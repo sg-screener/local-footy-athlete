@@ -132,7 +132,7 @@ export function addExerciseSectionContext(section: AddFamilyId, leaf: AddLeafId,
  * SAM'S THREE. A subset of the session's sections, typed as one so a family can
  * never name a section the athlete's session screen does not have.
  */
-export type AddFamilyId = Exclude<SessionExecutionSectionId, 'team_training'>;
+export type AddFamilyId = Exclude<SessionExecutionSectionId, 'team_training' | 'speed'>;
 
 /** Sam's order, which is not `SECTION_ORDER`'s. He stated Strength first. */
 export const ADD_FAMILY_ORDER: readonly AddFamilyId[] = ['strength', 'conditioning', 'mobility'];

@@ -1240,6 +1240,7 @@ export default function DayWorkoutScreenV2() {
   const quickAddFor = React.useCallback(
     (sectionId: SessionExecutionSectionId): (() => void) | null => {
       if (isTeamOnly || isFinished || isAlreadyComplete || sectionId === 'team_training'
+        || sectionId === 'speed'
         || workout?.workoutType === 'Game') return null;
       return () => openAddFamily(sectionId);
     }, [openAddFamily, isTeamOnly, isFinished, isAlreadyComplete, workout?.workoutType],
@@ -2870,7 +2871,7 @@ function SessionList({
         />
       );
     }
-    if (item.presentation === 'conditioning_phase') {
+    if (item.presentation === 'conditioning_phase' || item.presentation === 'speed') {
       return (
         <ConditioningPhaseRow
           key={key}

@@ -7231,3 +7231,21 @@ Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription`,
 `test:conditioning-templates`, `test:conditioning-identity`,
 and `test:session-template`. Supporting copy-census verification and NOT
 COVERED: `docs/STATUS_CONDNAMES.md`.
+
+**R-287** · Speed is a proper ordered session section, 2026-08-31.
+
+Owner: condnames. When a workout carries prescribed speed work, the active
+session shows the actual speed exercises inside a `Speed` section using the
+same section and prescription-card treatment as the other work. The active
+session order is Mobility / Warm-up, Strength, Speed, then Conditioning. Speed
+never falls through to a generic `Session` section or a bare `speed work`
+placeholder.
+
+This completes the existing 2026-08-17 ruling that sprint rows belong under
+Speed rather than Strength, and supersedes that note's claim that the active
+session places Speed before lifting. It changes presentation and checklist
+membership, not speed selection, dose, sprint credit or conditioning credit.
+
+Guard: `LAW-session-speed-rows-and-order`, `test:session-template` and
+`test:session-execution`. Verification status and NOT COVERED:
+`docs/STATUS_CONDNAMES.md`.

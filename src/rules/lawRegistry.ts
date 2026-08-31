@@ -2400,6 +2400,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-session-speed-rows-and-order',
+    law: 'A workout carrying a typed speed block renders the block\'s actual prescribed rows in a Speed execution section, never as a generic Session / speed work fallback. The section uses the established session-section and prescription-card treatment. The active-session order is Mobility / Warm-up, Strength, Speed, then Conditioning. Presentation does not alter speed selection, dose or exposure credit.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-287 — Sam required speed work to match the other session sections and sit immediately before Conditioning, after Strength; this supersedes the older screen-order note that put Speed before lifting.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-template + test:session-execution',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `condnames`. TEST FIRST: the real template fixture omitted both typed speed rows, and the execution projection printed Strength / Conditioning / Session with a single `speed work` placeholder; six new cells began red across the two in-chain suites. The canonical template now consumes getSessionComponentRows.speedRows, the checklist gives those rows one typed Speed section, and both rows retain componentId speed for completion. The shared section icon owner maps Speed to the established bolt, and the existing conditioning prescription-card renderer presents the authored speed doses. Sam corrected the first implementation\'s overreach: the active-session order is Mobility / Warm-up, Strength, Speed, then Conditioning. MUTATION/LIVENESS: temporarily emptying the speedRows loop killed both template speed cells and the execution actual-rows/no-fallback cell; restoring it returned them green. The visible simulator flow walks downward through Mobility / Warm-up, Strength, Speed and Conditioning in that exact order. NOT COVERED: physical-iPhone pixels, a completed Speed feedback round-trip, VoiceOver reading order and a standalone speed-only day.',
+    },
+  },
+  {
     id: 'LAW-repeated-weekly-strength-patterns-use-distinct-stable-seats',
     law: 'A movement pattern prescribed more than once in one week uses a distinct legal exercise for each occurrence until its same-pattern options are exhausted. The selection remains deterministic and each weekly occurrence stays stable throughout the build block. The durable selection key is movement slot plus zero-based weekly occurrence, never movement slot alone; legacy one-seat rows lift to occurrence zero at read ingress and new writes always carry the occurrence. Across repeated push and pull exposures, the main-lift role alternates between available horizontal and vertical planes so source order cannot make one plane lead every day.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-241 — Sam rejected weeks cloning Bench Press, Back Squat, RDLs and Bulgarian Split Squats while DB Bench Press and Pull-Ups never appeared.',

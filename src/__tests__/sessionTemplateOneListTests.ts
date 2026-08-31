@@ -401,6 +401,44 @@ console.log('\n[5] Conditioning — combined-day picker and conditioning-only ph
     `got ${JSON.stringify(names(singleTemplate.items))}`,
   );
 
+  const speedBetweenStrengthAndConditioning = workoutOf({
+    workoutType: 'Strength',
+    hasCombinedConditioning: true,
+    speedBlock: {
+      id: 'speed-block',
+      title: '10 m Acceleration Reps',
+      kind: 'true_speed',
+      placement: 'pre_lift',
+      exerciseIds: ['speed-warmup', 'speed-main'],
+    },
+    conditioningBlock: {
+      intent: 'high-intensity',
+      options: [
+        { title: 'Hard Intervals', description: '', exerciseIds: ['conditioning-main'] },
+      ],
+    },
+    exercises: [
+      strengthRow('Speed Warm-up', { id: 'speed-warmup', role: 'conditioning' }),
+      strengthRow('10 m Acceleration Reps', { id: 'speed-main', role: 'conditioning' }),
+      strengthRow('Back Squat', { id: 'strength-main', role: 'main_lift' }),
+      strengthRow('30-Second Hard Intervals', { id: 'conditioning-main', role: 'conditioning' }),
+    ],
+  });
+  const speedTemplate = buildSessionTemplate(speedBetweenStrengthAndConditioning);
+  ok(
+    'typed Speed rows enter the session template as their actual exercises',
+    speedTemplate.items.flatMap((item) => item.kind === 'exercise' && item.presentation === 'speed'
+      ? [item.row.exercise.name] : []).join(' | ')
+      === 'Speed Warm-up | 10 m Acceleration Reps',
+    `got ${JSON.stringify(names(speedTemplate.items))}`,
+  );
+  ok(
+    'Speed sits after Strength and immediately before Conditioning',
+    names(speedTemplate.items).join(' | ')
+      === 'Back Squat | Speed Warm-up | 10 m Acceleration Reps | 30-Second Hard Intervals',
+    `got ${JSON.stringify(names(speedTemplate.items))}`,
+  );
+
   const conditioningOnly = workoutOf({
     name: 'Tempo Run',
     workoutType: 'Tempo-Run',

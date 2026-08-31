@@ -1,5 +1,60 @@
 # STATUS — condnames
 
+## 2026-08-31 — Speed is a real session section in the athlete-specified order
+
+Owned by `condnames`.
+
+The active session discarded the typed speed rows. Its component fallback then
+rendered a generic `Session` disclosure containing the bare label `speed work`.
+The Day overview knew Speed existed, but the active-session template did not
+consume `speedBlock.exerciseIds`.
+
+Two options compared:
+
+1. Rename and reposition the rowless fallback.
+2. Carry the already-typed speed rows into the canonical session template and
+   give them the same execution-section and prescription-card model as the
+   other prescribed work.
+
+Option 2 landed. Both prescribed speed rows now appear in a `Speed` section
+with the bolt icon, normal cards and per-row completion. There is no generic
+`Session / speed work` fallback. Sam corrected the first attempted ordering;
+the active session is exactly Mobility / Warm-up, Strength, Speed, then
+Conditioning.
+
+Test-first receipt:
+
+- `test:session-template`: two new speed cells began red, then returned green;
+  current result is 87 passed / 1 pre-existing numeric-index source-contract
+  failure.
+- `test:session-execution`: four new speed cells began red, then returned
+  green; current result is 208 passed / 2 pre-existing source-contract
+  failures.
+- Mutation/liveness: emptying the real `speedRows` loop killed both template
+  cells and the execution actual-rows/no-fallback cell. Restoring it returned
+  those guards green.
+- `test:session-components`: 39 / 39 green.
+- `test:action-walker`: reached its final report with no Speed-kind failure;
+  the standing result is 14 passed / 6 unrelated action-law failures.
+- `test:maestro-element-contract`: the new flow adds no missing product id; the
+  standing repository result still lists its existing missing-id debt.
+- `test:law-registry` accepts R-287, its in-chain guards and ruling site; the
+  standing global 21-UNENFORCED-law red remains. `test:ruling-registry` adds no
+  R-287 error and retains its existing R-070 path, ratchet and re-ask reds.
+- Product and devtools TypeScript: 0 errors. Test TypeScript has four errors in
+  three concurrently edited files; this change adds none.
+
+Simulator receipt: the cold-seeded `conditioning-showcase` session walked
+downward through `Mobility / Warm-up`, `Strength`, `Speed` and `Conditioning` in
+that exact order. The Speed disclosure reported 0/2, both authored cards were
+visible with `Mode: Run`, and the flow completed after reaching Conditioning.
+
+NOT COVERED:
+
+- Physical-iPhone Release acceptance.
+- Completing and reopening a Speed section.
+- VoiceOver reading order and a standalone speed-only day.
+
 ## 2026-08-31 — equipment delivery no longer renames conditioning templates
 
 Owned by `condnames`.

@@ -1,0 +1,61 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - speed rows use a proper section before conditioning
+tags:
+  - e2e
+  - visible
+  - speed
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: conditioning-showcase
+- tapOn:
+    id: "day-timeline-part-conditioning"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-mobility"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "session-execution-toggle-mobility"
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-strength"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "session-execution-toggle-strength"
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-speed"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "session-execution-toggle-speed"
+    text: "Speed, 0 of 2 complete.*"
+- scrollUntilVisible:
+    element:
+      id: "workout-exercise-row-speed-.*-main"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "workout-exercise-row-speed-.*-warmup"
+- assertVisible:
+    id: "workout-exercise-row-speed-.*-main"
+- assertVisible:
+    id: "conditioning-mode-speed-.*-main"
+    text: "Run"
+- takeScreenshot: artifacts/visible/session-speed-section
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-conditioning"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "session-execution-toggle-conditioning"

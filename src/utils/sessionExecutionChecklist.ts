@@ -29,6 +29,7 @@ import type { SessionTemplate, SessionTemplateItem } from './sessionTemplate';
  */
 export type SessionExecutionSectionId =
   | 'mobility'
+  | 'speed'
   | 'strength'
   | 'primer'
   | 'accessories'
@@ -306,6 +307,7 @@ export function recordedCompletedSessionExecutionItemIds(
  */
 export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   mobility: 'Mobility / Warm-up',
+  speed: 'Speed',
   strength: 'Strength',
   primer: 'Primer',
   accessories: 'Accessories / Prehab',
@@ -322,7 +324,7 @@ export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
    defect R-116 was written about. */
 
 const SECTION_ORDER: SessionExecutionSectionId[] = [
-  'mobility', 'primer', 'strength', 'accessories', 'conditioning',
+  'mobility', 'primer', 'strength', 'accessories', 'speed', 'conditioning',
   'team_training', 'recovery', 'optional', 'other',
 ];
 
@@ -380,6 +382,7 @@ function componentForTemplateItem(
 
 function sectionForTemplateItem(item: SessionTemplateItem, workout: Workout): SessionExecutionSectionId {
   if (item.kind === 'team_training') return 'team_training';
+  if (item.kind === 'exercise' && item.presentation === 'speed') return 'speed';
   if (item.kind === 'exercise' && item.row.sessionSection && item.row.sessionSection !== 'strength') return item.row.sessionSection;
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') return 'conditioning';
   if (item.kind === 'exercise' && item.optional) return 'optional';
@@ -479,6 +482,7 @@ export function buildSessionExecutionPlan(args: {
       id: `component:${component.id}`,
       sectionId: component.kind === 'recovery' ? 'recovery'
         : component.kind === 'mobility' ? 'mobility'
+        : component.kind === 'speed' ? 'speed'
         : component.kind === 'conditioning' || component.kind === 'finisher' ? 'conditioning'
         : component.kind === 'team_training' ? 'team_training'
         // R-110 — a rowless power component opens Strength, same as a row does.

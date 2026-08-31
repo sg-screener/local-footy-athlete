@@ -652,8 +652,7 @@ function conditioningIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<s
 /**
  * THE SPEED BLOCK'S OWN ROWS — Sam's third surface, 2026-08-17.
  *
- * *"Sprint work must appear under Speed, not Strength, while preserving its
- * actual position before lifting/conditioning."*
+ * *"Sprint work must appear under Speed, not Strength."*
  *
  * A pre-season Tuesday printed an empty `Speed` block and then listed
  * `10 m Acceleration Reps` under `Strength`, because `strengthRows` was defined
@@ -674,9 +673,10 @@ function conditioningIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<s
  * `sessionComponents`' own conservation language above ("the rows are conserved,
  * re-homed not lost") already demands of the trunk split.
  *
- * **POSITION IS NOT TOUCHED.** `getSessionComponents` emits `speed` before
- * `strength` already, and the printed day already showed Speed above Strength.
- * This is a re-file, not a re-order.
+ * **THIS FUNCTION DOES NOT OWN ACTIVE-SESSION POSITION.** It owns typed row
+ * membership only. R-287 sets the athlete-facing session order in
+ * `sessionTemplate` / `sessionExecutionChecklist`: Mobility / Warm-up,
+ * Strength, Speed, then Conditioning.
  */
 function speedIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<string> {
   const ids = new Set<string>();
@@ -866,6 +866,7 @@ export function getSessionComponents(
 
   const teamState = getTeamTrainingWorkoutState(workout);
   const {
+    speedRows,
     strengthRows,
     supportRows,
     conditioningRows,
@@ -889,6 +890,7 @@ export function getSessionComponents(
       kind: 'speed',
       label: 'speed work',
       completionPolicy: 'required',
+      exerciseIds: speedRows.map((row) => row.id),
     });
   }
 

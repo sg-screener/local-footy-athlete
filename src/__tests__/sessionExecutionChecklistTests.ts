@@ -71,6 +71,44 @@ ok('accessories and prehab are folded into the Strength disclosure',
 ok('conditioning is its own section', plan.sections.some((section) => section.id === 'conditioning'));
 ok('every planned item has one stable id', new Set(plan.items.map((item) => item.id)).size === plan.items.length);
 
+const speedWorkout: any = {
+  id: 'speed-session', name: 'Speed + Strength + Conditioning', workoutType: 'Strength',
+  hasCombinedConditioning: true,
+  speedBlock: {
+    id: 'speed-block', title: '10 m Acceleration Reps', kind: 'true_speed',
+    placement: 'pre_lift', exerciseIds: ['speed-warmup', 'speed-main'],
+  },
+  conditioningBlock: {
+    intent: 'high-intensity',
+    options: [{ title: 'Hard Intervals', description: '', exerciseIds: ['conditioning-main'] }],
+  },
+  exercises: [
+    row('speed-warmup', 'Speed Warm-up', 'conditioning'),
+    row('speed-main', '10 m Acceleration Reps', 'conditioning'),
+    row('squat', 'Back Squat', 'main_lift'),
+    row('conditioning-main', '30-Second Hard Intervals', 'conditioning'),
+  ],
+};
+const speedPlan = buildSessionExecutionPlan({
+  workout: speedWorkout,
+  template: buildSessionTemplate(speedWorkout),
+  mobilityFlow: null,
+});
+const speedSection = speedPlan.sections.find((section) => section.id === ('speed' as any));
+ok('Speed is a proper section with the same execution-section model as its siblings',
+  speedSection?.label === 'Speed' && speedSection.iconKind === PART_ICON_KIND.speed);
+ok('Speed contains the two prescribed rows rather than a generic speed work fallback',
+  speedSection?.items.map((item) => item.label).join(' | ')
+    === 'Speed Warm-up | 10 m Acceleration Reps'
+    && !speedPlan.items.some((item) => item.id === 'component:speed' || item.label === 'speed work'),
+  speedPlan.sections.map((section) => ({ id: section.id, items: section.items.map((item) => item.label) })));
+ok('Speed is ordered after Strength and immediately before Conditioning',
+  speedPlan.sections.map((section) => section.id).join(' | ')
+    === 'strength | speed | conditioning',
+  speedPlan.sections.map((section) => section.id));
+ok('both Speed rows retain the typed speed component for completion',
+  speedSection?.items.every((item) => item.componentId === 'speed'));
+
 console.log('\n[2] Ticks derive component outcomes');
 const strengthItems = plan.items.filter((item) => item.componentId === 'strength');
 const allStrength = new Set(strengthItems.map((item) => item.id));

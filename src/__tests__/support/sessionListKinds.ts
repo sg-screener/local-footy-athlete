@@ -22,6 +22,7 @@ export const TEMPLATE_ITEM_KIND: Record<string, string> = {
   // conditioning-only day, are both the day's conditioning work.
   conditioning_choice: 'conditioning',
   conditioning_phase: 'conditioning',
+  speed: 'speed',
   // Mobility is a distinct session presentation while remaining a load-neutral
   // recovery part in the canonical projection.
   mobility: 'recovery',

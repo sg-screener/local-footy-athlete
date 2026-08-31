@@ -64,7 +64,7 @@ export type SessionTemplateItem =
       kind: 'exercise';
       role: SessionRole;
       /** Which row shape the renderer should use — the data differs, the badge does not. */
-      presentation: 'strength' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon';
+      presentation: 'strength' | 'speed' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon';
       row: any;
       /** Kept as a small in-list pairing indicator, never a badge (§2 item 4a). */
       superset: SessionSupersetTag | null;
@@ -174,6 +174,12 @@ function d2Rank(item: SessionTemplateItem): number {
   // The banner is context, not work — it stays absolute last, below even the
   // optional cluster (Sam, run-7).
   if (item.kind === 'team_training') return SESSION_ROLE_ORDER.length * 2;
+  // Speed is its own execution section immediately before Conditioning. The
+  // rows retain their counting role (`conditioning`); presentation is the
+  // typed fact that distinguishes them from the conditioning finisher here.
+  if (item.kind === 'exercise' && item.presentation === 'speed') {
+    return sessionRoleRank('conditioning') - 0.5;
+  }
   return sessionRoleRank(item.role) + (isOptional(item) ? SESSION_ROLE_ORDER.length : 0);
 }
 
@@ -278,7 +284,7 @@ function supersetTagsFor(rows: any[]): Map<any, SessionSupersetTag> {
 
 function exerciseItem(
   row: any,
-  presentation: 'strength' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon',
+  presentation: 'strength' | 'speed' | 'mobility' | 'recovery' | 'conditioning_phase' | 'addon',
   options: { role?: SessionRole; superset?: SessionSupersetTag | null; optional?: boolean } = {},
 ): SessionTemplateItem {
   return {
@@ -323,6 +329,15 @@ export function buildSessionTemplate(
   }
   for (const row of componentRows.recoveryRows) {
     items.push(exerciseItem(row, 'recovery', { role: 'prehab' }));
+  }
+
+  // A speed block is real prescribed row content, not component metadata.
+  // `getSessionComponentRows` already owns the typed membership through
+  // SpeedBlock.exerciseIds; consume that bucket exactly as the Day view does.
+  // The special d2Rank above places it immediately before Conditioning without
+  // disguising these non-counting rows as power or strength work.
+  for (const row of componentRows.speedRows) {
+    items.push(exerciseItem(row, 'speed', { role: 'conditioning' }));
   }
 
   // Strength and trunk/support rows are one population here. The shared
@@ -460,8 +475,14 @@ export function buildSessionTemplate(
       ? item => item.kind === 'team_training' ? 2 : isOptional(item) ? 1 : 0
       : item => item.kind === 'exercise' && item.row.composedOptionalKind === 'primer'
         ? 0 : ordering === 'phase' ? phaseRank(item) : d2Rank(item)).map(item =>
-      item.kind === 'exercise' && item.presentation === 'conditioning_phase'
-        ? { ...item, row: conditioningRowForDisplay(workout, item.row), modalityLabel: conditioningModeLabelForRow(workout, String(item.row?.id ?? '')) }
+      item.kind === 'exercise' && (item.presentation === 'conditioning_phase' || item.presentation === 'speed')
+        ? {
+            ...item,
+            row: conditioningRowForDisplay(workout, item.row),
+            modalityLabel: item.presentation === 'speed'
+              ? 'Run'
+              : conditioningModeLabelForRow(workout, String(item.row?.id ?? '')),
+          }
         : item),
   };
 }
