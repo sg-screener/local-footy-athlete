@@ -48,12 +48,20 @@
  * `utils/sessionInjuryReview` (the review card). TEST: `test:session-injury-review` [9].
  */
 
-/** Every cause a row can be standing in for, and the words for each. */
-const SUBSTITUTION_REASON: Readonly<Record<string, string>> = {
+export type InjurySubstitutionCause =
+  | 'excluded_today'
+  | 'kit_today'
+  | 'injury'
+  | 'already_on_day';
+
+/** Only athlete-actionable causes get words; automatic composition stays quiet. */
+const SUBSTITUTION_REASON: Readonly<Partial<Record<InjurySubstitutionCause, string>>> = {
   kit_today: 'equipment today',
   injury: 'injury',
   excluded_today: 'you left it out',
-  already_on_day: 'already in this session',
+  // `already_on_day` is automatic composition/de-duplication, not a constraint
+  // the athlete needs explained. Keep its typed provenance internally, but do
+  // not turn normal programming variety into a warning beneath the exercise.
 };
 
 export interface InjurySubstitutionSourceRef {
@@ -61,7 +69,7 @@ export interface InjurySubstitutionSourceRef {
   readonly baseExerciseName: string;
   /** The authored exercise. Internal history — never rendered. */
   readonly originExerciseName?: string;
-  readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
+  readonly cause: InjurySubstitutionCause;
 }
 
 /**
@@ -87,8 +95,16 @@ export function injurySubstitutionSourceName(
 export function injurySubstitutionBadge(args: {
   substitution: InjurySubstitutionSourceRef | null | undefined;
   displayName: (name: string) => string;
+  /**
+   * Read-time truth for persisted `kit_today` provenance. A canonical rebuild
+   * normally rewrites the row when a dated kit fact clears, but the screen must
+   * never repeat stale equipment copy while the base exercise is legal today.
+   */
+  baseExerciseIsLegalToday?: (name: string) => boolean;
 }): string | null {
   const source = injurySubstitutionSourceName(args.substitution);
+  if (source && args.substitution?.cause === 'kit_today'
+    && args.baseExerciseIsLegalToday?.(source) === true) return null;
   const reason = args.substitution ? SUBSTITUTION_REASON[args.substitution.cause] : undefined;
   if (!source || !reason) return null;
   return `Swapped from ${args.displayName(source)} — ${reason}`;

@@ -817,6 +817,35 @@ async function main(): Promise<void> {
         substitution: { baseExerciseName: 'Back Squat', cause: 'excluded_today' },
         displayName: (n: string) => n,
       }) === 'Swapped from Back Squat — you left it out');
+    ok('[10] automatic de-duplication keeps provenance but shows no explainer',
+      injurySubstitutionBadge({
+        substitution: { baseExerciseName: 'Single-Leg RDL', cause: 'already_on_day' },
+        displayName: (n: string) => n,
+      }) === null);
+    ok('[10] stale equipment provenance shows nothing when today\'s kit can do the base exercise',
+      injurySubstitutionBadge({
+        substitution: { baseExerciseName: 'Single-Leg RDL', cause: 'kit_today' },
+        displayName: (n: string) => n,
+        baseExerciseIsLegalToday: () => true,
+      }) === null
+      && injurySubstitutionBadge({
+        substitution: { baseExerciseName: 'Back Squat', cause: 'kit_today' },
+        displayName: (n: string) => n,
+        baseExerciseIsLegalToday: () => false,
+      }) === 'Swapped from Back Squat — equipment today');
+    const sessionScreen = require('fs').readFileSync(
+      'src/screens/home/DayWorkoutScreenV2.tsx', 'utf8');
+    const badgeCallAt = sessionScreen.indexOf('const substitutionBadgeText = injurySubstitutionBadge({');
+    const implementBadgeAt = sessionScreen.indexOf('const implementBadgeText', badgeCallAt);
+    ok('[10] CONTROL — the active-session badge call was found',
+      badgeCallAt >= 0 && implementBadgeAt > badgeCallAt,
+      { badgeCallAt, implementBadgeAt });
+    const badgeCall = badgeCallAt >= 0 && implementBadgeAt > badgeCallAt
+      ? sessionScreen.slice(badgeCallAt, implementBadgeAt)
+      : '';
+    ok('[10] the active session validates persisted equipment provenance against today\'s typed kit',
+      /baseExerciseIsLegalToday:[\s\S]*composedRowIsLegal\(name, availableEquipment\)/.test(badgeCall),
+      badgeCall);
     /* WHICH injury is "the new one" is derived from the facts so the live door
      * and boot cannot disagree — otherwise the badge would reword on restart. */
     ok('[10] the newest injury is derived from the facts, newest lastUpdatedAt first',

@@ -29,6 +29,7 @@ armTotalsOrRed();
 
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
+import { injurySubstitutionBadge } from '../rules/injurySubstitutionSource';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 
@@ -78,7 +79,17 @@ function quiet<T>(body: () => T): T {
   try { return body(); } finally { console.log = log; console.warn = warn; console.error = error; }
 }
 
-interface DayRows { readonly names: readonly string[] }
+interface DayRows {
+  readonly names: readonly string[];
+  readonly rows: ReadonlyArray<{
+    readonly exercise?: { readonly name?: string };
+    readonly name?: string;
+    readonly substitutedFrom?: {
+      readonly baseExerciseName: string;
+      readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
+    };
+  }>;
+}
 function generatedDays(phase: string, days: number): DayRows[] {
   const program = quiet(() => generateProgramLocally(athlete(phase, days), {
     todayISO: '2026-08-03', blockNumber: 2,
@@ -86,8 +97,10 @@ function generatedDays(phase: string, days: number): DayRows[] {
   const out: DayRows[] = [];
   for (const cycle of program.microcycles) {
     for (const workout of (cycle as { workouts: Array<{ exercises?: Array<{ exercise?: { name?: string }; name?: string }> }> }).workouts) {
+      const rows = workout.exercises ?? [];
       out.push({
-        names: (workout.exercises ?? []).map((row) => row.exercise?.name ?? row.name ?? ''),
+        names: rows.map((row) => row.exercise?.name ?? row.name ?? ''),
+        rows,
       });
     }
   }
@@ -135,6 +148,22 @@ run('Single-Leg RDL still lives where it owns the day (In-season 3-day)', () => 
   const days = generatedDays('In-season', 3);
   assert(days.some((day) => day.names.some(isSlRdl) && !day.names.some(isRdls)),
     'the guard erased Single-Leg RDL from worlds where it never collided');
+});
+
+run('healthy full-kit RDL de-dup is internal variety, never an equipment explainer', () => {
+  const rows = generatedDays('Off-season', 3).flatMap((day) => day.rows);
+  const deDuplicatedHamstring = rows.find((row) =>
+    isHamstringRow(row.exercise?.name ?? row.name ?? '')
+      && /Single-?Leg RDL/i.test(row.substitutedFrom?.baseExerciseName ?? ''));
+  assert(deDuplicatedHamstring,
+    'the full-kit control world no longer reaches the Single-Leg RDL -> hamstring de-dup');
+  assert(deDuplicatedHamstring.substitutedFrom?.cause === 'already_on_day',
+    `healthy full-kit de-dup was labelled ${deDuplicatedHamstring.substitutedFrom?.cause ?? 'none'}`);
+  assert(injurySubstitutionBadge({
+    substitution: deDuplicatedHamstring.substitutedFrom,
+    displayName: (name) => name,
+  }) === null,
+  'automatic RDL-family variety still produces an athlete-facing swap explainer');
 });
 
 /* ── The guard, at the source level ──────────────────────────────────────── */

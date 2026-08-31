@@ -79,6 +79,7 @@ import {
   injurySubstitutionBadge,
   type InjurySubstitutionSourceRef,
 } from '../../rules/injurySubstitutionSource';
+import { composedRowIsLegal } from '../../rules/composedRowLegality';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
@@ -3539,6 +3540,9 @@ function StrengthExerciseCard({
   const substitutionBadgeText = injurySubstitutionBadge({
     substitution,
     displayName: (name) => displayExerciseName(name),
+    ...(availableEquipment != null
+      ? { baseExerciseIsLegalToday: (name: string) => composedRowIsLegal(name, availableEquipment) }
+      : {}),
   });
   // "Dumbbells today — no barbell". One line, only on the rows it explains.
   const implementBadgeText = !substitutionBadgeText && showImplementBadge && implementLabel

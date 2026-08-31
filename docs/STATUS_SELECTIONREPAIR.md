@@ -1270,3 +1270,69 @@ rule to the chained `test:session-execution-checklist` gate.
 NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
 Dynamic Type, VoiceOver pronunciation, and a whole-app PASS. Neither physical
 phone was built for, installed to, launched or otherwise touched.
+
+## 2026-08-31 — false “equipment today” on automatic RDL de-dup (R-295)
+
+Root cause confirmed. In a healthy full-kit world, the block selected
+`Single-Leg RDL`, then R-233 correctly replaced it with `Hamstring Curl` because
+the same session already contained another RDL-family lift. That is ordinary
+programming de-duplication. The cause classifier checked only whether the exact
+`Single-Leg RDL` identity was already present and otherwise defaulted the reason
+to `kit_today`, producing the false explainer Sam saw despite zero equipment
+limitations.
+
+Two options were compared before coding: make the screen join every replacement
+against today's live equipment facts before showing a badge, or correct the
+typed cause where the substitution is authored and let the shared badge owner
+hide automatic causes. The source correction landed because it prevents false
+equipment provenance from reaching reviews, saved rows or any future surface;
+the renderer still shows real equipment, injury and athlete-exclusion causes.
+
+The composer now classifies exact and RDL-family collisions as
+`already_on_day`, proves `kit_today` by checking the base exercise against the
+actual day kit, and throws if any automatic substitution has no attributable
+cause. `already_on_day` remains available as internal provenance but produces no
+athlete-facing `Swapped from` line.
+
+For an already-materialised row carrying the old false `kit_today` cause, the
+shared display owner now rechecks the base exercise against today's typed kit.
+If it is legal, the stale line is suppressed immediately; genuine equipment
+substitutions remain visible.
+
+Regression and liveness receipts:
+
+- Red first: the new real-generation cell reached `Single-Leg RDL -> Hamstring
+  Curl` in a healthy full-kit Off-season world and reported its cause as
+  `kit_today`.
+- After the correction, that same cell reports `already_on_day` and the shared
+  badge owner returns no explainer.
+- `test:session-injury-review`: 80 / 80, including automatic de-duplication,
+  stale persisted equipment provenance, and existing real
+  injury/equipment/exclusion copy.
+- `test:equipment-scopes`: 20 / 20; actual dated equipment substitutions,
+  clearing and restart remain intact.
+- `test:rdl-family`: the new founding-case cell passes. The suite remains 6 / 8
+  because of two inherited generation expectations: Pre-season 4-day is now
+  refused at `hard_day_permitted_maximum:6`, and the old In-season 3-day fixture
+  no longer produces its expected standalone Single-Leg RDL.
+- `test:compiler-year`: detector 45 / 45 and all 416 required athlete-weeks were
+  reached across eight distinct athletes without an unattributed-substitution
+  error. The existing annual acceptance gate remains red at 236 green weeks and
+  365 distinct failure keys.
+- `test:compile`: product 0 errors and devtools 0 errors; the gate remains red on
+  four inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+- `test:visible-surfaces`: the real materialised `kit_today` provenance cells
+  pass; the suite remains 67 / 81 on its inherited shared-checkout fixture and
+  source-shape failures.
+- `test:composer-b1`: the new fail-closed attribution branch introduces no new
+  failure; the suite retains four inherited failures (46 / 50).
+- `test:law-registry`: R-295 is well formed, resolved and guarded. The registry
+  remains red only on the inherited 21 `UNENFORCED` rows: 229 total / 208
+  guarded.
+
+R-295 and `LAW-automatic-variety-has-no-constraint-explainer` bind the rule to
+the chained `test:rdl-family + test:session-injury-review` guards.
+
+NOT COVERED at this checkpoint: the exact affected session on Sam's phone,
+native pixels, and a whole-app PASS. No physical phone was touched.

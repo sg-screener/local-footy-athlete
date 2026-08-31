@@ -1580,7 +1580,9 @@ export interface WorkoutExercise {
     /**
      * Why it is not on the day. Kept apart because they end differently for the
      * athlete: a dated kit loss lifts itself, an exclusion ends when they
-     * restore it, an injury ends when it clears.
+     * restore it, an injury ends when it clears. `already_on_day` is internal
+     * automatic de-duplication provenance and deliberately renders no athlete
+     * explainer (R-295).
      */
     readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
   };

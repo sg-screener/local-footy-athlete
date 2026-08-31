@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-automatic-variety-has-no-constraint-explainer',
+    law: 'R-295: automatic exercise variety, collision avoidance and programming de-duplication show no “Swapped from” explainer. Equipment wording is reserved for a row whose recorded base exercise is genuinely illegal under that date\'s typed kit; injury and athlete exclusion retain their truthful explanations. An unattributed automatic substitution fails compilation rather than defaulting to equipment.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-295',
+    guard: {
+      state: 'guarded',
+      by: 'test:rdl-family + test:session-injury-review',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Red first: a healthy full-kit Off-season world reached the exact Single-Leg RDL -> Hamstring Curl de-duplication and the row carried cause kit_today, reproducing Sam\'s false “equipment today” line with zero equipment limits. The composer now attributes RDL-family and exact-row collision avoidance as already_on_day, proves kit_today from actual day-kit illegality, and throws on an unattributed substitution. The shared badge owner preserves internal already_on_day provenance but renders no athlete explainer for it, and revalidates persisted kit_today against the current typed kit so an already-materialised stale cause cannot leak. Direct badge coverage keeps real injury, equipment and athlete-exclusion copy. Final receipt and NOT COVERED: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-movement-prep-and-mobility-have-distinct-identities',
     law: 'R-294: derived warm-up work is labelled Movement Prep and uses the flame icon on the Day and active-session surfaces. A typed standalone or athlete-added Mobility session remains labelled Mobility and keeps the established mobility-person icon; typed identity, never exercise names or workout prose, decides between them.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-294',

@@ -7391,3 +7391,32 @@ separate Movement Prep identity.
 Guard: `LAW-movement-prep-and-mobility-have-distinct-identities` through the
 chained `test:session-execution-checklist` gate. Verification status and NOT
 COVERED: `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-295** · Automatic programming variety has no constraint explainer, 2026-08-31.
+
+Owner: selectionrepair. Automatic exercise variety, collision avoidance and
+programming de-duplication do not display a `Swapped from …` line. Equipment
+wording is shown only when the block-selected exercise is genuinely illegal
+under that date's typed available kit. Injury and athlete-authored exclusions
+retain their existing truthful explanations.
+
+The founding case was a healthy, full-kit session containing `Hamstring Curl`.
+It displayed `Swapped from Single-Leg RDL — equipment today` despite zero
+equipment limitations. The composer had deliberately replaced the second
+RDL-family movement to honour R-233, but its cause classifier recognized only
+an exact duplicate and defaulted every other substitution to `kit_today`.
+
+The composer now records RDL-family collision avoidance as `already_on_day`,
+keeps that provenance internally, and the shared badge owner renders no copy
+for that automatic cause. `kit_today` must be proven by the base exercise's
+actual illegality under the day's kit. Any substitution with no attributable
+cause fails compilation instead of inventing equipment context.
+
+The display owner also revalidates any persisted `kit_today` provenance against
+the current typed kit. If the base exercise is legal today, the line is hidden
+immediately rather than waiting for canonical reconstruction. A genuine illegal
+base exercise keeps the equipment explanation.
+
+Guard: `LAW-automatic-variety-has-no-constraint-explainer` through
+`test:rdl-family + test:session-injury-review`. Verification status and NOT
+COVERED: `docs/STATUS_SELECTIONREPAIR.md`.

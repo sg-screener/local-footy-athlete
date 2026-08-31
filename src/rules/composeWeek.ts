@@ -1834,11 +1834,24 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * BASE selection's job, above; the substitute's job is the best legal row. */
       const substitutedToday = !legal.includes(selection.identity);
       const identity = substitutedToday ? legal[0] : selection.identity;
+      const changedByDayIdentity = identitiesThisDay.has(selection.identity)
+        || (rdlAlreadyOnDay && RDL_FAMILY_IDENTITIES.has(selection.identity));
+      const substitutionCause: NonNullable<ComposedRow['substitutedFor']>['cause'] | undefined =
+        !substitutedToday ? undefined
+          : excludedToday.has(selection.identity) ? 'excluded_today'
+          : changedByDayIdentity ? 'already_on_day'
+          : !composedRowIsLegal(selection.identity, kitToday) ? 'kit_today'
+          : undefined;
+      if (substitutedToday && !substitutionCause) {
+        throw new Error(
+          `Unattributed composed substitution: ${selection.identity} -> ${identity} `
+          + `(day ${planned.dayOfWeek}, slot ${slot})`,
+        );
+      }
       const substitutionReason: ComposedRow['substitutedFor'] = substitutedToday
         ? {
             baseIdentity: selection.identity,
-            cause: excludedToday.has(selection.identity) ? 'excluded_today'
-              : identitiesThisDay.has(selection.identity) ? 'already_on_day' : 'kit_today',
+            cause: substitutionCause!,
           }
         : undefined;
       const dateISO = addComposerDaysISO(mondayISO(inputs.todayISO), (planned.dayOfWeek + 6) % 7);
