@@ -28,9 +28,9 @@ Owner: `selectionrepair`
 
 Steps 1–4 and 6 complete; Step 5 is checkpointed with one product decision
 blocked. Sam's 2026-08-31 audit follow-up is now being worked in the order he
-gave: Primer composition, injury composition and missing routes are
-checkpointed; conditioning labels are next, followed by classification
-reconciliation and the final isolated audit rerun.
+gave: Primer composition, injury composition, missing routes and classification
+reconciliation are checkpointed. Conditioning labels are blocked by named
+live shared-file ownership; the final isolated audit follows when that clears.
 
 ## 2026-08-31 follow-up 1 — every Primer is seven low-fatigue rows
 
@@ -133,6 +133,109 @@ failed with `ENOTFOUND`. No dependency or file changed; the local
 NOT COVERED at this checkpoint: the physical phone; the 32 conditioning-label
 occurrences; reconciliation of the 29 old `incorrectly_tagged_or_classified`
 entries; and the fresh two-athlete, 52-week final audit. No whole-job completion
+is claimed.
+
+## 2026-08-31 follow-up 4 — BLOCKED by live shared-file ownership
+
+Finished before the block: the old audit's 32 occurrences were isolated to the
+conditioning identity/display boundary; no selection-policy change is needed
+to count or repair them.
+
+Blocker: another live owner began editing the exact shared files this step
+requires while follow-up 3 was being checkpointed:
+
+- `src/rules/conditioningDisplay.ts`
+- `src/rules/conditioningSelection.ts`
+- `src/__tests__/conditioningTemplateEqualityTests.ts`
+- new `src/rules/conditioningAthleteCopy.ts`
+- new `src/__tests__/fixtures/conditioning-athlete-copy-sam-2026-08-31.ts`
+
+Those edits include a complete 55-template athlete-copy source and changed
+duration/count projection, so touching the same owners would risk combining or
+overwriting another seat's unfinished work. They remain dirty and uncommitted
+at this checkpoint. Follow-up 5 is independent and proceeded.
+
+Question for Sam if those files are not checkpointed/released: **may
+`selectionrepair` take ownership of the named conditioning files and finish the
+32-label correction once the concurrent work has stopped?**
+
+## 2026-08-31 follow-up 5 — the 29 classification entries reconciled
+
+The old audit did not preserve catalogue identity. Its year exporter formatted
+`row.exercise.name` into athlete-facing copy and the audit then compared that
+copy directly with catalogue keys; it also omitted the visible mobility/prehab
+flow. Separately, it counted a winner from any compiler attempt as though that
+winner had reached accepted final rows. Those are instrument-unit defects, not
+29 exercise-tag defects.
+
+The exporter now carries `catalogueIdentity` beside display `name` on every
+session, Speed and mobility-preparation row. The audit refuses rows missing the
+raw identity, counts visible presentation under display copy, counts catalogue
+reachability under canonical raw identity, and correlates an attempt-selected
+trace with accepted final rows on the same athlete-date before calling it a
+final selection.
+
+A diagnostic two-athlete, 52-week rerun (104 athlete-weeks and 104 restart
+checks) reconciled the old 29 exactly. Twenty-five have real final placements:
+
+- `SL 45° Back Extension Hold` 99; `SL 45° Back Extension` 40;
+  `Single-Leg Squat (to Box)` 14; `Banded TKE` 17;
+  `Copenhagen Plank (Half)` 34; `Swiss Ball Hamstring Curl` 121.
+- `Single-Arm DB Floor Press` 24; `Single-Arm DB Bench Press` 29;
+  `Half-Kneeling Single-Arm Overhead Press` 24;
+  `Single-Arm Lat Pulldown` 40; `Explosive Push-up` 61;
+  `Woodchop (Half Kneeling)` 32; `Stir the Pot` 23;
+  `McGill Sit Up` 34; `Banded External Rotation` 141;
+  `Bicep Curl (Barbell)` 19; `Bicep Curl (Dumbbell)` 17;
+  `Banded Tricep Pushdown` 21.
+- `30 s Very Hard Repeats` 8; `400 m Repeats` 4;
+  `Controlled 10–20 min Blocks` 20; `Steady 5 min Blocks` 24;
+  `Extensive Tempo (100 m repeats)` 6; `2 min On / 1 min Easy` 10;
+  `1 min On / 1 min Easy Tempo` 12.
+
+Count unit above: visible raw-catalogue row placements across mobility
+preparation, session template and Speed components; denominator is the two
+audited athletes × 52 weeks. These are not sets or selector calls.
+
+The other four had zero accepted final placements and are now named truthfully
+as `selected_only_in_nonfinal_compilation`, not as tagging errors:
+
+- `Lateral Bounds`: 8 power-selector attempt wins, 0 accepted-final matches;
+  finalisation produced lower sessions without that power row.
+- `Suitcase Carry`: 3 strength-selector attempt wins, 0 accepted-final matches;
+  the accepted dates contained different final session composition.
+- `Two-Minute Repeats`: 4 conditioning-selector attempt wins, 0 accepted-final
+  matches; accepted dates held `30 s Very Hard Repeats` or no session.
+- `1 km Repeats`: 2 conditioning-selector attempt wins, 0 accepted-final
+  matches; accepted dates held `45 s Hard Repeats`.
+
+No exercise identity or tag was changed to make the report pass. The corrected
+diagnostic audit has **0 `incorrectly_tagged_or_classified` rows**. Its four
+non-final rows carry every athlete/date/decision owner and the accepted final
+identities in JSON, so the explanation is evidence rather than a relabel.
+
+Regression and liveness receipts:
+
+- `test:programming-selection-trace`: 10 / 10, including all 29 former rows,
+  display/identity independence and a hard refusal when raw identity is lost.
+- `test:catalogue-reachability-classification`: 6 / 6, including attempt-only
+  selection as distinct from accepted-final selection.
+- The generated year contained 5,461 inspected warm-up/session rows and zero
+  missing `catalogueIdentity` values.
+- Mutation 1: falling back to display `name` when raw identity is absent killed
+  the hard-refusal cell.
+- Mutation 2: removing the attempt-only branch misclassified it as out-ranked
+  and killed the named classifier cell.
+- Product and devtools TypeScript remain at 0; the compile gate retains the
+  same four inherited test-scope errors in three unrelated test files.
+
+This was a diagnostic rerun, not the final audit: the catalogue-order receipt
+was a previously green zero-difference placeholder and follow-up 4's live
+conditioning files were still dirty. The final isolated run remains pending.
+
+NOT COVERED at this checkpoint: follow-up 4's 32 duration occurrences; a fresh
+catalogue-order mutation on the final saved revision; physical-iPhone
+acceptance; and the final isolated male/female audit. No whole-job completion
 is claimed.
 
 ## Step 1 — compiler-owned automatic selection trace

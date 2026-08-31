@@ -2,6 +2,7 @@
 export type ZeroPlacementClassification =
   | 'not_eligible_for_audited_athletes'
   | 'eligible_but_out_ranked'
+  | 'selected_only_in_nonfinal_compilation'
   | 'missing_automatic_programming_route'
   | 'incorrectly_tagged_or_classified'
   | 'intentionally_manual_or_special_use_only';
@@ -11,6 +12,8 @@ export interface ZeroPlacementTraceSummary {
   readonly candidateDecisions: number;
   readonly eligibleDecisions: number;
   readonly selectedDecisions: number;
+  /** Compiler-attempt selections before correlation with accepted final rows. */
+  readonly attemptSelectedDecisions?: number;
 }
 
 export type ZeroPlacementRouteEvidence =
@@ -41,6 +44,12 @@ export function classifyZeroPlacement(
     return {
       classification: 'incorrectly_tagged_or_classified',
       reason: 'The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.',
+    };
+  }
+  if ((trace.attemptSelectedDecisions ?? 0) > 0) {
+    return {
+      classification: 'selected_only_in_nonfinal_compilation',
+      reason: 'The identity won a compiler attempt, but no winning decision matched an accepted final row on that athlete-date. Attempt selection is not a final placement or a tagging error.',
     };
   }
   if (trace.eligibleDecisions > 0) {

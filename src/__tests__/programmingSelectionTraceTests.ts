@@ -7,6 +7,7 @@ import {
   installAutomaticProgrammingSelectionTraceObserver,
   type AutomaticProgrammingSelectionTrace,
 } from '../rules/programmingSelectionTrace';
+import { programmingAuditCatalogueIdentity } from '../rules/programmingAuditIdentity';
 
 let passed = 0;
 function check(name: string, fn: () => void): void {
@@ -75,6 +76,36 @@ check('selected trace identities survive into final session rows', () => {
   for (const trace of traces) {
     assert.ok(trace.selected && finalNames.has(trace.selected), `${trace.decisionId}:${trace.selected}`);
   }
+});
+
+check('audit catalogue identity is independent from athlete-facing display copy', () => {
+  const identities = [
+    'SL 45° Back Extension Hold', 'SL 45° Back Extension',
+    'Single-Leg Squat (to Box)', 'Banded TKE', 'Copenhagen Plank (Half)',
+    'Swiss Ball Hamstring Curl', 'Lateral Bounds', 'Single-Arm DB Floor Press',
+    'Single-Arm DB Bench Press', 'Half-Kneeling Single-Arm Overhead Press',
+    'Single-Arm Lat Pulldown', 'Explosive Push-up', 'Woodchop (Half Kneeling)',
+    'Stir the Pot', 'McGill Sit Up', 'Suitcase Carry', 'Banded External Rotation',
+    'Bicep Curl (Barbell)', 'Bicep Curl (Dumbbell)', 'Banded Tricep Pushdown',
+    '30 s Very Hard Repeats', 'Two-Minute Repeats', '1 km Repeats',
+    '400 m Repeats', 'Controlled 10–20 min Blocks', 'Steady 5 min Blocks',
+    'Extensive Tempo (100 m repeats)', '2 min On / 1 min Easy',
+    '1 min On / 1 min Easy Tempo',
+  ];
+  for (const identity of identities) {
+    assert.equal(programmingAuditCatalogueIdentity({
+      name: `Athlete copy is allowed to differ: ${identity}`,
+      catalogueIdentity: identity,
+    }), identity);
+  }
+  assert.equal(programmingAuditCatalogueIdentity({
+    name: 'Face Pull', catalogueIdentity: 'Face Pulls',
+  }), 'Face Pull');
+});
+
+check('audit refuses a visible row whose raw catalogue identity was discarded', () => {
+  assert.throws(() => programmingAuditCatalogueIdentity({ name: 'Single-Leg Box Squat' }),
+    /missing catalogueIdentity/);
 });
 
 check('ordinary strength seats cannot recruit a prehab identity by movement tag', () => {

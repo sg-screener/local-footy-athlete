@@ -24,6 +24,10 @@ const { classifyZeroPlacement } = require('../src/rules/catalogueReachabilityCla
 const { selectableVocabularyGroups, POWER_POOL_PENDING } = require('../src/data/selectableExerciseVocabulary');
 const { CONDITIONING_META, getExerciseTags } = require('../src/data/exerciseTags');
 const { resolveTemplateByName } = require('../src/rules/conditioningSelection');
+const {
+  programmingAuditCatalogueIdentity,
+  programmingAuditRowIsConditioning,
+} = require('../src/rules/programmingAuditIdentity');
 
 function parseCsvLine(line) {
   const cells = [];
@@ -88,6 +92,9 @@ for (const athlete of year.athletes) {
   for (const week of athlete.weeks) {
     for (const day of week.days) {
       const rows = [
+        ...(day.warmup ?? []).map((row) => ({
+          ...row, role: 'warmup_mobility', auditSurface: 'mobility_preparation',
+        })),
         ...flattenRows(day.rows ?? []).map((row) => ({ ...row, auditSurface: 'session_template' })),
         ...flattenRows(day.speedRows ?? []).map((row) => ({ ...row, auditSurface: 'speed_component' })),
       ];
@@ -101,26 +108,52 @@ for (const athlete of year.athletes) {
 const exerciseTallies = new Map();
 const conditioningTallies = new Map();
 const catalogueTallies = new Map();
+const acceptedIdentitiesByAthleteDate = new Map();
 for (const occurrence of occurrences) {
-  const template = resolveTemplateByName(occurrence.row.name);
+  const catalogueIdentity = programmingAuditCatalogueIdentity(occurrence.row);
+  const template = resolveTemplateByName(catalogueIdentity);
   addTally(template ? conditioningTallies : exerciseTallies, occurrence.row.name, occurrence);
-  addTally(catalogueTallies, template?.name ?? occurrence.row.name, occurrence);
+  addTally(catalogueTallies, catalogueIdentity, occurrence);
+  const dateKey = `${occurrence.gender}|${occurrence.day.date}`;
+  const accepted = acceptedIdentitiesByAthleteDate.get(dateKey) ?? new Set();
+  accepted.add(catalogueIdentity);
+  acceptedIdentitiesByAthleteDate.set(dateKey, accepted);
 }
 
 const distinctDecisions = new Map();
 for (const batch of traceFile.traceBatches) {
-  for (const trace of batch.traces) distinctDecisions.set(`${batch.athlete}|${trace.decisionId}`, trace);
+  for (const trace of batch.traces) {
+    distinctDecisions.set(`${batch.athlete}|${trace.decisionId}`, {
+      athlete: batch.athlete, trace,
+    });
+  }
 }
 const traceSummaries = new Map();
-for (const trace of distinctDecisions.values()) {
+for (const { athlete, trace } of distinctDecisions.values()) {
   for (const candidate of trace.candidates) {
     const summary = traceSummaries.get(candidate.name) ?? {
-      candidateDecisions: 0, eligibleDecisions: 0, selectedDecisions: 0,
-      kinds: new Set(), rejectionReasons: new Set(),
+      candidateDecisions: 0, eligibleDecisions: 0,
+      attemptSelectedDecisions: 0, selectedDecisions: 0,
+      kinds: new Set(), rejectionReasons: new Set(), nonfinalSelectionExamples: [],
     };
     summary.candidateDecisions += 1;
     if (candidate.eligible) summary.eligibleDecisions += 1;
-    if (trace.selected === candidate.name) summary.selectedDecisions += 1;
+    if (trace.selected === candidate.name) {
+      summary.attemptSelectedDecisions += 1;
+      const acceptedIdentities = acceptedIdentitiesByAthleteDate
+        .get(`${athlete}|${trace.need.dateISO}`) ?? new Set();
+      if (acceptedIdentities.has(candidate.name)) {
+        summary.selectedDecisions += 1;
+      } else {
+        summary.nonfinalSelectionExamples.push({
+          athlete,
+          date: trace.need.dateISO,
+          decisionId: trace.decisionId,
+          owner: trace.owner,
+          acceptedFinalIdentities: [...acceptedIdentities].sort(),
+        });
+      }
+    }
     summary.kinds.add(trace.kind);
     for (const reason of candidate.rejectedBy) summary.rejectionReasons.add(reason);
     traceSummaries.set(candidate.name, summary);
@@ -149,8 +182,12 @@ const zeroPlacements = catalogue.filter((row) => !catalogueTallies.has(row.name)
   const trace = summary ? {
     candidateDecisions: summary.candidateDecisions,
     eligibleDecisions: summary.eligibleDecisions,
+    attemptSelectedDecisions: summary.attemptSelectedDecisions,
     selectedDecisions: summary.selectedDecisions,
-  } : { candidateDecisions: 0, eligibleDecisions: 0, selectedDecisions: 0 };
+  } : {
+    candidateDecisions: 0, eligibleDecisions: 0,
+    attemptSelectedDecisions: 0, selectedDecisions: 0,
+  };
   const route = routeFor(row);
   return {
     catalogue: row.catalogue,
@@ -159,6 +196,7 @@ const zeroPlacements = catalogue.filter((row) => !catalogueTallies.has(row.name)
     ...trace,
     route,
     rejectionReasons: summary ? [...summary.rejectionReasons].sort() : [],
+    nonfinalSelectionExamples: summary ? summary.nonfinalSelectionExamples : [],
   };
 });
 const zeroClassificationCounts = Object.fromEntries(
@@ -191,12 +229,13 @@ function concentration(labelOf, filter) {
 }
 
 const exerciseConcentration = concentration(
-  ({ row }) => getExerciseTags(row.name)?.movement ?? row.domainRole ?? row.role ?? 'unclassified',
-  ({ row }) => !resolveTemplateByName(row.name) && !row.withheld,
+  ({ row }) => getExerciseTags(programmingAuditCatalogueIdentity(row))?.movement
+    ?? row.domainRole ?? row.role ?? 'unclassified',
+  ({ row }) => !programmingAuditRowIsConditioning(row) && !row.withheld,
 );
 const conditioningConcentration = concentration(
-  ({ row }) => resolveTemplateByName(row.name)?.quality ?? 'unclassified',
-  ({ row }) => !!resolveTemplateByName(row.name) && !row.withheld,
+  ({ row }) => resolveTemplateByName(programmingAuditCatalogueIdentity(row))?.quality ?? 'unclassified',
+  ({ row }) => programmingAuditRowIsConditioning(row) && !row.withheld,
 );
 
 const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
@@ -204,11 +243,14 @@ const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
 const restartFailures = year.athletes.flatMap((athlete) => athlete.restarts
   .filter((restart) => !restart.ok).map((restart) => ({ gender: athlete.gender, ...restart })));
 const missingConditioningModalities = occurrences.filter(({ row }) =>
-  row.auditSurface === 'session_template' && resolveTemplateByName(row.name) && !row.modalityLabel)
-  .map(({ gender, day, row }) => ({ gender, date: day.date, template: row.name }));
+  row.auditSurface === 'session_template' && programmingAuditRowIsConditioning(row) && !row.modalityLabel)
+  .map(({ gender, day, row }) => ({
+    gender, date: day.date, template: programmingAuditCatalogueIdentity(row),
+  }));
 const squatlessLowerSessions = dayRecords.filter(({ day, rows }) =>
   (day.parts ?? []).some((part) => part.kind === 'strength' && /lower squat/i.test(part.name)) &&
-  !rows.some((row) => !row.withheld && getExerciseTags(row.name)?.movement === 'squat' &&
+  !rows.some((row) => !row.withheld
+    && getExerciseTags(programmingAuditCatalogueIdentity(row))?.movement === 'squat' &&
     ['main_lift', 'main_strength'].includes(row.domainRole ?? row.role)))
   .map(({ gender, day, rows }) => ({
     gender, date: day.date, parts: day.parts, rows: rows.map((row) => row.name),
@@ -251,8 +293,9 @@ const report = {
   schemaVersion: 1,
   auditedRevision: year.revision,
   units: {
-    frequency: 'displayed row placements, choices expanded; distinct athlete dates and weeks include gender in the key; not sets, minutes, completions or selector calls',
+    frequency: 'visible row placements across mobility preparation, session template and speed components, with choices expanded; distinct athlete dates and weeks include gender in the key; not sets, minutes, completions or selector calls',
     trace: 'distinct athlete + compiler decisionId pairs after rebuild/restart de-duplication',
+    acceptedSelection: 'an attempt-selected identity counted as selected only when the accepted final rows contain that raw catalogue identity on the same athlete-date',
     concentration: 'trainable displayed row placements grouped by exercise movement or conditioning quality; withheld rows excluded',
   },
   denominators: {
@@ -263,6 +306,7 @@ const report = {
     catalogueIdentities: catalogue.length,
     distinctCompilerDecisions: distinctDecisions.size,
   },
+  catalogueIdentityFrequency: serialiseTallies(catalogueTallies),
   exerciseFrequency: serialiseTallies(exerciseTallies),
   conditioningFrequency: serialiseTallies(conditioningTallies),
   zeroPlacements: { count: zeroPlacements.length, classificationCounts: zeroClassificationCounts, rows: zeroPlacements },
@@ -293,7 +337,7 @@ const report = {
 };
 
 const zeroLines = zeroPlacements.map((row) =>
-  `| ${row.catalogue} | ${row.name.replaceAll('|', '\\|')} | ${row.classification} | ${row.candidateDecisions} | ${row.eligibleDecisions} | ${row.selectedDecisions} | ${row.reason} |`);
+  `| ${row.catalogue} | ${row.name.replaceAll('|', '\\|')} | ${row.classification} | ${row.candidateDecisions} | ${row.eligibleDecisions} | ${row.attemptSelectedDecisions} | ${row.selectedDecisions} | ${row.reason} |`);
 const frequencyLines = (rows) => rows.map((row) =>
   `| ${row.name.replaceAll('|', '\\|')} | ${row.displayedRowPlacements} | ${row.distinctAthleteDates} | ${row.distinctAthleteWeeks} |`);
 const concentrationLines = (rows) => rows.map((row) =>
@@ -311,7 +355,7 @@ const markdown = [
   ...frequencyLines(report.conditioningFrequency), '',
   '## Every zero-placement catalogue identity', '',
   `${zeroPlacements.length} / ${catalogue.length} catalogue identities have zero final displayed placements. Classification totals: ${Object.entries(zeroClassificationCounts).map(([kind, count]) => `${kind}=${count}`).join(', ')}.`, '',
-  '| Catalogue | Identity | Classification | Considered | Eligible | Selected | Evidence |', '|---|---|---|---:|---:|---:|---|',
+  '| Catalogue | Identity | Classification | Considered | Eligible | Attempt-selected | Accepted-final selected | Evidence |', '|---|---|---|---:|---:|---:|---:|---|',
   ...zeroLines, '',
   '## Concentration by family', '',
   'Trainable displayed rows only; each share is the leading identity within that family, not a share of the whole program.', '',

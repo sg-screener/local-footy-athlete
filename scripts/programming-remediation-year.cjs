@@ -40,6 +40,10 @@ replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.gr
   'role:item.role,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||(conditioning&&app("src/utils/sessionComponents").getSessionComponents(workout).some(c=>c.kind==="finisher"&&c.completionPolicy==="optional_no_penalty"))||undefined,pair:item.superset?.groupId');
 replace('name:o.title,description:o.description,rows:o.rows.map',
   'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
+replace('return {name:formatExerciseDisplayName(row.exercise?.name??row.name),',
+  'const catalogueIdentity=row.exercise?.name??row.name; return {name:formatExerciseDisplayName(catalogueIdentity),catalogueIdentity,');
+replace('warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),dose:mobilityFlowMovementDose(m.exercise)}))',
+  'warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),catalogueIdentity:m.exercise.name,dose:mobilityFlowMovementDose(m.exercise)}))');
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
   "rows:template.items.map(item=>rowView(item,day.workout)),speedRows:app('src/utils/sessionComponents').getSessionComponentRows(day.workout).speedRows.map(row=>rowView({kind:'exercise',presentation:'conditioning_phase',role:'speed',row},day.workout)),conditioningIdentity:app('src/utils/conditioningVisibleIdentity').projectConditioningVisibleIdentity(day.workout),resolvedEquipment:app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(useProfileStore.getState().onboardingData,normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,date),modifiers:");
 fs.mkdirSync(output, { recursive: true });
@@ -47,7 +51,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
+  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);
