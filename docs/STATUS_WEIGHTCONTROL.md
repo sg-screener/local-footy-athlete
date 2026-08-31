@@ -4,9 +4,9 @@ Owner: `weightcontrol`
 
 ## Current issue
 
-On the installed iPhone 16 Pro Max Release build, the successful record-only
-“Bit tired today” confirmation says “Noted — today stays as planned.” Sam has
-supplied its replacement wording.
+On the installed iPhone 16 Pro Max Release build, updating an active “Cooked
+today” modifier offers “Still pretty sick” even though the athlete never
+reported illness.
 
 ## Evidence before the fix
 
@@ -359,4 +359,108 @@ presentation cannot drift because both still resolve the same ID.
 ### Not covered yet
 
 - Fixed Release build on Sam's physical iPhone.
+- Physical Dynamic Type and VoiceOver reading order.
+
+---
+
+## Issue 6 — cooked status update offered an illness answer
+
+The physical Release flow was **Cooked today → Update status**, but its sheet
+offered both **Still pretty sick** and **Still cooked**. The athlete had never
+reported illness.
+
+### Cause and affected states
+
+The selected accepted fact was not stale or misclassified. The canonical
+projection knew it was fatigue and correctly titled it **Cooked today**, but
+`ActiveProgramModifier` / `ActiveCoachNote` discarded that typed fact family.
+`CoachNoteSheet` then branched only on the broad `temporary_status` type and
+rendered one universal five-button list.
+
+This affected every route that opens the one shared status-update sheet:
+
+- fatigue/cooked, poor-sleep and soreness rows were offered the illness-only
+  **Still pretty sick** answer;
+- illness rows were offered **Still cooked**;
+- unknown legacy temporary-status notes also received both guesses.
+
+### Options and fix
+
+1. Filter from the visible title or effect. This is smaller in lines but makes
+   athlete-facing wording or shared effects a second state owner.
+2. Carry the existing canonical `ReadinessFactKind` through the modifier and
+   note projection, then select the signed answer IDs from that type once.
+
+Option 2 landed. The five previously signed strings remain the vocabulary, not
+five universal buttons. Fatigue/cooked receives **I'm good now**, **Still not
+right**, **Still cooked**, **Worse**. Illness receives **I'm good now**, **Still
+not right**, **Still pretty sick**, **Worse**. Poor sleep receives the fatigue-
+family set; soreness and unknown legacy notes receive the neutral **I'm good
+now / Still not right / Worse** fallback. No title/body parsing, store lookup,
+accepted-state write or new wording was added.
+
+### Regression and liveness proof
+
+- Baseline `test:my-status-modifiers`: 10 passed, 0 failed.
+- The new test was first run against the installed-checkpoint design and went
+  red at 9 passed / 2 failed: the cooked note had no canonical family, and the
+  sheet still did not render the family-owned option set.
+- Fixed: 11 passed / 0 failed. The cell projects real fatigue, illness,
+  poor-sleep and soreness constraints, verifies the typed family survives into
+  each note, asserts exact fatigue/illness/soreness option sets, and asserts the
+  sheet consumes the selector.
+- Liveness mutation: adding `still_sick` back to the fatigue option set changed
+  the suite to 10 passed / 1 failed at **the accepted readiness family selects
+  only relevant status answers**. The mutation was removed and 11/11 restored.
+- `test:modifier-lifecycle`: 241/241 journeys; My Status 11/11; Program
+  read-only modifiers 11/11; modifier phrases 4/4.
+- `test:fatigue-sequence`: policy 35/35 and plumbing 18/18.
+- `test:readiness-illness-law`: 116/116.
+- `test:coach-note-action-source`: 4/4.
+- Preservation: session execution 206/206; Undo 28/28; injury recomposition
+  186/186. Modifier restart/clear, overlap, equipment, session edits and Undo
+  are also exercised inside the 241-cell lifecycle matrix.
+- `test:compile` reports 0 product and 0 devtool errors. Its overall result is
+  unchanged red on the exact checkpoint's three inherited test-harness type
+  errors in `canonicalWeeklyCompilerSliceTests.ts` and
+  `fatiguePlumbingTests.ts`.
+- `test:poor-sleep` remains at its inherited 28 passed / 4 failed generation-
+  policy boundary. The relevant modifier projection/restart/clear path is green
+  in `test:modifier-lifecycle`; the obsolete generation expectations were not
+  treated as this product requirement.
+- `test:equipment-answer` remains at its inherited 46 passed / 2 failed
+  onboarding-fixture boundary and stops before its chained equipment suites.
+  Maintained session equipment cells are green in session execution and the
+  complete equipment journey is green in modifier lifecycle.
+- `test:feature-registry` is 6/6 and `test:signed-copy-extraction` is 7/7.
+  `test:copy-rulings-binding` remains at its inherited 7/9 boundary on one
+  unrelated missing signed refusal and three retired proposals.
+- Repository law boundaries are unchanged: `test:law-registry` is 13/14 with
+  21 of 217 laws still `UNENFORCED`; `test:repo-law-guards` is 51/63 on the
+  existing report, inbox, orphan-flow, hot-file, golden-receipt, persisted-
+  writer and source-anchor debt. This fix adds no law row or positional source
+  anchor.
+
+### Simulator
+
+The preserved-data iPhone 17 Pro simulator had zero real active modifiers. A
+temporary display-only note was mounted without creating a readiness fact or
+program decision:
+
+- cooked sheet: **Still cooked** visible and **Still pretty sick** absent;
+- illness sheet: **Still pretty sick** visible and **Still cooked** absent;
+- both Maestro assertions passed and the cooked sheet was visually inspected;
+- the probe was removed, Fast Refresh returned to the real zero-modifier state,
+  and a final assertion confirmed the sheet absent.
+
+### Unresolved questions
+
+- None for the scoped product behaviour. Physical acceptance remains pending.
+
+### Not covered yet
+
+- Fixed Release build on Sam's physical iPhone.
+- Tapping a status answer on simulator: deliberately not done because it would
+  alter the preserved athlete state. The unchanged accepted-state writers are
+  covered by the action-source, fatigue/illness and modifier lifecycle suites.
 - Physical Dynamic Type and VoiceOver reading order.

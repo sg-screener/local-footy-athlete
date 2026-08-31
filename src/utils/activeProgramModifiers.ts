@@ -37,6 +37,7 @@ import {
   readinessFactKindOfConstraint,
   readinessFactTitle,
   readinessScopeOfConstraint,
+  type ReadinessFactKind,
 } from './readinessFactAttribution';
 import { buildDeterministicCoachNoteDescriptors } from './deterministicCoachNoteFactory';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
@@ -188,6 +189,12 @@ export interface ActiveProgramModifier {
   body: string;
   /** See `ActiveProgramModifierEffect`. Required, so a new builder must choose. */
   effect: ActiveProgramModifierEffect;
+  /**
+   * The accepted readiness fact family, when this modifier projects one.
+   * Kept separate from `effect`: illness and fatigue can change program load in
+   * similar ways, but the athlete must not be offered the other family's words.
+   */
+  readinessKind?: ReadinessFactKind;
   severity?: number;
   actions: ActiveProgramModifierAction[];
   affects: ActiveProgramModifierAffect[];
@@ -632,6 +639,7 @@ function statusModifier(
     sourceId: c.id,
     type: isCoachRestriction ? 'coach_restriction' : 'temporary_status',
     effect,
+    readinessKind: readinessFactKind ?? undefined,
     title: modifierString(sourceConstraint, 'modifierTitle') ?? fallbackTitle,
     body: modifierString(sourceConstraint, 'modifierBody') ?? fallbackBody,
     severity: 'severity' in c ? c.severity : undefined,
@@ -698,6 +706,7 @@ function datedFatigueFactModifier(
     sourceId,
     type: 'temporary_status',
     effect: noted ? 'readiness_noted' : cooked ? 'training_paused' : 'volume_adjusted',
+    readinessKind: 'fatigue',
     title: readinessFactTitle({ kind: 'fatigue', scope: 'today', severity }),
     body: signedCopy(noted
       ? 'readiness.fatigue.noted'

@@ -28,7 +28,10 @@ import { Button, Sheet, SheetDescription, SheetHeader } from './ui';
 import { explorerTestId } from '../utils/stableTestId';
 import { signedCopy } from '../rules/signedCopy';
 import { spacing } from '../theme/spacing';
-import type { ActiveCoachNote } from '../utils/activeCoachNotes';
+import {
+  statusUpdateOptionsForNote,
+  type ActiveCoachNote,
+} from '../utils/activeCoachNotes';
 import type { ProgramControlStatusUpdate } from '../utils/programControlActions';
 import type { CoachNoteSheetState } from '../screens/coach/useCoachNoteActions';
 import {
@@ -94,6 +97,16 @@ function updateCopyForNote(note: ActiveCoachNote): { title: string; body: string
     title: 'Update adjustment',
     body: 'Keep this adjustment active for future sessions, or clear it if it no longer applies.',
   };
+}
+
+function statusUpdateLabel(status: ProgramControlStatusUpdate): string {
+  switch (status) {
+    case 'good_now': return signedCopy('status_update.good_now');
+    case 'still_not_right': return signedCopy('status_update.still_not_right');
+    case 'still_sick': return signedCopy('status_update.still_pretty_sick');
+    case 'still_cooked': return signedCopy('status_update.still_cooked');
+    case 'worse': return signedCopy('status_update.worse');
+  }
 }
 
 export interface CoachNoteSheetProps {
@@ -212,71 +225,24 @@ export function CoachNoteSheet({
         </>
       ) : isStatusUpdate ? (
         <>
-          {/* FIVE ANSWERS. SAM RULED THIS SHEET TWICE ON 2026-08-12, and BOTH
-              messages are recorded because the second reverses the first — a
-              reversal written down as a correction is a reversal the next
-              reader re-applies.
-
-              FIRST: *"Drop 'Worse' from that sheet — four options only: I'm
-              good now, Still not right, Still pretty sick, Still cooked. And
-              change 'Still sick' to 'Still pretty sick'."*
-
-              THEN, MINUTES LATER: *"actually keep worse for now"*.
-
-              SO: the RENAME stands and "Worse" STAYS — his second message
-              reverses only the drop, and "for now" is his own word for it, not
-              an inference. Five options ship.
-
-              THE WORDS COME FROM `signedCopy`, NOT FROM HERE. All five were
-              inline literals for months — unsigned, and therefore attributable
-              to nobody, which is exactly why "Still sick" could sit on the
-              athlete's screen with no record of who chose it. His ruling gave
-              them a source; they are registered in `rules/projectionCopy.ts`
-              and read through the branded type, so a ruled string is no longer
-              editable by whoever opens this file next.
-
-              `still_sick` KEPT ITS VALUE AND ITS testID. He renamed what the
-              athlete READS; the id is a coordinate the explorer, the walker and
-              the flows already resolve, and renaming one during a copy change
-              is a silent rename of a door. */}
-          <Button
-            label={signedCopy('status_update.good_now')}
-            size="lg"
-            onPress={() => onUpdateStatus('good_now')}
-            testID={explorerTestId.readinessClearAction(sourceFactId)}
-          />
-          <Button
-            label={signedCopy('status_update.still_not_right')}
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_not_right')}
-            testID={explorerTestId.readinessOption('still_not_right')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label={signedCopy('status_update.still_pretty_sick')}
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_sick')}
-            testID={explorerTestId.readinessOption('still_sick')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label={signedCopy('status_update.still_cooked')}
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_cooked')}
-            testID={explorerTestId.readinessOption('still_cooked')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label={signedCopy('status_update.worse')}
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('worse')}
-            testID={explorerTestId.readinessOption('worse')}
-            style={{ marginTop: spacing.sm }}
-          />
+          {/* The five signed strings remain the complete vocabulary; the
+              accepted readiness fact decides which subset belongs here. A
+              cooked fact therefore cannot ask "Still pretty sick", and an
+              illness fact cannot ask "Still cooked". Unknown legacy notes get
+              the neutral three-answer fallback rather than a title guess. */}
+          {statusUpdateOptionsForNote(state.note).map((status, index) => (
+            <Button
+              key={status}
+              label={statusUpdateLabel(status)}
+              variant={index === 0 ? 'primary' : 'secondary'}
+              size={index === 0 ? 'lg' : 'md'}
+              onPress={() => onUpdateStatus(status)}
+              testID={status === 'good_now'
+                ? explorerTestId.readinessClearAction(sourceFactId)
+                : explorerTestId.readinessOption(status)}
+              style={index === 0 ? undefined : { marginTop: spacing.sm }}
+            />
+          ))}
           <Button
             label="Cancel"
             variant="secondary"

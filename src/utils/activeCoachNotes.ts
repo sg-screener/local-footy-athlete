@@ -11,6 +11,8 @@ import {
   type ActiveProgramModifierEffect,
 } from './activeProgramModifiers';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
+import type { ProgramControlStatusUpdate } from './programControlActions';
+import type { ReadinessFactKind } from './readinessFactAttribution';
 
 export type ActiveCoachNoteType = ActiveProgramModifierType;
 export type ActiveCoachNoteActionKind = ActiveProgramModifierActionKind;
@@ -27,6 +29,8 @@ export interface ActiveCoachNote {
    * tired week from a sick one, and a second derivation is a second answer.
    */
   effect: ActiveProgramModifierEffect;
+  /** The canonical source-fact family; never inferred from athlete-facing copy. */
+  readinessKind?: ReadinessFactKind;
   title: string;
   body: string;
   severity?: number;
@@ -55,6 +59,36 @@ export interface ClearActiveCoachNoteResult {
   cleared: ActiveProgramModifier | null;
   remainingActiveCount: number;
   rebuildRequired: boolean;
+}
+
+const GENERIC_STATUS_UPDATE_OPTIONS = [
+  'good_now',
+  'still_not_right',
+  'worse',
+] as const satisfies readonly ProgramControlStatusUpdate[];
+
+const STATUS_UPDATE_OPTIONS_BY_READINESS_KIND: Readonly<
+  Record<ReadinessFactKind, readonly ProgramControlStatusUpdate[]>
+> = {
+  fatigue: ['good_now', 'still_not_right', 'still_cooked', 'worse'],
+  poor_sleep: ['good_now', 'still_not_right', 'still_cooked', 'worse'],
+  illness: ['good_now', 'still_not_right', 'still_sick', 'worse'],
+  soreness: GENERIC_STATUS_UPDATE_OPTIONS,
+};
+
+/**
+ * The one answer selector for every modifier surface.
+ *
+ * The vocabulary remains signed independently; this function only decides
+ * which words belong to the accepted fact being updated. Unknown legacy notes
+ * get neutral answers instead of being guessed into illness or fatigue.
+ */
+export function statusUpdateOptionsForNote(
+  note: Pick<ActiveCoachNote, 'readinessKind'>,
+): readonly ProgramControlStatusUpdate[] {
+  return note.readinessKind
+    ? STATUS_UPDATE_OPTIONS_BY_READINESS_KIND[note.readinessKind]
+    : GENERIC_STATUS_UPDATE_OPTIONS;
 }
 
 function lifecycleKey(modifier: ActiveProgramModifier): string {
@@ -87,6 +121,7 @@ export function buildCoachNotesFromModifiers(
     constraintId: modifier.sourceId,
     type: modifier.type,
     effect: modifier.effect,
+    readinessKind: modifier.readinessKind,
     title: modifier.title,
     body: modifier.body,
     severity: modifier.severity,

@@ -1566,7 +1566,7 @@ export function registerProjectionCopy(): void {
     // nothing on it: an athlete who followed the sentence found an empty room
     // and no way back. That is the finding, not a footnote.
 
-    // ── THE STATUS-UPDATE SHEET'S FIVE ANSWERS. SAM RULED THEM 2026-08-12. ──
+    // ── THE STATUS-UPDATE VOCABULARY. SAM RULED IT 2026-08-12. ───────────────
     //
     // He read the sheet on the simulator the moment it went live on My Status,
     // and he ruled it TWICE. Both messages are recorded, because the second
@@ -1579,13 +1579,19 @@ export function registerProjectionCopy(): void {
     //
     //   THEN: *"actually keep worse for now"*.
     //
-    // SO THE RENAME STANDS AND `worse` STAYS. Five answers ship. "for now" is
+    // SO THE RENAME STANDS AND `worse` STAYS IN THE VOCABULARY. "for now" is
     // his own word and is left as his — it is not read here as a plan to remove
     // it later, and nothing in the code is staged against that reading.
     //
+    // PHYSICAL CORRECTION, 2026-08-31: these are not five universal buttons.
+    // A cooked fact must not ask whether the athlete is "still sick" when they
+    // never reported illness. `activeCoachNotes.statusUpdateOptionsForNote`
+    // filters this vocabulary from the accepted fact's typed readiness family.
+    //
     // THE COUNT IS PART OF THE SET. `test:my-status-modifiers` holds these five
-    // ids AND their exact words, so a sixth answer cannot appear, and none of
-    // the five can be silently reworded, without him saying so.
+    // ids AND their exact words, so a sixth vocabulary item cannot appear, and
+    // none of the five can be silently reworded, without him saying so. The
+    // same suite separately guards which subset each readiness family receives.
     //
     // THEY ARE SIGNED RATHER THAN EDITED IN PLACE because that is what this
     // repo does with a ruled athlete-facing string: all five were inline

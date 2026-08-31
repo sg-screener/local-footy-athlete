@@ -170,14 +170,14 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
   },
   {
     id: 'FEAT-status-update-answers',
-    feature: 'The "how are you feeling now?" sheet offers Sam\'s five answers, in his words.',
-    askedFor: 'Sam 2026-08-12, ruled twice: "Drop \'Worse\' … four options only … change \'Still sick\' to \'Still pretty sick\'", then "actually keep worse for now"',
+    feature: 'The "how are you feeling now?" sheet uses Sam\'s signed answer vocabulary, filtered to the accepted readiness family.',
+    askedFor: 'Sam 2026-08-12 signed the five answer strings; physical-device correction 2026-08-31: a cooked modifier must not ask whether the athlete is still sick when they never reported illness.',
     reachable: 'athlete_reachable',
     proof: {
       state: 'held',
       by: 'test:my-status-modifiers',
       chainStatus: 'in_chain',
-      receipt: 'Commit `cbc36bcf`. All five are SIGNED copy read through the branded type, not inline literals; the set AND its size are asserted, mutation-checked both ways ("Worse"->"Worst" reds the wording cell, a literal in the sheet reds the signedCopy cell). ON GLASS: `artifacts/ui-walk/coach-my-status-action-live.png`.',
+      receipt: 'Original signed-copy checkpoint `cbc36bcf`; corrected 2026-08-31 after physical testing. All five strings remain SIGNED copy, but the accepted typed readiness family now travels from the canonical modifier projection into the note and selects the relevant subset. `test:my-status-modifiers` projects real fatigue, illness, poor-sleep and soreness constraints; adding `still_sick` back to cooked made its family cell red. Updated simulator glass is recorded in `docs/STATUS_WEIGHTCONTROL.md`.',
     },
   },
   {

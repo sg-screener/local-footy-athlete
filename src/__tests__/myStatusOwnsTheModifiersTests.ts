@@ -56,6 +56,10 @@ import { stripComments } from './support/sourceText';
 armTotalsOrRed();
 
 import { ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS } from '../utils/activeProgramModifiers';
+import {
+  buildActiveCoachNotes,
+  statusUpdateOptionsForNote,
+} from '../utils/activeCoachNotes';
 import { coachNoteActionRoute } from '../screens/coach/useCoachNoteActions';
 
 const repoRoot = path.join(__dirname, '..', '..');
@@ -200,18 +204,20 @@ run('My Status passes real equipment fact ids, not an empty set', () => {
     + 'the call site is a second derivation of the athlete\'s equipment facts');
 });
 
-// ── [5] SAM'S FIVE ANSWERS, IN HIS WORDS ───────────────────────────────────
+// ── [5] SIGNED ANSWERS, FILTERED BY THE ACCEPTED READINESS FACT ─────────
 //
-// He ruled this sheet on the simulator the day it became reachable from My
-// Status, and he ruled it TWICE — first dropping "Worse", then *"actually keep
-// worse for now"*. Both are in `rules/projectionCopy.ts` beside the words.
+// The five signed strings remain the complete vocabulary. The physical-device
+// correction on 2026-08-31 changes WHERE they appear: a cooked fact must not
+// ask whether the athlete is "still sick", and an illness fact must not ask
+// whether they are "still cooked". The accepted fact's typed readiness kind is
+// the selector; title/body parsing would make copy a second state owner.
 //
 // THE SET AND ITS SIZE ARE BOTH THE RULING. A cell that only checked the four
 // he kept would be green on a sheet that had quietly grown a sixth answer, and
 // a cell that only counted would be green on five wrong words. This checks the
 // exact ids, their exact text, and that nothing else is offered.
 
-run("the status sheet offers Sam's five answers and no others", () => {
+run("the status-update vocabulary keeps Sam's five signed answers and no others", () => {
   const copy = read('src/rules/projectionCopy.ts');
   const expected: Record<string, string> = {
     'status_update.good_now': "I'm good now",
@@ -237,6 +243,71 @@ run("the status sheet offers Sam's five answers and no others", () => {
     + `${registered.join(', ')}. The COUNT is part of what Sam ruled.`);
 });
 
+run('the accepted readiness family selects only relevant status answers', () => {
+  const readinessNote = (readinessKind?: 'poor_sleep' | 'illness') => {
+    const note = buildActiveCoachNotes([{
+      id: `readiness:${readinessKind ?? 'fatigue'}`,
+      type: 'fatigue',
+      severity: 8,
+      status: 'active',
+      startDate: '2026-08-31T00:00:00.000Z',
+      lastUpdatedAt: '2026-08-31T00:00:00.000Z',
+      rules: [],
+      safeFocus: [],
+      advice: [],
+      modifierAffects: ['current_day'],
+      appliesToDate: '2026-08-31',
+      ...(readinessKind ? { readinessKind } : {}),
+    }] as never)[0];
+    assert(note, `no ${readinessKind ?? 'fatigue'} note was projected`);
+    return note;
+  };
+  const fatigue = readinessNote();
+  const illness = readinessNote('illness');
+  const poorSleep = readinessNote('poor_sleep');
+  const soreness = buildActiveCoachNotes([{
+    id: 'readiness:soreness',
+    type: 'soreness',
+    bodyPart: 'hamstring',
+    bucket: 'hamstring',
+    severity: 5,
+    status: 'active',
+    startDate: '2026-08-31T00:00:00.000Z',
+    lastUpdatedAt: '2026-08-31T00:00:00.000Z',
+    rules: [],
+    safeFocus: [],
+    advice: [],
+    modifierAffects: ['current_day'],
+    appliesToDate: '2026-08-31',
+  }] as never)[0];
+  assert(soreness, 'no soreness note was projected');
+
+  assert(fatigue.readinessKind === 'fatigue',
+    `the cooked note lost its canonical family: ${String(fatigue.readinessKind)}`);
+  assert(illness.readinessKind === 'illness',
+    `the illness note lost its canonical family: ${String(illness.readinessKind)}`);
+  assert(poorSleep.readinessKind === 'poor_sleep',
+    `the poor-sleep note lost its canonical family: ${String(poorSleep.readinessKind)}`);
+  assert(soreness.readinessKind === 'soreness',
+    `the soreness note lost its canonical family: ${String(soreness.readinessKind)}`);
+
+  const cookedOptions = statusUpdateOptionsForNote(fatigue);
+  assert(JSON.stringify(cookedOptions) === JSON.stringify([
+    'good_now', 'still_not_right', 'still_cooked', 'worse',
+  ]), `cooked options are ${cookedOptions.join(', ')}`);
+  const illnessOptions = statusUpdateOptionsForNote(illness);
+  assert(JSON.stringify(illnessOptions) === JSON.stringify([
+    'good_now', 'still_not_right', 'still_sick', 'worse',
+  ]), `illness options are ${illnessOptions.join(', ')}`);
+  const poorSleepOptions = statusUpdateOptionsForNote(poorSleep);
+  assert(!poorSleepOptions.includes('still_sick'),
+    `poor sleep was offered an illness answer: ${poorSleepOptions.join(', ')}`);
+  const sorenessOptions = statusUpdateOptionsForNote(soreness);
+  assert(JSON.stringify(sorenessOptions) === JSON.stringify([
+    'good_now', 'still_not_right', 'worse',
+  ]), `soreness options are ${sorenessOptions.join(', ')}`);
+});
+
 run('the sheet reads those words through signedCopy, not literals', () => {
   const sheet = read('src/components/CoachNoteSheet.tsx');
   for (const id of ['good_now', 'still_not_right', 'still_pretty_sick',
@@ -248,6 +319,8 @@ run('the sheet reads those words through signedCopy, not literals', () => {
   }
   assert(!/label="Still sick"/.test(sheet) && !/label="Worse"/.test(sheet),
     'a hard-coded status label is back in the sheet — two sources for one word');
+  assert(sheet.includes('statusUpdateOptionsForNote(state.note).map'),
+    'CoachNoteSheet is not rendering the accepted fact family\'s option set');
 });
 
 // ── [6] A SAVED FACT CANNOT DISAPPEAR WITH A PROGRAM OUTPUT ───────────────
