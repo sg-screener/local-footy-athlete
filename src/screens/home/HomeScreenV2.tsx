@@ -3300,7 +3300,7 @@ function DayTimeline({
                 {mobilityCompletion === 'full' || mobilityCompletion === 'partial' ? (
                   <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
-                  <RowIcon kind="mobility" size={DAY_ROW_ICON_SIZE} color={rowIconColor('mobility')} />
+                  <RowIcon kind="flame" size={DAY_ROW_ICON_SIZE} color={rowIconColor('flame')} />
                 )}
               </View>
               <View style={styles.timelinePartText}>

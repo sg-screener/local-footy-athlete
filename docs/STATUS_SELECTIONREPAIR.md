@@ -1214,3 +1214,59 @@ historic conditioning records that genuinely predate typed modality metadata,
 athlete profiles outside the two release profiles, and a whole-app PASS. Per
 Sam's instruction, neither physical phone was discovered, built for, installed
 to, launched or otherwise touched.
+
+## 2026-08-31 — Movement Prep label and flame identity (R-294)
+
+Changed only the derived warm-up identity: it now projects as `Movement Prep`
+with the flame icon on the Day and active Session surfaces. A typed standalone
+or athlete-added Mobility section still projects as `Mobility` with the existing
+mobility-person icon. The split is owned by the typed `composedOptionalKind` at
+the execution-plan boundary; no name or description inference was added.
+
+Two options were compared before coding: rename and replace the icon separately
+inside each screen, or make the contextual identity a projection owned where the
+typed composed kind is still available. The shared projection landed because it
+keeps Day, Session, Add and feedback vocabulary aligned while preserving the
+separate standalone Mobility identity without screen-level title guessing.
+
+Regression and liveness receipts:
+
+- Red first: `test:session-execution` named both defects—the embedded flow was
+  still `Mobility / Warm-up` + person, and standalone Mobility inherited that
+  same shared label.
+- Final target cells pass for a real derived flow and a typed standalone
+  Mobility workout. The same suite binds the Day row to `flame`, the embedded
+  section map to `flame`, and the composed Mobility map to `mobility`.
+- `test:movement-prep-identity`: 10 / 10.
+- Direct `dayFirstTimelineTests.ts`: 56 / 56.
+- Direct `exerciseIntakeTests.ts`: 642 / 642; the Add hierarchy consumes the
+  renamed shared section label.
+- `test:approved-icons`: 26 / 26.
+- `test:signed-copy-extraction`: 7 / 7.
+- `test:compile`: product 0 errors and devtools 0 errors; the gate remains red
+  on four inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+- The governing `test:session-execution` command remains red only on two
+  inherited shared-checkout source-shape cells: `[10] exercise names are
+  upright in every shared session row` and `[10] choice and phase cards use the
+  one trailing completion owner — never the title header`. They failed before
+  this edit and neither owning product file was changed here.
+- The remaining composite constituents are also inherited red: `test:mobility-flow`
+  has three stale source-shape assertions around the concurrent `SessionList`
+  mobility-content refactor; `test:results-persist` has five fixture refusals
+  because its diagnostic world lacks an accepted profile/program.
+- `test:copy-rulings-binding` remains red on one unrelated missing signed string
+  and seven old proposed strings; the new `Movement Prep` copy introduces no
+  missing-copy failure.
+- `test:law-registry`: the R-294 row is well formed, names an existing chained
+  guard and resolves its ruling. The gate remains red only on the inherited 21
+  `UNENFORCED` rows: 228 total / 207 guarded.
+- `test:ruling-registry` and `test:repo-law-guards` retain their documented
+  shared-checkout debts; neither reports a malformed R-294 row or missing guard.
+
+R-294 and `LAW-movement-prep-and-mobility-have-distinct-identities` bind the
+rule to the chained `test:session-execution-checklist` gate.
+
+NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
+Dynamic Type, VoiceOver pronunciation, and a whole-app PASS. Neither physical
+phone was built for, installed to, launched or otherwise touched.

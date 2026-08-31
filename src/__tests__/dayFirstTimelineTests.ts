@@ -951,7 +951,7 @@ run('the Today card has no accent rail and no retired change link', () => {
   'the retired Day change link is still mounted');
 });
 
-run('the front review includes the owned mobility warm-up before all projected parts', () => {
+run('the front review includes the owned Movement Prep before all projected parts', () => {
   const home = homeScreenSource();
   assert(/selectMobilityPrehabFlow\(/.test(home),
     'the Program review does not ask the existing mobility-flow owner for the flow');
@@ -965,8 +965,8 @@ run('the front review includes the owned mobility warm-up before all projected p
   assert(/mobilityFlow \? \(/.test(timeline)
     && /testID="day-timeline-part-mobility-warmup"/.test(timeline)
     && /mobilityFlow\.movements\.map/.test(timeline)
-    && /RowIcon kind="mobility" size=\{DAY_ROW_ICON_SIZE\} color=\{rowIconColor\('mobility'\)\}/.test(timeline),
-  'the mobility warm-up is not a real review row with its owned movements');
+    && /RowIcon kind="flame" size=\{DAY_ROW_ICON_SIZE\} color=\{rowIconColor\('flame'\)\}/.test(timeline),
+  'Movement Prep is not a real review row with its owned movements and flame icon');
   /* `'entries.map'` was the anchor here and it stopped existing when the loop
      learned to filter (2026-08-22) — `indexOf` returned -1 and the comparison
      silently became false. Both ends are proven found before they are compared,
@@ -974,7 +974,7 @@ run('the front review includes the owned mobility warm-up before all projected p
   const warmupAt = timeline.indexOf('day-timeline-part-mobility-warmup');
   const partsAt = timeline.indexOf(PROJECTED_ENTRY_LOOP);
   assert(warmupAt >= 0 && partsAt >= 0 && warmupAt < partsAt,
-    'the mobility warm-up no longer precedes the projected session parts');
+    'Movement Prep no longer precedes the projected session parts');
   /* Re-aimed with the anchor above: the loop renders every projected part
      EXCEPT club training, which moved to its own card (Sam, 2026-08-22). The
      exclusion is asserted rather than assumed, so the card cannot quietly

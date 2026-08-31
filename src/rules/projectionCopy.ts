@@ -699,10 +699,9 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.part.mobility_warmup',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-11 in the Codex UI merge task: Renee '
-        + '"includes the mobility / warm up on the front review screen". The '
-        + 'punctuation and casing follow the reference he asked the app to match.',
-      text: 'Mobility / Warm-up',
+      provenance: 'SIGNED — Sam, 2026-08-31: change "mobility / warm up" to '
+        + '"movement prep" while standalone Mobility sessions retain their name.',
+      text: 'Movement Prep',
     },
     {
       id: 'session.team_training.row',

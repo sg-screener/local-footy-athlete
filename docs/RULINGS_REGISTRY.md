@@ -7374,3 +7374,20 @@ Guard: `LAW-conditioning-intensity-unit-follows-typed-modality` through the
 chained `test:conditioning-identity` gate. The same census is release-blocking
 through `test:conditioning-modality-persistence`. Verification status and NOT
 COVERED: `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-294** · Movement Prep and Mobility retain distinct identities, 2026-08-31.
+
+Owner: selectionrepair. The derived warm-up section is called `Movement Prep`
+and uses the flame icon on both the Day view and active Session view. A typed
+standalone or athlete-added Mobility session remains called `Mobility` and
+keeps the established mobility-person icon.
+
+The distinction is resolved from the typed composed-session identity at the
+shared execution-plan boundary. Exercise names, workout titles and description
+copy do not decide it. This narrows R-269: its Mobility-person ruling continues
+to govern explicitly composed Mobility work, while derived prep now has the
+separate Movement Prep identity.
+
+Guard: `LAW-movement-prep-and-mobility-have-distinct-identities` through the
+chained `test:session-execution-checklist` gate. Verification status and NOT
+COVERED: `docs/STATUS_SELECTIONREPAIR.md`.

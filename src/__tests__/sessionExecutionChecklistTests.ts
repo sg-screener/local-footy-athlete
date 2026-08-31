@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
+  COMPOSED_OPTIONAL_ICON_KIND,
   PART_ICON_KIND,
   SESSION_SECTION_ICON_KIND,
 } from '../rules/sectionIconKinds';
@@ -63,6 +64,30 @@ const plan = buildSessionExecutionPlan({
 
 console.log('\n[1] One plan groups the existing rows into collapsible components');
 ok('mobility is its own section', plan.sections.some((section) => section.id === 'mobility'));
+const embeddedMovementPrep = plan.sections.find((section) => section.id === 'mobility');
+ok('embedded warm-up work is named Movement Prep and uses the flame icon',
+  embeddedMovementPrep?.label === 'Movement Prep'
+    && embeddedMovementPrep.iconKind === 'flame',
+  embeddedMovementPrep);
+
+const standaloneMobilityWorkout: any = {
+  id: 'standalone-mobility',
+  name: 'Mobility',
+  workoutType: 'Recovery',
+  composedOptionalKind: 'mobility',
+  exercises: [row('standalone-mobility-row', 'Open Book Thoracic Rotation', 'prehab')],
+};
+const standaloneMobilityPlan = buildSessionExecutionPlan({
+  workout: standaloneMobilityWorkout,
+  template: buildSessionTemplate(standaloneMobilityWorkout),
+  mobilityFlow: null,
+});
+const standaloneMobilitySection = standaloneMobilityPlan.sections
+  .find((section) => section.sessionKind === 'mobility');
+ok('a standalone Mobility session keeps the Mobility name and mobility-person icon',
+  standaloneMobilitySection?.label === 'Mobility'
+    && standaloneMobilitySection.iconKind === 'mobility',
+  standaloneMobilityPlan.sections);
 ok('strength is its own section', plan.sections.some((section) => section.id === 'strength'));
 ok('accessories and prehab are folded into the Strength disclosure',
   !plan.sections.some((section) => section.id === 'accessories') &&
@@ -1283,9 +1308,11 @@ for (const [sectionId, partKind] of SHARED_KINDS) {
 ok('[10] Team Training has an icon at all — it had none, which is what Sam saw',
   !!SESSION_SECTION_ICON_KIND.team_training
     && SESSION_SECTION_ICON_KIND.team_training === 'team');
-ok('[10] Mobility draws the Day screen\'s mobility glyph, not a lookalike',
-  SESSION_SECTION_ICON_KIND.mobility === 'mobility'
-    && /kind === 'mobility'[\s\S]{0,160}LfaIcon name="mobility"/.test(iconOwner));
+ok('[10] embedded Movement Prep uses the flame while standalone Mobility keeps its person',
+  SESSION_SECTION_ICON_KIND.mobility === 'flame'
+    && COMPOSED_OPTIONAL_ICON_KIND.mobility === 'mobility'
+    && /kind === 'mobility'[\s\S]{0,160}LfaIcon name="mobility"/.test(iconOwner)
+    && /<RowIcon kind="flame"[^>]+rowIconColor\('flame'\)/.test(home));
 ok('[10] POWER draws the STRENGTH icon, because power IS strength work (R-110)',
   SESSION_SECTION_ICON_KIND.strength === 'strength'
     && !('power' in (SESSION_SECTION_ICON_KIND as Record<string, unknown>))

@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-movement-prep-and-mobility-have-distinct-identities',
+    law: 'R-294: derived warm-up work is labelled Movement Prep and uses the flame icon on the Day and active-session surfaces. A typed standalone or athlete-added Mobility session remains labelled Mobility and keeps the established mobility-person icon; typed identity, never exercise names or workout prose, decides between them.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-294',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution-checklist',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Both target cells began red: the derived flow still projected Mobility / Warm-up with the person icon, while a standalone typed Mobility session also inherited that shared label. The execution-plan owner now distinguishes the two from composedOptionalKind, the signed Day copy says Movement Prep and both Day and Session use the flame for derived prep. Runtime cells pin derived and standalone projections; source binding pins the Day flame and the two total icon maps. Final receipt and NOT COVERED: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-intensity-unit-follows-typed-modality',
     law: 'R-293: conditioning intensity display is derived at read time from the selected typed modality. Running retains the authored MAS percentage or running pace; Bike, Air Bike, RowErg, SkiErg and mixed-ergo work display a template-specific Effort rating out of 10. Names, descriptions and catalogue position never decide the modality, and prescriptions, selection and placement remain unchanged.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-293',
@@ -2633,7 +2644,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-component-typed-mobility-icon',
-    law: 'R-269: each combined-day component resolves its icon from typed identity through the shared icon map. Mobility keeps the existing person and Recovery the battery; labels, programming, completion and persisted history are not identity substitutes or changed by rendering.',
+    law: 'R-269: each explicitly composed optional component resolves its icon from typed identity through the shared icon map. A standalone or added Mobility component keeps the existing person and Recovery the battery; derived warm-up work is now separately governed by R-294. Labels, programming, completion and persisted history are not identity substitutes or changed by rendering.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-269 — Sam combined Mobility icon request, 2026-08-28.',
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'lowLoadAdditionJourney checks actual standalone and combined Strength/Mobility, Gunshow/Mobility and Mobility/Recovery components through projection, Day timeline and Session execution before/after real Add, Undo and restart for both genders. First run failed 24 icon assertions; native combined-day evidence and mutation receipts are recorded in STATUS_PROGRAMMING_REMEDY.' },

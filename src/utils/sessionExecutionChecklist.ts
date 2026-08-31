@@ -306,7 +306,7 @@ export function recordedCompletedSessionExecutionItemIds(
  * free to drift the day either is reworded.
  */
 export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
-  mobility: 'Mobility / Warm-up',
+  mobility: 'Movement Prep',
   speed: 'Speed',
   strength: 'Strength',
   primer: 'Primer',
@@ -317,6 +317,30 @@ export const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   optional: 'Optional Work',
   other: 'Session',
 };
+
+/**
+ * A derived warm-up and a composed Mobility session share the `mobility`
+ * execution bucket, but they are not the same athlete-facing session identity.
+ * Keep that distinction at the point where the typed composed kind is still
+ * available; renderers must not infer it from exercise names or workout copy.
+ */
+function sectionPresentation(
+  id: SessionExecutionSectionId,
+  sessionKind: Workout['composedOptionalKind'] | undefined,
+): Pick<SessionExecutionSection, 'label' | 'iconKind'> {
+  if (id === 'mobility' && sessionKind === 'mobility') {
+    return {
+      label: 'Mobility',
+      iconKind: COMPOSED_OPTIONAL_ICON_KIND.mobility,
+    };
+  }
+  return {
+    label: SECTION_LABELS[id],
+    iconKind: id === 'accessories' && sessionKind === 'prehab'
+      ? COMPOSED_OPTIONAL_ICON_KIND.prehab
+      : SESSION_SECTION_ICON_KIND[id],
+  };
+}
 
 /* A composed optional session's own section glyph now comes from the ONE table
    in `rules/sectionIconKinds`. This file used to keep a hand-written mirror of
@@ -508,11 +532,10 @@ export function buildSessionExecutionPlan(args: {
       return kind ? [kind] : [];
     }));
     const sessionKind = kinds.size === 1 ? [...kinds][0] : undefined;
+    const presentation = sectionPresentation(id, sessionKind);
     return {
       id,
-      label: SECTION_LABELS[id],
-      iconKind: id === 'accessories' && sessionKind === 'prehab'
-        ? COMPOSED_OPTIONAL_ICON_KIND.prehab : SESSION_SECTION_ICON_KIND[id],
+      ...presentation,
       items: ownItems,
       ...(sessionKind ? { sessionKind } : {}),
     };

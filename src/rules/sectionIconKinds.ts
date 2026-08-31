@@ -108,7 +108,10 @@ export const COMPOSED_OPTIONAL_ICON_KIND:
  */
 export const SESSION_SECTION_ICON_KIND:
   Readonly<Record<SessionExecutionSectionId, RowIconKind>> = {
-  mobility: 'mobility',
+  // Derived warm-up work is Movement Prep. A standalone typed Mobility session
+  // is restored to COMPOSED_OPTIONAL_ICON_KIND.mobility by the execution-plan
+  // owner, where that contextual identity is still available.
+  mobility: 'flame',
   speed: 'bolt',
   primer: 'bolt',
   strength: 'strength',
