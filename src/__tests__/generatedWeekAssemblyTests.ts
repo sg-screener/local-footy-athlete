@@ -69,6 +69,8 @@ function composerDay(over: Record<string, unknown> = {}): Workout {
     name: 'Lower Body Strength', description: 'composed', durationMinutes: 0,
     intensity: 'Moderate', workoutType: 'Strength', sessionTier: 'core',
     planEntryId: 'w1:tuesday:none:strength',
+    strengthIntent: { archetype: 'lower', primaryPattern: 'squat',
+      plannedPatterns: ['squat'], effectivePatterns: ['squat'] },
     composedGaps: [{ dayOfWeek: 2, slot: 'vertical_pull', cause: 'kit', wouldNeed: 'pullup_bar' }],
     exercises: [{
       id: 'r1', workoutId: 'composed-1', exerciseId: 'e1', exerciseOrder: 1,
@@ -88,6 +90,7 @@ function adapterDay(over: Record<string, unknown> = {}): Workout {
     name: 'Conditioning', description: 'adapter', durationMinutes: 45,
     intensity: 'Light', workoutType: 'Conditioning', sessionTier: 'optional',
     planEntryId: 'ADAPTER-PLAN-ENTRY',
+    authoredDay: { anchor: 'club_training', components: ['strength', 'team_training'] },
     speedBlock: { kind: 'true_speed' },
     conditioningBlock: { kind: 'aerobic' },
     isTeamDay: true,
@@ -117,7 +120,8 @@ console.log('\n[law] The composer day is the base; the adapter contributes');
 
   // COMPOSER-OWNED, every one of them, named individually so a future loss
   // names the field it lost.
-  ok('[composer] the session identity is the composer\'s', day.name === 'Lower Body Strength');
+  ok('[derived] a club anchor carrying squat work is visibly represented as combined',
+    day.name === 'Team Training + Lower Squat', String(day.name));
   ok('[composer] the tier is the composer\'s', day.sessionTier === 'core');
   ok('[composer] the intensity is the composer\'s', day.intensity === 'Moderate');
   ok('[composer] the plan entry is the composer\'s',
@@ -140,10 +144,11 @@ console.log('\n[law] The composer day is the base; the adapter contributes');
     (day.speedBlock as { kind?: string })?.kind === 'true_speed');
   ok('[adapter] the conditioning block travels', !!day.conditioningBlock);
   ok('[adapter] the team-anchor fact travels', day.isTeamDay === true);
-  ok('[adapter] the planner strength intent travels', !!day.strengthIntent);
+  ok('[composer] the composer strength intent survives', !!day.strengthIntent);
   ok('[adapter] its non-strength row travels',
     rows.some((row) => (row.exercise as { name?: string })?.name === 'Short Flush'));
-  ok('[derived] a day carrying both is typed Mixed', day.workoutType === 'Mixed');
+  ok('[anchor] a combined club day retains the Team Training type',
+    day.workoutType === 'Team Training');
 }
 
 // ── [mutation A] AN ADAPTER FIELD MAY NOT OVERWRITE A COMPOSER-OWNED ONE ───
@@ -201,7 +206,7 @@ console.log('\n[mutation B] Dropping a permitted adapter contribution REDS');
 
   const withoutConditioning = assembleAuthoredWeek({
     composerWorkouts: [composerDay()],
-    adapterWorkouts: [adapterDay({ conditioningBlock: undefined })],
+    adapterWorkouts: [adapterDay({ conditioningBlock: undefined, authoredDay: undefined })],
   }).workouts[0] as unknown as Record<string, unknown>;
   ok('dropping the conditioning contribution drops the envelope with it',
     !withoutConditioning.conditioningBlock
@@ -218,7 +223,7 @@ console.log('\n[closed] Only enumerated fields can travel');
   const unexpected = fields.filter((field) => field !== 'rows'
     && !['conditioningBlock', 'conditioningCategory', 'conditioningFlavour',
       'attachedConditioningKind', 'conditioningFeasibility', 'hasCombinedConditioning',
-      'speedBlock', 'isTeamDay', 'derivedSessionProvenance', 'strengthIntent',
+      'speedBlock', 'isTeamDay', 'authoredDay', 'derivedSessionProvenance', 'strengthIntent',
       'section18Evidence', 'durationMinutes'].includes(field));
   ok('a contribution carries nothing outside the enumerated list',
     unexpected.length === 0, unexpected.join(', '));
@@ -255,6 +260,11 @@ console.log('\n[anchor] Full gym prefers the anchor; a kit-limited athlete gets 
     plannedDays: [lowerDay], kit,
     injuries: { prohibitedPatterns: [], excludedIdentities: [] },
     todayISO: '2026-07-13',
+    blockNumber: 1,
+    blockStartISO: '2026-07-13',
+    selectionHistory: [],
+    progressedIdentities: [],
+    pinnedIdentities: [],
   }) as never;
 
   const gym = composeWeek(inputs(FULL_GYM)).days[0];

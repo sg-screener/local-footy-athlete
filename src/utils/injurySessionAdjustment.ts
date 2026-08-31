@@ -19,6 +19,7 @@ import { finerPatternIdentityOf } from '../rules/injuryFallbackLadder';
 import { mainPatternForExerciseMovement, type MainStrengthPattern } from '../rules/strengthPatternContributions';
 import { getSessionComponentRows } from './sessionComponents';
 import { formatExerciseDisplayName } from './exerciseDisplay';
+import { stableDecisionOrder } from '../rules/stableDecisionDiversity';
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
@@ -241,23 +242,23 @@ export function chooseInjurySessionAdditions(args: {
     return true;
   };
 
-  /* Day-of-month, so consecutive affected days start at different points of
-   * the same pool. Deterministic: the same date always rotates the same way. */
-  const dayOffset = args.dateISO ? Number(args.dateISO.slice(8, 10)) || 0 : 0;
-  const rotated = (list: AddCandidate[]): AddCandidate[] => {
-    if (list.length <= 1 || dayOffset === 0) return list;
-    const offset = dayOffset % list.length;
-    return [...list.slice(offset), ...list.slice(0, offset)];
-  };
-
-  const legal = (leaf: AddLeafId): AddCandidate[] => rotated(legalAddCandidates({
-    leaf,
-    environment: args.environment,
-    profile: args.profile ?? null,
-    // Everything the week already has is "existing" as far as the door is
-    // concerned, so it never offers a duplicate in the first place.
-    existingExerciseNames: [...inTheWeek],
-  }).filter((candidate) => !inTheWeek.has(normalise(candidate.name))));
+  /* A date-specific rendezvous order gives consecutive affected days different
+   * coherent blocks without reading catalogue position. The old array rotation
+   * changed its answer when a source pool was reversed: the same injury and
+   * same day could become Bodyweight Squat or Goblet Squat solely because an
+   * author reordered the catalogue. */
+  const legal = (leaf: AddLeafId): AddCandidate[] => stableDecisionOrder(
+    legalAddCandidates({
+      leaf,
+      environment: args.environment,
+      profile: args.profile ?? null,
+      // Everything the week already has is "existing" as far as the door is
+      // concerned, so it never offers a duplicate in the first place.
+      existingExerciseNames: [...inTheWeek],
+    }).filter((candidate) => !inTheWeek.has(normalise(candidate.name))),
+    `injury-session:${args.dateISO ?? 'undated'}:${leaf}`,
+    (candidate) => normalise(candidate.name),
+  );
 
   // ── 1. ONE COMPOUND, FROM THE UNAFFECTED HALF ────────────────────────────
   //

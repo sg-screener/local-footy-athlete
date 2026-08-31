@@ -15,6 +15,7 @@
  * the zero is measured and reported instead.
  */
 import type { AuthoredDayIdentity, Workout } from '../types/domain';
+import { resolveSessionDisplayName } from '../utils/sessionNaming';
 
 /** Where a non-composer row or block came from. Never "it fills no ladder slot". */
 export type RetainedAdapterOwner = 'conditioning_adapter' | 'warmup_adapter' | 'planner_day';
@@ -253,7 +254,15 @@ function applyContribution(composed: Workout, contribution: AdapterContribution)
     // and a club night was named with the composer's raw purpose token. The
     // athlete reads the name, so an anchor whose name says something else is
     // still a lost anchor. Same typed source, so the two cannot disagree.
-    name: anchorWorkoutType(contribution.authoredDay) ?? composed.name,
+    name: contribution.authoredDay?.anchor === 'club_training'
+      ? resolveSessionDisplayName({
+        name: composed.name,
+        strengthIntent: composed.strengthIntent,
+        exercises: composerRows,
+        isTeamDay: true,
+        tier: composed.sessionTier,
+      })
+      : anchorWorkoutType(contribution.authoredDay) ?? composed.name,
     // Carried so the same defence still has something to read after assembly.
     ...(contribution.authoredDay ? { authoredDay: contribution.authoredDay } : {}),
     exercises,

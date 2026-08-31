@@ -26,7 +26,8 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Steps 1–4 complete; Step 5 next.
+Steps 1–4 complete; Step 5 is checkpointed with one product decision blocked;
+Step 6 next.
 
 ## Step 1 — compiler-owned automatic selection trace
 
@@ -244,3 +245,75 @@ recent uses for the deliberately dominant candidate.
 NOT COVERED at this checkpoint: composition repairs, explicit conditioning
 modality persistence, deload quality ownership, release-chain integration and
 the corrected lived-year audit. These remain Steps 5–9.
+
+## Step 5 — final-composition repairs (one blocked product decision)
+
+Compared two designs for the implausible Bottoms-Up KB Press progression:
+
+1. Add a load cap or special progression increment for that spelling. Rejected:
+   the 49.5 kg x 15 output was a route/identity failure, not an arithmetic one.
+2. Make automatic strength seats draw only from the pool that owns that route,
+   and stop special-only shoulder-health rows at `shoulder_prehab`. Chosen.
+
+`Bottoms-Up KB Press` lived only in the shoulder-health pool, but its accurate
+`vertical_push` movement tag also gave it ordinary `vertical_push` and
+`arm_or_shoulder` strength seats. It therefore inherited the normal strength
+load/dose/progression system. Pool-backed strength seats are now closed over
+their authored anchor/accessory pool, and shoulder-health rows with no separate
+strength-pool membership stop at the typed prehab route. Dual-authored rows such
+as Band Pull-Apart retain both legitimate routes.
+
+The other completed composition findings:
+
+- a canonical Commercial-gym generation reaches a squat main and does not use
+  Leg Press while the appropriate squat anchors are legal; the old audit's
+  108 Leg Press / zero Back Squat result came from its stale hand-authored
+  "full kit" fixture omitting `rack` and `trap_bar`, not from production's
+  Commercial-gym answer;
+- a club anchor carrying composed strength remains typed `Team Training` but is
+  now visibly named `Team Training + <canonical strength identity>` rather than
+  silently hiding the gym prescription behind plain `Team Training`;
+- a 6/10 shoulder adjustment selects a nonempty lower-body/midline block, every
+  selected exercise is rated `good`, and no triceps row is used; and
+- injury block diversity now uses the same decision-keyed stable order as the
+  other selectors, so reversing strength-pool arrays cannot flip the final
+  replacement block.
+
+Verification:
+
+- `test:programming-final-composition`: 2 / 2 (shoulder safety/coherence and
+  full strength-catalogue reversal).
+- `test:programming-selection-trace`: 7 / 7, including final commercial-gym
+  squat-main survival and the absence of Bottoms-Up KB Press from every
+  ordinary strength candidate set.
+- `test:generated-week-assembly`: 30 / 30, including the final combined club
+  identity.
+- `test:slot-coverage`: 84 / 84.
+- `test:injury-recomposition`: 186 / 186.
+- `test:programming-catalogue-order`: 3 / 3.
+- `test:compile`: product 0 and devtools 0; still red on the same four inherited
+  test-scope errors recorded in Steps 1 and 3.
+
+Concurrent/baseline reds were not hidden: `test:injury-session-adjustment` is
+50 / 4 on its moving real-world witness (its expected conditioning change and
+pre-existing safe row are absent in the current generated week),
+`test:injury-fallback-journey` is 181 / 1 on its trunk-pattern coverage census,
+and `test:session-naming` has the existing early-off-season expectation plus a
+composer-severance fixture failure. The focused final-content and accumulated
+injury tapes above are green.
+
+BLOCKED product decision — Primer length. R-129 explicitly signs seven checked
+rows plus three optional rows (Acceleration, one heavy lower lift and Bench),
+and `test:primer-session` guards that exact athlete-visible composition. The new
+request says Primers must remain short, but does not say which signed work to
+remove or whether automatic female G-1 and athlete-added Primers may diverge.
+The exact question for Sam is: **should a short Primer (A) keep the seven checked
+rows and omit the three R-129 optional rows everywhere, or (B) omit those rows
+only from the automatically placed female G-1 Primer while retaining the full
+athlete-added Primer?** No signed row was silently deleted while that answer is
+open.
+
+NOT COVERED at this checkpoint: the blocked Primer decision, physical-iPhone
+acceptance, the full corrected lived-year rerun, modality persistence,
+deload-quality ownership and release-chain integration. Those continue in
+Steps 6–9; the phone remains untouched.

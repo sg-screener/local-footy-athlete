@@ -515,9 +515,16 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   // rows may carry none of the strength taxonomy's tags, and a tagless
   // shoulder-health row still fills the seat. Males never declare the seat,
   // so the membership is inert on the male path.
-  const out: SessionSlot[] = isShoulderHealthPoolMember(name)
-    ? ['shoulder_prehab']
-    : [];
+  const shoulderHealth = isShoulderHealthPoolMember(name);
+  const strengthMembership = authoredPoolMembership(name);
+  const out: SessionSlot[] = shoulderHealth ? ['shoulder_prehab'] : [];
+  // A movement tag describes what a prehab drill does; it does not grant that
+  // drill an ordinary strength route. Bottoms-Up KB Press was in only the
+  // shoulder-health pool but its vertical-push tag also admitted it to the
+  // full upper ladder, where normal load progression eventually prescribed
+  // 49.5 kg for sets of 15. Dual-authored rows such as Band Pull-Apart may
+  // continue into their strength-pool route; special-only rows stop here.
+  if (shoulderHealth && !strengthMembership) return out;
   const tag = getExerciseTags(name);
   if (!tag) return out;
   // Power is an overlay, never a strength seat. The name-only path is also
@@ -582,16 +589,15 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       out.push(plane);
       if (isUpperAccessory(name)) {
         out.push('arm_or_shoulder');
-        const membership = authoredPoolMembership(name);
-        if (membership?.role === 'accessory'
-          && (membership.slot === 'horizontal_push' || membership.slot === 'vertical_push')) {
+        if (strengthMembership?.role === 'accessory'
+          && (strengthMembership.slot === 'horizontal_push' || strengthMembership.slot === 'vertical_push')) {
           out.push('push_accessory_1', 'push_accessory_2');
         }
-        if (membership?.role === 'accessory'
-          && (membership.slot === 'horizontal_pull' || membership.slot === 'vertical_pull')) {
+        if (strengthMembership?.role === 'accessory'
+          && (strengthMembership.slot === 'horizontal_pull' || strengthMembership.slot === 'vertical_pull')) {
           out.push('pull_accessory_1', 'pull_accessory_2');
         }
-        appendUpperGroupSlot(out, membership?.group);
+        appendUpperGroupSlot(out, strengthMembership?.group);
       }
       break;
     }

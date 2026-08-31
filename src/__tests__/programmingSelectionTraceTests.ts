@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
 import {
   installAutomaticProgrammingSelectionTraceObserver,
   type AutomaticProgrammingSelectionTrace,
@@ -66,6 +67,35 @@ check('selected trace identities survive into final session rows', () => {
   for (const trace of traces) {
     assert.ok(trace.selected && finalNames.has(trace.selected), `${trace.decisionId}:${trace.selected}`);
   }
+});
+
+check('ordinary strength seats cannot recruit a prehab identity by movement tag', () => {
+  const commercialTraces: AutomaticProgrammingSelectionTrace[] = [];
+  const commercialProfile = {
+    ...profile,
+    equipmentAnswer: presetEquipmentAnswer('commercial_gym', options.todayISO),
+  };
+  const program = generateProgramLocally(commercialProfile, {
+    ...options,
+    selectionTracesOut: commercialTraces,
+  });
+  const strengthCandidates = commercialTraces
+    .filter((trace) => trace.kind === 'strength_exercise')
+    .flatMap((trace) => trace.candidates.map((candidate) => candidate.name));
+  assert.ok(!strengthCandidates.includes('Bottoms-Up KB Press'),
+    'a shoulder-health identity entered the ordinary strength candidate universe');
+  const squatMains = commercialTraces.filter((trace) =>
+    trace.kind === 'strength_exercise'
+    && trace.need.movementOrQuality === 'squat'
+    && trace.need.role === 'main_strength');
+  assert.ok(squatMains.length > 0, 'the commercial-gym week never asked for a squat main');
+  assert.ok(squatMains.every((trace) => trace.selected !== 'Leg Press'),
+    squatMains.map((trace) => trace.selected).join(', '));
+  const finalNames = new Set(program.microcycles.flatMap((week) => week.workouts)
+    .flatMap((workout) => workout.exercises)
+    .map((row) => row.exercise?.name ?? ''));
+  assert.ok(squatMains.every((trace) => !!trace.selected && finalNames.has(trace.selected)),
+    'a selected squat main did not survive into the final session');
 });
 
 check('the scoped compiler observer serves store-driven audits and disposes cleanly', () => {

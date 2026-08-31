@@ -644,10 +644,16 @@ function poolOrderedFor(
 }
 
 /**
- * ANCHORS FIRST, THEN THE POOL'S ACCESSORY BENCH, THEN THE REST — and weighted
- * before unloaded inside each. An anchor list is not the pattern: every squat
- * anchor is a barbell lift, so returning anchors alone made the composer call
- * `squat` KIT-UNACHIEVABLE for a dumbbell athlete who can Goblet Squat.
+ * ANCHORS FIRST, THEN THE POOL'S ACCESSORY BENCH — and weighted before
+ * unloaded inside each. An anchor list is not the pattern: every squat anchor
+ * is a barbell lift, so returning anchors alone made the composer call `squat`
+ * KIT-UNACHIEVABLE for a dumbbell athlete who can Goblet Squat.
+ *
+ * The pool is also a CLOSED automatic-programming route. Appending every
+ * exercise carrying the same movement tag admitted shoulder-health rows such
+ * as `Bottoms-Up KB Press` into an ordinary vertical-push ladder seat, where it
+ * then inherited strength progression. Tags describe the movement; the pool
+ * decides whether automatic strength programming owns the identity.
  */
 function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
@@ -657,8 +663,7 @@ function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[
     ...poolOrderedFor(slot, pool.anchor.entries),
     ...poolOrderedFor(slot, pool.accessory.entries),
   ];
-  const rest = slotCandidates(slot).filter((id) => !ordered.includes(id));
-  return weightedFirst([...ordered, ...rest]);
+  return weightedFirst(ordered);
 }
 
 /**
@@ -674,8 +679,7 @@ function supportCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity
     ...poolOrderedFor(slot, pool.accessory.entries),
     ...poolOrderedFor(slot, pool.anchor.entries),
   ];
-  const rest = slotCandidates(slot).filter((id) => !ordered.includes(id));
-  return weightedFirst([...ordered, ...rest]);
+  return weightedFirst(ordered);
 }
 
 /**
