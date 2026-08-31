@@ -93,7 +93,7 @@ console.log('\n[1] THE SHEET — still reads as Sam signed it');
    together with its pool entry, cue, tags, load list and vocabulary entry. The
    number moves with the sheet; that is what makes this cell a ratchet rather
    than a decoration. */
-ok('the sheet holds 209 exercise rows (ten additions and one barbell variant)', sheetRows.length === 209, `found ${sheetRows.length}`);
+ok('the sheet holds 210 exercise rows (eleven additions and one barbell variant)', sheetRows.length === 210, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -312,8 +312,9 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // that is the enforced source for the cue and the muscle/experience gate.
 // `everyone` and not a regression (136 -> 137). Total 198 -> 199.
 // Then 137 -> 136 and 199 -> 198 on 2026-08-21 with the Light Skipping deletion.
+// The eleven-exercise intake adds Horse Stance Hold as `everyone` (141 -> 142).
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 141,
+  everyone: 142,
   everyone_regression: 11,
   one_plus_years: 38,
   two_plus_years: 17,

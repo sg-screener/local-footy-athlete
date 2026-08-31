@@ -24,7 +24,7 @@ import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityP
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './support/athleteJourney';
 import { ARCHETYPES, athleteAnswers, plusDays } from './compilerYear/catalog';
 import { useProgramStore } from '../store/programStore';
-import { resolveLoadAuthority, estimateStartingWeight, equipmentClassFor } from '../utils/loadEstimation';
+import { resolveLoadAuthority, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { SECTION_LABELS } from '../utils/sessionExecutionChecklist';
 import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
@@ -50,10 +50,11 @@ armTotalsOrRed();
 const mutation = process.env.LFA_INTAKE_MUTATION;
 if (mutation === 'experience') EXERCISE_TAGS['Reverse Nordic Curl'].programming!.automaticMinimum = 'new';
 if (mutation === 'fixture') EXERCISE_TAGS['Reverse Nordic Curl'].programming!.excludeWithinDaysOfGame = undefined;
+if (mutation === 'horse_fixture') EXERCISE_TAGS['Horse Stance Hold'].programming!.excludeWithinDaysOfGame = undefined;
 if (mutation === 'equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Rotational Medicine-Ball Throw'] = [];
-if (mutation === 'cue') EXERCISE_CUES['Crab Hold'].primaryCue = 'incorrect cue';
-if (mutation === 'video') EXERCISE_DEMO_VIDEOS['Seated Single-Leg Pike Lift'] = 'https://example.invalid';
-if (mutation === 'duration') EXERCISE_TAGS['SL 45° Back Extension Hold'].prescription!.prescriptionType = 'reps';
+if (mutation === 'cue') EXERCISE_CUES['Horse Stance Hold'].primaryCue = 'incorrect cue';
+if (mutation === 'video') EXERCISE_DEMO_VIDEOS['Horse Stance Hold'] = 'https://example.invalid';
+if (mutation === 'duration') EXERCISE_TAGS['Horse Stance Hold'].prescription!.prescriptionType = 'reps';
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -71,6 +72,7 @@ const submitted = [
   ['Rotational Medicine-Ball Throw', '02c2YLgF8iE'],
   ['Medicine-Ball Slam', 'fGLHGiYFIqc'],
   ['Rotational Medicine-Ball Slam', 'M9ryqecCLf0'],
+  ['Horse Stance Hold', '4P9w2Kvgl0A'],
 ];
 const vocabulary = new Set(selectableVocabularyGroups().flatMap(group => group.names));
 // Independent dose expectations transcribed from the signed intake, including
@@ -81,7 +83,9 @@ const doses = [
   [3, 10, 10, 60, 'reps', true], [2, 30, 30, 45, 'duration', true],
   [2, 5, 5, 60, 'reps', false], [3, 3, 5, 60, 'reps', true],
   [3, 4, 6, 60, 'reps', false], [3, 4, 6, 60, 'reps', true],
+  [2, 60, 60, 30, 'duration', false],
 ];
+const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name].power);
 submitted.forEach(([name], index) => {
   const p = EXERCISE_TAGS[name].prescription!;
   check(`${name}: signed dose, rest, unit and side`, JSON.stringify([
@@ -146,6 +150,10 @@ async function main() {
     && !inLeaf('lower_squat').includes('Bulgarian Split Squats')
     && !inLeaf('lower_hinge').includes('Single-Leg RDL'));
   const allNames = choices.map(c => c.name);
+  check('Horse Stance Hold: manual Add is filed only under Mobility & stretching',
+    inLeaf('mobility_drills').includes('Horse Stance Hold')
+    && leaves.filter(leaf => leaf.id !== 'mobility_drills').every(leaf =>
+      !legalAddCandidates({ ...args, leaf: leaf.id }).some(candidate => candidate.name === 'Horse Stance Hold')));
   check('Add does not offer any existing session identity', legalAddFamilies({ ...args, existingExerciseNames: allNames }).length === 0);
   for (const originalExercise of ['Back Squat', 'Bench Press', 'RDLs']) {
     const options = getTapSwapChoices({ originalExercise, reason: 'preference', environment, existingExerciseNames: [] });
@@ -179,9 +187,14 @@ async function main() {
       originalExercise: name }).some(c => c.name === name));
     check(`${name}: explicit kit allows`, exerciseIsAvailableWith(name, kit));
   }
-  for (const name of ['Crab Hold', 'Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Seated Good Morning (Barbell)']) {
     check(`${name}: not a main strength seat`, slotsForExerciseName(name).length === 0);
   }
+  check('Horse Stance Hold: bodyweight loading and no equipment gate',
+    resolveLoadAuthority('Horse Stance Hold').kind === 'bodyweight'
+    && equipmentRequiredFor('Horse Stance Hold')?.length === 0
+    && exerciseIsAvailableWith('Horse Stance Hold', ['bodyweight'])
+    && formatLoadLabel(resolveLoadAuthority('Horse Stance Hold'), 4) === 'BW + 4kg');
   for (const name of ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']) {
     check(`${name}: athlete chooses total ball load`, resolveLoadAuthority(name).kind === 'athlete_chosen' && estimateStartingWeight(name, profile) === null);
   }
@@ -203,25 +216,33 @@ async function main() {
     const novice = { ...athlete, onboardingData: { ...profile, experienceLevel: 'Complete beginner' as const } };
     check(`${name}: automatic novice boundary`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: novice.onboardingData.experienceLevel, daysToGame: null }) === [
       'Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Seated Good Morning', 'Medicine-Ball Slam',
+      'Horse Stance Hold',
     ].includes(name));
     for (const daysToGame of [1, 2, 3, null]) {
       const limit = Math.max(policy.excludeWithinDaysOfGame ?? -1, policy.automaticExcludeWithinDaysOfGame ?? -1);
       check(`${name}: automatic fixture ${daysToGame}`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: profile.experienceLevel, daysToGame }) === (daysToGame === null || daysToGame > limit));
     }
   }
-  for (const [name, bodyArea] of [['Crab Hold', 'Shoulder'], ['Reverse Nordic Curl', 'Knee'],
-    ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']]) {
-    const constraint = buildGuidedInjuryConstraint({ area: bodyArea, region: 'upper_body', severity: 5,
+  check('Horse Stance Hold: manual and automatic routes both exclude G-1 but allow G-2',
+    !exerciseProgrammingAllows('Horse Stance Hold', { route: 'manual', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && exerciseProgrammingAllows('Horse Stance Hold', { route: 'manual', experienceLevel: 'Complete beginner', daysToGame: 2 })
+    && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 2 })
+    && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 2 }));
+  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Reverse Nordic Curl', 'Knee'],
+    ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']] as const) {
+    const severity = suppliedSeverity ?? 5;
+    const constraint = buildGuidedInjuryConstraint({ area: bodyArea, region: 'upper_body', severity,
       severityBand: 'moderate', adjustmentLevel: 'moderate', triggers: [], seriousSymptoms: false }, { todayISO: date });
     const injured = resolveTapSwapEnvironment({ date, profile, gameDates: [], activeConstraints: [constraint], readinessSignal: null });
     check(`${name}: actual injury blocks manual choice`, !assessTapSwapCandidateSafety(name, injured).safe);
-    const injuredAthlete = { ...athlete, injuries: [{ bodyArea, description: '', severityScore: 5 }] };
+    const injuredAthlete = { ...athlete, injuries: [{ bodyArea, description: '', severityScore: severity }] };
     if (name === 'Reverse Nordic Curl') {
       check(`${name}: healthy lower-prehab pool admits it`, filterPoolForAthlete('lower_prehab', athlete).some(row => row.name === name));
       check(`${name}: injury excludes it from the actual lower-prehab pool`, !filterPoolForAthlete('lower_prehab', injuredAthlete).some(row => row.name === name));
       continue;
     }
-    const type = name === 'Crab Hold' ? 'mobility' : 'primer';
+    const type = name === 'Crab Hold' || name === 'Horse Stance Hold' ? 'mobility' : 'primer';
     let healthySeed: string | undefined;
     for (let seed = 0; seed < 120 && !healthySeed; seed++) {
       const seedDate = plusDays(date, seed);
@@ -237,6 +258,9 @@ async function main() {
   const reached = new Set<string>();
   const warmupsReached = new Set<string>();
   const powerReached = new Set<string>();
+  const mobilityReached = new Set<string>();
+  const recoveryReached = new Set<string>();
+  const horseRouteSeed: Partial<Record<'mobility' | 'recovery', string>> = {};
   for (let block = 1; block <= 80; block++) {
     const row = buildPowerRow({ family: 'upper', kind: 'primer', reduced: false,
       sets: 3, repsMin: 3, repsMax: 5, reason: 'intake power reachability' }, `power-${block}`, {
@@ -244,31 +268,49 @@ async function main() {
     });
     powerReached.add(row.exercise.name);
     const index = submitted.findIndex(([name]) => name === row.exercise.name);
-    if (index >= 7) check(`${row.exercise.name}: automatic power row carries its signed dose`,
+    if (index >= 0 && EXERCISE_TAGS[row.exercise.name]?.power) check(`${row.exercise.name}: automatic power row carries its signed dose`,
       JSON.stringify([row.prescribedSets, row.prescribedRepsMin, row.prescribedRepsMax, row.restSeconds,
         row.prescriptionType, row.perSide]) === JSON.stringify(doses[index]));
   }
-  for (const [name] of submitted.slice(7)) check(`${name}: ordinary automatic power is reachable`, powerReached.has(name));
+  for (const [name] of powerSubmitted) check(`${name}: ordinary automatic power is reachable`, powerReached.has(name));
   for (let day = 0; day < 120; day++) {
-    for (const type of ['mobility', 'prehab_accessories', 'primer'] as const) {
+    for (const type of ['mobility', 'recovery', 'prehab_accessories', 'primer'] as const) {
       const built = quiet(() => buildDerivedSession(type, plusDays(date, day), 'intake', 'reachability', athlete));
-      for (const row of built.exercises) reached.add(row.exercise.name);
+      for (const row of built.exercises) {
+        reached.add(row.exercise.name);
+        if (type === 'mobility') mobilityReached.add(row.exercise.name);
+        if (type === 'recovery') recoveryReached.add(row.exercise.name);
+        if (row.exercise.name === 'Horse Stance Hold' && (type === 'mobility' || type === 'recovery')) {
+          horseRouteSeed[type] ??= plusDays(date, day);
+        }
+      }
     }
+  }
+  check('Horse Stance Hold: automatic Mobility and Recovery routes are both reachable',
+    mobilityReached.has('Horse Stance Hold') && recoveryReached.has('Horse Stance Hold'));
+  for (const type of ['mobility', 'recovery'] as const) {
+    const seedDate = horseRouteSeed[type];
+    check(`Horse Stance Hold: actual ${type} route removes the otherwise selected row at G-1`, !!seedDate
+      && !quiet(() => buildDerivedSession(type, seedDate!, 'intake', 'G-1 exclusion', { ...athlete, daysToGame: 1 }))
+        .exercises.some(row => row.exercise.name === 'Horse Stance Hold'));
   }
   for (const category of Object.keys(FLOW_CATEGORY_MUSCLE_MAPPING)) {
     const eligible = flowSlotCandidates(category as keyof typeof FLOW_CATEGORY_MUSCLE_MAPPING, athlete);
     if (category === 'hip_prehab') check('lower warm-up can select both hip-flexor submissions',
       ['Seated Single-Leg Pike Lift', 'Standing Knee Extension'].every(name => eligible.some(row => row.name === name)));
+    if (category === 'hip_mobility') check('lower warm-up admits Horse Stance Hold through the authored hip-mobility slot',
+      eligible.some(row => row.name === 'Horse Stance Hold'));
   }
   const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: date }));
   check('real onboarding accepts explicit ball and fixture-free profile', !installed.onboardingRefusal);
   const acceptedEnvironment = resolveTapSwapEnvironment({ date, profile, gameDates: [],
     scheduleState: buildScheduleStateImperative(), activeConstraints: [], readinessSignal: null });
   check('manual eligibility reads the accepted preseason power policy', acceptedEnvironment.weeklyContract?.power.eligible === true);
-  for (const [name] of submitted.slice(7)) {
+  for (const [name] of powerSubmitted) {
     check(`${name}: offered under the actual accepted power contract`, assessTapSwapCandidateSafety(name, acceptedEnvironment).safe);
   }
   const program = useProgramStore.getState().currentProgram!;
+  let horseWarmupCase: { workout: (typeof program.microcycles)[number]['workouts'][number]; date: string } | null = null;
   for (const week of program.microcycles) for (const workout of week.workouts) {
     for (const row of workout.exercises) reached.add(row.exercise.name);
     for (let seed = 0; seed < 40; seed++) {
@@ -276,12 +318,17 @@ async function main() {
       for (const row of flow?.movements ?? []) {
         reached.add(row.exercise.name);
         warmupsReached.add(row.exercise.name);
+        if (row.exercise.name === 'Horse Stance Hold') horseWarmupCase ??= { workout, date: plusDays(date, seed) };
       }
     }
   }
-  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'SL 45° Back Extension Hold']) {
+  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
   }
+  check('Horse Stance Hold: the actual lower warm-up removes its otherwise selected row at G-1',
+    !!horseWarmupCase && !selectMobilityPrehabFlow({ workout: horseWarmupCase.workout,
+      date: horseWarmupCase.date, athlete: { ...athlete, daysToGame: 1 }, performedMovementIds: [],
+      seasonPhase: profile.seasonPhase!, isGameWeek: true })?.movements.some(row => row.exercise.name === 'Horse Stance Hold'));
   check('barbell Seated Good Morning is selected by automatic mobility', reached.has('Seated Good Morning (Barbell)'));
   const context = getCoachRevisionTemplateContext(date);
   check('reachability crosses actual generated strength sessions', program.microcycles[0].workouts.some(w => !!w.strengthIntent));
@@ -395,7 +442,7 @@ async function main() {
     const workout = quiet(() => deriveVisibleWeekLive(date, day)).find(d => d.date === day)!.workout!;
     const loadable = workout.exercises.filter(row => [
       'Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam',
-      'SL 45° Back Extension', 'SL 45° Back Extension Hold',
+      'SL 45° Back Extension', 'SL 45° Back Extension Hold', 'Horse Stance Hold',
     ].includes(row.exercise.name));
     for (const row of loadable) useProgramStore.getState().setWeightOverride(day, row.exerciseId, 4);
     const logged = await quietAsync(() => recordDay(day, { record: true, completion: 'full', feeling: 'good', soreness: 'none', difficulty: 6, logWeights: true }));
@@ -409,10 +456,11 @@ async function main() {
   if (!mutation) for (const [name, expectedFailure] of [
     ['experience', /Reverse Nordic Curl: automatic novice boundary/],
     ['fixture', /G-(1|2): compiler honors Reverse Nordic boundary/],
+    ['horse_fixture', /Horse Stance Hold: manual and automatic routes both exclude G-1/],
     ['equipment', /Rotational Medicine-Ball Throw: blocked without/],
-    ['duration', /SL 45° Back Extension Hold: signed dose, rest, unit and side/],
-    ['cue', /Crab Hold: exact supplied primary cue/],
-    ['video', /Seated Single-Leg Pike Lift: exact confirmed video URL/],
+    ['duration', /Horse Stance Hold: signed dose, rest, unit and side/],
+    ['cue', /Horse Stance Hold: exact supplied primary cue/],
+    ['video', /Horse Stance Hold: exact confirmed video URL/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

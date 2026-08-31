@@ -237,6 +237,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
   {"exercise": "Crab Hold", "pool": "Mobility", "primary": ["Shoulders", "Glutes", "Triceps"], "secondary": ["Hamstrings", "Chest", "Upper back", "Midline"], "experienceGate": "everyone", "note": "Hold with an open chest. Bodyweight. Familiar and pain-free near games.", "flagged": false},
   {"exercise": "Standing Knee Extension", "pool": "Lower prehab", "primary": ["Quads", "Hip flexors"], "secondary": ["Midline", "Glutes"], "experienceGate": "everyone", "note": "Squeeze for 5 seconds each rep. Bodyweight.", "flagged": false},
   {"exercise": "Seated Single-Leg Pike Lift", "pool": "Lower prehab", "primary": ["Hip flexors"], "secondary": ["Quads", "Midline"], "experienceGate": "everyone", "note": "Hold each rep for 2 seconds. Bodyweight.", "flagged": false},
+  {"exercise": "Horse Stance Hold", "pool": "Mobility", "primary": ["Groin", "Quads", "Glutes"], "secondary": [], "experienceGate": "everyone", "note": "2 × 60-second total holds. Bodyweight; use a higher or narrower stance as the beginner regression. Progress depth, stance width or duration before optional dumbbell load.", "flagged": false},
   /* ── Lower squat ── */
   {
     exercise: 'Back Squat',

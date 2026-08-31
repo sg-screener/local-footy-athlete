@@ -55,6 +55,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Crab Hold": [],
   "Standing Knee Extension": [],
   "Seated Single-Leg Pike Lift": [],
+  "Horse Stance Hold": [],
   "Ab Wheel": ['ab_wheel'],
   "Back Extension": ['back_extension_bench'],
   "Back Squat": ['barbell', 'rack'],

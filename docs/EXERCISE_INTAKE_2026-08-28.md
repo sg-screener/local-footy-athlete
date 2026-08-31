@@ -2,7 +2,7 @@
 
 Owner: this intake chat. Status: intake complete; **not implemented**.
 
-Sam has finished sending this batch. All 10 submitted exercises are saved below.
+Sam has finished sending this batch. All 11 submitted exercises are saved below.
 Implementation remains a separate task requiring Sam's go-ahead. This document
 does not activate exercises, change programming, approve new runtime rules or
 update the master sheet, catalogue, cues, videos, injury policy or tests.
@@ -549,3 +549,55 @@ trunk rotation or forward bending; foot pivoting; forceful gripping; ball impact
 repeated pickup from the floor.
 
 **Intake status:** Saved only. No exercise, cue, video or programming integration.
+
+## 11. Horse Stance Hold
+
+- **Video:** https://youtube.com/shorts/4P9w2Kvgl0A?si=8tS_xXydBNaIGwcK
+- **Category:** Mobility / lower-body prehab.
+- **Main muscles:** Groin; quadriceps; glutes.
+- **Secondary muscles:** None supplied.
+- **Primary cue:** Take a wide stance and sink straight down between your feet.
+- **Secondary cue:** Push knees over toes and keep your torso tall.
+- **Equipment:** None. An optional dumbbell may add load, but must not gate the
+  bodyweight movement.
+- **Unilateral:** No; prescribe total hold duration.
+- **Experience:** Everyone. Use a higher or narrower stance as the beginner
+  regression.
+- **Session use:** Lower-body warm-up; Mobility/Recovery; lower-body prehab;
+  groin and hip preparation.
+- **Availability:** Automatic in lower-body warm-ups and Mobility/Recovery
+  sessions; manual Add/Swap.
+- **Season:** All phases. Do not use G-1.
+- **Near-game suitability:** Good outside G-1.
+- **Prescription:** 2 × 60-second total holds.
+- **Loading:** Bodyweight, with an optional dumbbell. Progress greater depth,
+  stance width or hold duration before external load.
+- **Loading demand:** Low.
+- **Fatigue:** Low.
+- **Soreness:** Low.
+- **Balance/stabilisation demand:** Low.
+- **Eccentric demand:** Low.
+
+### Submitted injury ratings
+
+| Region | Rating |
+| --- | --- |
+| Groin | Caution |
+| Hip | Caution |
+| Quad | Caution |
+| Hamstring | Good |
+| Knee | Caution |
+| Calf | Good |
+| Ankle/foot | Caution |
+| Ribs | Good |
+| Lower back | Caution |
+| Neck | Good |
+| Shoulder | Good |
+| Elbow | Good |
+| Wrist/hand | Good |
+
+**Specific painful movements / restrictions:** Wide stance; deep knee flexion;
+hip abduction or external rotation; adductor stretch; sustained quad loading;
+ankle discomfort.
+
+**Intake status:** Implementation authorised 2026-08-31.

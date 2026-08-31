@@ -75,6 +75,7 @@ export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
   'adductor-rock': 'hips',
   'butterfly-stretch': 'hips',
   'pissing-dog-wall': 'hips',
+  'horse-stance-hold': 'hips',
   // ── midline (spine, lower back, trunk) ──
   'cat-cow': 'midline',
   'ql-back-extension': 'midline',

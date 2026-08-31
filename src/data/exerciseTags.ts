@@ -455,6 +455,27 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       primer: false,
     },
   },
+  'Horse Stance Hold': {
+    movement: 'isolation_lower', region: 'lower', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'caution', hip: 'caution', quad: 'caution',
+      hamstring: 'good', knee: 'caution', calf: 'good',
+      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
+      neck: 'good', shoulder: 'good', elbow: 'good',
+      'wrist/hand': 'good',
+    },
+    prescription: {
+      sets: 2, repsMin: 60, repsMax: 60,
+      restSeconds: 30, prescriptionType: 'duration', perSide: false,
+      notes: 'Bodyweight; use a higher or narrower stance as the beginner regression. Progress depth, stance width or hold duration before optional dumbbell load.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      excludeWithinDaysOfGame: 1, warmup: true, primer: false,
+    },
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // LOWER BODY — SQUAT / LUNGE

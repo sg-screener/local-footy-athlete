@@ -102,6 +102,7 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Seated Single-Leg Pike Lift',
   'Standing Knee Extension',
   'Crab Hold',
+  'Horse Stance Hold',
   'Seated Good Morning',
   'SL 45° Back Extension',
   'SL 45° Back Extension Hold',

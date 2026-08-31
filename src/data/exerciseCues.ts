@@ -187,6 +187,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   "Crab Hold": {"primaryCue": "Press through hands and feet, then lift the hips high.", "secondaryCue": "Keep the chest open and hold."},
   "Standing Knee Extension": {"primaryCue": "Stand tall, lift one knee to 90 degrees, then straighten your leg.", "secondaryCue": ""},
   "Seated Single-Leg Pike Lift": {"primaryCue": "Lean slightly forward, lock the knee, and lift the heel.", "secondaryCue": "Pause at the top."},
+  "Horse Stance Hold": {"primaryCue": "Take a wide stance and sink straight down between your feet.", "secondaryCue": "Push knees over toes and keep your torso tall."},
   '90/90 Breathing': {
     primaryCue: 'Knees and hips at 90, exhale fully.',
     secondaryCue: 'Pause at the bottom of each breath.',
@@ -902,4 +903,3 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: "Don't let the torso rotate.",
   },
 };
-

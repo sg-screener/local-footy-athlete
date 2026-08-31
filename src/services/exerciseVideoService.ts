@@ -54,6 +54,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   "Crab Hold": "https://youtube.com/shorts/m7-7YKIt_wM?si=2z1PTWhiwyGfDSyp",
   "Standing Knee Extension": "https://youtube.com/shorts/iJkCwL7Jivg?si=v0VQ0LOyyJYlP05p",
   "Seated Single-Leg Pike Lift": "https://youtube.com/shorts/1v-h-JQBKEY?si=xiftPU8joMStVB3l",
+  "Horse Stance Hold": "https://youtube.com/shorts/4P9w2Kvgl0A?si=8tS_xXydBNaIGwcK",
   // ═══ LOWER — Squat ═══
   'Back Squat':                       'https://youtube.com/shorts/hscOjLrW60c?si=w-VfL2KXVSR8tlhX',
   'Front Squat':                      'https://youtube.com/shorts/N4WGYDGu6bI?si=ca0DyggYeEZBOAVa',
