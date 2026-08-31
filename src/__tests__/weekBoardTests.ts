@@ -459,7 +459,7 @@ console.log('\n[6] A dragged box speaks the producer\'s scope vocabulary');
 console.log('\n[7] A box names its session, so two of them can be told apart');
 {
   const lower = buildWeekBoardDay(day('mon', [part('strength', 'Strength', 'Lower Squat')]));
-  const push = buildWeekBoardDay(day('tue', [part('strength', 'Strength', 'Upper Push')]));
+  const push = buildWeekBoardDay(day('tue', [part('strength', 'Strength', 'Upper Body Push')]));
   ok('a strength box shows the session, not the category',
     lower.boxes[0].label === 'Lower Squat', `got "${lower.boxes[0].label}"`);
   ok('so two strength days no longer read identically',
@@ -511,17 +511,17 @@ console.log('\n[8] A typed plan names its session, even with no delivery record'
 
   ok('CONTROL — a delivered pattern names the session, as it always did',
     name({ archetype: 'upper', primaryPattern: 'pull',
-      plannedPatterns: ['pull'], effectivePatterns: ['pull'] }) === 'Upper Pull');
+      plannedPatterns: ['pull'], effectivePatterns: ['pull'] }) === 'Upper Body Pull');
 
   /* THE DEFECT: the generator writes exactly this — a planned pattern with no
      delivery record — on the majority of real sessions. */
   ok('an EMPTY delivery record falls back to the plan, and the session is named',
     name({ archetype: 'upper', primaryPattern: 'pull',
-      plannedPatterns: ['pull'], effectivePatterns: [] }) === 'Upper Pull',
+      plannedPatterns: ['pull'], effectivePatterns: [] }) === 'Upper Body Pull',
     'this returned "Session" and every surface then printed "Strength"');
   ok('and the same holds for a push day',
     name({ archetype: 'upper', primaryPattern: 'push',
-      plannedPatterns: ['push'], effectivePatterns: [] }) === 'Upper Push');
+      plannedPatterns: ['push'], effectivePatterns: [] }) === 'Upper Body Push');
   ok('and for a squat day',
     name({ archetype: 'lower', primaryPattern: 'squat',
       plannedPatterns: ['squat'], effectivePatterns: [] }) === 'Lower Squat');
@@ -530,7 +530,7 @@ console.log('\n[8] A typed plan names its session, even with no delivery record'
      unread — that pass-through leaked planner text onto an athlete's screen
      once (surfaceAgreementTests cell 3) and stays shut. */
   ok('a session with NO typed plan is still not named from its raw text',
-    name(undefined) !== 'Lower Hinge' && name(undefined) !== 'Upper Pull',
+    name(undefined) !== 'Lower Hinge' && name(undefined) !== 'Upper Body Pull',
     'inferring a name from planner prose is a different defect, still closed');
 }
 

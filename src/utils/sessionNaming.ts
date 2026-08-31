@@ -12,8 +12,8 @@
  *     squat + hinge                → "Lower Body Strength"
  *
  *   UPPER BODY
- *     push only                    → "Upper Push"
- *     pull only                    → "Upper Pull"
+ *     push only                    → "Upper Body Push"
+ *     pull only                    → "Upper Body Pull"
  *     push + pull                  → "Upper Body Strength"
  *
  *   FULL BODY
@@ -598,7 +598,7 @@ export function strengthComponentDisplayName(args: {
     isTeamDay: false,
     tier: 'core',
   });
-  return isCanonicalStrengthSessionLabel(named) ? named : args.fallbackTitle;
+  return strengthVariantByLabel(named)?.label ?? args.fallbackTitle;
 }
 
 /**

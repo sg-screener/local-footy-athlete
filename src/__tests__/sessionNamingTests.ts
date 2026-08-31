@@ -143,24 +143,24 @@ eq(
   'Lower Squat',
 );
 eq(
-  'upper push + bike/row/ski finisher stays Upper Push',
+  'upper push + bike/row/ski finisher stays Upper Body Push',
   display({ focus: upperPushWithFinisher, strengthPattern: 'push' }),
-  'Upper Push',
+  'Upper Body Push',
 );
 eq(
-  'legacy upper push + bike/row/ski finisher stays Upper Push',
+  'legacy upper push + bike/row/ski finisher stays Upper Body Push',
   display({ focus: upperPushWithFinisher }),
-  'Upper Push',
+  'Upper Body Push',
 );
 eq(
-  'upper pull + bike/row/ski finisher stays Upper Pull',
+  'upper pull + bike/row/ski finisher stays Upper Body Pull',
   display({ focus: upperPullWithFinisher, strengthPattern: 'pull' }),
-  'Upper Pull',
+  'Upper Body Pull',
 );
 eq(
-  'legacy upper pull + bike/row/ski finisher stays Upper Pull',
+  'legacy upper pull + bike/row/ski finisher stays Upper Body Pull',
   display({ focus: upperPullWithFinisher }),
-  'Upper Pull',
+  'Upper Body Pull',
 );
 // TASK 11 — this cell pinned `'Full body'`, and `'Full body'` was the DEFECT.
 // The claim in its name is real and is kept: ambiguous full-body metadata must
@@ -208,7 +208,7 @@ notEq(
 notEq(
   'conditioning-only display does not create fake upper pull',
   resolveSessionDisplayName({ focus: conditioningOnly }),
-  'Upper Pull',
+  'Upper Body Pull',
 );
 eq(
   'typed lower metadata never imports pull from row finisher',
@@ -286,16 +286,16 @@ eq(
   'Full Body Strength',
 );
 eq(
-  'upper push plus support-only Face Pull remains Upper Push',
+  'upper push plus support-only Face Pull remains Upper Body Push',
   resolveSessionDisplayName({
     name: 'Upper Strength',
     strengthPattern: 'push',
     exercises: [{ name: 'Bench Press' }, { name: 'Shoulder Press' }, { name: 'Face Pull' }],
   }),
-  'Upper Push',
+  'Upper Body Push',
 );
 eq(
-  'upper push plus attached easy row conditioning remains Upper Push',
+  'upper push plus attached easy row conditioning remains Upper Body Push',
   resolveSessionDisplayName({
     name: 'Upper Strength',
     strengthPattern: 'push',
@@ -303,16 +303,16 @@ eq(
     conditioningFlavour: 'aerobic',
     exercises: [{ name: 'Bench Press' }, { name: 'Easy Zone 2 Row' }],
   }),
-  'Upper Push',
+  'Upper Body Push',
 );
 eq(
-  'pure upper pull remains Upper Pull',
+  'pure upper pull remains Upper Body Pull',
   resolveSessionDisplayName({
     name: 'Upper Strength',
     strengthPattern: 'pull',
     exercises: [{ name: 'Cable Row' }, { name: 'Pull-Up' }],
   }),
-  'Upper Pull',
+  'Upper Body Pull',
 );
 eq(
   'generic upper with main push + pull anchors displays Upper Body Strength',
@@ -360,7 +360,7 @@ section('[3] Early off-season 4-day display labels match structural plan');
   eq(
     'S6 early off-season 4-day no-team-training display labels',
     labels,
-    ['Full Body Strength', 'Upper Push', 'Lower Squat'],
+    ['Full Body Strength', 'Upper Body Push', 'Lower Squat'],
   );
 
   const actualFullBodyCount = plan.filter((session) => session.strengthPattern === 'full_body').length;
@@ -388,7 +388,7 @@ section('[4] Program builder names engine-built sessions from typed metadata');
   eq(
     'Program-screen strength workout names for S6',
     strengthLabels,
-    ['Full Body Strength', 'Upper Push', 'Lower Squat'],
+    ['Full Body Strength', 'Upper Body Push', 'Lower Squat'],
   );
   ok(
     'Program-screen S6 keeps standalone aerobic support separate',

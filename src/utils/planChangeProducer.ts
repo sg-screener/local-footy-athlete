@@ -91,7 +91,10 @@ import {
   type G1LandingAskContext,
 } from '../rules/g1LandingAsk';
 import { fixtureAwareMarkedDaysForWeek } from '../rules/section18AcceptedWeekGateway';
-import { strengthVariantByTemplateId } from '../data/strengthSessionVariants';
+import {
+  strengthVariantByTemplateId,
+  strengthVariantForPatterns,
+} from '../data/strengthSessionVariants';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { useProfileStore } from '../store/profileStore';
 import { liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
@@ -2900,17 +2903,16 @@ function athleteDeletionDoneMessage(
 ): string {
   const scope = change.scope ?? 'whole_day';
   const patterns = new Set(outcome.removedPatterns);
+  const upperComponent = patterns.size === 1
+    && (patterns.has('pull') || patterns.has('push'))
+    ? strengthVariantForPatterns(patterns)?.label ?? null
+    : null;
   const component = scope === 'whole_day'
     ? 'Session'
     : scope === 'conditioning'
     ? 'Conditioning'
-    : patterns.size === 1 && patterns.has('pull')
-      ? 'Upper Pull'
-      : patterns.size === 1 && patterns.has('push')
-        ? 'Upper Push'
-        : scope === 'strength'
-          ? 'Gym session'
-          : 'Session';
+    : upperComponent
+      ?? (scope === 'strength' ? 'Gym session' : 'Session');
   const removed = component === 'Session'
     ? 'Session removed.'
     : `${component} was removed.`;

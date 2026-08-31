@@ -59,12 +59,11 @@ export type StrengthDoorId = Extract<
 export interface StrengthSessionVariant {
   readonly id: StrengthSessionVariantId;
   /**
-   * The athlete-facing name. These are the strings `canonicalStrengthLabel`
-   * already returned and the app has been shipping — carried over verbatim
-   * rather than re-worded, because a rename here renames every session card in
-   * the app and that is Sam's to sign, not a refactor's to smuggle.
+   * The current athlete-facing name emitted by every projection surface.
    */
   readonly label: string;
+  /** Retired exact labels accepted only when reading existing athlete data. */
+  readonly legacyLabels?: readonly string[];
   /** One line for the picker. Athlete-visible: goes to Sam for signing (stage 5). */
   readonly description: string;
   readonly archetype: StrengthArchetype;
@@ -114,7 +113,8 @@ export const STRENGTH_SESSION_VARIANTS: readonly StrengthSessionVariant[] = [
   },
   {
     id: 'upper_push',
-    label: 'Upper Push',
+    label: 'Upper Body Push',
+    legacyLabels: ['Upper Push'],
     description: 'Pressing strength - chest, shoulders and triceps.',
     archetype: 'upper',
     primaryPattern: 'push',
@@ -124,7 +124,8 @@ export const STRENGTH_SESSION_VARIANTS: readonly StrengthSessionVariant[] = [
   },
   {
     id: 'upper_pull',
-    label: 'Upper Pull',
+    label: 'Upper Body Pull',
+    legacyLabels: ['Upper Pull'],
     description: 'Pulling strength - back and biceps.',
     archetype: 'upper',
     primaryPattern: 'pull',
@@ -196,7 +197,9 @@ export function strengthVariantByTemplateId(templateId: string): StrengthSession
  */
 export function strengthVariantByLabel(label: string | undefined): StrengthSessionVariant | null {
   if (!label) return null;
-  return STRENGTH_SESSION_VARIANTS.find((variant) => variant.label === label) ?? null;
+  return STRENGTH_SESSION_VARIANTS.find((variant) => (
+    variant.label === label || variant.legacyLabels?.includes(label)
+  )) ?? null;
 }
 
 /**

@@ -60,6 +60,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import {
   STRENGTH_DOOR_IDS,
   STRENGTH_SESSION_VARIANTS,
+  strengthVariantByLabel,
   strengthVariantByTemplateId,
   strengthVariantForPatterns,
   strengthVariantsForDoor,
@@ -160,17 +161,15 @@ run('B3. the seven names are PINNED, because collapsing the duplicate made B1 ci
   // very values it tidied, which is the hazard AGENTS.md names, arriving through
   // the front door of a correct refactor.
   //
-  // These seven strings are ATHLETE-VISIBLE and were all shipping before the
-  // authored set existed, so this pins the status quo rather than inventing
-  // wording. They go to Sam for explicit signing with the rest of the copy
-  // (stage 5); until then, changing one is a deliberate red cell and not a
-  // rename that nothing notices.
+  // These seven strings are ATHLETE-VISIBLE. Sam explicitly renamed the two
+  // single-pattern upper sessions on 2026-08-31 so they use the same body-region
+  // convention as Lower Body Strength and Upper Body Strength.
   const SIGNED_NAMES: Readonly<Record<string, string>> = {
     lower_squat: 'Lower Squat',
     lower_hinge: 'Lower Hinge',
     lower_combined: 'Lower Body Strength',
-    upper_push: 'Upper Push',
-    upper_pull: 'Upper Pull',
+    upper_push: 'Upper Body Push',
+    upper_pull: 'Upper Body Pull',
     upper_combined: 'Upper Body Strength',
     full_body: 'Full Body Strength',
   };
@@ -181,6 +180,19 @@ run('B3. the seven names are PINNED, because collapsing the duplicate made B1 ci
       `"${variant.id}" is named "${variant.label}"; the athlete has been reading `
       + `"${SIGNED_NAMES[variant.id]}". Renaming a session is Sam's to sign — see `
       + 'docs/COPY_SHEET_RULINGS_2026-07-30.md.');
+  }
+});
+
+run('B4. old upper labels remain read-ingress aliases but emit the current names', () => {
+  const legacyToCurrent: Readonly<Record<string, string>> = {
+    'Upper Push': 'Upper Body Push',
+    'Upper Pull': 'Upper Body Pull',
+  };
+  for (const [legacy, current] of Object.entries(legacyToCurrent)) {
+    const variant = strengthVariantByLabel(legacy);
+    assert(variant !== null, `existing session label "${legacy}" no longer resolves`);
+    assert(variant.label === current,
+      `existing session label "${legacy}" resolves to "${variant.label}", not "${current}"`);
   }
 });
 
