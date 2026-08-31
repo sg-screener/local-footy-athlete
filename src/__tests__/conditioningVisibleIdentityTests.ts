@@ -138,6 +138,20 @@ const typedContinuous = workout([
 eq('typed duration produces continuous identity', projectConditioningVisibleIdentity(typedContinuous)?.primaryLabel, 'Continuous Aerobic');
 eq('typed duration produces concise dose', projectConditioningVisibleIdentity(typedContinuous)?.doseLabel, '20 min steady');
 
+const transformedContinuousPlaceholder = workout([
+  row('r1', 'Continuous Aerobic Run', 41, 0, { type: 'duration_minutes', value: 50 }),
+]);
+eq('authored continuous dose outranks transformed numeric placeholders',
+  projectConditioningVisibleIdentity(transformedContinuousPlaceholder)?.doseLabel,
+  '40 min steady');
+
+const transformedControlledPlaceholder = workout([
+  row('r1', 'Controlled 10–20 min Blocks', 16, 0, { type: 'duration_minutes', value: 20 }),
+]);
+eq('authored interval dose outranks transformed numeric placeholders',
+  projectConditioningVisibleIdentity(transformedControlledPlaceholder)?.doseLabel,
+  '2 × 15 min');
+
 console.log('\n[2] typed purpose and effective intensity outrank bout length');
 for (const [category, intent, expected] of [
   ['tempo', 'tempo', 'Tempo Intervals'],

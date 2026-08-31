@@ -26,11 +26,10 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Steps 1–4 and 6 complete; Step 5 is checkpointed with one product decision
-blocked. Sam's 2026-08-31 audit follow-up is now being worked in the order he
-gave: Primer composition, injury composition, missing routes and classification
-reconciliation are checkpointed. Conditioning labels are blocked by named
-live shared-file ownership; the final isolated audit follows when that clears.
+Original Steps 1–9 are complete. Sam's 2026-08-31 audit follow-up is now being
+worked in the order he gave: Primer composition, injury composition, missing
+routes, conditioning labels and classification reconciliation are complete.
+The final isolated audit is next.
 
 ## 2026-08-31 follow-up 1 — every Primer is seven low-fatigue rows
 
@@ -135,29 +134,56 @@ occurrences; reconciliation of the 29 old `incorrectly_tagged_or_classified`
 entries; and the fresh two-athlete, 52-week final audit. No whole-job completion
 is claimed.
 
-## 2026-08-31 follow-up 4 — BLOCKED by live shared-file ownership
+## 2026-08-31 follow-up 4 — all 32 duration labels repaired
 
-Finished before the block: the old audit's 32 occurrences were isolated to the
-conditioning identity/display boundary; no selection-policy change is needed
-to count or repair them.
+The initial shared-file block was cleared without overwriting anyone: the live
+conditioning-copy owner checkpointed `8a313ec7`, then source inspection proved
+those card-copy files were an upstream input, not the defective owner. The
+broken `doseLabel` belongs to `conditioningVisibleIdentity.ts`, which was free.
 
-Blocker: another live owner began editing the exact shared files this step
-requires while follow-up 3 was being checkpointed:
+The defect was a unit substitution. Authored conditioning rows require numeric
+sets/reps fields in the generic Workout schema. They are placeholders, and
+deload/injury transforms may change them legitimately. The visible-identity
+projector nevertheless multiplied those transformed placeholders by an
+authored duration, producing `41 × 50 min`, `16 × 20 min` and siblings.
 
-- `src/rules/conditioningDisplay.ts`
-- `src/rules/conditioningSelection.ts`
-- `src/__tests__/conditioningTemplateEqualityTests.ts`
-- new `src/rules/conditioningAthleteCopy.ts`
-- new `src/__tests__/fixtures/conditioning-athlete-copy-sam-2026-08-31.ts`
+Compared two designs:
 
-Those edits include a complete 55-template athlete-copy source and changed
-duration/count projection, so touching the same owners would risk combining or
-overwriting another seat's unfinished work. They remain dirty and uncommitted
-at this checkpoint. Follow-up 5 is independent and proceeded.
+1. Cap or hide a dose label when its implied minutes exceed 120. Rejected: that
+   suppresses evidence while leaving the projector's source wrong.
+2. For an authored conditioning row, derive structure from the same concrete
+   55-template athlete prescription the card renders; retain numeric-row/text
+   fallback only for legacy and user-authored rows. Chosen because selection,
+   stored execution and transforms remain untouched while visible dose has one
+   authored source.
 
-Question for Sam if those files are not checkpointed/released: **may
-`selectionrepair` take ownership of the named conditioning files and finish the
-32-label correction once the concurrent work has stopped?**
+Direct red-first witnesses now resolve as follows:
+
+- transformed `Continuous Aerobic Run` (`41` placeholder sets, `50` placeholder
+  minutes) → `40 min steady`;
+- transformed `Controlled 10–20 min Blocks` (`16`, `20`) → `2 × 15 min`.
+
+The complete two-athlete, 52-week diagnostic rerun has **0 implausible
+conditioning dose labels**, down from 32. Its only emitted time-dose labels and
+occurrence counts are: `4 × 6 min` 26, `5 × 5 min` 24, `2 × 15 min` 20,
+`5 × 1 min` 14, `10 × 1 min` 12, `7 × 2 min` 10, `4 × 2 min` 10,
+`6 × 3 min` 6 and `6 × 1 min` 6. Count unit is visible identity occurrences
+across two athletes × 52 weeks, not sets performed or distinct templates.
+
+Regression and liveness receipts:
+
+- the two focused cells pass in `test:conditioning-identity`;
+- the full-year audit's `implausibleConditioningDoses` array is empty;
+- mutation: bypassing authored-template structure reproduced exactly
+  `41 × 50 min` and `16 × 20 min` and killed both focused cells; restoration
+  returned them green;
+- the wider identity suite is 65 / 8: its eight existing failures are the
+  legacy four-week generation fixture failing to find its expected workouts,
+  while all visible-identity, persistence, modality and new duration cells pass.
+
+NOT COVERED at this checkpoint: the final isolated catalogue-order mutation,
+release chain and male/female report; physical-iPhone acceptance. No whole-job
+completion is claimed.
 
 ## 2026-08-31 follow-up 5 — the 29 classification entries reconciled
 

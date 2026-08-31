@@ -1,7 +1,11 @@
 import type { ConditioningOption, Workout, WorkoutExercise } from '../types/domain';
 import { logger } from './logger';
 import { getSessionComponentRows } from './sessionComponents';
-import { conditioningWordingForModality } from '../rules/conditioningDisplay';
+import {
+  conditioningAthletePrescription,
+  conditioningWordingForModality,
+} from '../rules/conditioningDisplay';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 
 export type ConditioningStructureFamily =
   | 'continuous_aerobic'
@@ -98,6 +102,9 @@ export const CONDITIONING_VISIBLE_LABELS: Readonly<Record<ConditioningStructureF
 const WARMUP_COOLDOWN = /\b(?:warm[-\s]?up|cool[-\s]?down|cooldown)\b/i;
 const EXPLICIT_FLUSH = /\b(?:aerobic\s+flush|flush(?:\s+out)?)\b/i;
 const EXPLICIT_RECOVERY = /\b(?:recovery\s+(?:conditioning|pace|work)|recovery-oriented)\b/i;
+const CONDITIONING_TEMPLATE_BY_NAME = new Map(
+  CONDITIONING_TEMPLATES.map((template) => [template.name, template]),
+);
 
 function rowId(row: any): string {
   return String(row?.id ?? row?.exerciseId ?? row?.exercise?.id ?? '').trim();
@@ -174,7 +181,54 @@ function textDurationSeconds(text: string): number | undefined {
   return Number.isFinite(value) && value > 0 ? unitSeconds(value, match[2]) : undefined;
 }
 
-function structureForRow(row: WorkoutExercise): WorkStructure {
+/** Repeat count from the one concrete athlete prescription, not row placeholders. */
+function prescriptionBoutCount(text: string): number | undefined {
+  const beforeBetween = text.split(/\bbetween\b/i)[0];
+  const namedCounts = [...beforeBetween.matchAll(/\b(\d+)\s+(?:sets?|blocks?|rounds?|reps?)\b/gi)]
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (namedCounts.length > 0) return namedCounts.reduce((total, value) => total * value, 1);
+  // Flush copy uses `4 × 2-minute blocks`: four work bouts, each paired with
+  // its stated recovery inside a two-minute block.
+  const leadingMultiplier = /^\s*(\d+)\s*[×x]\s*\d+(?:\.\d+)?[-\s](?:min(?:ute)?|sec(?:ond)?)/i
+    .exec(beforeBetween);
+  return leadingMultiplier ? Number(leadingMultiplier[1]) : undefined;
+}
+
+/**
+ * Authored conditioning rows carry numeric placeholders because the Workout
+ * schema requires sets/reps. Deload and injury transforms can legitimately
+ * change those placeholders; they never re-author the selected template's
+ * visible dose. Resolve the same concrete athlete prescription the card uses.
+ */
+function authoredTemplateStructure(
+  row: WorkoutExercise,
+  workout: ConditioningIdentityWorkout,
+): WorkStructure | null {
+  const template = CONDITIONING_TEMPLATE_BY_NAME.get(String(row.exercise?.name ?? ''));
+  if (!template) return null;
+  const option = workout.conditioningBlock?.options
+    .find((candidate) => candidate.exerciseIds.includes(rowId(row)));
+  const prescription = conditioningAthletePrescription(template, undefined, option?.modality);
+  const duration = textDurationSeconds(prescription.work);
+  if (!duration) return { intervalised: false, structured: false };
+  const count = prescriptionBoutCount(prescription.setsRounds) ?? 1;
+  const intervalised = count > 1 && !/\bcontinuous\b/i.test(prescription.work);
+  return {
+    boutCount: intervalised ? count : undefined,
+    boutSeconds: intervalised ? duration : undefined,
+    continuousSeconds: intervalised ? undefined : duration,
+    intervalised,
+    structured: true,
+  };
+}
+
+function structureForRow(
+  row: WorkoutExercise,
+  workout: ConditioningIdentityWorkout,
+): WorkStructure {
+  const authored = authoredTemplateStructure(row, workout);
+  if (authored) return authored;
   const text = rowText(row);
   const repeated = parsedRepeatedDose(text);
   const prescribedSets = Number(row.prescribedSets);
@@ -193,8 +247,11 @@ function structureForRow(row: WorkoutExercise): WorkStructure {
   };
 }
 
-function mainStructure(rows: WorkoutExercise[]): WorkStructure {
-  const candidates = rows.map(structureForRow);
+function mainStructure(
+  rows: WorkoutExercise[],
+  workout: ConditioningIdentityWorkout,
+): WorkStructure {
+  const candidates = rows.map((row) => structureForRow(row, workout));
   return candidates.sort((a, b) => {
     const score = (value: WorkStructure) =>
       (value.intervalised ? 100 : 0) +
@@ -314,7 +371,7 @@ export function projectConditioningVisibleIdentity(
   if (!workout || !hasCanonicalConditioning(workout)) return null;
 
   const rows = getMeaningfulConditioningWorkRows(workout);
-  const structure = mainStructure(rows);
+  const structure = mainStructure(rows, workout);
   const purpose = typedPurpose(workout);
   const purposeText = rowPurposeText(rows);
 
