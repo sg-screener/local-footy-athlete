@@ -1623,3 +1623,54 @@ NOT COVERED at this checkpoint: clinical appropriateness for an individual
 athlete, changing Sam's 75/90 Off-season ruling, changing the never-rewrite-own-
 load ruling, physical-phone acceptance, PDF regeneration, and a whole-app PASS.
 Neither physical phone was touched.
+
+## 2026-08-31 — final implementation verification after all three checkpoints
+
+Scoped checkpoints, in the requested order:
+
+1. Going Away stable selection: `8dede52e`.
+2. Erg Flush final modality and restart: `df2758b5`.
+3. Load-concern source investigation: `e967a073`.
+
+Final commands and exact relevant results:
+
+- `npm run test:programming-selection-release` — green. Its full-year
+  catalogue reversal changed 0 / 728 final athlete-days across two 52-week
+  athlete-years; all four direct Going Away athlete-date rows and every later
+  saved/restarted day are identical. The same chain passed all 55 authored
+  conditioning templates (19 / 19 modality cells), 3,298 / 3,298 displayed
+  conditioning-route cells, 7 / 7 generated modality persistence cells, the
+  two exact recovery-shaped Erg Flush cells, deload quality 11 / 11, block-two
+  progression 41 / 41, audited load tracing 4 / 4, final composition 6 / 6,
+  and generated-week assembly 30 / 30.
+- `npm run test:programming-catalogue-order` — 3 / 3: strength,
+  conditioning and power selection all ignore catalogue array order.
+- `npm run test:equipment-scopes` — 20 / 20: dated kit/travel, permanent
+  answers, accepted selection history, Clear and restart remain intact.
+- The exact enriched replay used during Step 2 reached both athlete-cards on
+  2027-04-12 with `Bike → Air Bike → SkiErg → RowErg`, and both week-29
+  cold-restart receipts were `ok: true`.
+- `npm run test:canonical-weekly-compiler` reached the entire canonical slice.
+  All 112 new final-flush/save/relaunch cells pass; the slice remains
+  11,891 / 11,897 on six inherited failures already named in the Step 2
+  checkpoint, so the command's later `&&` children did not run.
+- `npm run test:compile` remains product 0 / devtools 0 and retains its four
+  inherited test-harness errors in three files.
+
+Verification strategy for the next defect of each class:
+
+- Selection stability is a final athlete-day comparison over normal/reversed
+  catalogues, real accepted Going Away facts and later restarts, not a selector
+  unit test alone.
+- Conditioning identity is checked both at the exact final-card adapter and in
+  the acted storage/relaunch journey, including Recovery-shaped cards.
+- A load flag must identify its accepted base and the exact producer before it
+  is called an unexplained progression; the literal producer cells are now in
+  the release chain.
+
+NOT COVERED in this final implementation pass: physical-phone acceptance,
+native layout/glass, remote sync, Android, full 52-week enriched event replays
+after the Erg Flush display-only fix, the corrected audit/PDF exporters, PDF
+generation or page inspection, clinical load appropriateness, and a whole-app
+PASS. Per Sam's request no PDF was generated, modified or inspected, and
+neither physical phone was touched.
