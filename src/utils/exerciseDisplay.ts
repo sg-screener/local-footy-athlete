@@ -20,6 +20,7 @@ const KNOWN_EXERCISE_TERMS: Record<string, string> = {
   rdls: 'RDLs',
   rom: 'ROM',
   rpe: 'RPE',
+  sl: 'SL',
   ssb: 'SSB',
   trx: 'TRX',
   vo2: 'VO2',

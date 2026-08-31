@@ -7587,3 +7587,15 @@ the chained `test:conditioning-templates` gate. That gate is also explicitly in
 `test:programming-selection-release`, alongside final composition, modality,
 save/restart and generated-week checks. Verification status and NOT COVERED:
 `docs/STATUS_CONDDOSECOPY.md`.
+
+**R-301** · `SL` remains fully capitalised in every exercise title, 2026-09-01.
+
+Owner: exerciseacronym. Sam ruled: *"SL back extension holds or anything that
+is listed as SL - should both be capitilaised - right now it looks like Sl"*.
+The shared athlete-facing exercise-name formatter therefore treats `SL` as an
+acronym, just like `ATG`, `DB`, `RDL` and `OHP`. Canonical exercise identities,
+matching, cues, video links and programming selection remain unchanged.
+
+Guard: `LAW-sl-exercise-display-acronym` through chained
+`test:exercise-display`. Verification and NOT COVERED:
+`docs/STATUS_EXERCISEACRONYM.md`.

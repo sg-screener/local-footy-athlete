@@ -61,6 +61,18 @@ eq(
   'ATG Split Squat',
 );
 
+eq(
+  'preserves SL in the canonical back-extension name',
+  formatExerciseDisplayName('SL 45° Back Extension'),
+  'SL 45° Back Extension',
+);
+
+eq(
+  'preserves SL in the canonical back-extension hold name',
+  formatExerciseDisplayName('SL 45° Back Extension Hold'),
+  'SL 45° Back Extension Hold',
+);
+
 eq('handles null defensively', formatExerciseDisplayName(null), '');
 eq('handles blank defensively', formatExerciseDisplayName('   '), '');
 

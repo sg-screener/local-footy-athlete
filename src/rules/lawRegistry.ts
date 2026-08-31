@@ -240,6 +240,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-sl-exercise-display-acronym',
+    law: 'R-301: every athlete-facing exercise projection preserves SL as a fully capitalised acronym, including SL 45° Back Extension and SL 45° Back Extension Hold; display formatting never rewrites it as Sl.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-301',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-display',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `exerciseacronym`. Two exact display cells began red: both canonical SL back-extension names rendered Sl. Adding SL to the existing shared acronym formatter returns both cells green; removing that single mapping recreates both reds. Canonical identities, programming, matching, cues and videos are unchanged. Physical-iPhone Release remains pending.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',
