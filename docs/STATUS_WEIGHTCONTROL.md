@@ -459,8 +459,37 @@ program decision:
 
 ### Not covered yet
 
-- Fixed Release build on Sam's physical iPhone.
+- Sam's physical acceptance of the fixed Release build.
 - Tapping a status answer on simulator: deliberately not done because it would
   alter the preserved athlete state. The unchanged accepted-state writers are
   covered by the action-source, fatigue/illness and modifier lifecycle suites.
 - Physical Dynamic Type and VoiceOver reading order.
+
+---
+
+## Physical Release install — 2026-08-31
+
+- Source checkpoint: `24076e294ea1c8153c41b46d471f4ef92a7c95cb`, stamped
+  `Agent: weightcontrol`. Product source remained unchanged through the build.
+- Fresh isolated `xcodebuild clean build`, configuration Release, SDK iphoneos:
+  `BUILD SUCCEEDED`.
+- Artifact:
+  `/private/tmp/lfa-phone-24076e29.SqMs1I/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app`.
+- Bundle: `com.localfootyathlete.app`, version `1.0.0 (1)`. Embedded standalone
+  `main.jsbundle`: 8,331,672 bytes, SHA-256
+  `96a2e4cb1cb68079ed081f311f1c0d4d46e60fbef4b2506a7d9fc7b5e1260636`.
+- Strict/deep code-sign verification passed; signed by Apple Development:
+  Samuel Geurts with the matching app provisioning profile.
+- Read-only device discovery selected only Sam's available paired iPhone 16 Pro
+  Max (`AFA21856-881E-587B-96D5-60817FD11018`). Renee's iPhone 17 Pro was
+  unavailable and was not targeted.
+- Installed through `devicectl device install app` as an in-place upgrade. No
+  uninstall, reset, reinstall-with-delete or data-container operation occurred.
+- The installed app reports the correct bundle and version. Launch succeeded,
+  and a later process snapshot found `LocalFootyAthlete` still running as PID
+  30662.
+
+### Not covered
+
+- Sam's physical acceptance of Issues 1–6 on this installed build.
+- Physical Dynamic Type and VoiceOver sweep.
