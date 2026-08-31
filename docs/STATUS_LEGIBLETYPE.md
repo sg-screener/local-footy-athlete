@@ -111,3 +111,34 @@ step. Visual inspection found no clipped, overlapping or truncated text:
 - The five inherited shared-Text bypasses, generated-Gunshow fixture and three
   mobility source-shape failures; none was changed or treated as typography
   acceptance evidence.
+
+## R-278 — Personal Injured-tile wording
+
+- Sam directly replaced “Adapt training around an injury” with “Adapt training
+  around your injury”. Tired and Sick remain unchanged.
+- Two implementations were compared: hardcode the new sentence at the card, or
+  update the existing signed-copy owner and bind its exact value in the Day
+  card guard. The signed owner was selected so the shared component retains one
+  copy source and the wording cannot diverge between callers.
+- Test first: the exact-copy cell began red on the former “an injury” value;
+  the separate inherited Gunshow fixture remained the only unrelated red.
+
+## NOT COVERED (R-278 starting boundary)
+
+- The focused Day-card cell now passes and signed-copy extraction is 7/7. The
+  Day timeline command is 55 passed / 1 inherited generated-Gunshow failure;
+  the law registry is 13 passed / 1 inherited failure for its 21 named
+  UNENFORCED rows.
+- The first simulator selector tried to locate the child Text by its exact
+  sentence, but this composite accessible card exposes only its parent id to
+  Maestro. That was an instrument miss, not a copy result: its failure
+  screenshot visibly showed the new words. The rerun reached the stable
+  `home-change-card` id, completed and captured `/tmp/lfa-injury-copy.png`.
+- Visual inspection on iPhone 17 Pro / iOS 26.3 shows the new sentence in full
+  over three balanced lines, with no clipping or collision; Tired and Sick are
+  unchanged.
+
+## NOT COVERED (R-278 current boundary)
+
+- Deliberate post-commit mutation, physical iPhone, Dynamic Type, VoiceOver and
+  Android.

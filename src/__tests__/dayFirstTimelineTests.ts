@@ -1034,6 +1034,9 @@ run('the status circles sit in a card with words above them', () => {
   assert(/signedCopy\('day\.change_card\.heading'\)/.test(hub)
     && /signedCopy\('day\.change_card\.subline'\)/.test(hub),
     'the heading and sub-line above the circles are not read from the sheet.');
+  assert(/injured: 'day\.change_card\.injured_detail'/.test(hub)
+    && signedCopy('day.change_card.injured_detail') === 'Adapt training around your injury',
+    'the Injured tile is not bound to Sam\'s signed personal injury explanation');
   assert(!/Not feeling 100%\?/.test(home) && !/Not feeling 100%\?/.test(hub)
     && !/Tell us what’s changed and we’ll adjust your training\./.test(home)
     && !/Tell us what’s changed and we’ll adjust your training\./.test(hub),

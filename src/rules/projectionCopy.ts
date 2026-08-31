@@ -1132,9 +1132,10 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.change_card.injured_detail',
       source: 'sam_ruling',
-      provenance: 'NEW — from Sam\'s template screenshot, 2026-08-27, beside the '
-        + 'medical cross.',
-      text: 'Adapt training around an injury',
+      provenance: 'SIGNED — Sam, 2026-08-31, R-278: the Injury tile says '
+        + '“Adapt training around your injury”. This personal wording supersedes '
+        + 'the template\'s “an injury”.',
+      text: 'Adapt training around your injury',
     },
     {
       id: 'day.plan_options.accessibility_label',

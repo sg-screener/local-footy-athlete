@@ -7063,3 +7063,14 @@ Guard: `LAW-accepted-lived-history-integrity`, `test:journal-load` (including
 its production `test:lived-history-foundations` journey and deliberate
 minutes-loss mutation). Verification and NOT COVERED:
 `docs/STATUS_HISTORYFIX.md`.
+
+**R-278** · Personal Injured-tile explanation, 2026-08-31.
+
+Owner: legibletype. The Injured tile beneath “Not feeling 100%?” says “Adapt
+training around your injury”. This supersedes only the earlier template wording
+“Adapt training around an injury”; the Tired and Sick wording, all three icons,
+their destinations and the status-card layout remain unchanged.
+
+Guard: `LAW-day-change-card-owns-plan-actions` and
+`test:day-first-timeline`.
+Verification status and NOT COVERED: `docs/STATUS_LEGIBLETYPE.md`.
