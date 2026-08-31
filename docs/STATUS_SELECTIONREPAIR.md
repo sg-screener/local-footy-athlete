@@ -629,3 +629,62 @@ athlete profiles outside the preserved male/female inputs, clinical validation
 of injury programming, the two Sam decisions above, and the separately owned
 conditioning dose-label projection fix. The phone was not installed, wiped or
 otherwise touched.
+
+## Follow-up step 2 — honest injury-adjusted identity and calf/Achilles conditioning
+
+Completed at the exact audited male 2027-03-01 coordinate.
+
+The old output was not physically running: it paired the authored title
+`Continuous Aerobic Run` with typed delivery `Bike`. That was safe off-leg
+delivery under a dishonest identity, so retaining it or merely teaching the
+audit to ignore the title was rejected. Two implementation options were
+compared:
+
+1. Patch the composed injured workout after selection, rebuilding one row and
+   its block locally.
+2. Make the shared selector refuse a run-named template whenever the scheduler
+   explicitly requests off-feet work, then let the existing authored-template
+   and feasibility owners select or remove it. Chosen because it prevents the
+   whole class and authors no new dose.
+
+The same naming comparison rejected deriving `Upper Pull` from the replacement
+rows. The existing typed strength-intent ledger now names a session
+`Injury-Adjusted Session` only when an injury adjustment exists, planned
+patterns are nonempty and effective original patterns are empty. Partial injury
+adjustments keep their surviving original-pattern identity. The canonical
+injury compiler writes that result to the workout and the signed visible
+projection reads the same owner.
+
+Red-first and liveness evidence:
+
+- `test:session-naming` returned `Lower Squat` for the fully replaced typed
+  lower-squat witness. That cell now returns `Injury-Adjusted Session`; the
+  partial squat+hinge control still returns `Lower Hinge`.
+- `test:conditioning-templates` selected `Continuous Aerobic Run` in the
+  20-position explicit off-feet sweep. It now reaches all four honestly named
+  aerobic machine templates and zero run-named templates (157 / 157).
+- Disabling the injury predicate killed the exact naming cell. Removing the
+  off-feet identity filter killed P14 and printed `Continuous Aerobic Run` in
+  the selected set. Both mutations were restored.
+
+Exact lived-year receipt, 23 weeks from real onboarding through the high 6/10
+calf/Achilles constraint:
+
+- Before: strength part `Lower Squat`; conditioning row
+  `Continuous Aerobic Run`, modality `Bike`, dose label `41 × 50 min`.
+- After: workout and strength part `Injury-Adjusted Session`; conditioning row
+  `Steady Blocks`, modality `Bike`, dose label `3 × 8 min`.
+- The modifier still says `Limits: limit running`; no running identity remains.
+
+Verification:
+
+- `test:conditioning-templates`: 157 / 157.
+- `test:session-naming`: both new cells pass; the suite retains its pre-existing
+  S6 plan-label mismatch and severed legacy-builder stop.
+- `test:compile`: product 0, devtools 0; the same four inherited test-scope
+  errors remain in three files.
+
+NOT COVERED: the complete male/female 52-week rerun (step 6), physical-iPhone
+Release acceptance, clinical validation, every possible injury/kit combination,
+and the other 31 broken conditioning-duration occurrences. The exact corrected
+case is evidence for step 2 only; step 4 still owns the duration class.

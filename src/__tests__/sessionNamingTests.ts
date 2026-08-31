@@ -232,6 +232,41 @@ eq(
 
 section('[2] Final visible strength content refines generic display identity');
 
+eq(
+  'an injury replacement with no surviving planned pattern is Injury-Adjusted Session',
+  resolveSessionDisplayName({
+    name: 'Lower Squat',
+    strengthIntent: {
+      archetype: 'lower',
+      primaryPattern: 'squat',
+      plannedPatterns: ['squat'],
+      effectivePatterns: [],
+    },
+    injuryAdjustment: {
+      paused: ['Back Squat', 'Walking Lunge'],
+    },
+    exercises: [{ name: 'Chest Supported Row' }, { name: 'Weighted Dead Bug' }],
+  }),
+  'Injury-Adjusted Session',
+);
+eq(
+  'a partial injury adjustment keeps the surviving original pattern identity',
+  resolveSessionDisplayName({
+    name: 'Lower Body Strength',
+    strengthIntent: {
+      archetype: 'lower',
+      primaryPattern: 'squat',
+      plannedPatterns: ['squat', 'hinge'],
+      effectivePatterns: ['hinge'],
+    },
+    injuryAdjustment: {
+      paused: ['Back Squat'],
+    },
+    exercises: [{ name: 'Romanian Deadlift' }, { name: 'Weighted Dead Bug' }],
+  }),
+  'Lower Hinge',
+);
+
 const lowerMixedExercises = [
   { name: 'Box Squat' },
   { name: 'Hip Thrusts' },

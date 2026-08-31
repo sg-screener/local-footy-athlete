@@ -62,7 +62,10 @@ import {
   type SignedCopyEntry,
 } from './signedCopy';
 import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
-import { TEAM_ONLY_NAME } from '../utils/sessionNaming';
+import {
+  INJURY_ADJUSTED_SESSION_NAME,
+  TEAM_ONLY_NAME,
+} from '../utils/sessionNaming';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 import {
@@ -83,12 +86,13 @@ import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplat
  * entry that carries it. Built from the authored set, never transcribed, so a
  * variant added to `strengthSessionVariants.ts` gets an entry here for free.
  */
-export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Map(
-  STRENGTH_SESSION_VARIANTS.map((variant) => [
+export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Map<string, string>([
+  ...STRENGTH_SESSION_VARIANTS.map((variant): [string, string] => [
     variant.label,
     `part.headline.strength.${variant.id}`,
   ]),
-);
+  [INJURY_ADJUSTED_SESSION_NAME, 'part.headline.strength.injury_adjusted'],
+]);
 
 export const BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID = 'blockBoundary.loadMoved';
 export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBlockReduced';
@@ -2122,6 +2126,15 @@ export function registerProjectionCopy(): void {
         + 'the authored set existed"). Not proposed: already shipping.',
       text: variant.label,
     })),
+    {
+      id: 'part.headline.strength.injury_adjusted',
+      source: 'sam_ruling',
+      provenance: 'R-289 (Sam, 2026-08-31): use "Injury-Adjusted Session" when '
+        + 'the original session movement patterns have all been replaced. The '
+        + 'typed planned/effective pattern ledger and injury-adjustment record '
+        + 'decide this; row-name inference does not.',
+      text: INJURY_ADJUSTED_SESSION_NAME,
+    },
   ]);
 
   // ── Bulk: the locked exercise vocabulary, and its authored cues. ──

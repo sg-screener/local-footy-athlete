@@ -91,6 +91,12 @@ export interface SessionNameInput {
   strengthPattern?: StrengthPatternMetadata;
   /** Canonical typed contract. When present, no display text may override it. */
   strengthIntent?: StrengthIntent;
+  /**
+   * Typed evidence that injury compilation removed authored rows. Paused names
+   * are evidence only; naming still decides from the planned/effective pattern
+   * contract rather than parsing those names.
+   */
+  injuryAdjustment?: { paused: readonly string[] } | null;
   /** Team-day flag — when true, name ALWAYS leads with "Team Training". */
   isTeamDay?: boolean;
   /** Presence of a conditioning flavour marks this as a conditioning-bearing session. */
@@ -294,6 +300,9 @@ export function canonicalStrengthLabel(
 /** Canonical team-session name (team day with no strength load). */
 export const TEAM_ONLY_NAME = 'Team Training';
 
+/** Sam's honest identity when injury replacement leaves no planned pattern. */
+export const INJURY_ADJUSTED_SESSION_NAME = 'Injury-Adjusted Session';
+
 /**
  * THE TYPE NAMES ITSELF — canonical conditioning identity by intent.
  *
@@ -423,6 +432,15 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
     ? normalizeStrengthIntent(input.strengthIntent)
     : null;
   if (typedIntent) {
+    const allPlannedPatternsReplaced =
+      typedIntent.plannedPatterns.length > 0 &&
+      typedIntent.effectivePatterns.length === 0 &&
+      (input.injuryAdjustment?.paused.length ?? 0) > 0;
+    if (allPlannedPatternsReplaced) {
+      return isTeam
+        ? `${TEAM_ONLY_NAME} + ${INJURY_ADJUSTED_SESSION_NAME}`
+        : INJURY_ADJUSTED_SESSION_NAME;
+    }
     /**
      * ⚠ **EMPTY `effectivePatterns` FALLS BACK TO `plannedPatterns` — AND NOT
      * DOING SO LEFT EVERY SESSION IN THE APP CALLED "Strength" (R-224).**

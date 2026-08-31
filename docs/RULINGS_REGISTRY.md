@@ -7268,3 +7268,25 @@ placement amendment in R-130.
 Guard: `LAW-primer-stays-seven-low-fatigue-rows` and `test:exercise-intake`
 (`test:primer-session` S7/W1/W2). Verification status and NOT COVERED:
 `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-289** · Injury-adjusted strength and conditioning use honest identities, 2026-08-31.
+
+Owner: selectionrepair. When an injury adjustment pauses every originally
+planned strength movement pattern, the strength component is named
+`Injury-Adjusted Session`. It is not left under the original pattern name and
+is not renamed from the replacement rows. If at least one original pattern
+survives, the existing typed effective-pattern name remains authoritative.
+
+An explicitly off-feet conditioning request may not select an authored
+template whose identity says `Run`. The selector chooses another feasible
+same-quality authored machine template; if none exists, the existing injury
+feasibility boundary removes conditioning. The founding 2027-03-01 high
+calf/Achilles case therefore receives `Steady Blocks` on Bike rather than
+`Continuous Aerobic Run`. This narrows R-282 only at selection time: later
+equipment substitutions still preserve the identity of the honestly selected
+template.
+
+Guards: `LAW-fully-replaced-strength-is-injury-adjusted-session` with
+`test:session-naming`, and `LAW-off-feet-selection-never-names-running` with
+`test:conditioning-templates`. Verification status and NOT COVERED:
+`docs/STATUS_SELECTIONREPAIR.md`.

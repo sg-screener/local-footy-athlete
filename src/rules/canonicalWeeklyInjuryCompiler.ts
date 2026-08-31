@@ -11,6 +11,10 @@ import { isRedFlagInjurySeverity } from './injuryWithheldRows';
 import { withSection18WorkoutEvidence } from './section18WorkoutEvidence';
 import { withEffectiveStrengthPatterns, type MainStrengthPattern } from './strengthPatternContributions';
 import { compileInjuryConditioning } from './canonicalInjuryConditioning';
+import {
+  INJURY_ADJUSTED_SESSION_NAME,
+  resolveSessionDisplayName,
+} from '../utils/sessionNaming';
 
 interface InjurySessionInput {
   workout: Workout; dateISO: string; profile: OnboardingData;
@@ -90,11 +94,26 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
     // overwrite roles already declared by the original session or injury slot.
     workout = { ...workout, exercises: workout.exercises.map(row => declaredRows.has(row.id)
       ? { ...row, section18Evidence: declaredRows.get(row.id)! } : row) };
-    if (workout.strengthIntent) workout = { ...workout,
-      strengthIntent: withEffectiveStrengthPatterns(workout.strengthIntent, workout.exercises.flatMap(row =>
+    if (workout.strengthIntent) {
+      workout = { ...workout,
+        strengthIntent: withEffectiveStrengthPatterns(workout.strengthIntent, workout.exercises.flatMap(row =>
         row.section18Evidence?.role === 'main_strength' && row.section18Evidence.mainStrengthPattern
           ? [row.section18Evidence.mainStrengthPattern] : [])),
-    };
+      };
+      const resolvedName = resolveSessionDisplayName({
+        strengthIntent: workout.strengthIntent,
+        injuryAdjustment: workout.injuryAdjustment,
+        exercises: workout.exercises,
+        isTeamDay: workout.isTeamDay,
+        tier: workout.sessionTier,
+      });
+      // Injury naming is the only responsibility added here. Ordinary session
+      // names remain owned by their original composer and canonicaliser.
+      if (resolvedName === INJURY_ADJUSTED_SESSION_NAME ||
+          resolvedName.endsWith(` + ${INJURY_ADJUSTED_SESSION_NAME}`)) {
+        workout = { ...workout, name: resolvedName };
+      }
+    }
   }
   return { workout, plan, adjustment, constraintId: stage.id };
 }

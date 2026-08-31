@@ -1089,9 +1089,11 @@ ok(
     category: 'aerobic_base', dateStr: '2026-08-26', miniCycleNumber: i + 1,
     offFeet: true, availableMachines: ['bike', 'air_bike', 'row', 'ski'], role: 'standalone',
   }).name));
-  ok('P14: all five legal off-leg aerobic templates remain reachable; machine count is not a rank',
-    ['Continuous Aerobic Run', 'Steady Blocks (3×8 min or 4×6 min)', 'Long Aerobic Intervals',
+  ok('P14: all four honestly named off-leg aerobic templates remain reachable; machine count is not a rank',
+    ['Steady Blocks (3×8 min or 4×6 min)', 'Long Aerobic Intervals',
       'Controlled 10–20 min Blocks', 'Steady 5 min Blocks'].every(name => picked.has(name)), JSON.stringify([...picked]));
+  ok('P14: an explicitly off-feet request never selects a template whose identity says Run',
+    [...picked].every(name => !/\brun\b/i.test(name)), JSON.stringify([...picked]));
 }
 
 // [C12] The old planner's categoryToFlavour closure was removed in 3417731e.

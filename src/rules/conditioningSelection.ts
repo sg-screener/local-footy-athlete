@@ -581,6 +581,11 @@ export function selectConditioningTemplateWithTrace(
     args.availableMachines === undefined || args.availableMachines.includes(modality);
   if (args.offFeet) {
     filters.push((template) =>
+      // An off-feet delivery cannot honestly retain an identity that promises
+      // running. Continuous Aerobic Run is authored to permit Bike, but an
+      // injured athlete was still shown "Run" beside "limit running". Choose
+      // another same-quality authored machine template instead.
+      !/\brun\b/i.test(template.name) &&
       renderableModalities(template).some((m) => m !== 'run' && machineOwned(m)));
   } else if (args.availableMachines !== undefined) {
     filters.push((template) =>

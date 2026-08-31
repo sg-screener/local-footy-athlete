@@ -141,6 +141,20 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-fully-replaced-strength-is-injury-adjusted-session',
+    law: 'R-289: when injury compilation leaves none of a strength session\'s originally planned movement patterns, its typed session and visible strength-part identity are Injury-Adjusted Session; partial adjustments retain the surviving original-pattern identity.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-289',
+    guard: { state: 'guarded', by: 'test:session-naming', chainStatus: 'in_chain',
+      receipt: 'Red-first 2026-08-31: a typed lower-squat intent with an injury adjustment and zero effective original patterns returned Lower Squat. The naming owner now requires typed injury evidence plus a nonempty planned/empty effective ledger; the injury compiler and visible projection consume that one result. The exact 2027-03-01 lived journey returns Injury-Adjusted Session at both workout and part. Disabling the predicate kills the named cell. Final verification: docs/STATUS_SELECTIONREPAIR.md.' },
+  },
+  {
+    id: 'LAW-off-feet-selection-never-names-running',
+    law: 'R-289: an explicitly off-feet conditioning request never selects a template whose athlete-facing identity says Run; it selects an honest same-quality machine template when feasible and otherwise the existing injury boundary removes conditioning.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-289',
+    guard: { state: 'guarded', by: 'test:conditioning-templates', chainStatus: 'in_chain',
+      receipt: 'Red-first 2026-08-31: the 20-position off-feet aerobic sweep selected Continuous Aerobic Run. The shared selector now rejects run-named identities only for explicit off-feet demand while preserving all four honestly named aerobic machine templates. The exact 2027-03-01 calf/Achilles journey now delivers Steady Blocks on Bike. Removing the identity filter kills P14. Final verification: docs/STATUS_SELECTIONREPAIR.md.' },
+  },
+  {
     id: 'LAW-primer-stays-seven-low-fatigue-rows',
     law: 'R-288: every generated and athlete-added Primer contains exactly seven low-fatigue rows and no optional Acceleration, heavy lower lift or Bench Press. Athletes who want more work add a separate Strength session.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-288',

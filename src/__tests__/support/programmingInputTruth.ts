@@ -81,9 +81,11 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
     category: 'aerobic_base', dateStr: date, miniCycleNumber: i + 1, offFeet: true,
     availableMachines: ['bike', 'air_bike', 'row', 'ski'], role: 'standalone',
   }).name));
-  ok('P14: all five usable off-leg aerobic templates remain selectable',
-    ['Continuous Aerobic Run', 'Steady Blocks (3×8 min or 4×6 min)', 'Long Aerobic Intervals',
+  ok('P14: all four honestly named off-leg aerobic templates remain selectable',
+    ['Steady Blocks (3×8 min or 4×6 min)', 'Long Aerobic Intervals',
       'Controlled 10–20 min Blocks', 'Steady 5 min Blocks'].every(name => picked.has(name)), JSON.stringify([...picked]));
+  ok('P14: off-feet selection never returns a template whose identity says Run',
+    [...picked].every(name => !/\brun\b/i.test(name)), JSON.stringify([...picked]));
   for (const category of ['sprint', 'aerobic_base'] as const) {
     const history: BlockConditioningSelection[] = [];
     const selected = [];

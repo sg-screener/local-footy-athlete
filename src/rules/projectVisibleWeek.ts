@@ -1157,6 +1157,7 @@ function partHeadline(
     // add them back without re-closing that path.
     const resolved = resolveSessionDisplayName({
       strengthIntent: workout?.strengthIntent,
+      injuryAdjustment: workout?.injuryAdjustment,
       exercises: rows.map((row) => ({ name: row.name })),
       isTeamDay: false,
       tier: 'core',
