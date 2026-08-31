@@ -64,6 +64,24 @@ whose readable words are currently below 11pt.
 - The chained mobility diagnostic is 71 passed / 3 failed on its inherited
   source-shape expectations around the shared session section.
 
+## First mutation finding
+
+Lowering the shared `caption` token from 11pt to 10pt left the new scale cell
+green. The old instrument sliced a fixed 260-character region after each style
+anchor, so it found the next style's correct 11pt value and treated that as the
+caption's. The mutation was real and the gate was blind.
+
+The guard now extracts each named style only from its opening anchor through
+its own closing brace, proving both anchors exist before checking size and line
+height. The 10pt mutation will be rerun against that exact-block reader before
+this task is accepted.
+
+The rerun killed the shared-token mutation at the exact caption cell. A second
+mutation lowered only the Day tile detail from 12pt to 10pt: the complete local
+source census and the Day status-card cell both turned red, while the shared
+token cell stayed green. Both mutations were restored by explicit reverse
+patches; no checkout or whole-file restore was used.
+
 ## NOT COVERED (current boundary)
 
 - Deliberate liveness mutation, simulator screenshots, smallest supported phone,

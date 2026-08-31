@@ -33,6 +33,14 @@ function run(name: string, body: () => void): void {
 const ROOT = path.join(__dirname, '..');
 const read = (relative: string) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
+function styleBlock(source: string, variant: string): string {
+  const start = source.indexOf(`  ${variant}: {`);
+  assert(start >= 0, `${variant}: typography variant was not found`);
+  const end = source.indexOf('\n  },', start);
+  assert(end > start, `${variant}: typography variant block was not closed`);
+  return source.slice(start, end + 5);
+}
+
 function productionTsxFiles(directory: string): string[] {
   const absolute = path.join(ROOT, directory);
   return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
@@ -55,9 +63,7 @@ run('the shared scale keeps Renee\'s hierarchy above the readable floor', () => 
     ['button', 12, 16], ['buttonSmall', 11, 15],
   ] as const;
   for (const [variant, size, lineHeight] of expected) {
-    const regionAt = source.indexOf(`${variant}: {`);
-    assert(regionAt >= 0, `${variant}: typography variant was not found`);
-    const region = source.slice(regionAt, regionAt + 260);
+    const region = styleBlock(source, variant);
     assert(new RegExp(`fontSize:\\s*${String(size).replace('.', '\\.')}(?:,|\\s)`).test(region),
       `${variant}: expected Renee size ${size}`);
     assert(new RegExp(`lineHeight:\\s*${lineHeight}(?:,|\\s)`).test(region),
@@ -109,9 +115,7 @@ run('onboarding alone keeps the original readable type scale', () => {
     ['button', 16, 24], ['buttonSmall', 14, 20],
   ] as const;
   for (const [variant, size, lineHeight] of expected) {
-    const regionAt = source.indexOf(`${variant}: {`);
-    assert(regionAt >= 0, `${variant}: onboarding typography variant was not found`);
-    const region = source.slice(regionAt, regionAt + 260);
+    const region = styleBlock(source, variant);
     assert(new RegExp(`fontSize:\\s*${String(size).replace('.', '\\.')}(?:,|\\s)`).test(region),
       `${variant}: expected original onboarding size ${size}`);
     assert(new RegExp(`lineHeight:\\s*${lineHeight}(?:,|\\s)`).test(region),
