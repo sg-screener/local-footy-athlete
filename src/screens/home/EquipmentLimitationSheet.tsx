@@ -35,9 +35,6 @@ const glyph = (color: string, children: React.ReactNode) => (
 );
 export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => React.ReactNode> = {
   medicine_ball: (color) => <LfaIcon name="sandbag-dead-ball" color={color} />,
-  slam_ball: (color) => <LfaIcon name="sandbag-dead-ball" color={color} />,
-  throwing_wall: (color) => glyph(color, <Path d="M4 3h16v18H4zM4 9h16M4 15h16M12 3v6M8 9v6M16 9v6M12 15v6" />),
-  slam_space: (color) => glyph(color, <Path d="M3 16l9-5 9 5-9 5zM12 3v7M9 7l3 3 3-3" />),
   /** Barbell and plates — Sam's supplied stacked-plate trace. */
   barbell: (color) => <LfaIcon name="barbell-plates" color={color} />,
   /** Dumbbells — the same dumbbell mark used throughout the app. */

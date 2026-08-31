@@ -513,32 +513,22 @@ function workoutsFor(
     `normal=${normalOption?.prescribedRepsMin}-${normalOption?.prescribedRepsMax} deload=${deloadOption?.prescribedRepsMin}-${deloadOption?.prescribedRepsMax}`);
 }
 
-// The power block is BODYWEIGHT-ONLY and equipment-independent.
-//
-// Sam retired the whole medicine-ball family (Chest Pass and Slam 2026-07-24,
-// Overhead Throw 2026-07-25), so `buildPowerBlock` no longer branches on
-// equipment at all. These assertions used to prove the med-ball alternate
-// appeared only when a ball was available; they now prove the stronger and
-// simpler property — owning a medicine ball changes nothing, and no power
-// option ever demands an implement the athlete may not have.
+// R-270 restored the three approved medicine-ball movements. R-296 collapses
+// their former ball/wall/space answers into one `Medicine ball` capability.
 {
   const noBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench'] }));
   const withBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench', 'Medicine Ball'] }));
-  const blocks = [...noBall, ...withBall].flatMap((w) => powerRows(w));
 
-  ok('every power option needs no equipment at all',
-    blocks.every((r) => (r.exercise?.equipmentRequired ?? []).length === 0),
-    blocks.map((r) => `${r.exercise?.name}[${(r.exercise?.equipmentRequired ?? []).join(',')}]`).join(' | '));
+  ok('no-ball power rows never require a medicine ball',
+    noBall.flatMap((w) => powerRows(w)).every((r) =>
+      !(r.exercise?.equipmentRequired ?? []).includes('medicine_ball')));
 
-  ok('no medicine-ball option is offered, with or without a ball',
-    blocks.every((r) => !/medicine ball/i.test(r.exercise?.name ?? '')));
-
-  // Equipment-independence, proven by comparison rather than asserted: the same
-  // athlete with and without a ball gets byte-identical power options.
   const names = (ws: typeof noBall) =>
     ws.flatMap((w) => powerRows(w)).map((r) => r.exercise?.name ?? '').join(' | ');
-  ok('owning a medicine ball changes no power option',
-    names(noBall) === names(withBall),
+  ok('one Medicine Ball answer unlocks an approved medicine-ball power option',
+    names(noBall) !== names(withBall)
+      && withBall.flatMap((w) => powerRows(w)).some((r) =>
+        /medicine[- ]ball/i.test(r.exercise?.name ?? '')),
     `noBall="${names(noBall)}"\n      withBall="${names(withBall)}"`);
 }
 

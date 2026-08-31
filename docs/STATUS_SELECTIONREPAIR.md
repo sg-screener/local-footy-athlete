@@ -1336,3 +1336,65 @@ the chained `test:rdl-family + test:session-injury-review` guards.
 
 NOT COVERED at this checkpoint: the exact affected session on Sam's phone,
 native pixels, and a whole-app PASS. No physical phone was touched.
+
+## 2026-08-31 — one Medicine ball answer across onboarding and equipment editing (R-296)
+
+Sam retired the separate `Ball suitable for slams`, `Suitable throwing wall`
+and `Impact-safe floor and clear space` answers. One `Medicine ball` answer now
+permits the three approved throws/slams; the athlete changes the exercise or
+removes Medicine ball if their ball or surroundings are unsuitable.
+
+Two options were compared: hide the three rows only in the UI while retaining
+four internal capabilities, or collapse the authored equipment model to one
+capability. The source-of-truth collapse landed because every surface is already
+derived from the catalogue; a UI-only filter would leave generation, Add/Swap
+and temporary equipment facts disagreeing with onboarding.
+
+Implemented:
+
+- `EquipmentTag`, the authored exercise-requirement sheet and the power pool now
+  use only `medicine_ball` for all three approved medicine-ball movements.
+- The shared label is exactly `Medicine ball`. Onboarding, Profile and the
+  temporary-equipment sheet all derive from that same vocabulary and icon map.
+- Commercial gym pre-ticks Medicine ball, so onboarding follows its existing
+  “untick what you do not have” contract.
+- New answers write only the canonical tag. A shared read-ingress lift maps old
+  medicine-ball/wall/slam/space answers and dated facts to `medicine_ball`;
+  onboarding and Profile use that lift when reopening old answers.
+
+Regression and liveness receipt:
+
+- Red first: `test:equipment-vocabulary` reported the four old labels plus
+  three demanded split capabilities; `test:power-pool` showed the throw and
+  slams still required those split tags.
+- `test:equipment-vocabulary`: 95 / 95, including the single onboarding label,
+  commercial preset, legacy saved-answer lift and legacy temporary-fact lift.
+- `test:power-pool`: 94 / 94; all three restored movements require only
+  `medicine_ball`.
+- `test:exercise-intake`: its primary intake journey is 636 / 636 and all
+  medicine-ball equipment cells pass. The composite remains red only when it
+  reaches the inherited `test:power-primer-policy` deload identity failure
+  named below.
+- `test:onboarding-presentation`: 109 / 109.
+- `test:equipment-answer`: the new onboarding/Profile lift cells pass; the
+  suite remains 49 / 50 on its inherited interrupted-flow expectation
+  (`SeasonFinished` is now the next required step).
+- `test:power-primer-policy`: the new no-ball/with-ball route passes; the suite
+  remains 56 / 57 on its inherited deload identity expectation (normal
+  `Vertical Jump`, deload `Broad Jumps`).
+- `test:equipment-scopes`: 20 / 20; temporary kit, clearing and restart remain
+  intact after the canonical tag lift.
+- `test:compile`: product 0 and devtools 0 errors; the gate retains four
+  inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+- `test:law-registry`: R-296 is well formed, resolved and guarded. The registry
+  remains red only on the inherited 21 `UNENFORCED` rows: 230 total / 209
+  guarded.
+
+R-296 and `LAW-one-medicine-ball-equipment-answer` bind the rule to the chained
+`test:equipment-vocabulary + test:equipment-answer + test:exercise-intake +
+test:power-pool` gates.
+
+NOT COVERED at this checkpoint: native onboarding pixels/taps, the exact saved
+answer on Sam's phone, Android, remote sync, and a whole-app PASS. Neither
+physical phone was touched.

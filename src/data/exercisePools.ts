@@ -69,10 +69,9 @@ export type EquipmentTag =
   // from FIVE authored sources and Sam's sheet was not one of them — see
   // `rules/equipmentVocabulary.ts`, where the sheet is now read FIRST.
   | 'sandbag'
-  | 'medicine_ball'
-  | 'throwing_wall'
-  | 'slam_ball'
-  | 'slam_space';
+  // One answer owns every approved medicine-ball throw and slam. Wall, ball
+  // suitability and floor/space are athlete judgement, not equipment tags.
+  | 'medicine_ball';
 
 export type InjuryTag =
   | 'shoulder'

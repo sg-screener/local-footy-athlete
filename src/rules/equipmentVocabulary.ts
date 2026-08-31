@@ -372,10 +372,7 @@ export type AskableEquipmentTag = Exclude<EquipmentTag, 'bodyweight' | 'bike_or_
  * cannot ship unlabelled — it fails compilation here instead.
  */
 export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>> = {
-  medicine_ball: 'Medicine ball (wall throws)',
-  throwing_wall: 'Suitable throwing wall',
-  slam_ball: 'Ball suitable for slams',
-  slam_space: 'Impact-safe floor and clear space',
+  medicine_ball: 'Medicine ball',
   barbell: 'Barbell and plates',
   dumbbells: 'Dumbbells',
   cables: 'Cable machine',

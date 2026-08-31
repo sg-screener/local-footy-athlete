@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-one-medicine-ball-equipment-answer',
+    law: 'R-296: onboarding, Profile and temporary-equipment surfaces expose one Medicine ball answer. That answer permits every approved medicine-ball throw and slam; wall suitability, slam rating and floor/space are athlete judgement, not separate capabilities. New saves use only medicine_ball and older split answers lift at read.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-296',
+    guard: {
+      state: 'guarded',
+      by: 'test:equipment-vocabulary + test:equipment-answer + test:exercise-intake + test:power-pool',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Red first: the derived vocabulary still exposed four ball/wall/space questions and each restored ball exercise required the split tags. The equipment tag union, authored requirement sheet and power catalogue now own one medicine_ball capability. Both onboarding and Profile read the shared derived label and saved-answer lift; temporary facts use the same lift. Legacy split answers remain read-ingress aliases only. Mutation/liveness and final gate receipt: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-automatic-variety-has-no-constraint-explainer',
     law: 'R-295: automatic exercise variety, collision avoidance and programming de-duplication show no “Swapped from” explainer. Equipment wording is reserved for a row whose recorded base exercise is genuinely illegal under that date\'s typed kit; injury and athlete exclusion retain their truthful explanations. An unattributed automatic substitution fails compilation rather than defaulting to equipment.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-295',
@@ -257,7 +268,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-exercise-intake-20260828',
-    law: 'R-270: the ten saved exercise additions use canonical typed catalogue, equipment, injury, experience, fixture and dose owners. Ball and space suitability require explicit answers. Approved automatic/manual/warm-up/Primer routes remain reachable; units and load conventions persist. No Bird Dogs, conditioning slam template, power-rest UI or Estimated 1RM change.',
+    law: 'R-270, with its split ball/wall/space equipment clause superseded by R-296: the saved exercise additions use canonical typed catalogue, equipment, injury, experience, fixture and dose owners. Approved automatic/manual/warm-up/Primer routes remain reachable; units and load conventions persist. No Bird Dogs, conditioning slam template, power-rest UI or Estimated 1RM change.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-270',
     guard: { state: 'guarded', by: 'test:exercise-intake', chainStatus: 'in_chain',
       receipt: 'exerciseIntakeTests compares all submitted injury ratings, real equipment and chooser eligibility, canonical composition, actual Add, logging and accumulated restart. Execution status and uncovered variants: docs/STATUS_INTAKE.md.' },

@@ -53,6 +53,9 @@ const ALL_ASKABLE_TAGS: readonly AskableEquipmentTag[] = [
   // could say they owned one. Commercial = all, so it is pre-ticked HERE and on
   // no other preset — club and home keep their signed lists exactly.
   'sandbag',
+  // One ordinary capability covers the approved throws and slams. Commercial
+  // starts it ticked; an athlete without one removes the tick.
+  'medicine_ball',
 ];
 
 export const EQUIPMENT_LOCATION_PRESETS: readonly EquipmentLocationPreset[] = [

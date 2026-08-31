@@ -27,6 +27,7 @@ import {
   type EquipmentLocationChoice,
 } from '../../rules/equipmentLocationPresets';
 import { todayISOLocal } from '../../utils/appDate';
+import { canonicalEquipmentAnswerTags } from '../../utils/equipmentAvailability';
 
 /**
  * WHERE "CONTINUE" LANDS IS AN INPUT — SEAT_INBOX item 24, Sam 2026-08-13.
@@ -43,10 +44,13 @@ import { todayISOLocal } from '../../utils/appDate';
  * changes — so `onDone` is optional and the fallback lives here, beside the
  * screen that owns it.
  *
- * NOTHING ABOUT THE QUESTION CHANGES. Sam's audit ruling 3 stands untouched:
+ * THIS EXIT INPUT CHANGED NOTHING ABOUT THE QUESTION. Sam's audit ruling 3
+ * still owns the interaction:
  * "where do you train" first, the choice PRE-TICKS the checklist, the athlete
  * unticks what their place lacks, and THE STORED ANSWER IS THE FINAL TICKED
  * LIST. This prop moves where the athlete goes afterwards, and nothing else.
+ * R-296 later collapsed the ball-specific rows into one derived Medicine ball
+ * answer without changing this exit contract.
  */
 type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Equipment'> & {
   /**
@@ -85,13 +89,17 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
   // to “leave Equipment”. An athlete who arrived with an existing answer still
   // keeps the established edit behaviour and exits Equipment on Back.
   const [existingOnEntry] = useState(() => savedEquipmentAnswer());
+  const canonicalExistingTags = useMemo(
+    () => canonicalEquipmentAnswerTags(existingOnEntry?.tags ?? {}),
+    [existingOnEntry],
+  );
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Equipment');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const [location, setLocation] = useState<EquipmentLocationChoice | null>(null);
   const [tickedTags, setTickedTags] = useState<ReadonlySet<AskableEquipmentTag>>(() =>
     new Set(
-      Object.entries(existingOnEntry?.tags ?? {})
+      Object.entries(canonicalExistingTags)
         .filter(([, possession]) => possession === 'have')
         .map(([tag]) => tag as AskableEquipmentTag),
     ));
@@ -141,7 +149,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
     const tags: Record<string, EquipmentAnswer['tags'][AskableEquipmentTag]> = {};
     for (const tag of askableTags) {
       if (tickedTags.has(tag)) tags[tag] = 'have';
-      else if (existingOnEntry?.tags[tag] === 'never') tags[tag] = 'never';
+      else if (canonicalExistingTags[tag] === 'never') tags[tag] = 'never';
     }
     const modalities: Record<string, EquipmentAnswer['modalities'][ConditioningEquipmentModality]> = {};
     for (const modality of askableModalities) {
@@ -160,7 +168,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, on
       // so this resolves to exactly what shipped before item 24.
       onDone ?? (() => navigation.navigate('GymExperience')),
     );
-  }, [askableTags, askableModalities, tickedTags, tickedModalities, existingOnEntry, location,
+  }, [askableTags, askableModalities, tickedTags, tickedModalities, canonicalExistingTags, location,
     commitAndAdvance, navigation, onDone]);
 
   if (!showChecklist) {

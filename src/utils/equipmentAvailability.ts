@@ -7,6 +7,7 @@ import type {
 import type {
   ConditioningEquipmentModality,
   EquipmentSelectionCompleteness,
+  EquipmentPossession,
   OnboardingData,
   TrainingLocation,
 } from '../types/domain';
@@ -59,6 +60,7 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   // 2026-08-17: askable at last, because Sam's own sheet requires it for
   // `Bear Carry`. Commercial = all, so it lands here and nowhere else.
   'sandbag',
+  'medicine_ball',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -71,6 +73,7 @@ const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   Kettlebells: ['kettlebell'],
   'Cable Machine': ['cables'],
   'Pull-up Bar': ['pullup_bar'],
+  'Medicine Ball': ['medicine_ball'],
 };
 
 const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -111,6 +114,11 @@ const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   Rower: ['bike_or_treadmill'],
   SkiErg: ['bike_or_treadmill'],
   Treadmill: ['bike_or_treadmill'],
+  // Read-ingress aliases only. New answers write only `medicine_ball`.
+  'Medicine ball (wall throws)': ['medicine_ball'],
+  'Suitable throwing wall': ['medicine_ball'],
+  'Ball suitable for slams': ['medicine_ball'],
+  'Impact-safe floor and clear space': ['medicine_ball'],
 };
 
 export const EQUIPMENT_CHECKLIST_OPTION_TAGS: Readonly<Record<string, readonly EquipmentTag[]>> = {
@@ -268,10 +276,9 @@ export function equipmentTagsForRequirement(
   if (/^(rings_trx|rings|trx|suspension_trainer)$/.test(normalized)) return ['rings_trx'];
   // Sam wrote "sand bag / dead ball" on his sheet; both spellings are one tick.
   if (/^(sandbag|sand_bag|dead_ball|deadball|sandbag_dead_ball)$/.test(normalized)) return ['sandbag'];
-  if (/^(medicine_ball|medicine_ball_wall_throws)$/.test(normalized)) return ['medicine_ball'];
-  if (/^(throwing_wall|suitable_throwing_wall)$/.test(normalized)) return ['throwing_wall'];
-  if (/^(slam_ball|ball_suitable_for_slams)$/.test(normalized)) return ['slam_ball'];
-  if (/^(slam_space|impact_safe_floor_and_clear_space)$/.test(normalized)) return ['slam_space'];
+  if (/^(medicine_ball|medicine_ball_wall_throws|throwing_wall|suitable_throwing_wall|slam_ball|ball_suitable_for_slams|slam_space|impact_safe_floor_and_clear_space)$/.test(normalized)) {
+    return ['medicine_ball'];
+  }
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {
@@ -293,6 +300,24 @@ export function equipmentTagsForRequirement(
   const mapped = tagsForChecklistOption(value);
   if (!mapped || mapped.length === 0) return null;
   return mapped;
+}
+
+/**
+ * Lift stored answer keys onto the current one-write equipment vocabulary.
+ * Several retired medicine-ball questions may collapse into one capability:
+ * any positive answer wins, otherwise a retained `never` remains `never`.
+ */
+export function canonicalEquipmentAnswerTags(
+  stored: Readonly<Record<string, EquipmentPossession | undefined>>,
+): Partial<Record<EquipmentTag, EquipmentPossession>> {
+  const lifted: Partial<Record<EquipmentTag, EquipmentPossession>> = {};
+  for (const [rawTag, possession] of Object.entries(stored)) {
+    if (!possession) continue;
+    for (const tag of equipmentTagsForRequirement(rawTag) ?? []) {
+      if (lifted[tag] !== 'have' || possession === 'have') lifted[tag] = possession;
+    }
+  }
+  return lifted;
 }
 
 /** True when every recognised requirement is present; unknown labels pass. */
@@ -445,11 +470,14 @@ function applyEquipmentConstraints(
     if (!isActiveEquipmentConstraint(constraint)) continue;
     if (!equipmentConstraintAppliesToDate(constraint, dateISO)) continue;
 
+    const canonicalConstraintTags = constraint.tags.flatMap((tag) =>
+      equipmentTagsForRequirement(String(tag)) ?? []);
+
     if (constraint.mode === 'only') {
       tags = ['bodyweight'];
-      addUnique(tags, constraint.tags);
+      addUnique(tags, canonicalConstraintTags);
     } else {
-      const unavailable = new Set(constraint.tags.filter((tag) => tag !== 'bodyweight'));
+      const unavailable = new Set(canonicalConstraintTags.filter((tag) => tag !== 'bodyweight'));
       tags = tags.filter((tag) => tag === 'bodyweight' || !unavailable.has(tag));
     }
     if (!tags.includes('bodyweight')) tags.unshift('bodyweight');
@@ -481,7 +509,7 @@ function resolveAnsweredCapabilities(
   effectiveDate: string,
 ): ResolvedEquipmentCapabilities {
   const tags: EquipmentTag[] = ['bodyweight'];
-  for (const [tag, possession] of Object.entries(answer.tags)) {
+  for (const [tag, possession] of Object.entries(canonicalEquipmentAnswerTags(answer.tags))) {
     if (possession === 'have') addUnique(tags, [tag as EquipmentTag]);
   }
   const modalities: ConditioningEquipmentModality[] = [];

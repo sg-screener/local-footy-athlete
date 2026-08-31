@@ -61,7 +61,7 @@ const profile = athleteAnswers({ id: 'power-bodyweight', gender: 'male',
   experience: '2-5 years', equipment: 'bodyweight', initialPhase: 'Pre-season',
   days: ['Monday', 'Tuesday', 'Thursday', 'Friday'], clubDays: [], gameDay: null, extraGame: false });
 const fullKit = { ...profile.equipmentAnswer!, tags: Object.fromEntries(derivedEquipmentChecklistTags()
-  .filter(tag => !['medicine_ball', 'throwing_wall', 'slam_ball', 'slam_space'].includes(tag))
+  .filter(tag => tag !== 'medicine_ball')
   .map(tag => [tag, 'have'])), modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' } } as OnboardingData['equipmentAnswer'];
 
 const program = await generateThroughOnboarding(profile as never, {

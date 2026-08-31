@@ -47,6 +47,7 @@ import {
 import { eligiblePowerExercises } from '../rules/powerExercisePool';
 import {
   FULL_GYM_EQUIPMENT,
+  equipmentTagsForRequirement,
   resolveEquipmentCapabilities,
 } from '../utils/equipmentAvailability';
 import type { ConditioningEquipmentModality } from '../types/domain';
@@ -111,8 +112,47 @@ const TAG_CLASSIFICATION: Record<EquipmentTag, 'asked' | 'always_available' | 'd
   // authored sources and Sam's own sheet was not one of them; it is now read
   // FIRST (`rules/equipmentVocabulary.ts`).
   sandbag: 'asked',
-  medicine_ball: 'asked', throwing_wall: 'asked', slam_ball: 'asked', slam_space: 'asked',
+  medicine_ball: 'asked',
 };
+
+ok(
+  'one Medicine ball answer owns throws and slams; no wall, slam-ball or slam-space question survives',
+  EQUIPMENT_TAG_LABELS.medicine_ball === 'Medicine ball'
+    && !('throwing_wall' in EQUIPMENT_TAG_LABELS)
+    && !('slam_ball' in EQUIPMENT_TAG_LABELS)
+    && !('slam_space' in EQUIPMENT_TAG_LABELS)
+    && ['medicine_ball', 'throwing_wall', 'slam_ball', 'slam_space']
+      .every((value) => JSON.stringify(equipmentTagsForRequirement(value)) === '["medicine_ball"]'),
+  EQUIPMENT_TAG_LABELS,
+);
+const legacyBallAnswer = resolveEquipmentCapabilities({
+  equipmentAnswer: {
+    tags: { slam_ball: 'have', slam_space: 'have' },
+    modalities: {},
+    answeredOn: '2026-08-28',
+  },
+} as never, null, '2026-08-31');
+ok(
+  'older slam-specific saved answers lift at read to the one medicine_ball capability',
+  legacyBallAnswer.tags.includes('medicine_ball')
+    && !legacyBallAnswer.tags.some((tag) => ['throwing_wall', 'slam_ball', 'slam_space'].includes(tag)),
+  legacyBallAnswer.tags,
+);
+const legacyBallConstraint = resolveEquipmentCapabilities({
+  equipmentAnswer: {
+    tags: { medicine_ball: 'have' },
+    modalities: {},
+    answeredOn: '2026-08-31',
+  },
+}, [{
+  id: 'old-slam-space-fact', type: 'equipment', mode: 'without',
+  tags: ['slam_space'], status: 'active', startDate: '2026-08-31',
+}] as never, '2026-08-31');
+ok(
+  'an older temporary slam-specific removal also lifts to removing Medicine ball',
+  !legacyBallConstraint.tags.includes('medicine_ball'),
+  legacyBallConstraint.tags,
+);
 
 console.log('\n— library -> checklist (nothing authored can require an unaskable tag) —');
 
@@ -291,11 +331,10 @@ console.log('\n— location presets are seeds INSIDE the vocabulary (audit rulin
       preset.preTickedModalities.every((modality) => modalityQuestions.includes(modality)),
       preset.preTickedModalities.filter((m) => !modalityQuestions.includes(m)));
   }
-  const explicitlyConfirmed = ['medicine_ball', 'throwing_wall', 'slam_ball', 'slam_space'] as const;
-  ok('commercial retains all existing equipment; ball suitability and space require confirmation',
-    EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.length === checklist.length - explicitlyConfirmed.length &&
-      EQUIPMENT_LOCATION_PRESETS.every(preset => explicitlyConfirmed.every(tag => !preset.preTickedTags.includes(tag))) &&
-      checklist.filter(tag => !explicitlyConfirmed.some(required => required === tag)).every(tag => EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.some(ticked => ticked === tag)) &&
+  ok('commercial pre-ticks the one Medicine ball answer so the athlete removes it if unavailable',
+    EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.length === checklist.length &&
+      EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.includes('medicine_ball') &&
+      checklist.every(tag => EQUIPMENT_LOCATION_PRESETS[0].preTickedTags.some(ticked => ticked === tag)) &&
       EQUIPMENT_LOCATION_PRESETS[0].preTickedModalities.length === modalityQuestions.length);
 
   // SIGNED CONTENT PINS — Sam, 2026-07-31, one amendment (club adds pull-up

@@ -6901,6 +6901,10 @@ Power rest remains hidden. Estimated 1RM is outside this work.
 Guard: `LAW-exercise-intake-20260828`, `test:exercise-intake`.
 Unresolved variant instructions and NOT COVERED: `docs/STATUS_INTAKE.md`.
 
+The ball/wall/space equipment-answer clause above is superseded by R-296. The
+exercise identities, prescriptions, eligibility and other R-270 boundaries are
+unchanged.
+
 **R-271** · Sam's attached device findings, 2026-08-28.
 
 Owner: intake. Source: `/Users/samgeurts/Downloads/Untitled note.pdf`, three pages,
@@ -7420,3 +7424,28 @@ base exercise keeps the equipment explanation.
 Guard: `LAW-automatic-variety-has-no-constraint-explainer` through
 `test:rdl-family + test:session-injury-review`. Verification status and NOT
 COVERED: `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-296** · One Medicine ball equipment answer, 2026-08-31.
+
+Owner: selectionrepair. Onboarding, Profile and temporary-equipment editing show
+one option labelled `Medicine ball`. `Ball suitable for slams`, `Suitable
+throwing wall` and `Impact-safe floor and clear space` are retired as separate
+equipment answers.
+
+Selecting `Medicine ball` permits every approved medicine-ball throw and slam.
+The athlete decides whether their ball and surroundings suit the movement; if
+not, they change the exercise or remove Medicine ball. Commercial gym starts
+with Medicine ball ticked, like its other equipment, so the athlete can remove
+it during onboarding.
+
+New writes contain only the canonical `medicine_ball` capability. Older saved
+ball/wall/space answers and temporary facts lift at read to that capability, so
+an existing athlete neither loses valid access nor sees retired questions when
+editing their answer. This supersedes only R-270's split ball/wall/space
+equipment-answer clause; the approved movements and their programming rules are
+unchanged.
+
+Guard: `LAW-one-medicine-ball-equipment-answer` through the chained
+`test:equipment-vocabulary + test:equipment-answer + test:exercise-intake +
+test:power-pool` gates. Verification status and NOT COVERED:
+`docs/STATUS_SELECTIONREPAIR.md`.

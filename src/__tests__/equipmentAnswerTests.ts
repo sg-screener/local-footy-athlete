@@ -352,6 +352,10 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
   // responsibility, which is how a signed screen quietly changes — so these
   // cells red on that inversion, not merely on the prop going missing.
   const equipmentScreen = read('screens/onboarding/EquipmentScreen.tsx');
+  ok('onboarding lifts older slam-specific answers into its one Medicine ball tick',
+    /canonicalEquipmentAnswerTags\(existingOnEntry\?\.tags \?\? \{\}\)/.test(equipmentScreen)
+      && /Object\.entries\(canonicalExistingTags\)/.test(equipmentScreen)
+      && /canonicalExistingTags\[tag\] === 'never'/.test(equipmentScreen));
   ok('the equipment screen takes an OPTIONAL exit',
     /onDone\?: \(\) => void/.test(equipmentScreen),
     'the exit is no longer optional. Onboarding passes nothing, so a required '
@@ -383,6 +387,10 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
   ok('the deleted footnote leaves no hidden Pressable or footNote style behind',
     !/Pressable|styles\.footNote|footNote:/.test(equipmentScreen));
 
+  const equipmentEditor = read('screens/profile/EquipmentEditorSheet.tsx');
+  ok('Profile equipment editing uses the same saved-answer lift as onboarding',
+    /canonicalEquipmentAnswerTags\(existing\.tags\)/.test(equipmentEditor));
+
   // ── R-230 (Sam, 2026-08-26): bodyweight-only is NOT a supported athlete ──
   // "Continuing with nothing ticked is a real answer" is retired: the step
   // requires at least one piece of strength kit, and the disabled Continue
@@ -406,7 +414,7 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
       !/'never'/.test(read('screens/onboarding/EquipmentScreen.tsx').replace(
         // The onboarding screen PRESERVES an existing never on save; it never
         // creates one. Strip the preservation branch before asserting.
-        /existing\?\.\w+\[\w+\] === 'never'\) \w+\[\w+\] = 'never';/g, '')));
+        /^\s*else if .* === 'never'\) .* = 'never';$/gm, '')));
 }
 
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);

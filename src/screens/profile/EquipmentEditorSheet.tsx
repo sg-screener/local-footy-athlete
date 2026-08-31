@@ -20,6 +20,7 @@ import {
 import { savedEquipmentAnswer, useProfileStore } from '../../store/profileStore';
 import { EQUIPMENT_LOCATION_PRESETS } from '../../rules/equipmentLocationPresets';
 import { todayISOLocal } from '../../utils/appDate';
+import { canonicalEquipmentAnswerTags } from '../../utils/equipmentAvailability';
 // SAME ICON OWNER AS THE THIS-WEEK SHEET (ruling 10) — `equipmentIconFor`
 // reads the exact `EQUIPMENT_TAG_ICON` / `CONDITIONING_MODALITY_ICON` maps
 // `EquipmentLimitationSheet` draws from, so the athlete's own kit looks like
@@ -93,7 +94,7 @@ export function EquipmentEditorSheet({
   const seed = () => {
     if (existing) {
       return {
-        tags: { ...(existing.tags as Partial<Record<AskableEquipmentTag, EquipmentPossession>>) },
+        tags: canonicalEquipmentAnswerTags(existing.tags) as Partial<Record<AskableEquipmentTag, EquipmentPossession>>,
         modalities: { ...existing.modalities },
       };
     }

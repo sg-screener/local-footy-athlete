@@ -200,16 +200,18 @@ async function main() {
   }
   check('Barbell Seated Good Morning starts at an empty bar', estimateStartingWeight('Seated Good Morning (Barbell)', profile) === 20);
   for (const [name, missing] of [
-    ['Rotational Medicine-Ball Throw', 'medicine_ball'], ['Rotational Medicine-Ball Throw', 'throwing_wall'],
-    ['Medicine-Ball Slam', 'slam_ball'], ['Medicine-Ball Slam', 'slam_space'],
-    ['Rotational Medicine-Ball Slam', 'slam_ball'], ['Rotational Medicine-Ball Slam', 'slam_space'],
+    ['Rotational Medicine-Ball Throw', 'medicine_ball'],
+    ['Medicine-Ball Slam', 'medicine_ball'],
+    ['Rotational Medicine-Ball Slam', 'medicine_ball'],
     ['SL 45° Back Extension', 'back_extension_bench'], ['SL 45° Back Extension Hold', 'back_extension_bench'],
   ]) {
     const without = kit.filter(tag => tag !== missing);
     check(`${name}: blocked without ${missing}`, !exerciseIsAvailableWith(name, without));
     check(`${name}: manual blocked without ${missing}`, !assessTapSwapCandidateSafety(name, { ...environment, availableEquipmentTags: without }).safe);
   }
-  check('dead ball is not a wall-throw ball', !exerciseIsAvailableWith('Rotational Medicine-Ball Throw', ['bodyweight', 'sandbag', 'throwing_wall']));
+  check('one medicine-ball answer permits every approved throw and slam',
+    ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']
+      .every(name => exerciseIsAvailableWith(name, ['bodyweight', 'medicine_ball'])));
   check('box can support bodyweight Seated Good Morning', exerciseIsAvailableWith('Seated Good Morning', ['bodyweight', 'plyo_box']));
   for (const [name] of submitted) {
     const policy = EXERCISE_TAGS[name].programming!;

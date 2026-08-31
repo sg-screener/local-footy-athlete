@@ -87,9 +87,9 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Broad Jumps', 'lower', null, []],
   ['Jump Squats', 'lower', null, []],
   ['Explosive Landmine Press', 'upper', 'developing', ['Barbell']],
-  ['Rotational Medicine-Ball Throw', 'upper', 'developing', ['medicine_ball', 'throwing_wall']],
-  ['Medicine-Ball Slam', 'upper', null, ['slam_ball', 'slam_space']],
-  ['Rotational Medicine-Ball Slam', 'upper', 'developing', ['slam_ball', 'slam_space']],
+  ['Rotational Medicine-Ball Throw', 'upper', 'developing', ['medicine_ball']],
+  ['Medicine-Ball Slam', 'upper', null, ['medicine_ball']],
+  ['Rotational Medicine-Ball Slam', 'upper', 'developing', ['medicine_ball']],
 ];
 
 ok(
@@ -127,8 +127,10 @@ ok(
 );
 
 ok(
-  'the med-ball family is absent (retired by the locked list)',
-  !POWER_EXERCISE_POOL.some((entry) => /medicine ball|med ball/i.test(entry.name)),
+  'every restored medicine-ball option reads the one medicine_ball capability',
+  POWER_EXERCISE_POOL.filter((entry) => /medicine[- ]ball/i.test(entry.name)).length === 3
+    && POWER_EXERCISE_POOL.filter((entry) => /medicine[- ]ball/i.test(entry.name))
+      .every((entry) => JSON.stringify(entry.equipmentRequired) === '["medicine_ball"]'),
 );
 
 ok(
