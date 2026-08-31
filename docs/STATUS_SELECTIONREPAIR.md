@@ -1518,3 +1518,58 @@ gates.
 NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
 Dynamic Type, VoiceOver reading order, a standalone speed-only day, and a
 whole-app PASS. Neither physical phone was touched.
+
+## 2026-08-31 — Erg Flush final modality and restart
+
+The handoff's proposed cause was disproved by the exact enriched journey. The
+finished 2027-04-12 workout already retained a typed mixed modality and the
+selected `bike / air_bike / ski / row` sequence in its conditioning block,
+including after the cold restart. The final card lost the label because
+`Aerobic Flush` deliberately presents its conditioning row in the Recovery
+section, while the final session-template adapter only projected typed
+conditioning identity onto rows presented in Conditioning or Speed sections.
+
+Two designs were compared: reclassify the whole optional Recovery session as a
+Conditioning section, or leave its honest Recovery identity in place and make
+the shared final-card adapter apply the typed conditioning option to every row
+that option owns. The second landed. It changes no session membership,
+selection, dose, placement, completion group or saved data; the existing typed
+conditioning block remains the sole source for the visible machine and effort
+wording.
+
+Regression and liveness receipt:
+
+- Red first: the exact recovery-shaped `Erg Flush Blocks` final adapter input
+  retained `mixed` plus `bike / air_bike / ski / row`, but the final card had
+  no modality label. After the change it displays
+  `Bike → Air Bike → SkiErg → RowErg` and retains `Effort: 3/10`.
+- JSON save/reconstruction preserves that exact sequence and display copy.
+- Mutation: restoring the old presentation-only guard makes the exact cell fail
+  on the missing all-machine sequence; restoring the shared owner makes it
+  green again.
+- `test:conditioning-modality-persistence` is green: 19 / 19 authored modality
+  cells, 3,298 / 3,298 displayed-route cells, 7 / 7 real generated save/restart
+  cells, and the two exact final Erg Flush cells.
+- The existing real accepted flush journey now checks the final card both
+  before and after a real storage relaunch. All 112 new cells pass: two genders
+  × four single-machine profiles × seven genuinely rolled-over flush dates ×
+  final-card plus restart. The full canonical slice reaches 11,891 passes and
+  remains red on six inherited failures: four pre-season speed identities
+  changing across restart and two full-kit Primer-heavy-option expectations.
+- The exact enriched 29-week replay was rerun for both athletes. The two final
+  athlete-cards on 2027-04-12 show the full four-machine sequence, and both
+  week-29 cold-restart receipts are `ok: true`.
+- `test:session-template` retains its inherited 87 / 88 numeric-index
+  source-shape failure; all conditioning and Recovery cells pass.
+- `test:compile` reports product 0 and devtools 0 errors. It retains four
+  inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+
+The next defect of this class is caught at two boundaries: the exact pure final
+adapter cell covers a typed conditioning row presented outside the Conditioning
+section, while the acted flush journey covers actual accepted history, storage
+and relaunch across every supported single-machine profile.
+
+NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
+remote sync, a no-machine flush fallback, the pending load-progression finding,
+PDF generation, and a whole-app PASS. Neither physical phone was touched.

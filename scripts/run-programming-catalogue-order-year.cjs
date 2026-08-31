@@ -30,6 +30,15 @@ app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionT
   catalogueOrderSelections.push(...traces.map((trace) => ({ decisionId: trace.decisionId, selected: trace.selected, reason: trace.selectionReason })));
 });
 const events = [];`);
+replace(
+  'rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
+  'rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,modalityLabel:item.modalityLabel,',
+);
+replace(
+  'result.restarts.push({date,ok:same,error:boot.error}); check(same,\'restart\',boot);',
+  `const modalityCards=view(weekStart,date).flatMap(day=>day.workout?buildSessionTemplate(day.workout).items.flatMap(item=>item.kind==='exercise'&&item.modalityLabel?[{date:day.date,name:item.row.exercise?.name??item.row.name,modalityLabel:item.modalityLabel,copy:String(item.row.notes??'')}]:[]):[]);
+    result.restarts.push({date,ok:same,error:boot.error,modalityCards}); check(same,'restart',boot);`,
+);
 replace("save('year-programs.json',data);", `save('year-programs.json',data);
   save('selected-programming-decisions.json', catalogueOrderSelections);`);
 let catalogueMutationSource = '';

@@ -5,6 +5,7 @@ import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { visibleSignature } from '../compilerYear/invariants';
 import { normalizeConditioningSelectionHistory, resolveTemplateByName, templateDurationMinutes } from '../../rules/conditioningSelection';
 import { useBlockSelectionHistoryStore } from '../../store/blockSelectionHistoryStore';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
 
 /** Accepted block history is produced by real rollover, never inserted into
  * storage. Every legacy flush identity must be reached and survive a boot on
@@ -30,6 +31,15 @@ export async function flushRestartJourney(storage: Map<string, string>, ok: (lab
           return o.modalitySequence?.join(',') === (machine === 'bike_erg' ? 'bike' : machine)
             && o.durationMinutes === templateDurationMinutes(resolveTemplateByName(o.title)!) && o.durationMinutes < 15;
         }), JSON.stringify(offered));
+      const displayed = view().flatMap(day => day.workout ? buildSessionTemplate(day.workout).items.flatMap(item =>
+        item.kind === 'exercise' && day.workout?.conditioningBlock?.options.some(option =>
+          option.exerciseIds.includes(String(item.row.id)))
+          ? [{ title: day.workout.conditioningBlock.options.find(option =>
+            option.exerciseIds.includes(String(item.row.id)))?.title, modality: item.modalityLabel }]
+          : []) : []);
+      ok(`flush-restart/${gender}/${machine}/${date}: final flush card displays its selected machine`,
+        offered.every(option => displayed.some(card => card.title === option.title && !!card.modality)),
+        JSON.stringify(displayed));
       const before = visibleSignature(view());
       const recorded = useBlockSelectionHistoryStore.getState().conditioningSelections;
       const flushHistory = recorded.filter(entry => resolveTemplateByName(entry.templateName)?.quality === 'flush');
@@ -46,6 +56,15 @@ export async function flushRestartJourney(storage: Map<string, string>, ok: (lab
         && lifted.filter(entry => resolveTemplateByName(entry.templateName)?.quality === 'flush').every(entry => entry.category === 'recovery_flush'));
       const boot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
       ok(`flush-restart/${gender}/${machine}/${date}: accepted dose and order survive restart`, boot.ok && before === visibleSignature(view()));
+      const restarted = view().flatMap(day => day.workout ? buildSessionTemplate(day.workout).items.flatMap(item =>
+        item.kind === 'exercise' && day.workout?.conditioningBlock?.options.some(option =>
+          option.exerciseIds.includes(String(item.row.id)))
+          ? [{ title: day.workout.conditioningBlock.options.find(option =>
+            option.exerciseIds.includes(String(item.row.id)))?.title, modality: item.modalityLabel }]
+          : []) : []);
+      ok(`flush-restart/${gender}/${machine}/${date}: final flush modality survives real save and relaunch`,
+        boot.ok && JSON.stringify(restarted) === JSON.stringify(displayed),
+        JSON.stringify({ displayed, restarted }));
     }
     ok(`flush-restart/${gender}/${machine}: all seven distinct flush templates were actually delivered and restarted`, seen.size === 7, JSON.stringify([...seen]));
   }

@@ -92,7 +92,7 @@
     "test:conditioning-rotation": "sucrase-node src/__tests__/conditioningRotationTests.ts",
     "test:programming-selection-trace": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingSelectionTraceTests.ts",
     "test:programming-final-composition": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingFinalCompositionTests.ts",
-    "test:conditioning-modality-persistence": "npm run test:conditioning-intensity-modality && npm run test:conditioning-intensity-routes && TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningModalityPersistenceTests.ts",
+    "test:conditioning-modality-persistence": "npm run test:conditioning-intensity-modality && npm run test:conditioning-intensity-routes && TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningModalityPersistenceTests.ts && node scripts/test-erg-flush-final-modality.cjs",
     "test:conditioning-intensity-modality": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningIntensityModalityTests.ts",
     "test:conditioning-intensity-routes": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningIntensityRouteTests.ts",
     "test:catalogue-reachability-classification": "TZ=Australia/Melbourne sucrase-node src/__tests__/catalogueReachabilityClassificationTests.ts",

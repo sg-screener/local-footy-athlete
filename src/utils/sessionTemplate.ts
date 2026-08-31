@@ -474,16 +474,24 @@ export function buildSessionTemplate(
     items: orderItems(items, oneRole
       ? item => item.kind === 'team_training' ? 2 : isOptional(item) ? 1 : 0
       : item => item.kind === 'exercise' && item.row.composedOptionalKind === 'primer'
-        ? 0 : ordering === 'phase' ? phaseRank(item) : d2Rank(item)).map(item =>
-      item.kind === 'exercise' && (item.presentation === 'conditioning_phase' || item.presentation === 'speed')
-        ? {
-            ...item,
-            row: conditioningRowForDisplay(workout, item.row),
-            modalityLabel: item.presentation === 'speed'
-              ? 'Run'
-              : conditioningModeLabelForRow(workout, String(item.row?.id ?? '')),
-          }
-        : item),
+        ? 0 : ordering === 'phase' ? phaseRank(item) : d2Rank(item)).map(item => {
+      if (item.kind !== 'exercise') return item;
+      const modalityLabel = item.presentation === 'speed'
+        ? 'Run'
+        : conditioningModeLabelForRow(workout, String(item.row?.id ?? ''));
+      // Typed conditioning-block ownership outranks the surrounding session's
+      // presentation bucket. A standalone Recovery session deliberately keeps
+      // its recovery section, but an Erg Flush row inside it still needs the
+      // selected machine and modality-specific wording on its card.
+      if (item.presentation !== 'conditioning_phase' && item.presentation !== 'speed' && !modalityLabel) {
+        return item;
+      }
+      return {
+        ...item,
+        row: conditioningRowForDisplay(workout, item.row),
+        modalityLabel,
+      };
+    }),
   };
 }
 
