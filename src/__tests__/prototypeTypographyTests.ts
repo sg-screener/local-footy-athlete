@@ -41,12 +41,12 @@ function styleBlock(source: string, variant: string): string {
   return source.slice(start, end + 5);
 }
 
-function productionTsxFiles(directory: string): string[] {
+function productionUiSourceFiles(directory: string): string[] {
   const absolute = path.join(ROOT, directory);
   return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
     const relative = path.join(directory, entry.name);
-    if (entry.isDirectory()) return productionTsxFiles(relative);
-    return entry.isFile() && entry.name.endsWith('.tsx') ? [relative] : [];
+    if (entry.isDirectory()) return productionUiSourceFiles(relative);
+    return entry.isFile() && /\.tsx?$/.test(entry.name) ? [relative] : [];
   });
 }
 
@@ -83,8 +83,10 @@ run('athlete-facing words never use a local font below 11pt', () => {
   ]);
   const foundBelowFloor: string[] = [];
   for (const relative of [
-    ...productionTsxFiles('screens'),
-    ...productionTsxFiles('components'),
+    ...productionUiSourceFiles('screens'),
+    ...productionUiSourceFiles('components'),
+    ...productionUiSourceFiles('navigation'),
+    ...productionUiSourceFiles('theme'),
   ]) {
     if (relative.startsWith('components/dev/')) continue;
     let currentStyle = '<inline>';
@@ -164,8 +166,10 @@ run('every local font-size override receives a safe effective line box', () => {
     'AppTextInput can still render a local font size in a smaller line box');
 
   const files = [
-    ...productionTsxFiles('screens'),
-    ...productionTsxFiles('components'),
+    ...productionUiSourceFiles('screens'),
+    ...productionUiSourceFiles('components'),
+    ...productionUiSourceFiles('navigation'),
+    ...productionUiSourceFiles('theme'),
   ];
   const overrides = files.flatMap((relative) => {
     const matches = read(relative).match(/fontSize\s*:/g) ?? [];
@@ -179,8 +183,8 @@ run('every local font-size override receives a safe effective line box', () => {
 run('every athlete-facing screen stays behind the shared Text owner', () => {
   const offenders: string[] = [];
   for (const relative of [
-    ...productionTsxFiles('screens'),
-    ...productionTsxFiles('components'),
+    ...productionUiSourceFiles('screens'),
+    ...productionUiSourceFiles('components'),
   ]) {
     if (relative.startsWith('components/dev/')) continue;
     const source = read(relative);

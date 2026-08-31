@@ -55,7 +55,8 @@ whose readable words are currently below 11pt.
 ## Verification so far
 
 - `test:prototype-typography`: the new scale and complete local-source floor
-  cells pass. The command is 5 passed / 1 failed on an inherited census of five
+  cells pass across 425 literal font-size occurrences in 65 distinct UI source
+  files. The command is 5 passed / 1 failed on an inherited census of five
   React Native Text imports; the same five names were present before this task.
 - `test:day-first-timeline`: typography/status/week-card cells now pass. The
   command is 55 passed / 1 failed on its inherited generated-Gunshow fixture.
@@ -63,6 +64,10 @@ whose readable words are currently below 11pt.
 - `test:onboarding-presentation`: 109 passed / 0 failed.
 - The chained mobility diagnostic is 71 passed / 3 failed on its inherited
   source-shape expectations around the shared session section.
+- `test:compile`: product 0 errors, devtools 0 errors; the command remains red
+  on 3 inherited test-harness errors across 2 distinct test files.
+- `test:law-registry`: the updated typography law is guarded; current registry
+  total is 218 laws, 197 guarded and 21 inherited UNENFORCED.
 
 ## First mutation finding
 
@@ -82,7 +87,27 @@ source census and the Day status-card cell both turned red, while the shared
 token cell stayed green. Both mutations were restored by explicit reverse
 patches; no checkout or whole-file restore was used.
 
+The maintained census covers `.ts` and `.tsx` UI sources under screens,
+components, navigation and theme; the starting one-off shell scan covered the
+same production UI roots, so the guard is not narrower than the measurement.
+
+## Simulator inspection — iPhone 17 Pro, iOS 26.3
+
+One non-destructive Maestro flow kept the existing athlete data, traversed Day,
+Week, Progress and Profile, and captured each surface. The flow completed every
+step. Visual inspection found no clipped, overlapping or truncated text:
+
+- Day: all three 12pt/16pt explanations fit inside equal tiles. Tired wraps to
+  three lines; Sick and Injured remain balanced and the card keeps its bounds.
+- Week: 11pt weekdays, tier badges and exercise counts fit all visible cards,
+  including compound Strength + Team Training titles.
+- Progress: enlarged captions fit the Load card and all four main-lift cards.
+- Profile: setup labels and values remain aligned; the two-line Training
+  Experience label is not clipped.
+
 ## NOT COVERED (current boundary)
 
-- Deliberate liveness mutation, simulator screenshots, smallest supported phone,
-  physical iPhone, Dynamic Type, VoiceOver and Android.
+- Smallest supported phone, physical iPhone, Dynamic Type, VoiceOver and Android.
+- The five inherited shared-Text bypasses, generated-Gunshow fixture and three
+  mobility source-shape failures; none was changed or treated as typography
+  acceptance evidence.
