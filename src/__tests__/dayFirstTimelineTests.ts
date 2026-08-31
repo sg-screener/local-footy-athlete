@@ -903,7 +903,7 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert(/testID="day-card-title"[\s\S]{0,400}numberOfLines=\{1\}[\s\S]{0,120}adjustsFontSizeToFit/.test(home),
     'the day session title can wrap again. Sam ruled it stays on ONE line, and '
     + 'at 26pt a two-word-plus name only fits by shrinking itself.');
-  assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
+  assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*11[^}]*lineHeight:\s*15[^}]*fontWeight:\s*'800'/.test(home),
     'the compact status-label scale has drifted');
   assert(/programmedPartHeadline:\s*\{[^}]*fontSize:\s*15[^}]*lineHeight:\s*20[^}]*textTransform:\s*'none'[^}]*letterSpacing:\s*0/.test(home),
     'programmed section headings must keep the 15pt scale and normal casing while compact status labels remain uppercase');
@@ -916,7 +916,7 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert((home.match(/styles\.programmedPartHeadline/g) ?? []).length === 3,
     'the programmed headings changed count — check Team Training still wears the '
     + 'session scale and its STATUS line still wears the compact one');
-  assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),
+  assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*11[^}]*lineHeight:\s*15/.test(home),
     'the exercise counts no longer match Renee\'s component meta size');
   assert(/timelineRow:\s*\{[^}]*minHeight:\s*52[^}]*paddingVertical:\s*10[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
     'the simplified icon-led rows lost their accepted height or quiet dividers');
@@ -1029,7 +1029,7 @@ run('the status circles sit in a card with words above them', () => {
     'the session screen lost the round chip it still needs');
   assert(/variant="tiles"/.test(home)
     && /tile:\s*\{[^}]*borderRadius:\s*12[^}]*borderWidth:\s*1/.test(hub)
-    && /tileDetail:\s*\{/.test(hub),
+    && /tileDetail:\s*\{[^}]*fontSize:\s*12[^}]*lineHeight:\s*16/.test(hub),
     'the Day screen status card has fallen back off the template tiles');
   assert(/signedCopy\('day\.change_card\.heading'\)/.test(hub)
     && /signedCopy\('day\.change_card\.subline'\)/.test(hub),
@@ -1519,7 +1519,7 @@ run('the week card keeps her proportions — large date, compact badges', () => 
     path.join(__dirname, '..', 'components', 'common', 'SessionTierBadge.tsx'), 'utf8');
   const uiBadge = fs.readFileSync(
     path.join(__dirname, '..', 'components', 'ui', 'Badge.tsx'), 'utf8');
-  assert(/compactText:\s*\{[^}]*fontSize:\s*8[^}]*lineHeight:\s*10/.test(tierBadge),
+  assert(/compactText:\s*\{[^}]*fontSize:\s*11[^}]*lineHeight:\s*14/.test(tierBadge),
     'the compact category font shrank but kept the normal 24pt text line-height');
   assert(/fontSize: s\.font, lineHeight: s\.line/.test(uiBadge)
     && /case 'xxs':[\s\S]{0,180}font:\s*8, line:\s*10/.test(uiBadge),

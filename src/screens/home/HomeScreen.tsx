@@ -968,7 +968,8 @@ const styles = StyleSheet.create({
   },
   thisWeekBadgeText: {
     color: '#C8FF00',
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -1091,7 +1092,8 @@ const styles = StyleSheet.create({
   },
   todayBadgeText: {
     color: '#0C0C0C',
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -1105,7 +1107,8 @@ const styles = StyleSheet.create({
   },
   gameBadgeText: {
     color: '#C8FF00',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1,
   },
@@ -1119,7 +1122,8 @@ const styles = StyleSheet.create({
   },
   movingBadgeText: {
     color: '#C8FF00',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1,
   },

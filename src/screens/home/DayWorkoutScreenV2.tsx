@@ -5464,7 +5464,8 @@ const styles = StyleSheet.create({
   },
   coachNotesEyebrow: {
     color: colors.accent.lime,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1.5,
     opacity: 0.85,
@@ -5779,7 +5780,8 @@ const styles = StyleSheet.create({
   // dominates; they co-operate as a quiet structural frame.
   pairTagText: {
     color: colors.accent.lime,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1.2,
     opacity: 0.55,
@@ -5801,11 +5803,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 6,
   },
-  // The Skip marker that REPLACES the checkbox on a withheld row. Same 22x22
-  // footprint and the same `marginTop` as `executionCheckbox`, so the row's
-  // right edge does not shift between an ordinary row and a withheld one.
+  // The Skip marker that REPLACES the checkbox on a withheld row. It keeps the
+  // checkbox height and right edge, but needs enough width for an 11pt word.
   executionSkipMark: {
-    width: 22,
+    width: 32,
     height: 22,
     borderRadius: 6,
     borderWidth: 1,
@@ -5815,7 +5816,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginTop: 3,
   },
-  executionSkipText: { color: '#FF9A8B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.2 },
+  executionSkipText: {
+    color: '#FF9A8B', fontSize: 11, lineHeight: 14,
+    fontWeight: '900', letterSpacing: 0.2,
+  },
 
   // ── Exercise header row ──
   // Label (index) is now plain text, not a chip — the index is information,
@@ -6262,7 +6266,8 @@ const styles = StyleSheet.create({
   // reason a label on every row was worse than a label on the group.
   optionalWorkHeader: {
     color: '#5A5A5A',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1.2,
     textTransform: 'uppercase',

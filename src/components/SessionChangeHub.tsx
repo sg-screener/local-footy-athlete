@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tileDetail: {
-    color: '#8A8A8A', fontSize: 9.5, lineHeight: 13, textAlign: 'center',
+    color: '#8A8A8A', fontSize: 12, lineHeight: 16, textAlign: 'center',
   },
   chip: { flex: 1, alignItems: 'center', gap: 6 },
   chipIcon: {

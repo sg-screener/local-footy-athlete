@@ -385,7 +385,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   dateCellToday: {},
-  weekday: { color: colors.text.tertiary, fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
+  weekday: {
+    color: colors.text.tertiary, fontSize: 11, lineHeight: 14,
+    fontWeight: '700', letterSpacing: 0.6,
+  },
   weekdayToday: { color: colors.text.accent },
   dayNumber: { color: colors.text.primary, fontSize: 17, fontWeight: '700' },
   /* THE BOXES SHARE THE ROW EQUALLY — a day with one session and an empty box

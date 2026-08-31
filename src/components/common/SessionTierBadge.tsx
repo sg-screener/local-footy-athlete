@@ -82,14 +82,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   text: {
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '700',
     letterSpacing: 1,
   },
   compactText: {
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 0.6,
   },

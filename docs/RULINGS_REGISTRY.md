@@ -7017,3 +7017,18 @@ not count toward the fatigue sequence.
 Guard: `LAW-dated-fatigue-and-missed-move`, `test:fatigue-sequence`,
 `test:missed-session-prompt` and `test:plan-change-producer`.
 Verification status and NOT COVERED: `docs/STATUS_FATIGUECATCHUP.md`.
+
+**R-276** · App-wide readable small type, 2026-08-31.
+
+Owner: legibletype. The explanatory lines below Tired, Sick and Injured use
+12pt type with a 16pt line height. Elsewhere, every athlete-facing word uses at
+least 11pt type; compact hierarchy comes from weight, colour and spacing rather
+than unreadably small letters. The larger onboarding scale remains unchanged.
+Invisible automation markers and an icon-only selected-tile checkmark are not
+readable copy and keep their functional sizes.
+
+This supersedes only the sub-11pt values in R-057's Renee typography scale. The
+System face, heading hierarchy, normal casing and screen structures remain.
+Guard: `LAW-renee-typography-app-wide`, `test:prototype-typography` and
+`test:day-first-timeline`.
+Verification status and NOT COVERED: `docs/STATUS_LEGIBLETYPE.md`.

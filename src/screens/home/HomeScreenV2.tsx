@@ -4815,7 +4815,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   weekCardDateColumnCompact: { minHeight: 44 },
-  weekCardWeekday: { minWidth: 0, textAlign: 'center', fontSize: 9, letterSpacing: 0.7 },
+  weekCardWeekday: {
+    minWidth: 0, textAlign: 'center', fontSize: 11, lineHeight: 14, letterSpacing: 0.7,
+  },
   weekCardDateNumeral: { textAlign: 'center', fontSize: 27, fontWeight: '700', lineHeight: 29 },
   weekCardDivider: {
     width: StyleSheet.hairlineWidth,
@@ -4830,7 +4832,7 @@ const styles = StyleSheet.create({
     textAlign: 'left', flexShrink: 1,
   },
   weekCardRestTitle: { color: '#777B77', fontSize: 13, fontWeight: '600' },
-  weekCardMeta: { color: '#A0A0A0', fontSize: 10, lineHeight: 13 },
+  weekCardMeta: { color: '#A0A0A0', fontSize: 11, lineHeight: 14 },
   weekCardCategoryRow: {
     minHeight: 17,
     flexDirection: 'row',
@@ -4913,7 +4915,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(200,255,0,0.35)',
   },
-  weekStripDay: { color: '#8A8F98', fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
+  weekStripDay: {
+    color: '#8A8F98', fontSize: 11, lineHeight: 14,
+    fontWeight: '700', letterSpacing: 0.6,
+  },
   weekStripDayToday: { color: '#C8FF00' },
   weekStripDayActive: { color: '#C8FF00' },
   weekStripDate: { color: '#E8EAED', fontSize: 15, fontWeight: '600' },
@@ -4957,8 +4962,8 @@ const styles = StyleSheet.create({
   timelineIconMarker: { width: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   timelineHeadline: {
     color: '#E8EAED',
-    fontSize: 10.5,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '800',
     // Compact labels such as SESSION STATUS use this uppercase base style.
     // Programmed section headings opt out in `programmedPartHeadline`.
@@ -4980,7 +4985,7 @@ const styles = StyleSheet.create({
   // the meta line reuses the compact timeline scale, and the
   // prescription reuses the accent-free `#A7A7A7` the coach-note body uses.
   timelinePartText: { flex: 1, gap: 1 },
-  timelinePartMeta: { color: '#929692', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
+  timelinePartMeta: { color: '#929692', fontSize: 11, lineHeight: 15, fontWeight: '500' },
   timelineChevronOpen: { transform: [{ rotate: '180deg' }] },
   // Indented to the part's own text column, so an exercise reads as belonging
   // to the row above it rather than as another part.
@@ -4994,7 +4999,7 @@ const styles = StyleSheet.create({
   // adds none, or the first section starts behind two horizontal rules.
   weekSessionSection: { minWidth: 0 },
   weekSessionSectionTitle: {
-    color: '#9A9E9A', fontSize: 9, lineHeight: 12, fontWeight: '800',
+    color: '#9A9E9A', fontSize: 11, lineHeight: 14, fontWeight: '800',
     letterSpacing: 0.7, textTransform: 'uppercase', paddingVertical: 8,
   },
   weekSessionRows: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#2F2F2F' },
@@ -5144,13 +5149,13 @@ const styles = StyleSheet.create({
   },
   // THE EYEBROW SAM ASKED BACK FOR, 2026-08-27 — *"a little 'today's focus' in
   // lime green should sit above it too like the image"*, and then *"it should be
-  // smaller"* against the first build at 11pt. Its words come from `signedCopy`.
-  // 9.5 is deliberately below the 10.5 compact-label scale: this is a LABEL FOR
-  // the title beneath it, not a line the athlete reads on its own.
+  // smaller"* against the first build. Its words come from `signedCopy`. It
+  // stays quiet through weight, tracking and colour without dropping below the
+  // readable type floor.
   dayFocusEyebrow: {
     color: '#C6FF00',
-    fontSize: 9.5,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 0.9,
     textTransform: 'uppercase',

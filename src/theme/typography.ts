@@ -65,9 +65,9 @@ export const typography = {
     letterSpacing: 0,
   },
 
-  // Body Small
+  // Body Small — 11pt is the iPhone readability floor.
   bodySmall: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '400' as const,
     lineHeight: 15,
@@ -76,34 +76,34 @@ export const typography = {
 
   // Body Small Emphasis
   bodySmallEmphasis: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '700' as const,
     lineHeight: 15,
     letterSpacing: 0,
   },
 
-  // Caption — small labels and metadata
+  // Caption — small labels and metadata, never smaller than readable copy.
   caption: {
-    fontSize: 8.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '400' as const,
-    lineHeight: 12,
+    lineHeight: 14,
     letterSpacing: 0,
   },
 
   // Caption Emphasis
   captionEmphasis: {
-    fontSize: 8.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '700' as const,
-    lineHeight: 12,
+    lineHeight: 14,
     letterSpacing: 0.2,
   },
 
   // Label — form labels and button text
   label: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '700' as const,
     lineHeight: 14,
@@ -112,19 +112,19 @@ export const typography = {
 
   // Label Small
   labelSmall: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '700' as const,
-    lineHeight: 13,
+    lineHeight: 14,
     letterSpacing: 0.35,
   },
 
   // Overline — prototype section label.
   overline: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'System',
     fontWeight: '800' as const,
-    lineHeight: 12,
+    lineHeight: 14,
     letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },

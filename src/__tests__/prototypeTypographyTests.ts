@@ -2,7 +2,8 @@
  * RENEE'S TYPOGRAPHY IS THE APP TYPOGRAPHY — Sam, 2026-08-11.
  *
  * The reference is the signed interactive prototype. Its type system is the
- * Apple system face with a deliberately compact six-step scale. This gate
+ * Apple system face with a compact hierarchy whose readable words never fall
+ * below the iPhone 11pt minimum. This gate
  * watches the OWNERS, not every rendered string: every production screen uses
  * the shared Text component, every editable field uses AppTextInput, and those
  * two owners apply the same family. A screen importing React Native Text would
@@ -43,12 +44,14 @@ function productionTsxFiles(directory: string): string[] {
 
 console.log('\n-- Renee prototype typography --');
 
-run('the shared scale matches Renee\'s compact prototype hierarchy', () => {
+run('the shared scale keeps Renee\'s hierarchy above the readable floor', () => {
   const source = read('theme/typography.ts');
   const expected = [
     ['h1', 23, 28], ['h2', 21, 25], ['h3', 17, 21], ['h4', 14, 18],
-    ['body', 11.5, 17], ['bodySmall', 10.5, 15], ['caption', 8.5, 12],
-    ['label', 10.5, 14], ['labelSmall', 9.5, 13], ['overline', 9, 12],
+    ['body', 11.5, 17], ['bodyEmphasis', 11.5, 17],
+    ['bodySmall', 11, 15], ['bodySmallEmphasis', 11, 15],
+    ['caption', 11, 14], ['captionEmphasis', 11, 14],
+    ['label', 11, 14], ['labelSmall', 11, 14], ['overline', 11, 14],
     ['button', 12, 16], ['buttonSmall', 11, 15],
   ] as const;
   for (const [variant, size, lineHeight] of expected) {
@@ -64,6 +67,37 @@ run('the shared scale matches Renee\'s compact prototype hierarchy', () => {
     'the retired industrial heading face is still in the shared type owner');
   assert(/default:\s*'System'/.test(source) && /heading:\s*'System'/.test(source),
     'the shared heading and body families are not both the iPhone system face');
+});
+
+run('athlete-facing words never use a local font below 11pt', () => {
+  const allowedNonCopy = new Set([
+    'components/ExplorerRenderWitness.tsx:text:1',
+    'components/common/SelectableTile.tsx:markGrid:9',
+    'screens/home/DayWorkoutScreenV2.tsx:smokeContractMarkerText:1',
+  ]);
+  const foundBelowFloor: string[] = [];
+  for (const relative of [
+    ...productionTsxFiles('screens'),
+    ...productionTsxFiles('components'),
+  ]) {
+    if (relative.startsWith('components/dev/')) continue;
+    let currentStyle = '<inline>';
+    for (const line of read(relative).split('\n')) {
+      const style = /^\s{2}([A-Za-z0-9_]+):\s*\{/.exec(line)?.[1];
+      if (style) currentStyle = style;
+      const match = /fontSize\s*:\s*(\d+(?:\.\d+)?)/.exec(line);
+      if (!match || Number(match[1]) >= 11) continue;
+      foundBelowFloor.push(`${relative}:${currentStyle}:${match[1]}`);
+    }
+  }
+  assert(foundBelowFloor.length > 0,
+    'the local readability census reached no below-floor control glyphs or witnesses');
+  const offenders = foundBelowFloor.filter((entry) => !allowedNonCopy.has(entry));
+  const missingAllowances = [...allowedNonCopy].filter((entry) => !foundBelowFloor.includes(entry));
+  assert(offenders.length === 0,
+    `readable local type below 11pt: ${offenders.join(', ')}`);
+  assert(missingAllowances.length === 0,
+    `the non-copy allowance is stale: ${missingAllowances.join(', ')}`);
 });
 
 run('onboarding alone keeps the original readable type scale', () => {

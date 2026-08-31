@@ -364,7 +364,8 @@ const styles = StyleSheet.create({
   },
   featureLabel: {
     color: '#C8FF00',
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 0,
   },
