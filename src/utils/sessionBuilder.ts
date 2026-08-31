@@ -38,6 +38,7 @@ import type {
 } from '../store/programStore';
 import {
   POOL_REGISTRY,
+  MOBILITY_POOL,
   preferAutomaticCurlCandidates,
   gunshowExercisesCanPair,
   type PoolExercise,
@@ -79,7 +80,10 @@ import {
   type BlockPowerSelection,
   type PowerPoolEntry,
 } from '../rules/powerExercisePool';
-import type { AutomaticProgrammingSelectionTrace } from '../rules/programmingSelectionTrace';
+import {
+  rankSelectedFirst,
+  type AutomaticProgrammingSelectionTrace,
+} from '../rules/programmingSelectionTrace';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { PowerFamily } from '../rules/powerPrimerPolicy';
@@ -103,6 +107,9 @@ export interface AthleteContext {
   powerSelectionsOut?: BlockPowerSelection[];
   powerSelectionTracesOut?: AutomaticProgrammingSelectionTrace[];
   powerSelectionBlockStartISO?: string;
+  /** Compiler evidence sink for automatically composed Mobility sessions. */
+  selectionTracesOut?: AutomaticProgrammingSelectionTrace[];
+  selectionWeekStartISO?: string;
 }
 
 /** Default context when no profile data is available. */
@@ -1103,15 +1110,65 @@ export function buildDerivedSession(
   // after this point (naming, tier, load estimates, the returned Workout) is
   // shared, so the door and the top-up get the identical session.
   if (type === 'mobility') {
-    for (const movement of composeMobilitySession({
+    const eligible = filterMobilityPoolForAthlete(athlete).filter(notAlreadyProgrammed);
+    const selected = composeMobilitySession({
       seed,
-      eligible: filterMobilityPoolForAthlete(athlete).filter(notAlreadyProgrammed),
-    })) {
+      eligible,
+    });
+    const previouslySelected = new Set<string>();
+    selected.forEach((movement, seatIndex) => {
+      const region = mobilityRegionOf(movement);
+      const candidates = MOBILITY_POOL.map((candidate) => {
+        const sameRegion = mobilityRegionOf(candidate) === region;
+        const available = eligible.some((entry) => entry.id === candidate.id);
+        const alreadyOnDay = previouslySelected.has(candidate.id);
+        const eligibleForSeat = sameRegion && available && !alreadyOnDay;
+        return {
+          name: candidate.name,
+          eligible: eligibleForSeat,
+          rejectedBy: eligibleForSeat ? []
+            : !sameRegion ? ['wrong_movement_or_quality' as const]
+              : alreadyOnDay ? ['already_on_day' as const]
+                : ['athlete_availability' as const],
+          rank: null,
+          score: {
+            phasePriority: 0,
+            athletePreference: false,
+            recentUsage: 0,
+            annualUsage: 0,
+            weeksOrBlocksSinceUse: null,
+            weeklyUsage: alreadyOnDay ? 1 : 0,
+          },
+        };
+      });
+      athlete.selectionTracesOut?.push({
+        schemaVersion: 1,
+        decisionId: `mobility:${dateStr}:${region ?? 'unmapped'}:${seatIndex}`,
+        kind: 'mobility_exercise',
+        owner: 'mobilitySessionComposition',
+        need: {
+          dateISO: dateStr,
+          weekStartISO: athlete.selectionWeekStartISO ?? dateStr,
+          dayOfWeek: new Date(`${dateStr}T12:00:00`).getDay(),
+          phase: athlete.onboardingData?.seasonPhase ?? 'unknown',
+          movementOrQuality: region ?? 'unmapped',
+          role: 'mobility_support',
+          seatIndex,
+          equipment: [...athlete.equipmentTags],
+          experience: athlete.onboardingData?.experienceLevel ?? null,
+          injuries: athlete.injuries.map((injury) => injury.bodyArea),
+          daysToGame: athlete.daysToGame ?? null,
+        },
+        candidates: rankSelectedFirst(candidates, movement.name),
+        selected: movement.name,
+        selectionReason: 'deterministic_region_spread',
+      });
+      previouslySelected.add(movement.id);
       exercises.push(
         poolExerciseToWorkoutExercise(movement, workoutId, order, MOBILITY_ROW_EVIDENCE),
       );
       order += 1;
-    }
+    });
     return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
   }
 

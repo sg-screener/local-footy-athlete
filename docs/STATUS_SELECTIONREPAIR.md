@@ -28,9 +28,9 @@ Owner: `selectionrepair`
 
 Steps 1–4 and 6 complete; Step 5 is checkpointed with one product decision
 blocked. Sam's 2026-08-31 audit follow-up is now being worked in the order he
-gave: Primer composition first, injury composition second, missing routes
-third, conditioning labels fourth, classification reconciliation fifth, then
-the final isolated audit rerun.
+gave: Primer composition, injury composition and missing routes are
+checkpointed; conditioning labels are next, followed by classification
+reconciliation and the final isolated audit rerun.
 
 ## 2026-08-31 follow-up 1 — every Primer is seven low-fatigue rows
 
@@ -77,6 +77,63 @@ calf/Achilles conditioning case; injury-adjusted session naming; the two Seated
 Good Morning routes; 32 conditioning-duration labels; the 29 classification
 entries; and the fresh two-athlete, 52-week final audit. These are the remaining
 follow-up steps and no whole-job completion is claimed.
+
+## 2026-08-31 follow-up 3 — both Seated Good Mornings have an automatic route
+
+The old audit called `Seated Good Morning` and `Seated Good Morning (Barbell)`
+automatic exercises with no programming route. There were three distinct
+causes rather than one catalogue-count problem:
+
+- the compiler trace represented strength, power and conditioning only, so the
+  two real automatic mobility owners could not supply evidence;
+- both exercise policies said `warmup: false`, contradicting the signed intake
+  statement `Availability: Automatic in mobility`; and
+- the Barbell version carries a G-1 limit, while the shared gate treated a real
+  off-season caller's absent `daysToGame` as an exclusion rather than as no
+  upcoming game.
+
+The typed compiler evidence now includes the composed Mobility-session route
+and the in-session mobility/prehab flow. Both exercise policies admit the
+warm-up route, remain excluded from ordinary strength and Primer seats, retain
+their experience/equipment/injury/G-minus boundaries, and an absent or null
+game distance means no G-minus restriction. Audit classification now names
+`automatic_mobility_top_up` instead of inventing a missing route from the old
+three-kind trace.
+
+Compared two designs:
+
+1. Mark both rows manual/special-use in the report. Rejected because it would
+   rewrite the intake promise to fit an incomplete instrument.
+2. Repair the existing mobility route and observe its real decisions. Chosen
+   because the app already owns automatic mobility in two places and the trace
+   can now answer from the decision that actually ran.
+
+Regression and liveness receipts:
+
+- Red first: the direct intake gate reported 634 / 636, with both named
+  in-session mobility selection cells failing while `warmup` was false.
+- Corrected direct intake: 642 / 642 across all eleven submitted exercises.
+- Six-week commercial lived trace: both identities were eligible and the real
+  in-session route selected bodyweight 4 times and Barbell 3 times (distinct
+  selected compiler decisions for the one audited male athlete).
+- `test:programming-selection-trace`: 8 / 8, including both candidate
+  identities and selected-final-row survival for compiler-composed mobility.
+- `test:catalogue-reachability-classification`: 5 / 5.
+- Mutation 1: setting both policies back to `warmup: false` produced 636 / 640
+  and killed the two no-game warm-up cells plus both actual-route selection
+  cells; restoring the policies returned green.
+- Mutation 2: restoring the null-only game-distance comparison produced
+  640 / 642 and killed the Barbell automatic and warm-up absent-distance cells;
+  restoring nullish no-game semantics returned green.
+
+The first attempted direct test command used `npx`, which tried the network and
+failed with `ENOTFOUND`. No dependency or file changed; the local
+`node -r sucrase/register` runner then executed the same test successfully.
+
+NOT COVERED at this checkpoint: the physical phone; the 32 conditioning-label
+occurrences; reconciliation of the 29 old `incorrectly_tagged_or_classified`
+entries; and the fresh two-athlete, 52-week final audit. No whole-job completion
+is claimed.
 
 ## Step 1 — compiler-owned automatic selection trace
 

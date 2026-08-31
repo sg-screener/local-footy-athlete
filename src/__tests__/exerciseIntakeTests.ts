@@ -229,6 +229,16 @@ async function main() {
     && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
     && exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 2 })
     && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 2 }));
+  for (const name of ['Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+    check(`${name}: no-game automatic route is unrestricted when daysToGame is absent`,
+      exerciseProgrammingAllows(name, {
+        route: 'automatic', experienceLevel: '5+ years', daysToGame: undefined,
+      }));
+    check(`${name}: no-game warm-up route is unrestricted when daysToGame is absent`,
+      exerciseProgrammingAllows(name, {
+        route: 'warmup', experienceLevel: '5+ years', daysToGame: undefined,
+      }));
+  }
   for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Reverse Nordic Curl', 'Knee'],
     ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']] as const) {
     const severity = suppliedSeverity ?? 5;
@@ -324,6 +334,9 @@ async function main() {
   }
   for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
+  }
+  for (const name of ['Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+    check(`${name}: approved in-session mobility route actually selects it`, warmupsReached.has(name));
   }
   check('Horse Stance Hold: the actual lower warm-up removes its otherwise selected row at G-1',
     !!horseWarmupCase && !selectMobilityPrehabFlow({ workout: horseWarmupCase.workout,

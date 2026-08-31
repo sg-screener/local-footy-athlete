@@ -16,6 +16,7 @@ export interface ZeroPlacementTraceSummary {
 export type ZeroPlacementRouteEvidence =
   | 'automatic_strength_or_power'
   | 'automatic_conditioning_template'
+  | 'automatic_mobility_top_up'
   | 'mobility_pool_without_compiler_route'
   | 'retired_or_legacy_manual_conditioning'
   | 'explicit_pending_power_placement'
@@ -52,6 +53,12 @@ export function classifyZeroPlacement(
     return {
       classification: 'not_eligible_for_audited_athletes',
       reason: 'The automatic route considered the candidate, but it was ineligible in every audited compiler decision.',
+    };
+  }
+  if (route === 'automatic_mobility_top_up') {
+    return {
+      classification: 'not_eligible_for_audited_athletes',
+      reason: 'A canonical automatic Mobility route exists, but the audited athlete-weeks opened no eligible decision seat for this identity.',
     };
   }
   if (route === 'retired_or_legacy_manual_conditioning'

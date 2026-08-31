@@ -68,16 +68,20 @@ for (const trace of distinctDecisions.values()) {
 const groups = selectableVocabularyGroups();
 function routeFor(row) {
   const ids = groups.filter((group) => group.names.includes(row.name)).map((group) => group.id);
-  if (summaries.has(row.name)) {
+  const summary = summaries.get(row.name);
+  if (summary) {
     return row.catalogue === 'conditioning_templates'
-      ? 'automatic_conditioning_template' : 'automatic_strength_or_power';
+      ? 'automatic_conditioning_template'
+      : summary.kinds.has('mobility_exercise')
+        ? 'automatic_mobility_top_up'
+        : 'automatic_strength_or_power';
   }
   if (POWER_POOL_PENDING.has(row.name)) return 'explicit_pending_power_placement';
   if (row.catalogue === 'exercise_tags' && CONDITIONING_META[row.name]) {
     return 'retired_or_legacy_manual_conditioning';
   }
   if (row.name === 'MetCon') return 'special_session_identity';
-  if (ids.includes('mobility')) return 'mobility_pool_without_compiler_route';
+  if (ids.includes('mobility')) return 'automatic_mobility_top_up';
   return 'no_route';
 }
 

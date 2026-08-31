@@ -8,6 +8,7 @@
 export type AutomaticProgrammingSelectionKind =
   | 'strength_exercise'
   | 'power_exercise'
+  | 'mobility_exercise'
   | 'conditioning_template';
 
 export type AutomaticCandidateRejection =
@@ -21,6 +22,7 @@ export type AutomaticCandidateRejection =
   | 'role'
   | 'weekly_spacing'
   | 'already_on_day'
+  | 'athlete_availability'
   | 'manual_or_special_use_only';
 
 export interface AutomaticProgrammingNeedTrace {
@@ -62,7 +64,9 @@ export interface AutomaticProgrammingSelectionTrace {
   readonly owner:
     | 'blockExerciseSelection'
     | 'conditioningSelection'
-    | 'powerExercisePool';
+    | 'powerExercisePool'
+    | 'mobilitySessionComposition'
+    | 'mobilityPrehabFlow';
   readonly need: AutomaticProgrammingNeedTrace;
   readonly candidates: readonly AutomaticCandidateTrace[];
   readonly selected: string | null;

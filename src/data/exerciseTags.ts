@@ -239,7 +239,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
     programming: {
       strengthRole: 'none', automaticMinimum: 'developing', manualMinimum: 'developing',
-      warmup: false, primer: false, excludeWithinDaysOfGame: 1,
+      warmup: true, primer: false, excludeWithinDaysOfGame: 1,
     },
   },
   'Rotational Medicine-Ball Slam': {
@@ -389,7 +389,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
     programming: {
       strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
-      warmup: false, primer: false,
+      warmup: true, primer: false,
     },
   },
   'Crab Hold': {

@@ -38,8 +38,13 @@ export function exerciseProgrammingAllows(name: string, context: {
   if (context.route === 'primer' && !policy.primer) return false;
   const limit = context.route === 'manual' ? policy.excludeWithinDaysOfGame
     : Math.max(policy.excludeWithinDaysOfGame ?? -1, policy.automaticExcludeWithinDaysOfGame ?? -1);
-  return limit === undefined || limit < 0 || context.daysToGame === null
-    || (context.daysToGame !== undefined && context.daysToGame > limit);
+  // No known upcoming game means there is no G-minus restriction to apply.
+  // AthleteContext carries this as an optional field, so real off-season
+  // callers arrive as `undefined` while fixtures commonly spell it `null`.
+  // Treating only null as unrestricted silently removed every exercise with a
+  // pre-game limit from those real automatic routes.
+  return limit === undefined || limit < 0 || context.daysToGame == null
+    || context.daysToGame > limit;
 }
 
 // ─── Context Types ───

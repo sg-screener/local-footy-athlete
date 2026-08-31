@@ -84,6 +84,8 @@ export interface ApplyOptionalTopUpsArgs {
   readonly equipmentFreeCandidateDays?: readonly number[];
   /** The athlete's stated weakness as a `:105` focus, or null. Leans the needs only. */
   readonly weakPointFocus?: WeakPointFocus | null;
+  /** Exact automatic-choice evidence owned by the canonical compiler. */
+  readonly selectionTracesOut?: import('../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
 }
 
 export interface OptionalTopUpResult {
@@ -122,7 +124,12 @@ export function applyOptionalTopUps(args: ApplyOptionalTopUpsArgs): OptionalTopU
       date,
       args.microcycleId,
       TOP_UP_REASON,
-      { ...athlete, daysToGame: args.daysToGameByDay?.[placement.dayOfWeek] },
+      {
+        ...athlete,
+        daysToGame: args.daysToGameByDay?.[placement.dayOfWeek],
+        selectionTracesOut: args.selectionTracesOut,
+        selectionWeekStartISO: args.weekStartISO,
+      },
     );
     // An empty composition is no session rather than an empty card: equipment and
     // injury filtering can thin a pool, and the app shrinks rather than padding.

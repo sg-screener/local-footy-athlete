@@ -936,6 +936,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         weekStart: blockState.weekStart,
         governedFromISO: boundary?.governedFromISO ?? null,
       }),
+      selectionTracesOut: selectionTraces,
     }).workouts;
     if (exposureContractV2) {
       const craftSafe = withCraftSafeTopUps({

@@ -19,6 +19,12 @@ import {
   filterPoolEntriesForAthlete,
   type AthleteContext,
 } from './sessionBuilder';
+import {
+  publishAutomaticProgrammingSelectionTraces,
+  rankSelectedFirst,
+  type AutomaticProgrammingSelectionTrace,
+} from '../rules/programmingSelectionTrace';
+import { getMondayForDate } from './sessionResolver';
 
 /**
  * D13/D17 — the Mobility & Prehab flow that sits collapsed at the top of a session.
@@ -384,6 +390,53 @@ export function selectMobilityPrehabFlow(
   );
   // An empty draw is no flow rather than an empty one.
   if (movements.length === 0) return null;
+
+  const seenByCategory = new Map<FlowSlotCategory, Set<string>>();
+  const traces: AutomaticProgrammingSelectionTrace[] = movements.map((movement, seatIndex) => {
+    const seen = seenByCategory.get(movement.category) ?? new Set<string>();
+    const candidates = flowSlotCandidates(movement.category, context.athlete).map((candidate) => {
+      const alreadyOnDay = seen.has(candidate.id);
+      return {
+        name: candidate.name,
+        eligible: !alreadyOnDay,
+        rejectedBy: alreadyOnDay ? ['already_on_day' as const] : [],
+        rank: null,
+        score: {
+          phasePriority: 0,
+          athletePreference: false,
+          recentUsage: 0,
+          annualUsage: 0,
+          weeksOrBlocksSinceUse: null,
+          weeklyUsage: alreadyOnDay ? 1 : 0,
+        },
+      };
+    });
+    seen.add(movement.exercise.id);
+    seenByCategory.set(movement.category, seen);
+    return {
+      schemaVersion: 1,
+      decisionId: `mobility-flow:${context.date}:${movement.category}:${seatIndex}`,
+      kind: 'mobility_exercise',
+      owner: 'mobilityPrehabFlow',
+      need: {
+        dateISO: context.date,
+        weekStartISO: getMondayForDate(context.date),
+        dayOfWeek: new Date(`${context.date}T12:00:00`).getDay(),
+        phase: context.seasonPhase ?? 'unknown',
+        movementOrQuality: movement.category,
+        role: 'warmup_mobility',
+        seatIndex,
+        equipment: [...context.athlete.equipmentTags],
+        experience: context.athlete.onboardingData?.experienceLevel ?? null,
+        injuries: context.athlete.injuries.map((injury) => injury.bodyArea),
+        daysToGame: context.athlete.daysToGame ?? null,
+      },
+      candidates: rankSelectedFirst(candidates, movement.exercise.name),
+      selected: movement.exercise.name,
+      selectionReason: 'authored_day_type_slot_rotation',
+    };
+  });
+  publishAutomaticProgrammingSelectionTraces(traces);
 
   return { dayType, movements, movementCount: movements.length };
 }

@@ -33,10 +33,18 @@ check('observing compiler choices does not alter the finished program', () => {
   assert.deepEqual(normalize(traced), normalize(control));
 });
 
-check('the actual compiler emits strength, power and conditioning decisions', () => {
+check('the actual compiler emits strength, power, conditioning and mobility decisions', () => {
   assert.ok(traces.some((trace) => trace.kind === 'strength_exercise'));
   assert.ok(traces.some((trace) => trace.kind === 'power_exercise'));
   assert.ok(traces.some((trace) => trace.kind === 'conditioning_template'));
+  assert.ok(traces.some((trace) => trace.kind === 'mobility_exercise'));
+});
+
+check('automatic mobility traces consider both Seated Good Morning identities', () => {
+  const mobilityNames = new Set(traces.filter((trace) => trace.kind === 'mobility_exercise')
+    .flatMap((trace) => trace.candidates.map((candidate) => candidate.name)));
+  assert.ok(mobilityNames.has('Seated Good Morning'));
+  assert.ok(mobilityNames.has('Seated Good Morning (Barbell)'));
 });
 
 check('every selected candidate is eligible, ranked first and explained', () => {
