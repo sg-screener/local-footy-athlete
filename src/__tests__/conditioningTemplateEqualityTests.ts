@@ -247,6 +247,7 @@ const reAuthored = new Map(RE_AUTHORED.map((r) => [`${r.name}::${r.column}`, r])
 
 const missingFromCode: string[] = [];
 const fieldMismatches: string[] = [];
+const modalityMismatches: string[] = [];
 
 for (const { quality, record } of sheetRows) {
   const template = byKey.get(`${quality}::${record.Name}`);
@@ -264,6 +265,13 @@ for (const { quality, record } of sheetRows) {
       );
     }
   }
+  const authoredModalities = (record['Supported modalities'] ?? '').trim();
+  const shippedModalities = template.permittedModalities.join(',') || 'none';
+  if (authoredModalities !== shippedModalities) {
+    modalityMismatches.push(
+      `${record.Name}\n        sheet: ${JSON.stringify(authoredModalities)}\n        code:  ${JSON.stringify(shippedModalities)}`,
+    );
+  }
 }
 
 ok(
@@ -276,6 +284,12 @@ ok(
   'every authored field ships verbatim — no rewording, no rounding',
   fieldMismatches.length === 0,
   fieldMismatches.slice(0, 5).join('\n      '),
+);
+
+ok(
+  'all 55 supported-modality declarations ship verbatim from the workbook',
+  modalityMismatches.length === 0,
+  modalityMismatches.slice(0, 8).join('\n      '),
 );
 
 /* ⚠ NON-VACUITY FOR THE OVERRIDE ITSELF. An override whose text already equals

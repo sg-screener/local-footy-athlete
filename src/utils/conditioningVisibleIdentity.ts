@@ -42,6 +42,9 @@ export function conditioningModeLabel(
 /** Only the typed option owning this row can label it; never parse a lift name. */
 export function conditioningModeLabelForRow(workout: Partial<Workout>, id: string): string | undefined {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(id));
+  if (!option && workout.speedBlock?.exerciseIds?.includes(id)) {
+    return ({ run: 'Run', bike: 'Bike', air_bike: 'Air Bike', row: 'RowErg', ski: 'SkiErg' } as const)[workout.speedBlock.modality ?? 'run'];
+  }
   if (!option) return undefined;
   const selectedMode = conditioningModeLabel(option.modality, option.modalitySequence);
   if (selectedMode) return selectedMode;
@@ -67,8 +70,15 @@ export function conditioningModeLabelForRow(workout: Partial<Workout>, id: strin
  */
 export function conditioningRowForDisplay<T extends { id?: string; notes?: string | null }>(workout: Partial<Workout>, row: T): T {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(String(row.id)));
-  if (!option?.modality || !row.notes) return row;
-  const notes = conditioningWordingForModality(row.notes, option.modality);
+  if (option?.modality && row.notes) {
+    const notes = conditioningWordingForModality(row.notes, option.modality);
+    return notes === row.notes ? row : { ...row, notes };
+  }
+  const speedMode = workout.speedBlock?.exerciseIds?.includes(String(row.id))
+    ? ({ run: 'running', bike: 'bike', air_bike: 'bike', row: 'row', ski: 'ski' } as const)[workout.speedBlock.modality ?? 'run']
+    : undefined;
+  if (!speedMode || !row.notes) return row;
+  const notes = conditioningWordingForModality(row.notes, speedMode);
   return notes === row.notes ? row : { ...row, notes };
 }
 

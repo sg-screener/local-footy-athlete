@@ -459,13 +459,19 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
   const authoredTitle = exercises.find((row) => allIds.includes(row.id))?.exercise?.name
     ?? workout.conditioningBlock?.options[0]?.title
     ?? workout.name;
+  const originalOption = workout.conditioningBlock?.options[0];
   return {
     ...workout,
     exercises,
     ...(workout.conditioningBlock ? {
       conditioningBlock: {
         ...workout.conditioningBlock,
-        options: [{ title: authoredTitle, description, exerciseIds: allIds }],
+        options: [{
+          ...originalOption,
+          title: authoredTitle,
+          description,
+          exerciseIds: allIds,
+        }],
       },
     } : {}),
   };

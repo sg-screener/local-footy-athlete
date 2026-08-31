@@ -15,6 +15,7 @@ import type {
   WorkoutExercise,
   WorkoutType,
 } from '../types/domain';
+import { assertConditioningTemplateModalityCompatibility } from '../rules/conditioningModalityCompatibility';
 import {
   classifyGeneratedWorkoutRow,
   type GeneratedWorkoutRowClassification,
@@ -348,13 +349,23 @@ function buildCanonicalConditioningBlock(args: {
     : (mainWorkRow ? rowName(mainWorkRow) : '') || typedFallback;
   const covered = new Set(retainedOptions.flatMap((option) => option.exerciseIds));
   const promoted = conditioningIds.filter((id) => !covered.has(id));
-  const options = retainedOptions.length > 0
+  const inferredTypedMode = modalities.length > 1 || modalities[0] === 'mixed'
+    ? { modality: 'mixed' as const }
+    : modalities[0] === 'run'
+      ? { modality: 'running' as const, modalitySequence: ['run' as const] }
+      : modalities[0] === 'bike'
+        ? { modality: 'bike' as const, modalitySequence: ['bike' as const] }
+        : modalities[0] === 'row' || modalities[0] === 'ski'
+          ? { modality: modalities[0], modalitySequence: [modalities[0]] }
+          : {};
+  let options = retainedOptions.length > 0
     ? retainedOptions.map((option, index) => index === 0 && promoted.length > 0
       ? { ...option, title, exerciseIds: [...option.exerciseIds, ...promoted] }
       : index === 0 && isWarmupOrCooldown(option.title)
         ? { ...option, title }
         : option)
-    : [{ title, description: '', exerciseIds: conditioningIds }];
+    : [{ title, description: '', exerciseIds: conditioningIds, ...inferredTypedMode }];
+  options = options.map((option) => option.modality ? option : { ...option, ...inferredTypedMode });
   if (args.earlyOffseason) {
     options[0] = { ...options[0], title, description: '' };
   }
@@ -591,7 +602,7 @@ function updatePowerForPhase(args: {
 }
 
 /** Pure canonical finaliser shared by generation and every persisted mutation. */
-export function finaliseWorkoutAfterMutation(
+function finaliseWorkoutAfterMutationUnchecked(
   inputWorkout: Workout,
   // No `= {}` default: an empty context would silently answer the subphase
   // question with a guess, which is the defect this signature now forbids.
@@ -650,7 +661,7 @@ export function finaliseWorkoutAfterMutation(
   if (composedRows.length > 0) {
     const otherRows = inputWorkout.exercises.filter(row => !row.composedOptionalKind);
     if (otherRows.length === 0) return { workout: inputWorkout, changed: false, actions };
-    const other = finaliseWorkoutAfterMutation({ ...inputWorkout, exercises: otherRows }, context);
+    const other = finaliseWorkoutAfterMutationUnchecked({ ...inputWorkout, exercises: otherRows }, context);
     const byId = new Map(other.workout.exercises.map(row => [row.id, row]));
     const exercises = inputWorkout.exercises.flatMap(row => row.composedOptionalKind
       ? [row] : byId.has(row.id) ? [byId.get(row.id)!] : []);
@@ -1213,4 +1224,14 @@ export function finaliseWorkoutAfterMutation(
     changed: originalJson !== JSON.stringify(workout),
     actions,
   };
+}
+
+/** Every generation/mutation writer exits through the same pairing validator. */
+export function finaliseWorkoutAfterMutation(
+  inputWorkout: Workout,
+  context: WorkoutCanonicalisationContext,
+): WorkoutCanonicalisationResult {
+  const result = finaliseWorkoutAfterMutationUnchecked(inputWorkout, context);
+  assertConditioningTemplateModalityCompatibility(result.workout);
+  return result;
 }

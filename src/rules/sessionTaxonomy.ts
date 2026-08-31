@@ -363,7 +363,13 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
 
   const hasTrueSpeedBlock = workout.speedBlock?.kind === 'true_speed';
   if (hasTrueSpeedBlock) {
-    units.push({ category: 'sprint', modality: 'running', component: 'speed', reason: 'speedBlock.kind=true_speed' });
+    const speedModality = workout.speedBlock?.modality;
+    units.push({
+      category: 'sprint',
+      modality: speedModality && speedModality !== 'run' ? 'off_feet' : 'running',
+      component: 'speed',
+      reason: 'speedBlock.kind=true_speed with typed modality',
+    });
   }
 
   // ── Recovery (only when the WHOLE session is recovery-tier) ──

@@ -1193,12 +1193,16 @@ export function resolvedBlockModality(
       ? requested
       : undefined;
   }
+  // No machine was selected: a generic compatible template remains a run.
+  // Never manufacture the first catalogue machine merely because one exists.
+  if (!requested && renderableModalities(template).includes('run')) return 'running';
   // Clamp the erg pick to what the AUTHORED notes let this row render on —
   // a ski stamp on a run/bike-only template would be an invented rendering.
   const permittedMachines = renderableModalities(template)
       .filter((m) => m !== 'run')
       .filter((m) => availableMachines === undefined || availableMachines.includes(m as never));
   const machines = new Set(permittedMachines.map((m) => (m === 'air_bike' ? 'bike' : m)));
+  if (permittedMachines.length === 0 && renderableModalities(template).includes('run')) return 'running';
   // Delivery feasibility reads the signed count. Athlete copy may phrase that
   // count as a complete block (`4 × 3-minute blocks`), which is display text
   // rather than a new selection input.

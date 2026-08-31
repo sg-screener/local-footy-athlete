@@ -92,12 +92,17 @@ export function speedBlockForTemplate(
   placement: SpeedBlockPlacement,
   idPrefix = 'speed',
 ): SpeedBlock {
+  const modality = template.permittedModalities.length === 1
+    ? template.permittedModalities[0]
+    : template.permittedModalities.includes('run') ? 'run' : template.permittedModalities[0];
+  if (!modality) throw new Error(`speed_template_has_no_modality:${template.name}`);
   return {
     id: `${idPrefix}-${speedBlockIdSlug(template.name)}-${placement}`,
     title: template.name,
     label: template.name,
     kind: 'true_speed',
     placement,
+    modality,
     durationMinutes: templateDurationMinutes(template),
     prescription: templatePrescriptionLine(template),
     notes: [template.effortCue],

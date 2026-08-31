@@ -562,6 +562,8 @@ export interface SpeedBlock {
   prescription: string;
   notes?: string[];
   exerciseIds?: string[];
+  /** Typed delivery mode. Optional only for legacy stored blocks; every writer stamps it. */
+  modality?: 'run' | 'bike' | 'air_bike' | 'row' | 'ski';
   counting: SpeedBlockCountingFence;
   /**
    * The authored conditioning template this block renders (Stage B

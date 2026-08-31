@@ -7469,3 +7469,28 @@ dose, exposure credit, placement, completion or feedback policy.
 Guard: `LAW-one-session-section-order-on-session-day-and-week` through the
 chained `test:projection-ownership + test:session-execution-checklist` gates.
 Verification status and NOT COVERED: `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-298** · Conditioning template identity and selected modality must agree, 2026-09-01.
+
+Owner: condpair. Every one of the 55 signed conditioning templates explicitly
+declares the typed modalities it supports. Distance-based and running-identity
+templates are Run-only. Air Bike identities are Air Bike-only. Erg identities
+are machine-only. A generic time-based template may support more than one mode
+only when its title, work prescription and instructions remain true on each.
+
+When a required modality cannot use the selected template, selection chooses a
+stable compatible template from the same conditioning quality. It never places
+a different machine under an incompatible identity. Warm-up copy is projected
+from the selected typed modality: running may use jog/run-through language;
+Bike, RowErg, SkiErg and mixed-ergo work use a machine build-up. The selected
+template/modality pair remains typed through final composition, saving and
+restart, and the final workout boundary refuses any incompatible authored pair.
+
+This changes no weekly placement, conditioning frequency, intended quality,
+prescription or progression rule.
+
+Guard: `LAW-conditioning-template-and-selected-modality-must-be-compatible`
+through chained `test:conditioning-templates` (which invokes the complete
+template/modality gate). The persistence and full-year catalogue-order gates
+remain release-blocking through `test:programming-selection-release`.
+Verification status and NOT COVERED: `docs/STATUS_CONDPAIR.md`.

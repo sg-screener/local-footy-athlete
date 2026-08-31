@@ -476,9 +476,7 @@ export function buildSessionTemplate(
       : item => item.kind === 'exercise' && item.row.composedOptionalKind === 'primer'
         ? 0 : ordering === 'phase' ? phaseRank(item) : d2Rank(item)).map(item => {
       if (item.kind !== 'exercise') return item;
-      const modalityLabel = item.presentation === 'speed'
-        ? 'Run'
-        : conditioningModeLabelForRow(workout, String(item.row?.id ?? ''));
+      const modalityLabel = conditioningModeLabelForRow(workout, String(item.row?.id ?? ''));
       // Typed conditioning-block ownership outranks the surrounding session's
       // presentation bucket. A standalone Recovery session deliberately keeps
       // its recovery section, but an Erg Flush row inside it still needs the

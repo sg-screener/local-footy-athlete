@@ -50,6 +50,7 @@ import { CONDITIONING_ATHLETE_COPY } from './conditioningAthleteCopy';
  */
 export function conditioningWordingForModality(text: string, modality?: ConditioningOption['modality']): string {
   if (!modality) return text;
+  if (/^5–10 min build-up\n/i.test(text)) return conditioningWarmupCopyForModality(modality);
   const active = text.replace(/\beasy spin\/paddle\b/gi, 'easy active recovery');
   if (modality === 'running') return active;
   const movementWording = active
@@ -60,6 +61,20 @@ export function conditioningWordingForModality(text: string, modality?: Conditio
     const projected = conditioningIntensityDisplayForModality(intensity.trim(), modality);
     return projected ? `${projected.label}: ${projected.text}` : '';
   }).replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** Warm-up language is projected from the selected typed mode, never a title. */
+export function conditioningWarmupCopyForModality(modality: ConditioningOption['modality']): string {
+  const instruction = modality === 'running'
+    ? 'Start with an easy jog, then progress into run-throughs, increasing the intensity as you go.'
+    : modality === 'bike'
+      ? 'Start easy on the bike, then build the effort smoothly, increasing the intensity as you go.'
+      : modality === 'row'
+        ? 'Start easy on the RowErg, then build the effort smoothly, increasing the intensity as you go.'
+        : modality === 'ski'
+          ? 'Start easy on the SkiErg, then build the effort smoothly, increasing the intensity as you go.'
+          : 'Start easy on the first machine, then build the effort smoothly as you move through the selected ergs.';
+  return `5–10 min build-up\n${instruction}`;
 }
 
 export interface ConditioningDisplayLine {

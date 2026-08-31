@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-conditioning-template-and-selected-modality-must-be-compatible',
+    law: 'R-298: each of the 55 conditioning templates explicitly declares supported typed modalities. Distance and running identities are Run-only, Air Bike identities are Air Bike-only and Erg identities are machine-only. A required incompatible modality selects a stable same-quality compatible template; typed warm-up copy follows the selected mode, the pair survives save/restart, and final composition refuses an incompatible pair.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-298',
+    guard: {
+      state: 'guarded',
+      by: 'test:conditioning-templates',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `condpair`. The audit supplied 68 final-card occurrences across five repeated identity, modality and warm-up defects. The signed workbook now carries an explicit Supported modalities column for all 55 rows and the equality gate compares it verbatim. One compatibility owner validates every declared mode and every final authored pair; selection retains conditioning quality when a requested mode cannot use the selected identity. SpeedBlock and ConditioningOption carry typed mode through composition, display and persistence. Machine warm-ups project from the typed mode and contain no jog/run-through language. The complete modality route/persistence gate, annual male/female Going Away run and reversal receipt are recorded in docs/STATUS_CONDPAIR.md. NOT COVERED: physical iPhone, athlete-authored sessions outside the signed 55 and final PDF regeneration.',
+    },
+  },
+  {
     id: 'LAW-one-session-section-order-on-session-day-and-week',
     law: 'R-297: the active Session, Day and Week views share one typed execution-section order: derived Movement Prep, Strength, Speed, then Conditioning. The component extractor owns membership, never athlete-facing order; standalone or athlete-added Mobility keeps its separate typed identity.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-297',
