@@ -1,5 +1,38 @@
 # STATUS — progressmetrics
 
+## 2026-08-31 — Sweet-spot Load hero and weekly AU history
+
+Owner: `progressmetrics`
+
+Scope and existing authority:
+
+- The load engine already owns a signed 0.8–1.3 sweet-spot band against the athlete's rolling four-week normal.
+- R-277 already owns one reconstructable weekly AU total across strength, conditioning, team training and games using actual minutes × session RPE.
+- The accepted microcycle already records scheduled/readiness/illness deload dose; the surface does not infer a deload from a low number.
+
+Options compared before implementation:
+
+1. Re-group feedback and calculate an acute:chronic chart inside Progress.
+2. Extend the existing live Snapshot with the load owner's weekly AU totals and one typed current-deload answer, leaving all calculation in the existing domain owners.
+
+Choice: option 2. It prevents the screen from becoming a second workload model. The relative continuum answers whether this week sits around the athlete's normal; the chart shows the underlying weekly AU history. Absolute AU is not given a universal good/bad cutoff.
+
+Verification:
+
+- Red first: six focused cells failed for the missing exact statuses, deload exception, explanation, AU history chart, two-point refusal and typed deload handoff.
+- After implementation: Progress ownership is 48/48, the pure Snapshot/ownership arm is 38/38, and TypeScript compile is green.
+- The AU history is chronological, comes directly from `JournalLoadModel.history` plus this week, and includes only weeks with measured load.
+- Mutation: restoring the old in-range wording, reversing historical order, allowing a one-point chart and inverting the deload-door check changed Progress from 48/0 to 45/3 and Snapshot from 38/0 to 36/2. Restoration returned both focused tapes to green.
+- The complete load chain is green: 138/138 pure load cells plus 28/28 real onboarding, accepted-save, restart and phase-change history cells.
+- The law registry resolves R-281 and its revised guard; it remains red only on the inherited 21 UNENFORCED rows.
+
+NOT COVERED:
+
+- Physical-iPhone Release acceptance, Dynamic Type and real VoiceOver traversal.
+- Mounted simulator pixels; the shared simulator lane is currently owned by the active lived-year audit preflight and was not interrupted.
+- A production athlete with four fully measured prior weeks; the existing coverage refusal remains the authority for when the status is available.
+- Any automatic program change from the monitoring result. R-277 keeps this read-only.
+
 ## 2026-08-31 — Main-lift card simplification and plain comparisons
 
 Owner: `progressmetrics`

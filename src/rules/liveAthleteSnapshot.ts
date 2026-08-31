@@ -57,6 +57,11 @@ export interface CoachSnapshotLoad {
   readonly headline: JournalLoadHeadline | null;
   readonly sweetSpotBand: { readonly low: number; readonly high: number } | null;
   readonly coverage: JournalLoadCoverage | null;
+  readonly weeklyCompletedLoadAU: readonly {
+    readonly weekStart: string;
+    readonly value: number;
+  }[];
+  readonly isDeloadWeek: boolean;
 }
 
 export interface StrengthProgressPoint {
@@ -99,6 +104,7 @@ export interface BuildCoachSnapshotInput {
   readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly readinessSignal: ReadinessSignal | null;
   readonly activeModifiers: readonly ActiveCoachNote[];
+  readonly isDeloadWeek?: boolean;
 }
 
 /**
@@ -133,6 +139,7 @@ export interface DeriveCoachSnapshotInput {
   readonly twoKmTimeTrial?: OnboardingData['twoKmTimeTrial'];
   readonly bodyWeightKg?: OnboardingData['weightKg'];
   readonly trackedLiftChoices?: import('./estimatedOneRepMax').TrackedLiftChoices;
+  readonly isDeloadWeek?: boolean;
 }
 
 function countRecordedWeeks(
@@ -239,6 +246,7 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     twoKmTimeTrial: input.twoKmTimeTrial ?? null,
     readinessSignal: input.readinessSignal,
     activeModifiers: input.activeModifiers,
+    isDeloadWeek: input.isDeloadWeek,
   });
 }
 
@@ -262,6 +270,13 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
     throw new Error('Coach Snapshot readiness must describe its as-of date.');
   }
 
+  const model = input.loadModel;
+  const weeklyCompletedLoadAU = [...(model.history ?? [])]
+    .reverse()
+    .concat(model.thisWeek ? [model.thisWeek] : [])
+    .filter((week) => week.sessionsMeasured > 0)
+    .map((week) => ({ weekStart: week.weekStart, value: week.completedLoadAU }));
+
   return {
     asOfDateISO: input.asOfDateISO,
     visibleWeek: input.visibleWeek,
@@ -271,9 +286,11 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
       signal: input.readinessSignal,
     },
     load: {
-      headline: signedValue(input.loadModel.headline),
-      sweetSpotBand: signedValue(input.loadModel.sweetSpotBand),
-      coverage: signedValue(input.loadModel.coverage),
+      headline: signedValue(model.headline),
+      sweetSpotBand: signedValue(model.sweetSpotBand),
+      coverage: signedValue(model.coverage),
+      weeklyCompletedLoadAU,
+      isDeloadWeek: input.isDeloadWeek === true,
     },
     progress: [...input.strengthLifts],
     strengthHistory: input.strengthHistory.map((history) => ({

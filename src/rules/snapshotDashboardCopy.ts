@@ -1,5 +1,6 @@
 /**
- * BATCH 38 — COACH SNAPSHOT DASHBOARD. SIGNED 2026-08-24.
+ * BATCH 38 — COACH SNAPSHOT DASHBOARD. SIGNED 2026-08-24; Progress Load
+ * wording revised by Sam in R-281 on 2026-08-31.
  *
  * Sam named the five sections, signed the first wording with "the wording is
  * fine", then moved Load into the hero and supplied `Consistency` as the exact
@@ -25,10 +26,15 @@ export const COACH_DASHBOARD_COPY = {
   readinessFlat: 'Feeling flat',
   readinessSore: 'Feeling sore',
   readinessRecorded: 'Check-in recorded',
-  loadUnavailable: 'Not enough recorded load yet',
-  loadBelow: 'Below your usual range',
-  loadIn: 'In your usual range',
-  loadAbove: 'Above your usual range',
+  loadUnavailable: 'Building your load history',
+  loadBelow: 'Potentially undertraining',
+  loadIn: 'In the sweet spot',
+  loadAbove: 'Potentially overtraining',
+  loadDeload: 'Deload week',
+  loadSweetSpotGuidance: 'The sweet spot helps you build fitness without training too hard or undertraining.',
+  loadDeloadGuidance: 'Lower load is expected during a deload week.',
+  loadHistoryGuidance: 'Complete and rate your sessions to build your 4-week load baseline.',
+  loadHistoryBuilding: 'Your load graph builds as you train.',
   noProgress: 'No lifts recorded this week',
   progressUp: 'Up from last week',
   progressFlat: 'Same as last week',
@@ -70,13 +76,27 @@ export function coachReadinessSummary(state: CoachSnapshotReadinessState): strin
   }
 }
 
-export function coachLoadSummary(band: BandVerdict | null): string {
+export function coachLoadSummary(
+  band: BandVerdict | null,
+  isDeloadWeek = false,
+): string {
   switch (band) {
-    case 'below': return COACH_DASHBOARD_COPY.loadBelow;
+    case 'below': return isDeloadWeek
+      ? COACH_DASHBOARD_COPY.loadDeload
+      : COACH_DASHBOARD_COPY.loadBelow;
     case 'in': return COACH_DASHBOARD_COPY.loadIn;
     case 'above': return COACH_DASHBOARD_COPY.loadAbove;
     default: return COACH_DASHBOARD_COPY.loadUnavailable;
   }
+}
+
+export function coachLoadGuidance(
+  band: BandVerdict | null,
+  isDeloadWeek = false,
+): string {
+  if (band === null) return COACH_DASHBOARD_COPY.loadHistoryGuidance;
+  if (band === 'below' && isDeloadWeek) return COACH_DASHBOARD_COPY.loadDeloadGuidance;
+  return COACH_DASHBOARD_COPY.loadSweetSpotGuidance;
 }
 
 export function coachLoadEvidence(coverage: JournalLoadCoverage | null): string | null {

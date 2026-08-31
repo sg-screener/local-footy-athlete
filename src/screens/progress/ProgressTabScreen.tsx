@@ -12,7 +12,9 @@ import { useLiveAthleteSnapshot } from '../coach/useLiveAthleteSnapshot';
 import type { CoachSnapshotLoad } from '../../rules/liveAthleteSnapshot';
 import type { ProgressMainLiftHistory } from '../../rules/progressMainLiftStrength';
 import {
+  COACH_DASHBOARD_COPY,
   coachLoadEvidence,
+  coachLoadGuidance,
   coachLoadMarkerFraction,
   coachLoadSummary,
 } from '../../rules/snapshotDashboardCopy';
@@ -65,12 +67,28 @@ function LoadContinuum({ load }: { load: CoachSnapshotLoad }) {
     ? coachLoadMarkerFraction(load.headline.ratio, load.sweetSpotBand)
     : null;
   const evidence = coachLoadEvidence(load.coverage);
+  const status = coachLoadSummary(load.headline?.band ?? null, load.isDeloadWeek);
+  const guidance = coachLoadGuidance(load.headline?.band ?? null, load.isDeloadWeek);
+  const statusColor = load.headline === null
+    ? colors.text.primary
+    : load.headline.band === 'in'
+      ? colors.status.successLight
+      : load.headline.band === 'above'
+        ? colors.status.errorLight
+        : load.isDeloadWeek
+          ? colors.status.infoLight
+          : colors.status.warningLight;
+  const latestLoad = load.weeklyCompletedLoadAU[load.weeklyCompletedLoadAU.length - 1];
   return (
     <View style={styles.heroCard} testID="progress-load-continuum">
       <Text variant="caption" style={styles.label}>{PROGRESS_TAB_COPY.load}</Text>
-      <Text variant="h4" style={styles.heroValue}>
-        {coachLoadSummary(load.headline?.band ?? null)}
+      <Text variant="h4" style={[styles.heroValue, { color: statusColor }]}>
+        {status}
       </Text>
+      <Text variant="bodySmall" style={styles.loadGuidance}>{guidance}</Text>
+      <View style={styles.loadTrackHeader}>
+        <Text variant="caption" style={styles.label}>Load vs your 4-week normal</Text>
+      </View>
       <View style={styles.loadTrack} testID="progress-load-track">
         {load.sweetSpotBand ? (
           <View
@@ -91,9 +109,35 @@ function LoadContinuum({ load }: { load: CoachSnapshotLoad }) {
           />
         ) : null}
       </View>
+      <View style={styles.loadChart}>
+        <View style={styles.loadChartHeader}>
+          <Text variant="bodySmallEmphasis" style={styles.chartTitle}>Weekly load (AU)</Text>
+          {latestLoad ? (
+            <Text variant="caption" style={styles.chartValue}>
+              Latest {Math.round(latestLoad.value)} AU
+            </Text>
+          ) : null}
+        </View>
+        <LoadHistoryChart points={load.weeklyCompletedLoadAU} />
+      </View>
       {evidence ? <Text variant="caption" style={styles.detail}>{evidence}</Text> : null}
     </View>
   );
+}
+
+function LoadHistoryChart({ points }: {
+  points: readonly { readonly weekStart: string; readonly value: number }[];
+}) {
+  if (points.length < 2) {
+    return (
+      <View style={styles.loadChartBuilding} testID="progress-load-chart-building">
+        <Text variant="caption" style={styles.emptyText}>
+          {COACH_DASHBOARD_COPY.loadHistoryBuilding}
+        </Text>
+      </View>
+    );
+  }
+  return <LineChart points={points.map((point) => ({ dateISO: point.weekStart, value: point.value }))} />;
 }
 
 function LineChart({ points: recordedPoints, higherIsBetter = true }: {
@@ -558,6 +602,8 @@ const styles = StyleSheet.create({
   label: { color: colors.text.tertiary },
   heroValue: { color: colors.text.primary, marginTop: spacing.xs },
   detail: { color: colors.text.secondary, marginTop: spacing.sm },
+  loadGuidance: { color: colors.text.secondary, marginTop: spacing.xs },
+  loadTrackHeader: { marginTop: spacing.md },
   loadTrack: {
     backgroundColor: colors.surface.tertiary,
     borderRadius: borderRadius.full,
@@ -582,6 +628,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -3,
     width: LOAD_MARKER_SIZE,
+  },
+  loadChart: {
+    borderTopColor: colors.surface.tertiary,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+  },
+  loadChartHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  loadChartBuilding: {
+    alignItems: 'center',
+    height: CHART_HEIGHT,
+    justifyContent: 'center',
   },
   chartCard: {
     backgroundColor: colors.surface.secondary,

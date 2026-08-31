@@ -95,6 +95,8 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   const myStatus = read('src/screens/home/MyStatusScreen.tsx');
   const progress = read('src/screens/progress/ProgressTabScreen.tsx');
   const snapshot = read('src/rules/liveAthleteSnapshot.ts');
+  const snapshotAdapter = read('src/screens/coach/useLiveAthleteSnapshot.ts');
+  const loadCopy = read('src/rules/snapshotDashboardCopy.ts');
   const progressCopy = read('src/rules/progressTabCopy.ts');
 
   const tabNames = [...navigator.matchAll(/<Tab\.Screen\s+name="([^"]+)"/g)]
@@ -128,6 +130,32 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('Progress renders the fixed predicted-1RM histories even when every graph is empty',
     /snapshot\.mainLiftEstimates\.map/.test(progress)
       && !/snapshot\.strengthHistory\.length\s*>\s*0/.test(progress));
+  ok('Load names the sweet spot and potential over/under-training states exactly',
+    /loadIn:\s*'In the sweet spot'/.test(loadCopy)
+      && /loadBelow:\s*'Potentially undertraining'/.test(loadCopy)
+      && /loadAbove:\s*'Potentially overtraining'/.test(loadCopy)
+      && /loadDeload:\s*'Deload week'/.test(loadCopy));
+  ok('a low-load deload is explained as intentional rather than undertraining',
+    /coachLoadSummary\([\s\S]*?isDeloadWeek[\s\S]*?case 'below':[\s\S]*?loadDeload/.test(loadCopy)
+      && /Lower load is expected during a deload week/.test(loadCopy)
+      && /coachLoadGuidance\(load\.headline\?\.band \?\? null, load\.isDeloadWeek\)/.test(progress));
+  ok('the Load hero explains why the range matters in plain language',
+    /helps you build fitness without training too hard or undertraining/.test(loadCopy)
+      && /coachLoadGuidance/.test(progress));
+  ok('the existing completed-load owner reaches a multi-week AU chart',
+    /weeklyCompletedLoadAU/.test(snapshot)
+      && /model\.history/.test(snapshot)
+      && /function LoadHistoryChart/.test(progress)
+      && /Weekly load \(AU\)/.test(progress)
+      && /load\.weeklyCompletedLoadAU/.test(progress));
+  ok('the AU chart refuses a lone point and says it builds as the athlete trains',
+    /points\.length < 2/.test(progress)
+      && /loadHistoryBuilding:\s*'Your load graph builds as you train\.'/ .test(loadCopy));
+  ok('the snapshot adapter reads the stored week dose and passes one deload answer',
+    /currentProgram/.test(snapshotAdapter)
+      && /weekKind === 'deload'/.test(snapshotAdapter)
+      && /deloadDoor !== undefined/.test(snapshotAdapter)
+      && /isDeloadWeek/.test(snapshotAdapter));
   ok('Main lifts owns the estimated-1RM context once instead of repeating it inside every card',
     /mainLifts:\s*'Main lifts \(Estimated 1RM\)'/.test(progressCopy)
       && !/predictedOneRepMax:/.test(progressCopy)

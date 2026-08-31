@@ -23,7 +23,11 @@ import type { VisibleWeek } from '../rules/visibleProjection';
 import type { JournalWeek } from '../rules/journalWeek';
 import type { JournalLoadModel } from '../rules/journalLoad';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
-import { coachLoadMarkerFraction } from '../rules/snapshotDashboardCopy';
+import {
+  coachLoadGuidance,
+  coachLoadMarkerFraction,
+  coachLoadSummary,
+} from '../rules/snapshotDashboardCopy';
 
 armTotalsOrRed();
 
@@ -94,6 +98,11 @@ const journalWeek = {
 
 const loadModel = {
   weekStart: WEEK_START,
+  thisWeek: { weekStart: WEEK_START, sessionsMeasured: 3, completedLoadAU: 720 },
+  history: [
+    { weekStart: '2026-08-17', sessionsMeasured: 4, completedLoadAU: 680 },
+    { weekStart: '2026-08-10', sessionsMeasured: 4, completedLoadAU: 640 },
+  ],
   headline: { value: { ratio: 1.05, band: 'in' }, provenance: 'signed' },
   sweetSpotBand: { value: { low: 0.8, high: 1.3 }, provenance: 'signed' },
   coverage: {
@@ -159,6 +168,18 @@ console.log('\n[1] ONE PURE PICTURE CARRIES THE FIVE REQUESTED FACTS');
   ok('load coverage remains its measured/planned pair',
     snapshot.load.coverage?.sessionsMeasured === 3
       && snapshot.load.coverage.sessionsPlanned === 4);
+  ok('completed weekly AU reaches Progress in chronological order',
+    snapshot.load.weeklyCompletedLoadAU.map((point) => `${point.weekStart}:${point.value}`).join(',')
+      === '2026-08-10:640,2026-08-17:680,2026-08-24:720');
+  const deloadSnapshot = buildCoachSnapshot({ ...baseInput, isDeloadWeek: true });
+  ok('the stored deload answer crosses the same snapshot boundary',
+    snapshot.load.isDeloadWeek === false && deloadSnapshot.load.isDeloadWeek === true);
+  ok('load wording distinguishes the sweet spot, both potential misses and an intentional deload',
+    coachLoadSummary('in') === 'In the sweet spot'
+      && coachLoadSummary('above') === 'Potentially overtraining'
+      && coachLoadSummary('below') === 'Potentially undertraining'
+      && coachLoadSummary('below', true) === 'Deload week'
+      && coachLoadGuidance('below', true) === 'Lower load is expected during a deload week.');
   ok('recorded progress survives without a second calculation',
     snapshot.progress[0]?.exerciseName === 'Back Squat'
       && snapshot.progress[0]?.direction === 'up');

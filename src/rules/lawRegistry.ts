@@ -2005,13 +2005,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-progress-load-owns-the-dashboard-hero',
-    law: 'Training load owns the wide Progress hero immediately below the Progress title and shows the signed under-to-sweet-spot-to-over continuum. Coach does not render a second load surface.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-139 superseding the earlier Batch 38 Coach placement — Sam moved the continuum into the new Progress tab and simplified Coach to My Status plus chat.',
+    law: 'Training load owns the wide Progress hero immediately below the Progress title. Its signed four-week-normal continuum says In the sweet spot, Potentially overtraining or Potentially undertraining; a low-load stored deload says Deload week instead. The card explains that the range builds fitness without training too hard or undertraining and charts the existing completed weekly load history in AU, refusing a one-point graph. Coach does not render a second load surface.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-139 and R-281 — Sam moved Load into Progress, then required the exact sweet-spot/potential-over-or-under interpretation, a deload exception and weekly AU history.',
     guard: {
       state: 'guarded',
       by: 'test:coach-snapshot',
       chainStatus: 'in_chain',
-      receipt: 'UPDATED UNDER R-139, 2026-08-24 by seat `snapshot`. The guard locates the mounted Progress screen before comparing anchors, requires Progress title -> Load continuum -> 2km -> Main lifts in that order, requires the continuum track and sweet-spot zone, and proves Coach has no dashboard import or ids. Main lifts render from one history list into a two-column grid. Moving Load below Main lifts kills the guard. `.maestro/golden/progress-dashboard.yaml` separately requires the populated marker and both progress sections. NOT COVERED: physical-phone pixels.',
+      receipt: 'UPDATED UNDER R-139, 2026-08-24 by seat `snapshot`; REVISED UNDER R-281, 2026-08-31 by seat `progressmetrics`. The guard locates the mounted Progress screen before comparing anchors, requires Progress title -> Load continuum -> Main lifts in that order, the continuum track and signed sweet-spot zone, and proves Coach has no duplicate dashboard. Six red-first Progress cells pin the exact three band labels, typed deload exception/guidance, fitness explanation, completed-AU history handoff, two-point chart refusal and stored week-dose read. The pure Snapshot arm pins chronological AU points and the deload flag. MUTATION: restoring the old in-range copy, reversing the historical order, allowing a one-point graph and inverting the deload-door test changed Progress from 48/0 to 45/3 and Snapshot from 38/0 to 36/2, naming the intended boundaries. Focused results after restoration: Progress 48/0, Snapshot 38/0 and TypeScript green. NOT COVERED: physical-phone pixels, Dynamic Type, a production history with four fully measured prior weeks and future automatic programming changes (none are made).',
     },
   },
   {

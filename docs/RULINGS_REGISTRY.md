@@ -7115,3 +7115,27 @@ max-calorie test improves when calories rise.
 Guard: `LAW-progress-shows-four-fixed-predicted-one-rep-max-graphs`,
 `LAW-progress-performance-tests-and-measurements` and `test:coach-snapshot`.
 Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.
+
+**R-281** · Sweet-spot load hero and weekly AU history, 2026-08-31.
+
+Owner: progressmetrics. The top Progress card keeps the existing signed
+acute-versus-four-week-normal continuum and names its three states “In the
+sweet spot”, “Potentially overtraining” and “Potentially undertraining”. When
+the stored current week is deliberately deloaded, a below-range result says
+“Deload week” instead of implying undertraining. The explanation says the
+sweet spot helps the athlete build fitness without training too hard or
+undertraining; a deload explains that lower load is expected.
+
+The same card adds a weekly load-over-time chart in AU. Its points come from
+R-277's one completed-load owner—actual minutes multiplied by session RPE for
+strength, conditioning, team training and games—rather than a second screen
+calculation. This Progress chart is the explicit exception to the older raw-AU
+and monthly-only chart wording; the relative four-week continuum remains the
+owner of the status because an absolute AU has no universal good/bad threshold.
+The graph waits for two measured weekly points and otherwise says it builds as
+the athlete trains. Monitoring remains read-only and does not automatically
+change future programming.
+
+Guard: `LAW-progress-load-owns-the-dashboard-hero`,
+`LAW-accepted-lived-history-integrity` and `test:coach-snapshot`.
+Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.

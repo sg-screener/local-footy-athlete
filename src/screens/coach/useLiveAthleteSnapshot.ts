@@ -28,10 +28,18 @@ export interface UseLiveAthleteSnapshotInput {
 
 export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): CoachSnapshot {
   const sessionFeedback = useProgramStore((state) => state.sessionFeedback);
+  const currentProgram = useProgramStore((state) => state.currentProgram);
   const trackedLiftChoices = useProfileStore((state) => state.trackedLiftChoices);
   const readinessSignalsByDate = useReadinessStore((state) => state.signalsByDate);
   const athlete = useAthleteContext();
   const asOfDateISO = todayISOLocal();
+  const currentMicrocycle = currentProgram?.microcycles.find((microcycle) => {
+    const start = microcycle.startDate.slice(0, 10);
+    const end = microcycle.endDate.slice(0, 10);
+    return input.visibleWeek.weekStart >= start && input.visibleWeek.weekStart <= end;
+  });
+  const isDeloadWeek = currentMicrocycle?.weekKind === 'deload'
+    || currentMicrocycle?.deloadDoor !== undefined;
 
   return useMemo(() => deriveCoachSnapshot({
     asOfDateISO,
@@ -45,17 +53,20 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     twoKmTimeTrial: athlete.onboardingData?.twoKmTimeTrial,
     bodyWeightKg: athlete.onboardingData?.weightKg,
     trackedLiftChoices,
+    isDeloadWeek,
   }), [
     asOfDateISO,
     input.weekDays,
     input.visibleWeek,
     input.activeModifiers,
     sessionFeedback,
+    currentProgram,
     trackedLiftChoices,
     readinessSignalsByDate,
     athlete.onboardingData?.experienceLevel,
     athlete.onboardingData?.conditioningLevel,
     athlete.onboardingData?.twoKmTimeTrial,
     athlete.onboardingData?.weightKg,
+    isDeloadWeek,
   ]);
 }
