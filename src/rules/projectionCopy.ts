@@ -1035,8 +1035,8 @@ export function registerProjectionCopy(): void {
     {
       id: 'readiness.fatigue.noted',
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-30, R-275: bit tired records only.',
-      text: 'Noted — today stays as planned.',
+      provenance: 'SIGNED — Sam, 2026-08-31, physical-device correction to R-275, verbatim.',
+      text: 'You should be okay to train as planned, but if you start feeling flatter, let me know and we’ll pull things back.',
     },
     {
       id: 'readiness.fatigue.lighter',

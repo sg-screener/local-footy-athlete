@@ -6999,6 +6999,13 @@ Sunday followed by Monday opens a fresh Monday-through-Sunday deload. The
 athlete is told: “That’s two tired days in a row.” Clear removes the factual
 report from derivation; expiry does not erase history.
 
+**Copy corrected from physical-device feedback, 2026-08-31:** the successful
+record-only “bit tired” sheet keeps the title **“Got it”** and says **“You should
+be okay to train as planned, but if you start feeling flatter, let me know and
+we’ll pull things back.”** This replaces “Noted — today stays as planned.” It
+does not change the recorded fact, fatigue level, program derivation, later
+lighter-day threshold or consecutive-day deload behaviour.
+
 This supersedes R-035/R-038's rolling seven-day readiness horizon and its rule
 that cooked sessions remain offered. Illness remains a separate door and does
 not count toward the fatigue sequence.

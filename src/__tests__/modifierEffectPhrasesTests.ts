@@ -79,9 +79,10 @@ run('all effects including time limits are visible (R-262)', () => {
     'modifiers without a signed phrase have been hidden from Program. They are '
     + 'real and active; a missing phrase is a gap in the WORDS, never a reason '
       + 'to stop telling the athlete their program changed.');
+  const notedCopy = String(signedCopy('readiness.fatigue.noted'));
   assert(isShownOnProgram({ effect: 'readiness_noted' })
-      && String(signedCopy('readiness.fatigue.noted')).startsWith('Noted'),
-    'a record-only tired report is hidden or described as a program change');
+      && notedCopy === 'You should be okay to train as planned, but if you start feeling flatter, let me know and we’ll pull things back.',
+    `a record-only tired report is hidden or does not use Sam's exact acknowledgment: "${notedCopy}"`);
 });
 
 // THE COUNT AND THE LIST ARE THE SAME ARRAY, AND THIS IS WHY IT MATTERS.

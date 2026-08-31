@@ -4,9 +4,9 @@ Owner: `weightcontrol`
 
 ## Current issue
 
-On the installed iPhone 16 Pro Max Release build, the Week active-modifier
-notice is a compact lime line while Day shows a neutral two-line card. Week must
-use the exact Day presentation.
+On the installed iPhone 16 Pro Max Release build, the successful record-only
+“Bit tired today” confirmation says “Noted — today stays as planned.” Sam has
+supplied its replacement wording.
 
 ## Evidence before the fix
 
@@ -282,6 +282,10 @@ only Week's rendered notice changes.
 - `test:compile` reports 0 product errors and 0 devtool errors. Its overall
   result remains red on the same three inherited test-harness errors in
   `canonicalWeeklyCompilerSliceTests.ts` and `fatiguePlumbingTests.ts`.
+- `test:ruling-registry` remains at its inherited 5/8 boundary: R-070 names a
+  removed file, nine older rulings exceed the four-row `UNENFORCED` ceiling and
+  15 existing question sites omit citations. This correction adds no new row,
+  missing enforcement path or question.
 - `test:day-first-timeline` is unchanged at its inherited 55/56 boundary: the
   generated three-week probe still does not reach a Gunshow day. The modifier
   notice cell inside that suite remains green; the unreachable diagnostic was
@@ -303,3 +307,56 @@ only Week's rendered notice changes.
 
 - Fixed Release build on Sam's physical iPhone.
 - Physical Dynamic Type and VoiceOver order.
+
+---
+
+## Issue 5 — record-only fatigue acknowledgment copy
+
+The physical Release sheet already has the correct **Got it** title, but its
+body says **Noted — today stays as planned.** Sam replaced the body with:
+**You should be okay to train as planned, but if you start feeling flatter, let
+me know and we’ll pull things back.**
+
+### Cause and options
+
+The sheet correctly reads `readiness.fatigue.noted` from the signed projection
+copy registry. The old sentence was the registered R-275 wording, so this is a
+canonical-copy correction rather than a layout or state bug.
+
+1. Put the new sentence directly in the confirmation sheet. This would make the
+   popup disagree with any other reader of the record-only readiness effect.
+2. Replace the one signed-copy entry and keep every consumer reading it.
+
+Option 2 landed. The confirmation sheet and retained legacy read-only modifier
+presentation cannot drift because both still resolve the same ID.
+
+### Coverage
+
+- Test-first proof: `test:modifier-effect-phrases` changed from 4/4 to 3/4
+  against the installed-checkpoint wording. It failed with the exact old
+  sentence in its diagnostic. Replacing the signed entry returned it to 4/4.
+- `test:fatigue-sequence` — 35/35 policy cells plus 18/18 plumbing cells.
+  Record-only, lighter-day, cooked, all nine two-day tier combinations, Clear,
+  expiry and consecutive-day deload behaviour are unchanged.
+- `test:modifier-lifecycle` — 241/241 restriction journeys, My Status 10/10,
+  Program read-only modifiers 11/11 and modifier phrases 4/4.
+- Preservation checks: readiness 28/28, readiness acknowledgment 6/6, session
+  execution 206/206, Undo 28/28, injury recomposition 186/186 and signed-copy
+  extraction 7/7.
+- `test:weekly-readiness` remains at its inherited 32/35 source-shape boundary;
+  all confirmation-state cells are green. `test:copy-rulings-binding` remains
+  at its inherited 7/9 boundary on an unrelated missing signed refusal and
+  three retired proposals.
+- `test:compile` reports 0 product errors and 0 devtool errors. Its overall
+  result remains red on the same three inherited test-harness errors in
+  `canonicalWeeklyCompilerSliceTests.ts` and `fatiguePlumbingTests.ts`.
+- Preserved-data iPhone 17 Pro simulator: a temporary development display-only
+  probe showed the existing **Got it** title and the exact new body wrapping
+  cleanly above the unchanged Done button. The probe did not create a readiness
+  fact or program decision, was removed immediately, and the sheet was
+  confirmed absent again against the real athlete state.
+
+### Not covered yet
+
+- Fixed Release build on Sam's physical iPhone.
+- Physical Dynamic Type and VoiceOver reading order.
