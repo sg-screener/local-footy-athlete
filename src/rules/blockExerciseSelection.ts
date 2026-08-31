@@ -45,6 +45,7 @@
 
 import type { SessionSlot } from './sessionSlotCoverage';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
+import { stableDecisionOrder } from './stableDecisionDiversity';
 
 /** What part a slot plays — it decides which rotation rules apply. */
 export type SelectionRole = 'main_bilateral' | 'single_leg' | 'accessory';
@@ -179,13 +180,14 @@ const HINGE_PREFERENCE_ORDER: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
 function orderByPreference(
   candidates: readonly ComposedExerciseIdentity[],
   preference: readonly string[],
+  decisionIdentity: string,
 ): ComposedExerciseIdentity[] {
   const rank = (id: ComposedExerciseIdentity): number => {
     const index = preference.indexOf(id);
     return index === -1 ? preference.length : index;
   };
-  // Stable: equal ranks keep authored pool order, which IS the tie-break (rule 6).
-  return [...candidates].sort((a, b) => rank(a) - rank(b));
+  const stable = stableDecisionOrder(candidates, decisionIdentity, String);
+  return stable.sort((a, b) => rank(a) - rank(b));
 }
 
 /** Is this slot pinned to one movement by the season phase? */
@@ -213,7 +215,7 @@ function blocksSinceLastUse(
  *   3. phase policy  — phase-specific preferences outrank generic variety
  *   4. continuity    — a progressed main lift may hold a second block
  *   5. variety       — otherwise the least-recently-used legal same-group option
- *   6. tie-break     — authored pool order
+ *   6. equal cohort  — decision-keyed identity diversity, never catalogue order
  */
 export function decideExerciseForBlock(
   inputs: ExerciseSelectionInputs,
@@ -227,8 +229,11 @@ export function decideExerciseForBlock(
     );
   }
 
-  // ── RULE 6 applied first as the BASE ORDER, so every rule below breaks ties
-  //    the same authored way. Phase preference is layered on top of it.
+  const decisionIdentity = [
+    inputs.phase, inputs.blockNumber, inputs.slot, inputs.group ?? '', inputs.role,
+  ].join('|');
+  // Equal candidates are ordered from the decision and candidate identities,
+  // never from their current position in a catalogue array.
   // Sam, 2026-08-28: these stay manual choices and suitable fallbacks, not
   // automatic variety while another legal movement can fill the same slot.
   const fallback = inputs.slot === 'hinge' ? 'Deadlift' : inputs.slot === 'squat' ? 'Leg Press' : null;
@@ -239,8 +244,9 @@ export function decideExerciseForBlock(
     ? orderByPreference(
       automaticCandidates,
       phasePinsSlot(inputs) ? IN_SEASON_HINGE_ORDER : HINGE_PREFERENCE_ORDER,
+      decisionIdentity,
     )
-    : [...automaticCandidates];
+    : stableDecisionOrder(automaticCandidates, decisionIdentity, String);
 
   const decide = (
     identity: ComposedExerciseIdentity,
@@ -264,7 +270,7 @@ export function decideExerciseForBlock(
       decisionKind: 'retained',
       reason: 'restored_recorded_selection',
       previousIdentity,
-      consideredCandidates: inputs.legalCandidates,
+      consideredCandidates: stableDecisionOrder(inputs.legalCandidates, decisionIdentity, String),
     };
   }
 
@@ -313,7 +319,7 @@ export function decideExerciseForBlock(
   // ── RULE 4 — CONTINUITY ───────────────────────────────────────────────────
   if (previousIdentity !== null && !phaseOrdered.includes(previousIdentity)) {
     return decide(
-      leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
+      leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
       'rotated',
       'previous_selection_no_longer_legal',
     );
@@ -325,7 +331,7 @@ export function decideExerciseForBlock(
       && inputs.recentSelections[1]?.identity === previousIdentity;
     if (heldTwice) {
       return decide(
-        leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
+        leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
         'rotated',
         'two_block_maximum_reached',
       );
@@ -334,7 +340,7 @@ export function decideExerciseForBlock(
       return decide(previousIdentity, 'retained', 'progressed_from_own_history');
     }
     return decide(
-      leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
+      leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
       'rotated',
       'history_does_not_support_retention',
     );
@@ -354,14 +360,15 @@ export function decideExerciseForBlock(
    * candidate exists. A mutation removing the filter reddened nothing, which is
    * how it was found. The one-candidate case is answered far above. */
   return decide(
-    leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
+    leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
     'rotated',
     'structured_variety',
   );
 }
 
 /**
- * The least recently used candidate, with authored pool order as the tie-break.
+ * The least recently used candidate. Equal ages use decision-keyed identity
+ * diversity, so catalogue insertion order is not programming policy.
  *
  * ⚠ **THIS IS WHAT REPLACED THE CURSOR.** It reads the RECORDED past instead of
  * reconstructing it from a block number, so an athlete whose kit or exclusions
@@ -370,16 +377,9 @@ export function decideExerciseForBlock(
 function leastRecentlyUsed(
   candidates: readonly ComposedExerciseIdentity[],
   recent: readonly BlockExerciseSelection[],
+  decisionIdentity: string,
 ): ComposedExerciseIdentity {
-  let best = candidates[0];
-  let bestAge = blocksSinceLastUse(best, recent);
-  for (const candidate of candidates.slice(1)) {
-    const age = blocksSinceLastUse(candidate, recent);
-    // Strictly greater keeps the earlier (authored-order) candidate on a tie.
-    if (age > bestAge) {
-      best = candidate;
-      bestAge = age;
-    }
-  }
-  return best;
+  const bestAge = Math.max(...candidates.map((candidate) => blocksSinceLastUse(candidate, recent)));
+  const cohort = candidates.filter((candidate) => blocksSinceLastUse(candidate, recent) === bestAge);
+  return stableDecisionOrder(cohort, decisionIdentity, String)[0];
 }

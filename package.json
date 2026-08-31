@@ -92,6 +92,7 @@
     "test:conditioning-rotation": "sucrase-node src/__tests__/conditioningRotationTests.ts",
     "test:programming-selection-trace": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingSelectionTraceTests.ts",
     "test:catalogue-reachability-classification": "TZ=Australia/Melbourne sucrase-node src/__tests__/catalogueReachabilityClassificationTests.ts",
+    "test:programming-catalogue-order": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingCatalogueOrderTests.ts",
     "test:conditioning-equipment-consistency": "sucrase-node src/__tests__/conditioningEquipmentConsistencyTests.ts",
     "test:adjustment-engine": "sucrase-node src/__tests__/programAdjustmentEngineTests.ts",
     "test:apply-events": "sucrase-node src/__tests__/applyAdjustmentEventsTests.ts",

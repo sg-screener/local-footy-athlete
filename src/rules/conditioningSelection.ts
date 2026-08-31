@@ -52,6 +52,7 @@ import {
   type AutomaticCandidateTrace,
   type AutomaticProgrammingSelectionTrace,
 } from './programmingSelectionTrace';
+import { stableDecisionChoice, stableDecisionOrder } from './stableDecisionDiversity';
 
 /* ── The surviving demand vocabulary ── */
 
@@ -629,27 +630,37 @@ export function selectConditioningTemplateWithTrace(
     const qualityLast = (quality: ConditioningQuality): string => latest(entry =>
       resolveTemplateByName(entry.templateName)?.quality === quality);
     const nameLast = (name: string): string => latest(entry => entry.templateName === name);
-      selected = [...candidates].sort((a, b) => qualityLast(a.quality).localeCompare(qualityLast(b.quality))
+      const stable = stableDecisionOrder(
+        candidates,
+        `${blockStartISO}|${args.category}|${seat}|${role}`,
+        (template) => template.name,
+      );
+      selected = stable.sort((a, b) => qualityLast(a.quality).localeCompare(qualityLast(b.quality))
         || nameLast(a.name).localeCompare(nameLast(b.name)))[0];
       selectionReason = 'least_recent_quality_then_template';
     }
   } else {
-    const index = args.miniCycleNumber !== undefined
-      ? (Math.max(1, args.miniCycleNumber) - 1 + Math.max(0, args.seatIndex ?? 0)) % candidates.length
-      : conditioningSelectionHash(args.dateStr) % candidates.length;
-    selected = candidates[index];
+    const decisionIdentity = args.miniCycleNumber !== undefined
+      ? `${Math.max(1, args.miniCycleNumber)}|${args.category}|${Math.max(0, args.seatIndex ?? 0)}|${role}`
+      : `${args.dateStr}|${args.category}|${role}`;
+    selected = stableDecisionChoice(candidates, decisionIdentity, (template) => template.name)!;
     selectionReason = 'deterministic_rotation_without_recorded_history';
   }
 
   const candidateSet = new Set(candidates.map((candidate) => candidate.name));
   const routeSet = new Set(pool.map((candidate) => candidate.name));
   const history = args.selectionContext?.history ?? [];
+  // Mutation cells deliberately inject schema-incomplete candidates to prove
+  // an earlier eligibility gate rejects them. The observer must describe that
+  // rejection without making the rejected row executable just to inspect it.
+  const traceModalities = (template: ConditioningTemplate): ConditioningModality[] =>
+    Array.isArray(template.permittedModalities) ? renderableModalities(template) : [];
   const candidateRows: AutomaticCandidateTrace[] = CONDITIONING_TEMPLATES.map((template) => {
     const rejectedBy: AutomaticCandidateRejection[] = [];
     if (template.automaticSelection === 'retired') rejectedBy.push('manual_or_special_use_only');
     else if (!routeSet.has(template.name)) rejectedBy.push('wrong_movement_or_quality');
     else if (!candidateSet.has(template.name)) {
-      const modes = renderableModalities(template);
+      const modes = traceModalities(template);
       const owned = (mode: ConditioningModality) => args.availableMachines === undefined
         || args.availableMachines.includes(mode);
       if ((args.offFeet && !modes.some((mode) => mode !== 'run' && owned(mode)))
@@ -678,7 +689,7 @@ export function selectConditioningTemplateWithTrace(
         weeksOrBlocksSinceUse: blocksSince < 0 ? null : blocksSince,
         weeklyUsage: sameBlockUses,
       },
-      modalities: renderableModalities(template),
+      modalities: traceModalities(template),
     };
   });
   const context = args.traceContext;
@@ -737,7 +748,7 @@ export function offFeetAlternative(
   // A usable selected template keeps its identity; changing modality alone
   // must not silently rotate the session to another prescription.
   return pool.find(candidate => candidate.name === template.name)
-    ?? pool[conditioningSelectionHash(dateStr) % pool.length];
+    ?? stableDecisionChoice(pool, `${dateStr}|off_feet|${template.quality}`, (candidate) => candidate.name);
 }
 
 /* ── Name resolution for stored/legacy content ── */

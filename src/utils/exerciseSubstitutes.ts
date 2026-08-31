@@ -79,6 +79,7 @@ import {
   isMeaningfullyLighter,
   loadRatioDiffersMeaningfully,
 } from '../rules/substituteLoadTolerance';
+import { stableDecisionOrder } from '../rules/stableDecisionDiversity';
 
 // ─── Types ───
 
@@ -690,7 +691,11 @@ export function getSubstituteCandidates(
 
   // ─── 3. Score & pick first ───
   const injuries = ctx.activeInjuries ?? {};
-  const scored = candidates
+  const scored = stableDecisionOrder(
+    candidates,
+    `${canonical}|${Object.entries(ctx.activeInjuries ?? {}).sort().map(([key, value]) => `${key}:${value}`).join(',')}|${[...(ctx.availableEquipment ?? [])].sort().join(',')}`,
+    (candidate) => candidate.name,
+  )
     .map((c) => ({
       candidate: c,
       score: scoreCandidate(
@@ -810,7 +815,11 @@ function pickSecond(
 ): SubstituteCandidate | null {
   if (candidates.length === 0) return null;
   const firstDiffSet = new Set<DiffAxis>(first.differsOn);
-  const scored = candidates
+  const scored = stableDecisionOrder(
+    candidates,
+    `${first.name}|second_substitute`,
+    (candidate) => candidate.name,
+  )
     .map((candidate) => {
       const pairDiff = computeDiffAxes(
         {
@@ -874,7 +883,11 @@ function tryCrossPatternFallback(
   // Order by their own score (vs original) before pickSecond re-ranks
   // by pair-score. This gives pickSecond a sensible search order when
   // multiple fallback candidates qualify on hard filters.
-  const ordered = fallbackCandidates
+  const ordered = stableDecisionOrder(
+    fallbackCandidates,
+    `${canonical}|${first.name}|cross_pattern`,
+    (candidate) => candidate.name,
+  )
     .map((c) => ({
       candidate: c,
       score: scoreCandidate(c, originalCtx, injuries),

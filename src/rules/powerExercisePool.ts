@@ -68,6 +68,7 @@ import {
   type AutomaticCandidateTrace,
   type AutomaticProgrammingSelectionTrace,
 } from './programmingSelectionTrace';
+import { stableDecisionChoice } from './stableDecisionDiversity';
 
 /* ── Entries ── */
 
@@ -296,15 +297,6 @@ export function eligiblePowerExercises(
  * block ids (`block-1`, `block-2`) across different buckets, which is what makes
  * rotation actually rotate.
  */
-function rotationHash(seed: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
-}
-
 /**
  * WHICH power exercise this session gets. Pure and deterministic.
  *
@@ -336,7 +328,7 @@ export function selectPowerExercise(
   // Rotate on block identity plus the cell, so a phase or experience change
   // does not silently keep an athlete on the same movement forever.
   const seed = `${context.blockId}|${context.family}|${context.phase}|${context.trainingAge}`;
-  return eligible[rotationHash(seed) % eligible.length];
+  return stableDecisionChoice(eligible, seed, (candidate) => candidate.name);
 }
 
 /** The pool decision plus its candidate evidence; selection itself is unchanged. */

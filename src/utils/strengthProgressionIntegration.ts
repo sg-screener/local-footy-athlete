@@ -409,7 +409,22 @@ function resolveSiblingPerformedWeight(
   const { entry: targetEntry, slot, role } = hit;
   const siblings = pools.getSlotSiblings(slot, role);
 
-  for (const sibling of siblings) {
+  // Pool position is not evidence that one recorded sibling is the right
+  // transfer source. Prefer the same authored group, then the closest ratio;
+  // the identity comparison only stabilises an exact semantic tie.
+  const available = siblings.filter((sibling) => {
+    if (sibling.name === targetName) return false;
+    const siblingId = program.findOrCreateExercise(sibling.name).id;
+    return siblingId in lastPerformedWeights && lastPerformedWeights[siblingId] !== undefined;
+  }).sort((left, right) => {
+    const leftGroup = left.group === targetEntry.group ? 0 : 1;
+    const rightGroup = right.group === targetEntry.group ? 0 : 1;
+    return leftGroup - rightGroup
+      || Math.abs(left.loadRatio - targetEntry.loadRatio) - Math.abs(right.loadRatio - targetEntry.loadRatio)
+      || left.name.localeCompare(right.name);
+  });
+
+  for (const sibling of available) {
     if (sibling.name === targetName) continue;
     const siblingId = program.findOrCreateExercise(sibling.name).id;
     if (!(siblingId in lastPerformedWeights)) continue;

@@ -172,10 +172,14 @@ run('a repeated upper pattern uses both a main lift and a real variation', () =>
   const world = worlds.find((entry) => entry.id === 'male/Pre-season/4d/noclub');
   assert(world, 'the named four-day control world was not generated');
   const names = world.rows.map((row) => row.name);
-  assert(names.some((name) => /DB Bench/i.test(name)),
-    `no DB Bench variation in ${names.join(' | ')}`);
-  assert(names.some((name) => /Pull-Ups|Chin-Ups/i.test(name)),
-    `no Pull-Up/Chin-Up in ${names.join(' | ')}`);
+  const horizontalPresses = world.rows.filter((row) => row.slot === 'horizontal_push');
+  assert(horizontalPresses.length >= 2
+      && new Set(horizontalPresses.map((row) => row.name)).size >= 2,
+  `horizontal presses did not vary: ${names.join(' | ')}`);
+  assert(horizontalPresses.some((row) => /\bDB\b|Dumbbell/i.test(row.name)),
+    `no dumbbell press variation in ${names.join(' | ')}`);
+  assert(world.rows.some((row) => row.slot === 'vertical_pull'),
+    `no vertical-pull variation in ${names.join(' | ')}`);
 });
 
 run('each weekly seat stays stable across all four weeks of the block', () => {

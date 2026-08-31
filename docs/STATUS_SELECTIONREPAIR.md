@@ -26,7 +26,7 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Steps 1–2 complete; Step 3 next.
+Steps 1–3 complete; Step 4 next.
 
 ## Step 1 — compiler-owned automatic selection trace
 
@@ -124,3 +124,73 @@ lived output records accepted final weeks, but the existing driver does not tag
 which individual rebuild attempt became the accepted block. Catalogue-order
 independence, ranking policy, composition, modality persistence, deload
 ownership, release gates and final corrected audit remain Steps 3–9.
+
+## Step 3 — catalogue order is not selection policy
+
+The completed audit's mutation reversed `CONDITIONING_TEMPLATES` and
+`EXERCISE_TAGS` and changed 66 athlete-days. The same full lived run now yields
+**0 differing athlete-days / 728 athlete-days compared** (2 athletes × 52 weeks
+× 7 days), with 104 / 104 restart checks green on both sides.
+
+The selection fix is one shared rendezvous-style owner,
+`stableDecisionDiversity`: after legality, explicit preference, phase policy,
+role and recorded history have formed an otherwise-equal candidate cohort, the
+decision identity plus candidate identity resolves diversity. Reordering,
+adding or removing an unrelated catalogue row cannot move the winner. This is
+not a second global alphabetical/random carousel and it does not outrank a
+programming fact.
+
+That owner replaced all discovered position/index paths in:
+
+- block exercise first-selection and least-recently-used ties;
+- conditioning history ties and no-history rotation;
+- power rotation; and
+- off-feet conditioning fallback.
+
+A stronger diagnostic also reversed every strength-pool array. It exposed two
+additional positional reads outside ordinary selection: sibling progression
+took the first recorded pool member, and the generic substitute helper kept a
+score tie in pool order. The progression source now prefers the same authored
+group and closest load ratio; substitute ties use the same decision-keyed
+diversity owner. A remaining stronger-mutation difference sits specifically in
+the injury-recomposition path (Bodyweight Squat vs Goblet Squat at the same
+score). It is recorded, not hidden, and Step 5 owns injury-replacement
+coherence. It does not affect the exact audit mutation proved by this step.
+
+Compared two designs:
+
+1. Sort equal candidates alphabetically or encode the old position as a numeric
+   priority. Rejected: both replace one arbitrary global order with another.
+2. Keep every semantic rank where it is and resolve only an exact equal cohort
+   from the stable decision + candidate identities. Chosen: deterministic
+   diversity is local to the decision and independent of catalogue position.
+
+Verification:
+
+- `test:programming-catalogue-order`: 3 / 0 — strength, conditioning and power
+  each survive an in-memory reversal.
+- full lived-year order mutation: 2 / 2 athlete years, 52 / 52 weeks each,
+  0 / 728 differing athlete-days.
+- `test:block-selection-authority`: 5 / 0.
+- `test:power-pool`: 90 / 0.
+- `test:weekly-strength-variety`: 5 / 0. The founding check now asserts the
+  semantic property (distinct horizontal presses including a dumbbell press,
+  plus a vertical pull) rather than requiring one incidental spelling.
+- `test:conditioning-templates`: 152 / 0.
+- `test:programming-selection-trace`: 6 / 0.
+- `test:compile`: product 0, devtools 0; still red only on the same four
+  inherited test-scope errors in the three untouched files recorded in Step 1.
+- `test:strength-progression-integration`: 104 / 1, with its pre-existing
+  “Conditioning/recovery still placed on empty days” failure unchanged.
+
+Mutation/liveness: reversing all 55 conditioning templates, all exercise-tag
+object entries, the power pool, and the focused strength candidates leaves the
+named selector tests green. Removing the stable order makes the conditioning
+and power reversal cells select a different identity. The two complete lived
+runs are preserved under `output/programming-order-step3-final/` with driver
+receipts and selected-decision evidence.
+
+NOT COVERED at this checkpoint: the stronger strength-pool/injury-recomposition
+tie above; contextual scoring beyond the existing legality/phase/history
+policy; all composition findings; modality persistence; deload ownership;
+release integration; final corrected audit. These remain Steps 4–9.
