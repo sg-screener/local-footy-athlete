@@ -332,7 +332,7 @@ async function main(): Promise<void> {
   ok('the compiler accepts the typed readiness directive',
     compilerSource.includes('readonly readiness?: CanonicalWeeklyReadinessFact | null'));
   ok('the compiler authors the conditioning-plan deload before feasibility',
-    compilerSource.includes('applyDeloadPolicyToSessionAllocation'));
+    compilerSource.includes('applyDeloadPoliciesToWeeklySessionAllocations'));
   ok('product generation hands readiness to the compiler as a typed fact',
     generatorSource.includes('readiness: canonicalReadinessFactFrom(generationConstraints)'));
   ok('product generation consumes compiler-authored per-day dose policy',
@@ -3069,14 +3069,24 @@ async function main(): Promise<void> {
     const lateOffseasonRestart = await quietAsync(() => relaunchApp({
       storage: localStorageData, todayISO: lateOffseasonStart,
     }));
+    const lateOffseasonAfter = quiet(() => resolvedDays(lateOffseasonStart, lateOffseasonStart));
+    const lateOffseasonAfterSignature = visibleSignature(lateOffseasonAfter);
+    const beforeRows = JSON.parse(lateOffseasonSignature) as unknown[];
+    const afterRows = JSON.parse(lateOffseasonAfterSignature) as unknown[];
+    const firstChangedDay = beforeRows.findIndex((day, index) =>
+      JSON.stringify(day) !== JSON.stringify(afterRows[index]));
     ok(`${label} preserves its compiled week and dose exactly across restart`,
       lateOffseasonInstall.onboardingRefusal === null && lateOffseasonStart === (phase === 'In-season' ? INSTALL_DAY : '2026-08-03') &&
         lateOffseasonRestart.ok &&
         (phase === 'In-season' || scheduledNotes(quiet(() =>
           deriveVisibleWeekLive(lateOffseasonStart, lateOffseasonStart))).length > 0) &&
-        visibleSignature(quiet(() => resolvedDays(lateOffseasonStart, lateOffseasonStart))) ===
-          lateOffseasonSignature,
-      JSON.stringify({ lateOffseasonStart, lateOffseasonRestart }));
+        lateOffseasonAfterSignature === lateOffseasonSignature,
+      JSON.stringify({ lateOffseasonStart, lateOffseasonRestart,
+        scheduledNoteCount: phase === 'In-season' ? null : scheduledNotes(quiet(() =>
+          deriveVisibleWeekLive(lateOffseasonStart, lateOffseasonStart))).length,
+        firstChangedDay,
+        before: firstChangedDay >= 0 ? beforeRows[firstChangedDay] : null,
+        after: firstChangedDay >= 0 ? afterRows[firstChangedDay] : null }));
   }
 
   console.log('\n[accumulated fixture durability] old blocks, two fixtures, restart and Undo');

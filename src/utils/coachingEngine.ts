@@ -220,6 +220,12 @@ export interface SessionAllocation {
    * efforts at 6-7/10 — medium stress, never a hard exposure.
    */
   conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
+  /**
+   * The canonical weekly compiler's one answer to the deload conditioning law.
+   * A session materialiser consumes this role; it never elects itself by
+   * looking at its own exercise names or notes.
+   */
+  deloadConditioningRole?: 'weekly_quality_owner' | 'easy_aerobic';
   /** Section 18 ownership; canonical construction must preserve this identity. */
   section18ConditioningRole?: Section18ConditioningRole;
   /**

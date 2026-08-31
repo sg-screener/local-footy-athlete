@@ -256,6 +256,76 @@ export function applyDeloadPolicyToSessionAllocation(
   };
 }
 
+const WEEKDAY_INDEX: Readonly<Record<string, number>> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+function planEntryHasConditioning(entry: SessionAllocation): boolean {
+  return entry.hasCombinedConditioning === true ||
+    entry.conditioningCategory !== undefined ||
+    entry.conditioningFlavour !== undefined;
+}
+
+function planEntryHasQualityConditioning(entry: SessionAllocation): boolean {
+  return entry.conditioningFlavour === 'high-intensity' ||
+    entry.conditioningCategory === 'tempo' ||
+    entry.conditioningCategory === 'sprint' ||
+    entry.conditioningCategory === 'vo2' ||
+    entry.conditioningCategory === 'glycolytic' ||
+    entry.conditioningCategory === 'cod_decel';
+}
+
+/**
+ * Apply the deload policy as one WEEK decision.
+ *
+ * The old caller mapped `applyDeloadPolicyToSessionAllocation` over the week.
+ * The row applier then started its `qualityKept` counter at zero for every
+ * session, so two or three sessions could each call themselves "the week's one
+ * quality exposure". This owner elects one chronological plan entry after the
+ * ordinary policy transform and tags every governed conditioning entry before
+ * any template row can elect itself from its own prose. The row-level deload
+ * transform remains the single owner of the actual half-work/easy treatment.
+ */
+export function applyDeloadPoliciesToWeeklySessionAllocations(
+  entries: readonly SessionAllocation[],
+  dosePolicyByDay: Readonly<Partial<Record<number, DeloadWeekPolicy>>>,
+): SessionAllocation[] {
+  const transformed = entries.map((entry) => {
+    const day = entry.dayOfWeek ? WEEKDAY_INDEX[entry.dayOfWeek] : undefined;
+    return {
+      entry: applyDeloadPolicyToSessionAllocation(
+        entry,
+        day === undefined ? null : dosePolicyByDay[day] ?? null,
+      ),
+      day,
+      governed: day !== undefined && dosePolicyByDay[day] !== undefined,
+    };
+  });
+  const chronological = [1, 2, 3, 4, 5, 6, 0];
+  const ownerIndex = chronological.flatMap((day) => transformed
+    .map((candidate, index) => ({ candidate, index }))
+    .filter(({ candidate }) => candidate.day === day && candidate.governed &&
+      planEntryHasQualityConditioning(candidate.entry)))
+    .at(0)?.index ?? null;
+
+  return transformed.map(({ entry, governed }, index) => {
+    if (!governed || !planEntryHasConditioning(entry)) return entry;
+    if (index === ownerIndex) {
+      return { ...entry, deloadConditioningRole: 'weekly_quality_owner' };
+    }
+    return {
+      ...entry,
+      deloadConditioningRole: 'easy_aerobic',
+    };
+  });
+}
+
 export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
   const name = exercise.exercise?.name ?? '';
   const tags = EXERCISE_TAGS[name];
@@ -471,6 +541,7 @@ function isQualityConditioningRow(exercise: WorkoutExercise): boolean {
 export function applyConditioningDeloadToExercises(
   exercises: WorkoutExercise[],
   policy: DeloadWeekPolicy,
+  role?: SessionAllocation['deloadConditioningRole'],
 ): WorkoutExercise[] {
   let qualityKept = 0;
 
@@ -480,7 +551,7 @@ export function applyConditioningDeloadToExercises(
     }
 
     const isQuality = isQualityConditioningRow(exercise);
-    const keepAsQuality = isQuality
+    const keepAsQuality = role !== 'easy_aerobic' && isQuality
       && qualityKept < DELOAD_LAW.maxQualityConditioningExposures;
     if (keepAsQuality) qualityKept += 1;
 

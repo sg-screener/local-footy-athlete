@@ -2457,7 +2457,11 @@ export function buildWorkoutsFromCoach(
     // not ours to shrink.
     const dayConditioningDeload = deloadPolicyForDayOfWeek(cw.dayOfWeek);
     if (dayConditioningDeload && normalizedWorkoutType !== 'Game') {
-      finalExercises = applyConditioningDeloadToExercises(finalExercises, dayConditioningDeload);
+      finalExercises = applyConditioningDeloadToExercises(
+        finalExercises,
+        dayConditioningDeload,
+        planEntry?.deloadConditioningRole,
+      );
     }
 
     let resolvedSpeedBlock: SpeedBlock | undefined;

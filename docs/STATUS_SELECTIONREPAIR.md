@@ -360,3 +360,51 @@ NOT COVERED at this checkpoint: physical-iPhone rendering/VoiceOver, genuinely
 multi-option "Choose one" blocks, Step 5's blocked Primer decision,
 deload-quality ownership, release-chain integration and the corrected lived
 year. Those remain open; the phone remains untouched.
+
+## Step 7 — one weekly deload-quality owner
+
+This was a real ownership defect, not duplicated copy. The full-year audit
+contained 28 sentence occurrences across 12 distinct athlete-weeks (14 rows in
+6 male weeks and 14 rows in 6 female weeks) saying each row was "the week's one
+quality exposure". Within a single week there were two or three such rows.
+`applyConditioningDeloadToExercises` held a local `qualityKept` counter, and the
+adapter invoked it separately for every session, so the counter restarted for
+every day.
+
+Compared two repairs:
+
+1. Deduplicate the athlete-facing sentence after composition. Rejected: it
+   would hide the contradictory ownership while leaving each session free to
+   classify itself as quality.
+2. Make the canonical weekly compiler elect one chronological typed
+   conditioning plan entry, then hand every governed session an explicit
+   `weekly_quality_owner` or `easy_aerobic` role. Chosen: the row transformer
+   still owns the signed half-work/easy treatment, but no row can become a
+   week-level owner by regex-reading its own template name or notes.
+
+The focused tape proves that an aerobic row containing `MAS` cannot self-promote,
+two tempo candidates produce exactly one final quality row and one ownership
+sentence, and reversing plan storage order leaves the chronological owner
+unchanged. Its liveness mutation removes the typed roles and recreates two
+self-elected owners immediately.
+
+Verification:
+
+- `test:deload-quality-owner`: 11 / 11.
+- `test:deload-law`: 68 / 68.
+- `test:compile`: product 0 and devtools 0; the new Step 7 test has 0 type
+  errors. The same four current test-scope errors remain in
+  `canonicalWeeklyCompilerSliceTests.ts`, `fatiguePlumbingTests.ts` (2) and
+  `fixtureMutationTransactionTests.ts`.
+
+The broader canonical compiler tape is red on four Pre-season-persona restart
+checks: the selected conditioning template changes after relaunch (for example
+`2 min On / 1 min Easy` to `30:30 Controlled Tempo Blocks`, and `Fly 20` to
+`20 m Shuttle Repeats`). Reverting Step 7's only possible template-category
+change left those exact four failures unchanged; the focused Step 7 coordinate
+is green. The wider red is recorded, not presented as Step 7 coverage.
+
+NOT COVERED at this checkpoint: the existing conditioning-template rotation
+restart red, physical-iPhone copy, Step 5's blocked Primer decision,
+release-chain integration and the corrected lived-year rerun. These continue
+in Steps 8–9; the phone remains untouched.

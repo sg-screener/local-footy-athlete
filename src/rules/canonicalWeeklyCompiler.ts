@@ -36,7 +36,7 @@ import {
   type ConditioningFeasibilityContext,
 } from './conditioningFeasibility';
 import {
-  applyDeloadPolicyToSessionAllocation,
+  applyDeloadPoliciesToWeeklySessionAllocations,
   resolveDoorDeloadPolicy,
   type DeloadWeekPolicy,
 } from './deloadWeekRules';
@@ -320,16 +320,10 @@ export function compileCanonicalWeek(
   const doseResolvedPlan = doseDoor
     ? {
         ...injuryResolvedPlan,
-        weeklyPlan: injuryResolvedPlan.weeklyPlan.map((entry) =>
-          applyDeloadPolicyToSessionAllocation(
-            entry,
-            entry.dayOfWeek
-              ? dosePolicyByDay[
-                  ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-                    .indexOf(entry.dayOfWeek)
-                ] ?? null
-              : null,
-          )),
+        weeklyPlan: applyDeloadPoliciesToWeeklySessionAllocations(
+          injuryResolvedPlan.weeklyPlan,
+          dosePolicyByDay,
+        ),
       }
     : injuryResolvedPlan;
   const plan = input.conditioningFeasibility

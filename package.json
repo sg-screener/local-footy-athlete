@@ -206,6 +206,7 @@
     "test:readiness-illness-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessIllnessLawTests.ts",
     "test:fatigue-sequence": "TZ=Australia/Melbourne sucrase-node src/__tests__/fatigueSequencePolicyTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/fatiguePlumbingTests.ts",
     "test:deload-law": "TZ=Australia/Melbourne sucrase-node src/__tests__/deloadLawTests.ts",
+    "test:deload-quality-owner": "TZ=Australia/Melbourne sucrase-node src/__tests__/deloadWeeklyQualityOwnershipTests.ts",
     "test:muscle-experience": "TZ=Australia/Melbourne sucrase-node src/__tests__/muscleExperienceEqualityTests.ts",
     "test:conditioning-muscle": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningMuscleEqualityTests.ts",
     "test:power-pool": "TZ=Australia/Melbourne sucrase-node src/__tests__/powerExercisePoolTests.ts",
