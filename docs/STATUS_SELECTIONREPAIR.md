@@ -1573,3 +1573,53 @@ and relaunch across every supported single-machine profile.
 NOT COVERED at this checkpoint: native pixels, physical-phone acceptance,
 remote sync, a no-machine flush fallback, the pending load-progression finding,
 PDF generation, and a whole-app PASS. Neither physical phone was touched.
+
+## 2026-08-31 — four load flags investigated to their two ruled owners
+
+The four occurrences are two duplicated male/female changes. The proposed
+shared production defect was not confirmed, so no prescription code was
+changed:
+
+- `Leg Press 92.5 kg 3×10 -> 110 kg 3×8` is the exact result of Sam's U-2
+  ruling, `Keep the cut (75% / 90%)`. The initial four-week program is authored
+  before those sessions occur: early Off-season applies 75% to the 122.5 kg
+  base and rounds to 92.5 kg; mid Off-season applies 90% and rounds to 110 kg,
+  while the authored target drops from 10 to 8 reps. It is a pre-authored
+  subphase transition, not an unexplained history progression or athlete edit.
+- `Kettlebell Swings 22.5 kg -> 26.5 kg` comes from a different owner. The
+  athlete's exact recorded 22.5 kg remains the base under R-096's explicit
+  `never round, rewrite or correct the athlete's recorded number` clause. The
+  same ruling then adds the authored kettlebell increment of 4 kg. The result is
+  unusual on a fixed-bell rack, but changing it would require either rewriting
+  the athlete's number or replacing Sam's ruled increment semantics.
+
+The audit correctly called these review concerns rather than proven unsafe
+progressions. The implementation trace establishes that they do not share a
+cause and that both currently follow explicit Sam rulings. Reclassifying either
+as a product defect would silently overturn those rulings, which this seat did
+not do.
+
+Regression and liveness receipt:
+
+- `test-audited-load-concerns.cjs` adds four exact source-tracing cells to the
+  release-blocking programming-selection chain: the literal 92.5/110 Leg Press
+  outputs, its 3×10/3×8 authored schemes, the literal 4 kg kettlebell
+  increment, and the exact `22.5 + 4 = 26.5` history decision.
+- `test:block-two-progression` is 41 / 41 and retains the broader real stored =
+  visible = reloaded load-authority protection.
+- Mutation 1 changed the mid-Off-season multiplier from 90% to 85%; the exact
+  Leg Press cell went red with 105 kg.
+- Mutation 2 changed the kettlebell lattice step from 4 kg to 6 kg; the exact
+  increment cell went red. Both production mutations were restored before the
+  final 4 / 4 green run.
+
+The next false-positive load report is caught by requiring each flagged number
+to name its producing owner and accepted base before calling it an automatic
+progression. A detector that only compares consecutive display values cannot
+distinguish a pre-authored phase prescription or a return to exact athlete
+history from an unexplained jump.
+
+NOT COVERED at this checkpoint: clinical appropriateness for an individual
+athlete, changing Sam's 75/90 Off-season ruling, changing the never-rewrite-own-
+load ruling, physical-phone acceptance, PDF regeneration, and a whole-app PASS.
+Neither physical phone was touched.
