@@ -66,6 +66,12 @@ import { exerciseProgrammingAllows } from '../utils/exerciseFilter';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import {
+  rankSelectedFirst,
+  type AutomaticCandidateRejection,
+  type AutomaticCandidateTrace,
+  type AutomaticProgrammingSelectionTrace,
+} from './programmingSelectionTrace';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -353,6 +359,8 @@ export interface ComposedWeek {
    * rule that reaches into a store is the hidden-read the order forbids.
    */
   readonly selections: readonly BlockExerciseSelection[];
+  /** Exercise choices made by this exact composer run, before final assembly. */
+  readonly selectionTraces: readonly AutomaticProgrammingSelectionTrace[];
 }
 
 // ─── THE AUTHORISED OPTION SET ─────────────────────────────────────────────
@@ -1143,6 +1151,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   /* What this block chose, per weekly slot occurrence — handed back so
    * generation can RECORD it. */
   const selectionsThisBlock: BlockExerciseSelection[] = [];
+  const selectionTraces: AutomaticProgrammingSelectionTrace[] = [];
   // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
   // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
   // it, which is why a main lift changed every week. `rules/blockExerciseSelection.ts`
@@ -1828,6 +1837,68 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
               : identitiesThisDay.has(selection.identity) ? 'already_on_day' : 'kit_today',
           }
         : undefined;
+      const dateISO = addComposerDaysISO(mondayISO(inputs.todayISO), (planned.dayOfWeek + 6) % 7);
+      const experienceAllowed = new Set(experiencePreferred(pool, inputs.profile));
+      const considered = new Set(selection.consideredCandidates);
+      const candidateRows: AutomaticCandidateTrace[] = pool.map((candidate) => {
+        const rejectedBy: AutomaticCandidateRejection[] = [];
+        if (excludedToday.has(candidate)) rejectedBy.push('athlete_exclusion');
+        if (!composedRowIsLegal(candidate, kitToday)) rejectedBy.push('equipment');
+        if (!experienceAllowed.has(candidate) || !exerciseProgrammingAllows(candidate, {
+          experienceLevel: inputs.profile.experienceLevel,
+          daysToGame: planned.daysToGame,
+          route: 'automatic',
+        })) rejectedBy.push('experience');
+        if (identitiesThisDay.has(candidate)) rejectedBy.push('already_on_day');
+        if (rejectedBy.length === 0 && !considered.has(candidate) && candidate !== identity) {
+          rejectedBy.push('weekly_spacing');
+        }
+        const uses = slotHistory.filter((entry) => entry.identity === candidate);
+        const lastIndex = slotHistory.findIndex((entry) => entry.identity === candidate);
+        return {
+          name: candidate,
+          eligible: rejectedBy.length === 0 && (considered.has(candidate) || candidate === identity),
+          rejectedBy,
+          rank: null,
+          score: {
+            phasePriority: selection.consideredCandidates.indexOf(candidate) === -1
+              ? selection.consideredCandidates.length
+              : selection.consideredCandidates.indexOf(candidate),
+            athletePreference: inputs.pinnedIdentities.includes(candidate),
+            recentUsage: uses.slice(0, 3).length,
+            annualUsage: uses.length,
+            weeksOrBlocksSinceUse: lastIndex === -1 ? null : lastIndex,
+            weeklyUsage: usedThisWeek.has(candidate) ? 1 : 0,
+          },
+        };
+      });
+      selectionTraces.push({
+        schemaVersion: 1,
+        decisionId: `strength:${dateISO}:${slot}:${seatIndex}`,
+        kind: 'strength_exercise',
+        owner: 'blockExerciseSelection',
+        need: {
+          dateISO,
+          weekStartISO: mondayISO(inputs.todayISO),
+          dayOfWeek: planned.dayOfWeek,
+          phase: inputs.seasonPhase,
+          movementOrQuality: slot,
+          role: isMainLift ? 'main_strength' : 'strength_accessory',
+          seatIndex,
+          equipment: [...kitToday],
+          experience: inputs.profile.experienceLevel ?? null,
+          injuries: [
+            ...inputs.injuries.prohibitedPatterns.map((item) => `pattern:${item}`),
+            ...[...excludedToday].map((item) => `excluded:${item}`),
+          ],
+          daysToGame: planned.daysToGame ?? null,
+        },
+        candidates: rankSelectedFirst(candidateRows, identity),
+        selected: identity,
+        selectionReason: substitutedToday
+          ? `temporary_substitution:${substitutionReason?.cause}`
+          : selection.reason,
+      });
       usedThisWeek.add(identity);
       identitiesThisDay.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
@@ -1941,5 +2012,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     },
     kitUnachievablePatterns: kitUnachievablePatterns(weekReachableKit),
     selections: selectionsThisBlock,
+    selectionTraces,
   };
 }

@@ -62,6 +62,12 @@ import {
 import type { PowerFamily, PowerKind } from './powerPrimerPolicy';
 import { getExerciseTags } from '../data/exerciseTags';
 import { exerciseIsAvailableWith } from '../data/exerciseEquipmentRequirement';
+import {
+  rankSelectedFirst,
+  type AutomaticCandidateRejection,
+  type AutomaticCandidateTrace,
+  type AutomaticProgrammingSelectionTrace,
+} from './programmingSelectionTrace';
 
 /* ── Entries ── */
 
@@ -331,6 +337,76 @@ export function selectPowerExercise(
   // does not silently keep an athlete on the same movement forever.
   const seed = `${context.blockId}|${context.family}|${context.phase}|${context.trainingAge}`;
   return eligible[rotationHash(seed) % eligible.length];
+}
+
+/** The pool decision plus its candidate evidence; selection itself is unchanged. */
+export function selectPowerExerciseWithTrace(
+  context: PowerSelectionContext,
+  traceContext: {
+    readonly dateISO: string;
+    readonly weekStartISO: string;
+    readonly dayOfWeek: number;
+    readonly experience: string | null;
+    readonly injuries: readonly string[];
+    readonly daysToGame: number | null;
+  },
+): { readonly entry: PowerPoolEntry | null; readonly trace: AutomaticProgrammingSelectionTrace } {
+  const entry = selectPowerExercise(context);
+  const eligible = new Set(eligiblePowerExercises(context).map((candidate) => candidate.name));
+  if (context.reduced && context.family === 'lower') eligible.add(POWER_POOL_REDUCED_TAKEOVER);
+  const rows: AutomaticCandidateTrace[] = POWER_EXERCISE_POOL.map((candidate) => {
+    const rejectedBy: AutomaticCandidateRejection[] = [];
+    if (candidate.family !== context.family) rejectedBy.push('wrong_movement_or_quality');
+    if (candidate.reducedTakeoverOnly && !(context.reduced && context.family === 'lower')) rejectedBy.push('role');
+    if (context.phase === 'In-season' && (!candidate.inSeasonSafe
+      || candidate.phaseGate === 'off_and_pre_season_only')) rejectedBy.push('game_proximity');
+    if (candidate.minTrainingAge !== null
+      && !meetsTrainingAgeMinimum(context.trainingAge, candidate.minTrainingAge)) rejectedBy.push('experience');
+    if (!hasEquipment(candidate, context.availableEquipment)
+      || (getExerciseTags(candidate.name)?.programming
+        && !exerciseIsAvailableWith(candidate.name, context.availableEquipment))) rejectedBy.push('equipment');
+    return {
+      name: candidate.name,
+      eligible: eligible.has(candidate.name),
+      rejectedBy: eligible.has(candidate.name) ? [] : [...new Set(rejectedBy)],
+      rank: null,
+      score: {
+        phasePriority: 0,
+        athletePreference: false,
+        recentUsage: 0,
+        annualUsage: 0,
+        weeksOrBlocksSinceUse: null,
+        weeklyUsage: 0,
+      },
+    };
+  });
+  return {
+    entry,
+    trace: {
+      schemaVersion: 1,
+      decisionId: `power:${traceContext.dateISO}:${context.family}`,
+      kind: 'power_exercise',
+      owner: 'powerExercisePool',
+      need: {
+        dateISO: traceContext.dateISO,
+        weekStartISO: traceContext.weekStartISO,
+        dayOfWeek: traceContext.dayOfWeek,
+        phase: context.phase,
+        movementOrQuality: context.family,
+        role: context.kind,
+        seatIndex: 0,
+        equipment: [...context.availableEquipment],
+        experience: traceContext.experience,
+        injuries: traceContext.injuries,
+        daysToGame: traceContext.daysToGame,
+      },
+      candidates: rankSelectedFirst(rows, entry?.name ?? null),
+      selected: entry?.name ?? null,
+      selectionReason: context.reduced && context.family === 'lower'
+        ? 'reduced_lower_takeover'
+        : entry ? 'deterministic_power_pool_rotation' : 'no_eligible_power_exercise',
+    },
+  };
 }
 
 /** Whether a name is in the pool at all — for wiring-time reconciliation. */

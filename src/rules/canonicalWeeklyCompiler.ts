@@ -196,6 +196,8 @@ export type CanonicalWeeklyCompilerResult =
       readonly compositionAvailability: CanonicalWeeklyCompositionAvailability | null;
       /** Same resolved fixture context used by the scheduler, read by composition. */
       readonly daysToGameByDay: Readonly<Record<number, number | null>>;
+      /** Specialist selection evidence emitted by this exact compiler run. */
+      readonly selectionTraces: readonly import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
     }
   | {
       readonly ok: false;
@@ -357,6 +359,7 @@ export function compileCanonicalWeek(
     doseDoor,
     activeInjuryKeys: input.injury?.activeInjuryKeys ?? [],
     compositionAvailability: input.availability?.composition ?? null,
+    selectionTraces: materialised.flatMap((session) => session.selectionTraces),
     daysToGameByDay: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(day =>
       [day, scheduledGameProximity(day, scheduler).daysUntilNextGame])),
   };

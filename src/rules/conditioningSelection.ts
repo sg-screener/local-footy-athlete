@@ -46,6 +46,12 @@ import {
 } from './conditioningDose';
 import type { WorkoutExercise, WorkoutType } from '../types/domain';
 import type { Section18ConditioningRole } from './weeklyExposureContractV2';
+import {
+  rankSelectedFirst,
+  type AutomaticCandidateRejection,
+  type AutomaticCandidateTrace,
+  type AutomaticProgrammingSelectionTrace,
+} from './programmingSelectionTrace';
 
 /* ── The surviving demand vocabulary ── */
 
@@ -439,6 +445,15 @@ export interface ConditioningSelectionArgs {
   /** The week carries NO team training (lifts the availability gate). */
   readonly noTeamTrainingWeek?: boolean;
   readonly role?: ConditioningRole;
+  /** Context copied into the compiler trace. It never participates in selection. */
+  readonly traceContext?: {
+    readonly weekStartISO: string;
+    readonly phase: string;
+    readonly experience: string | null;
+    readonly injuries: readonly string[];
+    readonly daysToGame: number | null;
+    readonly equipment: readonly string[];
+  };
 }
 
 /** One chosen identity per conditioning seat; dose remains owned by the sheet. */
@@ -532,9 +547,9 @@ const ROLE_MAX_MINUTES: Readonly<Record<ConditioningRole, number | null>> = {
  * Deterministically select the authored template serving a demand category.
  * Filters are selection policy; the returned template is Sam's, untouched.
  */
-export function selectConditioningTemplate(
+export function selectConditioningTemplateWithTrace(
   args: ConditioningSelectionArgs,
-): ConditioningTemplate {
+): { readonly template: ConditioningTemplate; readonly trace: AutomaticProgrammingSelectionTrace } {
   const role = args.role ?? 'standalone';
   const pool = poolForCategory(args.category);
 
@@ -590,15 +605,22 @@ export function selectConditioningTemplate(
   if (candidates.length === 0) throw new Error(`conditioning_no_eligible_template:${args.category}:${JSON.stringify({ date: args.dateStr, offFeet: args.offFeet, runOnly: args.runOnly, machines: args.availableMachines, role })}`);
 
   const preferred = candidates.find(template => template.name === args.preferredTemplateName);
-  if (preferred) return preferred;
-  if (args.selectionContext) {
+  let selected: ConditioningTemplate;
+  let selectionReason: string;
+  if (preferred) {
+    selected = preferred;
+    selectionReason = 'preferred_specialist_identity';
+  } else if (args.selectionContext) {
     const { blockStartISO, history } = args.selectionContext;
     const seat = args.seatIndex ?? 0;
     const relevant = history.filter(entry => entry.category === args.category
       && entry.blockStartISO <= blockStartISO);
     const recorded = relevant.find(entry => entry.blockStartISO === blockStartISO && entry.seatIndex === seat);
     const restored = candidates.find(template => template.name === recorded?.templateName);
-    if (restored) return restored;
+    if (restored) {
+      selected = restored;
+      selectionReason = 'restored_recorded_selection';
+    } else {
     // Choose the least-recently served QUALITY before the template within it.
     // Skipped block numbers and unrelated qualities never consume a turn.
     // Earlier seats in this very week are supplied explicitly by the boundary.
@@ -607,13 +629,89 @@ export function selectConditioningTemplate(
     const qualityLast = (quality: ConditioningQuality): string => latest(entry =>
       resolveTemplateByName(entry.templateName)?.quality === quality);
     const nameLast = (name: string): string => latest(entry => entry.templateName === name);
-    return [...candidates].sort((a, b) => qualityLast(a.quality).localeCompare(qualityLast(b.quality))
-      || nameLast(a.name).localeCompare(nameLast(b.name)))[0];
+      selected = [...candidates].sort((a, b) => qualityLast(a.quality).localeCompare(qualityLast(b.quality))
+        || nameLast(a.name).localeCompare(nameLast(b.name)))[0];
+      selectionReason = 'least_recent_quality_then_template';
+    }
+  } else {
+    const index = args.miniCycleNumber !== undefined
+      ? (Math.max(1, args.miniCycleNumber) - 1 + Math.max(0, args.seatIndex ?? 0)) % candidates.length
+      : conditioningSelectionHash(args.dateStr) % candidates.length;
+    selected = candidates[index];
+    selectionReason = 'deterministic_rotation_without_recorded_history';
   }
-  const index = args.miniCycleNumber !== undefined
-    ? (Math.max(1, args.miniCycleNumber) - 1 + Math.max(0, args.seatIndex ?? 0)) % candidates.length
-    : conditioningSelectionHash(args.dateStr) % candidates.length;
-  return candidates[index];
+
+  const candidateSet = new Set(candidates.map((candidate) => candidate.name));
+  const routeSet = new Set(pool.map((candidate) => candidate.name));
+  const history = args.selectionContext?.history ?? [];
+  const candidateRows: AutomaticCandidateTrace[] = CONDITIONING_TEMPLATES.map((template) => {
+    const rejectedBy: AutomaticCandidateRejection[] = [];
+    if (template.automaticSelection === 'retired') rejectedBy.push('manual_or_special_use_only');
+    else if (!routeSet.has(template.name)) rejectedBy.push('wrong_movement_or_quality');
+    else if (!candidateSet.has(template.name)) {
+      const modes = renderableModalities(template);
+      const owned = (mode: ConditioningModality) => args.availableMachines === undefined
+        || args.availableMachines.includes(mode);
+      if ((args.offFeet && !modes.some((mode) => mode !== 'run' && owned(mode)))
+        || (args.runOnly && !modes.includes('run'))
+        || (args.availableMachines !== undefined && !modes.some((mode) => mode === 'run' || owned(mode)))) {
+        rejectedBy.push('equipment');
+      } else {
+        rejectedBy.push('role');
+      }
+    }
+    const uses = history.filter((entry) => entry.templateName === template.name);
+    const sameBlockUses = uses.filter((entry) => entry.blockStartISO === args.selectionContext?.blockStartISO).length;
+    const relevantBlocks = [...new Set(history.map((entry) => entry.blockStartISO))].sort().reverse();
+    const lastBlock = uses.map((entry) => entry.blockStartISO).sort().at(-1) ?? null;
+    const blocksSince = lastBlock === null ? null : relevantBlocks.indexOf(lastBlock);
+    return {
+      name: template.name,
+      eligible: candidateSet.has(template.name),
+      rejectedBy,
+      rank: null,
+      score: {
+        phasePriority: 0,
+        athletePreference: template.name === args.preferredTemplateName,
+        recentUsage: uses.filter((entry) => relevantBlocks.slice(0, 3).includes(entry.blockStartISO)).length,
+        annualUsage: uses.length,
+        weeksOrBlocksSinceUse: blocksSince < 0 ? null : blocksSince,
+        weeklyUsage: sameBlockUses,
+      },
+      modalities: renderableModalities(template),
+    };
+  });
+  const context = args.traceContext;
+  return {
+    template: selected,
+    trace: {
+      schemaVersion: 1,
+      decisionId: `conditioning:${args.dateStr}:${args.category}:${args.seatIndex ?? 0}`,
+      kind: 'conditioning_template',
+      owner: 'conditioningSelection',
+      need: {
+        dateISO: args.dateStr,
+        weekStartISO: context?.weekStartISO ?? args.dateStr,
+        dayOfWeek: new Date(`${args.dateStr}T12:00:00`).getDay(),
+        phase: context?.phase ?? 'unknown',
+        movementOrQuality: args.category,
+        role,
+        seatIndex: args.seatIndex ?? 0,
+        equipment: context?.equipment ?? [...(args.availableMachines ?? [])],
+        experience: context?.experience ?? null,
+        injuries: context?.injuries ?? [],
+        daysToGame: context?.daysToGame ?? null,
+      },
+      candidates: rankSelectedFirst(candidateRows, selected.name),
+      selected: selected.name,
+      selectionReason,
+    },
+  };
+}
+
+/** Compatibility wrapper for callers that need only the selected template. */
+export function selectConditioningTemplate(args: ConditioningSelectionArgs): ConditioningTemplate {
+  return selectConditioningTemplateWithTrace(args).template;
 }
 
 /**

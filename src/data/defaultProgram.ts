@@ -63,7 +63,7 @@ import {
   type ConditioningRole,
   codDecelPermitted,
 } from '../rules/conditioningSelection';
-import { selectPowerExercise } from '../rules/powerExercisePool';
+import { selectPowerExerciseWithTrace } from '../rules/powerExercisePool';
 import { parseConditioningDose, doseMidpoint } from '../rules/conditioningDose';
 import { conditioningAthletePrescription } from '../rules/conditioningDisplay';
 import {
@@ -1265,7 +1265,7 @@ export function buildPowerRow(
   // Identity comes from the pool. The policy owns placement and legacy dose;
   // R-270's authored per-exercise prescription supplies the new ball doses.
   // A reduced policy remains a ceiling on their set count.
-  const picked = selectPowerExercise({
+  const powerContext = {
     family: spec.family,
     phase: selection.phase ?? 'Pre-season',
     trainingAge: ladderLevelForProfile(selection.experienceLevel),
@@ -1273,7 +1273,13 @@ export function buildPowerRow(
     availableEquipment: selection.availableEquipment ?? [],
     blockId: selection.blockId ?? 'block-1',
     kind: spec.kind,
+  } as const;
+  const decision = selectPowerExerciseWithTrace(powerContext, selection.traceContext ?? {
+    dateISO: 'unknown', weekStartISO: 'unknown', dayOfWeek: -1,
+    experience: selection.experienceLevel ?? null, injuries: [], daysToGame: null,
   });
+  selection.selectionTracesOut?.push(decision.trace);
+  const picked = decision.entry;
   // The selector covers every real (family, phase, experience) cell, so null is
   // unreachable in practice; falling back to the family's bodyweight default
   // keeps a missing power row from being worse than a plain one.
@@ -1333,6 +1339,15 @@ interface PowerBlockSelectionInput {
    * block-stability rule.
    */
   blockId?: string;
+  selectionTracesOut?: import('../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
+  traceContext?: {
+    readonly dateISO: string;
+    readonly weekStartISO: string;
+    readonly dayOfWeek: number;
+    readonly experience: string | null;
+    readonly injuries: readonly string[];
+    readonly daysToGame: number | null;
+  };
 }
 
 export function buildWorkoutsFromCoach(

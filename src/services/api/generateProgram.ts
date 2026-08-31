@@ -167,6 +167,8 @@ export interface GenerateProgramFromProfileOptions {
    */
   selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
   conditioningSelectionHistory?: readonly import('../../rules/conditioningSelection').BlockConditioningSelection[];
+  /** Optional observer for the actual canonical compiler's automatic choices. */
+  selectionTracesOut?: import('../../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
   /**
    * Record this block's selections durably? **DEFAULT FALSE.**
    *
@@ -915,6 +917,7 @@ export function generateProgramLocally(
   const blockStart = input.weeks.blockStartISO;
   const compilation = compileCanonicalProgram(input);
   const { program, selections: selectionsAuthored } = compilation;
+  options.selectionTracesOut?.push(...compilation.selectionTraces);
   const plan = compilation.plans[0];
   if (!plan || !program.microcycles[0]?.workouts.length) {
     throw new ProgramGenError('bad_response', 'The app could not rebuild your week. Please try again.', 'canonical compiler produced no populated week', true);

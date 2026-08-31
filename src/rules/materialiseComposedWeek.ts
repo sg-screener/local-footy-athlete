@@ -39,6 +39,9 @@ export interface ComposedPowerPlacement {
   readonly availableEquipment?: readonly string[];
   readonly availableEquipmentByDay?: Readonly<Record<number, readonly string[]>>;
   readonly blockId?: string;
+  readonly selectionTracesOut?: import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
+  readonly injuries?: readonly string[];
+  readonly daysToGameByDay?: Readonly<Record<number, number | null>>;
 }
 
 export interface MaterialisationContext {
@@ -234,6 +237,15 @@ export function materialiseComposedWeek(
           availableEquipment: (context.power?.availableEquipmentByDay?.[day.dayOfWeek]
             ?? context.power?.availableEquipment ?? []) as never,
           blockId: context.power?.blockId,
+          selectionTracesOut: context.power?.selectionTracesOut,
+          traceContext: {
+            dateISO: isoDateForWeekday(context.weekStartISO, day.dayOfWeek),
+            weekStartISO: context.weekStartISO,
+            dayOfWeek: day.dayOfWeek,
+            experience: context.power?.experienceLevel ?? null,
+            injuries: context.power?.injuries ?? [],
+            daysToGame: context.power?.daysToGameByDay?.[day.dayOfWeek] ?? null,
+          },
         }) as WorkoutExercise;
         /* ── ONE EXERCISE, ONCE PER SESSION ──────────────────────────────────
          *

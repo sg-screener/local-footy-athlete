@@ -48,6 +48,7 @@ export interface CompilationDiagnostic { readonly message: string; readonly deta
 export interface CanonicalProgramWeeksResult {
  readonly microcycles: Microcycle[]; readonly plans: CoachingPlan[];
  readonly selections: BlockExerciseSelection[]; readonly diagnostics: CompilationDiagnostic[];
+ readonly selectionTraces: readonly import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
 }
 const DAY_MAP: Record<string, number> = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
 
@@ -253,6 +254,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
   const plans: CoachingPlan[] = [];
   const selections: BlockExerciseSelection[] = [];
   const diagnostics: CompilationDiagnostic[] = [];
+  const selectionTraces: import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[] = [];
   const blockStates = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
     blockNumber: args.blockNumber ?? 1,
@@ -454,6 +456,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
           equipment,
         },
       });
+      if (compiled.ok) selectionTraces.push(...compiled.selectionTraces);
       if (compiled.ok === false) throw new WeeklyScheduleRefusedError(compiled.refusal);
       compiledSchedule = compiled.schedule;
       compiledDaysToGame = compiled.daysToGameByDay;
@@ -559,6 +562,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       // re-pick core/accessory seats before their first week's record is saved.
       selectionHistory: [...(args.selectionHistory ?? []), ...selections],
     });
+    selectionTraces.push(...composedWeek.selectionTraces);
     /* What this block chose, carried out so the caller can RECORD it. The
      * composer decides; persistence is the caller's job. */
     for (const selection of composedWeek.selections) {
@@ -700,6 +704,9 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
               .map(([day, capabilities]) => [day, capabilities.tags])),
             blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
+            selectionTracesOut: selectionTraces,
+            injuries: compiledActiveInjuryKeys,
+            daysToGameByDay: compiledDaysToGame,
           },
         }),
         adapterWorkouts,
@@ -983,5 +990,5 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       updatedAt: args.authoredAtISO,
     };
   });
-  return { microcycles, plans, selections, diagnostics };
+  return { microcycles, plans, selections, diagnostics, selectionTraces };
 }

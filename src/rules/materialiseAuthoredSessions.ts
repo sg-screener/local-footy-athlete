@@ -37,7 +37,7 @@
  * copied). **Those four properties are guarded behaviourally, not asserted here.**
  */
 import {
-  selectConditioningTemplate,
+  selectConditioningTemplateWithTrace,
   speedTemplateByName,
   type AthleteConditioningCategory,
   type ConditioningRole,
@@ -48,6 +48,7 @@ import type { ConditioningModality, ConditioningTemplate } from '../data/conditi
 import type { CapacityBand } from '../types/domain';
 import type { SessionIntention, WeeklySchedule } from './weeklyScheduler';
 import type { SessionPurpose } from './weeklyProgrammingContract';
+import type { AutomaticProgrammingSelectionTrace } from './programmingSelectionTrace';
 
 /** Why a specialist could not serve an authorised request. Typed, never silent. */
 export type UnmaterialisedReason =
@@ -88,6 +89,8 @@ export interface MaterialisedSession {
   readonly powerPrimer: PowerPrimerSpec | null;
   /** Set when a specialist refused something the scheduler authorised. */
   readonly unmaterialised: UnmaterialisedReason | null;
+  /** Actual specialist decisions made while materialising this authored day. */
+  readonly selectionTraces: readonly AutomaticProgrammingSelectionTrace[];
 }
 
 export interface MaterialisationFacts {
@@ -151,6 +154,20 @@ export function materialiseAuthoredSessions(args: {
   // `flatMap`, never `filter`, never a push into the result — the specialists
   // physically cannot change the shape of the week from in here.
   return schedule.days.map((intention): MaterialisedSession => {
+    const selectionTraces: AutomaticProgrammingSelectionTrace[] = [];
+    const gameOffset = gameDays.length === 0
+      ? null
+      : gameDays.map((gameDay) =>
+          orderIndex(intention.dayOfWeek) - orderIndex(gameDay))
+        .sort((left, right) => Math.abs(left) - Math.abs(right))[0];
+    const traceContext = {
+      weekStartISO: facts.weekStartISO,
+      phase: String(facts.phase),
+      experience: facts.isBeginner ? 'new' : facts.experienced ? 'experienced' : 'developing',
+      injuries: facts.injuries.map((injury) => `${injury.area}:${injury.severity}`),
+      daysToGame: gameOffset,
+      equipment: [...(facts.availableMachinesByDay?.[intention.dayOfWeek] ?? facts.availableMachines ?? [])],
+    };
     const base = {
       dateISO: intention.dateISO,
       dayOfWeek: intention.dayOfWeek,
@@ -178,7 +195,7 @@ export function materialiseAuthoredSessions(args: {
       seats.set(intention.conditioningCategory, seatIndex + 1);
       const availableMachines = facts.availableMachinesByDay?.[intention.dayOfWeek] ?? facts.availableMachines;
       try {
-        conditioningTemplate = selectConditioningTemplate({
+        const decision = selectConditioningTemplateWithTrace({
           category: intention.conditioningCategory as AthleteConditioningCategory,
           requestedSpeedQualities: intention.sprintQualities,
           dateStr: intention.dateISO,
@@ -192,7 +209,10 @@ export function materialiseAuthoredSessions(args: {
           availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: intention.conditioningRole as ConditioningRole,
+          traceContext,
         });
+        conditioningTemplate = decision.template;
+        selectionTraces.push(decision.trace);
         remember(intention.conditioningCategory as AthleteConditioningCategory, seatIndex, conditioningTemplate);
       } catch {
         // A SPECIALIST MAY REFUSE, AND THE DAY SURVIVES THE REFUSAL. It is
@@ -213,7 +233,7 @@ export function materialiseAuthoredSessions(args: {
       const seatIndex = seats.get('sprint') ?? 0;
       seats.set('sprint', seatIndex + 1);
       try {
-        sprintTemplate = selectConditioningTemplate({
+        const decision = selectConditioningTemplateWithTrace({
           category: 'sprint',
           requestedSpeedQualities: intention.sprintQualities,
           dateStr: intention.dateISO,
@@ -224,7 +244,10 @@ export function materialiseAuthoredSessions(args: {
           availableMachines: facts.availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: 'component',
+          traceContext,
         });
+        sprintTemplate = decision.template;
+        selectionTraces.push(decision.trace);
         remember('sprint', seatIndex, sprintTemplate);
       } catch {
         unmaterialised = 'no_template_for_category_on_this_equipment';
@@ -245,11 +268,7 @@ export function materialiseAuthoredSessions(args: {
     // why this is gated on `owner === 'strength'` AND `powerEligible`, and why a
     // declined primer changes nothing about the day.
     let powerPrimer: PowerPrimerSpec | null = null;
-    const gOffset = gameDays.length === 0
-      ? -99
-      : gameDays.map((gameDay) =>
-          orderIndex(intention.dayOfWeek) - orderIndex(gameDay))
-        .sort((left, right) => Math.abs(left) - Math.abs(right))[0];
+    const gOffset = gameOffset ?? -99;
     if (intention.owner === 'strength' && intention.powerEligible && intention.purpose) {
       powerPrimer = decidePowerPrimer({
         phase: facts.phase,
@@ -289,6 +308,7 @@ export function materialiseAuthoredSessions(args: {
       sprintTemplate,
       powerPrimer,
       unmaterialised,
+      selectionTraces,
     };
   });
 }

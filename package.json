@@ -90,6 +90,7 @@
     "test:finisher-eligibility": "sucrase-node src/__tests__/finisherEligibilityTests.ts",
     "test:variation": "sucrase-node src/__tests__/variedProgramPersonaTests.ts",
     "test:conditioning-rotation": "sucrase-node src/__tests__/conditioningRotationTests.ts",
+    "test:programming-selection-trace": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingSelectionTraceTests.ts",
     "test:conditioning-equipment-consistency": "sucrase-node src/__tests__/conditioningEquipmentConsistencyTests.ts",
     "test:adjustment-engine": "sucrase-node src/__tests__/programAdjustmentEngineTests.ts",
     "test:apply-events": "sucrase-node src/__tests__/applyAdjustmentEventsTests.ts",
