@@ -21,7 +21,7 @@ export interface ConditioningVisibleIdentity {
   doseLabel?: string;
 }
 
-/** P09: quality/title and the actual selected mode are separate facts. */
+/** P09: quality/title and the selected mode are separate, plainly named facts. */
 export function conditioningModeLabel(
   modality: ConditioningOption['modality'],
   sequence?: ConditioningOption['modalitySequence'],
@@ -29,11 +29,11 @@ export function conditioningModeLabel(
   if (!modality) return undefined;
   if (modality === 'mixed') {
     const names = sequence?.map(m => ({ run: 'Run', bike: 'Bike', air_bike: 'Air Bike', row: 'RowErg', ski: 'SkiErg' })[m]);
-    return names?.length ? `${names.join(' → ')} · change after each round; repeat this order` : 'Machine selection unavailable';
+    return names?.length ? `Mode: ${names.join(' → ')}` : undefined;
   }
-  if (modality === 'bike' && sequence?.[0] === 'air_bike') return 'Air Bike · off-leg';
-  return { bike: 'Bike · off-leg', row: 'RowErg · off-leg', ski: 'SkiErg · off-leg',
-    running: 'Run · running' }[modality];
+  if (modality === 'bike' && sequence?.[0] === 'air_bike') return 'Mode: Air Bike';
+  return { bike: 'Mode: Bike', row: 'Mode: RowErg', ski: 'Mode: SkiErg',
+    running: 'Mode: Run' }[modality];
 }
 
 /** Only the typed option owning this row can label it; never parse a lift name. */
@@ -45,14 +45,15 @@ export function conditioningModeLabelForRow(workout: Partial<Workout>, id: strin
   switch (workout.conditioningFeasibility?.resolvedSubstitutionFamily) {
     case 'treadmill':
     case 'outdoor_running':
+      return 'Mode: Run';
     case 'hill_running_or_walking':
-      return 'Run · running';
+      return 'Mode: Run / Walk';
     case 'brisk_walking':
-      return 'Walk · walking';
+      return 'Mode: Walk';
     case 'bodyweight_circuit':
-      return 'Bodyweight · conditioning';
+      return 'Mode: Bodyweight';
     case 'safe_mixed_modal':
-      return 'Mixed · conditioning';
+      return 'Mode: Mixed';
     default:
       return undefined;
   }

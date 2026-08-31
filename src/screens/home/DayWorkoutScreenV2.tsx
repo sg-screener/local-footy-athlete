@@ -3914,10 +3914,6 @@ function usePersonalPace(notes: string | null | undefined) {
   );
 }
 
-const CONDITIONING_EMPHASISED_LABELS = new Set([
-  'Work', 'Recovery', 'Rounds', 'Reps', 'Blocks', 'Intensity',
-]);
-
 /** One typography owner for every structured conditioning prescription. */
 function ConditioningPrescriptionCopy({
   copy,
@@ -3928,27 +3924,7 @@ function ConditioningPrescriptionCopy({
   style: any;
   testID?: string;
 }) {
-  const lines = copy.split('\n');
-  return (
-    <Text style={style} testID={testID}>
-      {lines.map((line, index) => {
-        const match = /^([^:]+):\s*(.*)$/.exec(line);
-        const label = match?.[1] ?? null;
-        const emphasised = label !== null && CONDITIONING_EMPHASISED_LABELS.has(label);
-        return (
-          <React.Fragment key={`${index}-${line}`}>
-            {index > 0 ? '\n' : null}
-            {emphasised ? (
-              <>
-                <Text style={styles.conditioningPrescriptionLabel}>{label}:</Text>
-                {` ${match?.[2] ?? ''}`}
-              </>
-            ) : line}
-          </React.Fragment>
-        );
-      })}
-    </Text>
-  );
+  return <Text style={style} testID={testID}>{copy}</Text>;
 }
 
 /**
@@ -5365,6 +5341,8 @@ const EXERCISE_CARD_INSET = 13;
  */
 const EXERCISE_COLUMN_ACTION_RESERVE = 68;
 
+const SESSION_ROW_TEXT_SIZE = 15;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
   smokeContractMarkerRoot: {
@@ -5869,7 +5847,7 @@ const styles = StyleSheet.create({
   // Strength, Power and Recovery.
   exerciseName: {
     color: '#F2F2F2',
-    fontSize: 15,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '600',
     letterSpacing: -0.1,
     lineHeight: 19,
@@ -6229,7 +6207,7 @@ const styles = StyleSheet.create({
   // ── Conditioning (pure) ──
   conditioningPhaseBody: {
     color: '#D0D0D0',
-    fontSize: 14,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     lineHeight: 23,
     fontWeight: '500',
     marginTop: 5,
@@ -6240,10 +6218,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-  },
-  conditioningPrescriptionLabel: {
-    fontWeight: '800',
-    color: '#FFFFFF',
   },
   conditioningRest: {
     color: '#7A7A7A',
@@ -6292,13 +6266,13 @@ const styles = StyleSheet.create({
   },
   conditioningOptionTitle: {
     color: colors.accent.lime,
-    fontSize: 16,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '800',
     marginBottom: 2,
   },
   conditioningOptionDescription: {
     color: '#C8C8C8',
-    fontSize: 13,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     lineHeight: 19,
     marginBottom: spacing.xs,
   },
@@ -6330,18 +6304,18 @@ const styles = StyleSheet.create({
   conditioningRowName: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '700',
   },
   conditioningRowPrescription: {
     color: colors.accent.lime,
-    fontSize: 13,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '700',
     marginTop: 2,
   },
   conditioningRowNotes: {
     color: '#8A8A8A',
-    fontSize: 12,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     lineHeight: 20,
     marginTop: 5,
   },
@@ -6351,7 +6325,7 @@ const styles = StyleSheet.create({
   // it so the two do not compete for the same row.
   personalPace: {
     color: colors.accent.lime,
-    fontSize: 12,
+    fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '700',
     marginTop: 3,
   },

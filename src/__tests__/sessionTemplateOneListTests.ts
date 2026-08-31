@@ -811,7 +811,7 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
   const structuredCopyStart = screen.indexOf('function ConditioningPrescriptionCopy(');
   const structuredCopyEnd = screen.indexOf('function ConditioningPhaseRow(', structuredCopyStart);
   ok(
-    'the shared conditioning-copy renderer is present before its emphasis contract is checked',
+    'the shared conditioning-copy renderer is present before its typography contract is checked',
     structuredCopyStart >= 0 && structuredCopyEnd > structuredCopyStart,
     `${structuredCopyStart}:${structuredCopyEnd}`,
   );
@@ -819,10 +819,11 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
     ? screen.slice(structuredCopyStart, structuredCopyEnd)
     : '';
   ok(
-    'one shared renderer bolds Work, Recovery, count and Intensity labels',
+    'Work, Recovery, count and Intensity use the same weight as their values',
     structuredCopySource.length > 0
-      && /CONDITIONING_EMPHASISED_LABELS[\s\S]*Work[\s\S]*Recovery[\s\S]*Rounds[\s\S]*Reps[\s\S]*Blocks[\s\S]*Intensity/.test(screen)
-      && /styles\.conditioningPrescriptionLabel/.test(structuredCopySource),
+      && !/CONDITIONING_EMPHASISED_LABELS/.test(screen)
+      && !/conditioningPrescriptionLabel/.test(screen)
+      && /<Text style=\{style\} testID=\{testID\}>\{copy\}<\/Text>/.test(structuredCopySource),
     structuredCopySource,
   );
   ok(
@@ -839,6 +840,24 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
     'the conditioning title and prescription keep a small visual gap',
     /conditioningPhaseBody:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen)
       && /conditioningRowNotes:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen),
+  );
+  const conditioningTextStyles = [
+    'conditioningPhaseBody',
+    'conditioningOptionTitle',
+    'conditioningOptionDescription',
+    'conditioningRowName',
+    'conditioningRowPrescription',
+    'conditioningRowNotes',
+    'personalPace',
+  ];
+  ok(
+    'every line inside a conditioning card uses the same 15-point text size',
+    /const SESSION_ROW_TEXT_SIZE\s*=\s*15\b/.test(screen)
+      && /exerciseName:\s*\{[\s\S]*?fontSize:\s*SESSION_ROW_TEXT_SIZE\b/.test(screen)
+      && conditioningTextStyles.every((styleName) => new RegExp(
+        `${styleName}:\\s*\\{[\\s\\S]*?fontSize:\\s*SESSION_ROW_TEXT_SIZE\\b`,
+      ).test(screen)),
+    conditioningTextStyles.join(', '),
   );
 
   ok(

@@ -7157,3 +7157,50 @@ second set of conditioning titles.
 Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
 `test:conditioning-identity`. Verification status and NOT COVERED:
 `docs/STATUS_CONDNAMES.md`.
+
+**R-283** · Conditioning delivery uses one professional Mode field, 2026-08-31.
+
+Owner: condnames. Sam rejected the redundant labels “Run · running” and the
+equivalent machine wording. The session view uses exactly `Mode: Run`, `Mode:
+Bike`, `Mode: Air Bike`, `Mode: RowErg` and `Mode: SkiErg`. A genuinely mixed
+session keeps the same field and shows only its ordered modes, for example
+`Mode: Bike → RowErg`. Equipment fallbacks use the same grammar: `Mode: Walk`,
+`Mode: Run / Walk`, `Mode: Bodyweight` or `Mode: Mixed`.
+
+This corrects R-282's vague “shown separately as the mode” wording; it does not
+change template identity, dose, modality selection or equipment feasibility.
+
+Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
+`test:conditioning-identity`. Verification status and NOT COVERED:
+`docs/STATUS_CONDNAMES.md`.
+
+**R-284** · One font size throughout a conditioning card, 2026-08-31.
+
+Owner: condnames. Sam required the conditioning card's text to be the same
+font size throughout. The template title, Mode field, Work, Recovery, count,
+Intensity, coaching cue and personal pace all use 15 points. Font weight and
+colour may still distinguish a title, structured label or pace prescription;
+size may not.
+
+This applies to both the ordinary one-prescription row and every row inside a
+genuine multi-option conditioning card.
+
+Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
+`test:session-template`. Verification status and NOT COVERED:
+`docs/STATUS_CONDNAMES.md`.
+
+**R-285** · Conditioning labels do not use a second text weight, 2026-08-31.
+
+Owner: condnames. Sam's follow-up glass review showed that `Work`, `Recovery`,
+`Rounds` and `Intensity` were still visually different because a nested text
+span made those labels extra-bold and white while their values used the body
+weight and colour. The labels and values now use the same text style. Colons
+and line breaks provide the structure; a second label font treatment does not.
+
+This supersedes R-240's label-emphasis instruction and narrows R-284's allowance
+for weight and colour: the title and personal pace may retain their hierarchy,
+but structured prescription labels may not differ from their values.
+
+Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
+`test:session-template`. Verification status and NOT COVERED:
+`docs/STATUS_CONDNAMES.md`.

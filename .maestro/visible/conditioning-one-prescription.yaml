@@ -33,7 +33,7 @@ tags:
     id: "workout-exercise-prescription-cond-.*"
 - assertVisible:
     id: "conditioning-mode-cond-.*"
-    text: "Bike · off-leg"
+    text: "Mode: Bike"
 - scrollUntilVisible:
     element:
       text: ".*Choose a pace you can repeat across all 4 rounds.*"

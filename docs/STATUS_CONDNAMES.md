@@ -67,3 +67,83 @@ NOT COVERED:
 - Physical-iPhone Release acceptance.
 - Persisted sessions already saved with a former substitution alias.
 - VoiceOver speech and genuinely multi-option conditioning blocks.
+
+## 2026-08-31 — the separate mode field uses one clean label
+
+The first correction preserved template identity but introduced wording Sam
+had not authored: `Run · running`, alongside the existing `Bike · off-leg` and
+machine equivalents. Sam rejected that as redundant and unprofessional and
+specified the field directly: `Mode: Run`, `Mode: Bike`, `Mode: SkiErg`, etc.
+
+The mode owner now emits exactly:
+
+- `Mode: Run`, `Mode: Bike`, `Mode: Air Bike`, `Mode: RowErg`, `Mode: SkiErg`;
+- `Mode: Bike → RowErg` for an ordered mixed sequence;
+- `Mode: Run / Walk`, `Mode: Walk`, `Mode: Bodyweight` and `Mode: Mixed` for
+  equipment fallbacks.
+
+Test-first receipt: `test:conditioning-identity` was 54 passed / 17 failed
+after the nine exact wording cells were changed and before the product fix. It
+is now 63 passed / 8 failed; all nine wording cells are green and the same eight
+concurrent generation failures remain. `test:session-template` remains 84 / 85
+with only its pre-existing numeric-index source-contract red.
+
+Simulator receipt: the `conditioning-showcase` world was cold-reset, opened
+through the real Day → session route and asserted by test id plus exact Mode
+grammar. The card on glass reads `30-Second Hard Intervals` and `Mode: Bike`.
+The short flow passed through screenshot capture; the committed visible flow's
+old `Bike · off-leg` assertion is replaced with `Mode: Bike`.
+
+NOT COVERED:
+
+- Fresh simulator generation of every other single and mixed modality.
+- Physical-iPhone Release acceptance and VoiceOver speech.
+
+## 2026-08-31 — one font size throughout the conditioning card
+
+Sam's simulator screenshot showed three sizes inside one card: a 15-point title,
+14-point Mode/prescription copy and 12-point pace. The screen now has one
+`SESSION_ROW_TEXT_SIZE` owner set to 15. Both conditioning render paths use it
+for title, option title/description, Mode, structured prescription, cue and
+pace; weight and colour remain available for hierarchy.
+
+Test-first receipt: the new `test:session-template` source-contract cell began
+red at 84 / 2 and returned green at 85 / 1. Its sole remaining red is the
+pre-existing numeric-index source contract. Product TypeScript is 0 errors.
+
+Simulator receipt: after a cold reset into `conditioning-showcase`, the real
+session card was captured with `30-Second Hard Intervals`, `Mode: Bike` and the
+structured lines all at the shared 15-point size. The short glass flow passed.
+
+NOT COVERED:
+
+- Dynamic Type accessibility scaling and VoiceOver.
+- Physical-iPhone Release acceptance.
+
+## 2026-08-31 — structured labels use the body style
+
+The font sizes were unified, but the screenshot still showed `Work`,
+`Recovery`, `Rounds` and `Intensity` in an extra-bold white nested span while
+their values used the ordinary body style. That survived because R-284 had
+explicitly allowed weight and colour hierarchy; Sam's glass review rejected
+that interpretation.
+
+The nested-label parser and `conditioningPrescriptionLabel` style are removed.
+The shared renderer now prints the complete structured copy in one Text node,
+so label and value necessarily inherit the same size, weight and colour.
+
+Test-first receipt: the changed `test:session-template` typography cell began
+red at 84 / 2 and returned green at 85 / 1. Its sole remaining red is the same
+pre-existing numeric-index source contract. Product TypeScript remains at 0
+errors.
+
+Simulator receipt: the cold-seeded `conditioning-showcase` card was rendered
+again after this change. `Work: 30 s hard` and `Recovery: 30 s easy…` now show
+the label and value in the same body weight and colour; the exact `Mode: Bike`
+flow passed and captured `/private/tmp/lfa-mode-verified.png`.
+
+NOT COVERED:
+
+- Title and personal-pace colour hierarchy; Sam's correction named the
+  structured labels specifically.
+- Physical-iPhone Release acceptance, Dynamic Type and VoiceOver.

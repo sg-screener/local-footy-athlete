@@ -8,6 +8,7 @@ process.env.TZ = 'Australia/Melbourne';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import {
+  conditioningModeLabel,
   conditioningModeLabelForRow,
   LONG_AEROBIC_INTERVAL_MIN_SECONDS,
   projectConditioningVisibleIdentity,
@@ -342,7 +343,7 @@ for (const weekIndex of [2, 3]) {
     sessionItem?.kind === 'exercise'
       ? { title: sessionItem.row?.exercise?.name, mode: sessionItem.modalityLabel }
       : null,
-    { title: 'Continuous Aerobic Run', mode: 'Run · running' });
+    { title: 'Continuous Aerobic Run', mode: 'Mode: Run' });
   ok('the structural warm-up keeps its own name',
     names[0] === CONDITIONING_WARMUP_ROW_NAME, names);
   ok('so no session names one exercise twice',
@@ -353,13 +354,23 @@ for (const weekIndex of [2, 3]) {
     substituted.conditioningBlock?.options?.[0]?.exerciseIds);
 }
 
-for (const family of [
-  'treadmill',
-  'outdoor_running',
-  'hill_running_or_walking',
-  'brisk_walking',
-  'bodyweight_circuit',
-  'safe_mixed_modal',
+eq('single-mode labels use one professional Mode field', [
+  conditioningModeLabel('running'),
+  conditioningModeLabel('bike'),
+  conditioningModeLabel('bike', ['air_bike']),
+  conditioningModeLabel('row'),
+  conditioningModeLabel('ski'),
+], ['Mode: Run', 'Mode: Bike', 'Mode: Air Bike', 'Mode: RowErg', 'Mode: SkiErg']);
+eq('mixed-mode labels retain only the ordered modes',
+  conditioningModeLabel('mixed', ['bike', 'row']), 'Mode: Bike → RowErg');
+
+for (const [family, expectedMode] of [
+  ['treadmill', 'Mode: Run'],
+  ['outdoor_running', 'Mode: Run'],
+  ['hill_running_or_walking', 'Mode: Run / Walk'],
+  ['brisk_walking', 'Mode: Walk'],
+  ['bodyweight_circuit', 'Mode: Bodyweight'],
+  ['safe_mixed_modal', 'Mode: Mixed'],
 ] as const) {
   const source = workout([row('delivery-main', 'Continuous Aerobic Run')], {
           conditioningFeasibility: { resolvedSubstitutionFamily: family } as never,
@@ -367,8 +378,8 @@ for (const family of [
   const delivered = applyResolvedConditioningSubstitution(source);
   eq(`${family} preserves the selected template identity`,
     delivered.exercises[0]?.exercise?.name, 'Continuous Aerobic Run');
-  ok(`${family} has a separate delivery label`,
-    !!conditioningModeLabelForRow(delivered, 'delivery-main'));
+  eq(`${family} has one clean Mode field`,
+    conditioningModeLabelForRow(delivered, 'delivery-main'), expectedMode);
 }
 
 console.log(`\nconditioningVisibleIdentityTests: ${pass} passed, ${fail} failed`);
