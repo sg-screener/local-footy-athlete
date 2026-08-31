@@ -7096,3 +7096,22 @@ measurement bounds and save through the accepted profile/program transaction.
 Guard: `LAW-progress-performance-tests-and-measurements` and
 `test:coach-snapshot`.
 Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.
+
+**R-280** · Simplified main-lift selectors and plain progress comparisons, 2026-08-31.
+
+Owner: progressmetrics. The Progress strength heading reads “Main lifts
+(Estimated 1RM)” once. Each of the four strength cards shows only the currently
+selected lift and its result; tapping the lift opens its two choices instead of
+showing both choices permanently inside the card. The pairs remain Pull-Up/Lat
+Pulldown, Bench Press/OHP, RDL/Trap-Bar Deadlift and Back Squat/Bulgarian Split
+Squat. The first option is displayed as “Pull-Up (added weight)”. An empty card
+shows “No data yet” without a second lime dash pretending to be a value.
+
+Performance change has no arrow or chart icon. A positive result shows the
+percentage followed by “better” in green; a negative result shows the percentage
+followed by “worse” in red. Timed tests improve when time falls, while the
+max-calorie test improves when calories rise.
+
+Guard: `LAW-progress-shows-four-fixed-predicted-one-rep-max-graphs`,
+`LAW-progress-performance-tests-and-measurements` and `test:coach-snapshot`.
+Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.

@@ -1,5 +1,30 @@
 # STATUS — progressmetrics
 
+## 2026-08-31 — Main-lift card simplification and plain comparisons
+
+Owner: `progressmetrics`
+
+Options compared before implementation:
+
+1. Keep the two permanent inline choices and only reduce their type size.
+2. Make the selected lift the card's single identity and open one shared two-option sheet when it is tapped.
+
+Choice: option 2. The selected lift already owns the card's graph, value and persisted slot; using it as the selector removes duplicated copy and gives all four slots one interaction. “Estimated 1RM” moves to the section heading so it is stated once. Pull-Up gets the explicit Progress-only label “Pull-Up (added weight)” without changing exercise matching elsewhere.
+
+Verification:
+
+- Red first: three named cells failed for the repeated estimate captions, permanent inline alternatives and ambiguous Pull-Up label. A fourth pinned removal of the lime empty-value dash. After Sam removed direction glyphs entirely, the comparison-copy cell stayed red until the UI showed only green percentage + better or red percentage + worse.
+- Focused Progress result: 42/42 cells green; TypeScript compile is green.
+- Liveness: removing and renaming the former trend component exposed that the selector source guard used it as an end anchor. Re-anchoring to the stable `categoryLabel` boundary made the instrument observe the card region independently of whichever comparison glyph exists; this is an anchoring repair, not an application fix.
+- Mutation: reintroducing an SVG glyph in the comparison row and changing `better` back to `improved` changed the focused tape from 42/0 to 41/1, naming the exact plain-comparison cell; restoration returned 42/0.
+- The in-chain Coach Snapshot ownership arm is 35/35 before its inherited populated-history failure. The law registry resolves the revised rulings and remains at its inherited 21 UNENFORCED rows.
+
+NOT COVERED:
+
+- Physical-iPhone Release acceptance, Dynamic Type and real VoiceOver traversal.
+- Completed isolated simulator interaction through all four lift sheets; the shared simulator lane was occupied while this change was authored.
+- Visual calibration of the trend-chart glyph at every supported text/display scale.
+
 ## 2026-08-31 — Progress performance tests and measurements
 
 Owner: `progressmetrics`

@@ -52,6 +52,42 @@ function progressOwnsVisibleTracking(progress: string, coach: string): boolean {
     && !/CoachDashboard|SnapshotDashboard|coach-dashboard/.test(coach);
 }
 
+function mainLiftCardsUseOneTapToChangeSelector(progress: string): boolean {
+  const cardStart = progress.indexOf('function StrengthChart');
+  const cardEnd = progress.indexOf('function categoryLabel', cardStart);
+  const card = cardStart >= 0 && cardEnd > cardStart
+    ? progress.slice(cardStart, cardEnd)
+    : '';
+  const sheetTestId = progress.indexOf('testID="progress-lift-choice-sheet"');
+  const sheetStart = sheetTestId >= 0 ? progress.lastIndexOf('<Sheet', sheetTestId) : -1;
+  const sheetEnd = sheetStart >= 0 ? progress.indexOf('</Sheet>', sheetTestId) : -1;
+  const sheet = sheetStart >= 0 && sheetEnd > sheetStart
+    ? progress.slice(sheetStart, sheetEnd)
+    : '';
+  return card.length > 0
+    && /onChangeRequested:\s*\(\) => void/.test(card)
+    && /accessibilityLabel=\{`Change tracked lift from \$\{progressLiftLabel\(history\.id\)\}`\}/.test(card)
+    && /onPress=\{onChangeRequested\}/.test(card)
+    && !/TRACKED_LIFT_PAIRS|liftChoices|progress-choose-/.test(card)
+    && sheetStart >= 0
+    && /visible=\{activeLiftSlot !== null\}/.test(sheet)
+    && /TRACKED_LIFT_PAIRS\[activeLiftSlot\]\.map/.test(sheet)
+    && /setTrackedLiftChoice\(activeLiftSlot, lift\)/.test(sheet);
+}
+
+function performanceComparisonUsesPlainCopy(progress: string, copy: string): boolean {
+  const rowStart = progress.indexOf('function PerformanceTestRow');
+  const rowEnd = progress.indexOf('export default function ProgressTabScreen', rowStart);
+  const row = rowStart >= 0 && rowEnd > rowStart
+    ? progress.slice(rowStart, rowEnd)
+    : '';
+  return row.length > 0
+    && /better:\s*'better'/.test(copy)
+    && /worse:\s*'worse'/.test(copy)
+    && /PROGRESS_TAB_COPY\.better\s*:\s*PROGRESS_TAB_COPY\.worse/.test(row)
+    && !/<Svg\b/.test(row);
+}
+
 console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
 {
   const navigator = read('src/navigation/AppNavigator.tsx');
@@ -59,6 +95,7 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   const myStatus = read('src/screens/home/MyStatusScreen.tsx');
   const progress = read('src/screens/progress/ProgressTabScreen.tsx');
   const snapshot = read('src/rules/liveAthleteSnapshot.ts');
+  const progressCopy = read('src/rules/progressTabCopy.ts');
 
   const tabNames = [...navigator.matchAll(/<Tab\.Screen\s+name="([^"]+)"/g)]
     .map((match) => match[1]);
@@ -91,16 +128,28 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
   ok('Progress renders the fixed predicted-1RM histories even when every graph is empty',
     /snapshot\.mainLiftEstimates\.map/.test(progress)
       && !/snapshot\.strengthHistory\.length\s*>\s*0/.test(progress));
+  ok('Main lifts owns the estimated-1RM context once instead of repeating it inside every card',
+    /mainLifts:\s*'Main lifts \(Estimated 1RM\)'/.test(progressCopy)
+      && !/predictedOneRepMax:/.test(progressCopy)
+      && !/estimateLabel/.test(progress));
+  ok('each lift card shows one current lift and opens one shared two-option selector',
+    mainLiftCardsUseOneTapToChangeSelector(progress));
+  ok('the Pull-Up option says explicitly that its estimate is added weight',
+    /pull_up:\s*'Pull-Up \(added weight\)'/.test(progressCopy)
+      && /progressLiftLabel\(history\.id\)/.test(progress));
+  ok('empty main-lift cards rely on No data yet and never show a lime dash',
+    !/estimate === undefined[\s\S]{0,60}['"]—['"]/.test(progress)
+      && /estimate !== undefined[\s\S]{0,120}<Text[^>]+styles\.chartValue/.test(progress));
   ok('the old oversized 2km chart is retired rather than kept beside the new tests',
     !/function TwoKmChart|testID="progress-two-km"|snapshot\.twoKmTimeTrial/.test(progress));
   ok('the three compact test categories sit below Main Lifts and above Measurements',
     progress.indexOf('testID="progress-main-lifts"') >= 0
       && progress.indexOf('testID="progress-main-lifts"') < progress.indexOf('testID="progress-performance-tests"')
       && progress.indexOf('testID="progress-performance-tests"') < progress.indexOf('testID="progress-measurements"'));
-  const progressCopy = read('src/rules/progressTabCopy.ts') + read('src/data/performanceTests.ts');
+  const performanceCopy = progressCopy + read('src/data/performanceTests.ts');
   ok('the six ruled test choices include the exact electronically timed sprint label',
     ['2km TT', '3km TT', '400m run', '1 min max cal air bike', '100m sprint', '20m sprint (electronically timed)']
-      .every((label) => progressCopy.includes(`'${label}'`)));
+      .every((label) => performanceCopy.includes(`'${label}'`)));
   ok('performance results and measurements save through the accepted profile transaction',
     /commitProfileProgramTransaction/.test(progress)
       && /performanceTesting/.test(progress)
@@ -108,12 +157,14 @@ console.log('\n[PROGRESS] ONE LIVE SNAPSHOT, TWO HONEST SURFACES');
       && /weightKg/.test(progress));
   ok('m:ss tests expose punctuation input and a truthful per-test example',
     /numbers-and-punctuation/.test(progress)
-      && /inputPlaceholder: '12:00'/.test(progressCopy)
-      && /inputPlaceholder: '1:15'/.test(progressCopy));
+      && /inputPlaceholder: '12:00'/.test(performanceCopy)
+      && /inputPlaceholder: '1:15'/.test(performanceCopy));
   ok('VoiceOver hears the current test result, trend and both measurement values',
     /accessibilityLabel=\{`\$\{categoryLabel\(category\)\} test,[\s\S]*?\$\{resultText\}/.test(progress)
       && /Height in centimetres, \$\{heightInput/.test(progress)
       && /Weight in kilograms, \$\{weightInput/.test(progress));
+  ok('performance change uses only green better or red worse copy with no direction icon',
+    performanceComparisonUsesPlainCopy(progress, progressCopy));
   ok('lift charts keep each recorded week and position it through the time-axis owner',
     /buildProgressChartPoints/.test(progress)
       && /dateISO:\s*point\.weekStart/.test(progress)
@@ -221,7 +272,7 @@ console.log('\n[PERFORMANCE TESTS] ONE HISTORY, HONEST DIRECTION');
     slower?.direction === 'up' && slower.status === 'worse');
   const moreCalories = comparePerformanceTestResults('one_min_air_bike', 24, 27);
   const fewerCalories = comparePerformanceTestResults('one_min_air_bike', 24, 21);
-  ok('air-bike calories reverse both the success rule and arrow direction',
+  ok('air-bike calories reverse both the success rule and trend direction',
     moreCalories?.direction === 'up' && moreCalories.status === 'improved'
       && fewerCalories?.direction === 'down' && fewerCalories.status === 'worse');
   ok('clock, sprint and calorie inputs parse without pretending they share a unit',

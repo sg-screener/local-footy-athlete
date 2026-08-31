@@ -2,7 +2,7 @@ import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useProfileStore } from '../../store/profileStore';
-import { TRACKED_LIFT_PAIRS, TRACKED_LIFTS, type TrackedLiftSlot, type TrackedLiftId } from '../../rules/estimatedOneRepMax';
+import { TRACKED_LIFT_PAIRS, type TrackedLiftSlot } from '../../rules/estimatedOneRepMax';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { LfaWordmark } from '../../components/branding/LfaWordmark';
@@ -16,7 +16,7 @@ import {
   coachLoadMarkerFraction,
   coachLoadSummary,
 } from '../../rules/snapshotDashboardCopy';
-import { PROGRESS_TAB_COPY } from '../../rules/progressTabCopy';
+import { PROGRESS_TAB_COPY, progressLiftLabel } from '../../rules/progressTabCopy';
 import type {
   PerformanceTestCategory,
   PerformanceTestId,
@@ -151,57 +151,40 @@ function LineChart({ points: recordedPoints, higherIsBetter = true }: {
   );
 }
 
-function StrengthChart({ history, slot, onChoose }: {
-  history: ProgressMainLiftHistory; slot: TrackedLiftSlot; onChoose: (lift: TrackedLiftId) => void;
+function StrengthChart({ history, onChangeRequested }: {
+  history: ProgressMainLiftHistory;
+  onChangeRequested: () => void;
 }) {
   const latest = history.points[history.points.length - 1];
   const estimate = latest?.predictedOneRepMaxKg;
   const formatted = estimate === undefined
-    ? '—'
+    ? null
     : `${history.valuePrefix}${Number.isInteger(estimate) ? String(estimate) : estimate.toFixed(1)} kg`;
   return (
     <View style={[styles.chartCard, styles.liftCard]} testID={`progress-lift-${history.id}`}>
       <View style={styles.liftChartHeader}>
-        <View style={styles.liftTitleBlock}>
-          <Text variant="bodySmallEmphasis" style={styles.chartTitle} numberOfLines={2}>
-            {history.exerciseName}
+        <Pressable
+          accessibilityLabel={`Change tracked lift from ${progressLiftLabel(history.id)}`}
+          accessibilityRole="button"
+          onPress={onChangeRequested}
+          style={({ pressed }) => [styles.liftNameButton, pressed && styles.rowPressed]}
+          testID={`progress-change-lift-${history.id}`}
+        >
+          <Text variant="bodySmallEmphasis" style={styles.chartTitle} numberOfLines={3}>
+            {progressLiftLabel(history.id)}
           </Text>
-          <Text variant="caption" style={styles.estimateLabel}>
-            {PROGRESS_TAB_COPY.predictedOneRepMax}
-          </Text>
-        </View>
-        {history.series.length <= 1 ? <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted}</Text> : null}
+          <Text variant="bodySmallEmphasis" style={styles.liftChevron}>›</Text>
+        </Pressable>
+        {estimate !== undefined && history.series.length <= 1
+          ? <Text variant="bodySmallEmphasis" style={styles.chartValue}>{formatted}</Text>
+          : null}
       </View>
-      <View style={styles.liftChoices}>
-        {TRACKED_LIFT_PAIRS[slot].map((lift) => <Pressable key={lift}
-          testID={`progress-choose-${lift}`} accessibilityRole="button"
-          accessibilityState={{ selected: history.id === lift }}
-          style={styles.liftChoice} onPress={() => onChoose(lift)}>
-          <Text variant="caption" style={{ color: history.id === lift ? colors.accent.lime : colors.text.secondary }}>
-            {TRACKED_LIFTS[lift].label}
-          </Text>
-        </Pressable>)}
-      </View>
-      {history.id === 'pull_up' ? <Text variant="caption">Estimated added weight · session bodyweight used</Text> : null}
       {history.series.length === 0 ? <LineChart points={[]} /> : history.series.map((series) => <View key={series.key}>
         <Text variant="caption">{series.label}{history.series.length > 1
           ? ` · ${history.valuePrefix}${series.points[series.points.length - 1].predictedOneRepMaxKg} kg` : ''}</Text>
         <LineChart points={series.points.map((point) => ({ dateISO: point.weekStart, value: point.predictedOneRepMaxKg }))} />
       </View>)}
     </View>
-  );
-}
-
-function TrendArrow({ direction, color }: { direction: 'up' | 'down'; color: string }) {
-  const up = direction === 'up';
-  return (
-    <Svg width={18} height={18} viewBox="0 0 18 18" accessibilityLabel={`${direction} arrow`}>
-      <Line x1="9" y1={up ? 15 : 3} x2="9" y2={up ? 3 : 15} stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Polyline
-        points={up ? '4,8 9,3 14,8' : '4,10 9,15 14,10'}
-        fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      />
-    </Svg>
   );
 }
 
@@ -228,7 +211,7 @@ function PerformanceTestRow({ category, testing, onPress }: {
     : PROGRESS_TAB_COPY.noPerformanceResult;
   const trendText = comparison
     ? `${comparison.percent.toFixed(1)}% ${comparison.status === 'improved'
-      ? PROGRESS_TAB_COPY.improved : PROGRESS_TAB_COPY.worse}`
+      ? PROGRESS_TAB_COPY.better : PROGRESS_TAB_COPY.worse}`
     : latest
       ? (results.length === 1 ? PROGRESS_TAB_COPY.baseline : PROGRESS_TAB_COPY.noChange)
       : '';
@@ -251,10 +234,9 @@ function PerformanceTestRow({ category, testing, onPress }: {
         {latest ? (
           comparison ? (
             <View style={styles.trendRow}>
-              <TrendArrow direction={comparison.direction} color={trendColor} />
               <Text variant="caption" style={{ color: trendColor }}>
                 {comparison.percent.toFixed(1)}% {comparison.status === 'improved'
-                  ? PROGRESS_TAB_COPY.improved : PROGRESS_TAB_COPY.worse}
+                  ? PROGRESS_TAB_COPY.better : PROGRESS_TAB_COPY.worse}
               </Text>
             </View>
           ) : (
@@ -290,6 +272,7 @@ export default function ProgressTabScreen() {
   const [measurementError, setMeasurementError] = React.useState<string | null>(null);
   const [measurementSaved, setMeasurementSaved] = React.useState(false);
   const [savingMeasurements, setSavingMeasurements] = React.useState(false);
+  const [activeLiftSlot, setActiveLiftSlot] = React.useState<TrackedLiftSlot | null>(null);
 
   React.useEffect(() => {
     setHeightInput(onboardingData?.heightCm?.toString() ?? '');
@@ -388,8 +371,9 @@ export default function ProgressTabScreen() {
         <View style={styles.liftGrid}>
           {snapshot.mainLiftEstimates.map((history, index) => (
             <StrengthChart key={history.id} history={history}
-              slot={(Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[])[index]}
-              onChoose={(lift) => setTrackedLiftChoice((Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[])[index], lift)} />
+              onChangeRequested={() => setActiveLiftSlot(
+                (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[])[index],
+              )} />
           ))}
         </View>
 
@@ -455,6 +439,39 @@ export default function ProgressTabScreen() {
 
       </ScrollView>
       <Sheet
+        visible={activeLiftSlot !== null}
+        onClose={() => setActiveLiftSlot(null)}
+        testID="progress-lift-choice-sheet"
+      >
+        {activeLiftSlot ? (
+          <View style={styles.sheetBody}>
+            <SheetHeader title="Main lift" subtitle="Choose which lift to track" />
+            <View style={styles.testChoices}>
+              {TRACKED_LIFT_PAIRS[activeLiftSlot].map((lift) => {
+                const selected = snapshot.mainLiftEstimates.some((history) => history.id === lift);
+                return (
+                  <Pressable
+                    key={lift}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      setTrackedLiftChoice(activeLiftSlot, lift);
+                      setActiveLiftSlot(null);
+                    }}
+                    style={[styles.testChoice, selected && styles.testChoiceSelected]}
+                    testID={`progress-select-lift-${lift}`}
+                  >
+                    <Text variant="bodySmallEmphasis" style={selected ? styles.testChoiceTextSelected : styles.testChoiceText}>
+                      {progressLiftLabel(lift)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+      </Sheet>
+      <Sheet
         visible={activeCategory !== null}
         onClose={() => setActiveCategory(null)}
         dismissable={!savingResult}
@@ -512,8 +529,6 @@ export default function ProgressTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  liftChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  liftChoice: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   root: { flex: 1, backgroundColor: colors.surface.primary },
   content: {
     paddingHorizontal: spacing.md,
@@ -576,14 +591,24 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   liftChartHeader: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xs,
     justifyContent: 'space-between',
-    minHeight: 54,
+    minHeight: 44,
   },
-  liftTitleBlock: { flex: 1, minWidth: 0 },
-  estimateLabel: { color: colors.text.tertiary, marginTop: spacingValues.xxs },
+  liftNameButton: {
+    alignItems: 'flex-start',
+    borderRadius: borderRadius.md,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacingValues.xxs,
+    justifyContent: 'flex-start',
+    minHeight: 44,
+    minWidth: 0,
+    paddingVertical: spacing.xs,
+  },
+  liftChevron: { color: colors.text.secondary, fontSize: 20, lineHeight: 20 },
   liftGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
