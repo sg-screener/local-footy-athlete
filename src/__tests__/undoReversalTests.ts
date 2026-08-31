@@ -498,7 +498,7 @@ run('20 mutation: a missing exclusion reversal is caught after awaited Undo', as
   });
 
   run('R-107 — both surfaces that own changes mount the toast', () => {
-    assert(/<UndoToast \/>/.test(day),
+    assert(/<UndoToast(?:\s[^>]*)?\s*\/>/.test(day),
       'the Program screen no longer mounts UndoToast');
     assert(/<UndoToast \/>/.test(session),
       'the SESSION screen does not mount UndoToast. The five labelled changes '
@@ -515,17 +515,41 @@ run('20 mutation: a missing exclusion reversal is caught after awaited Undo', as
     const layer = region![1].match(/\bzIndex:\s*(\d+)/);
     return layer ? Number(layer[1]) : 0;
   };
-  run('R-107 — Undo stays above the week-board Save control it overlaps', () => {
-    assert(/<Animated\.View\s+style=\{\[styles\.wrap,/.test(toast), 'toast wrap is not mounted');
+  const weekBoardUndoBottom = (source: string): number => {
+    const match = source.match(/const WEEK_BOARD_UNDO_BOTTOM = (\d+);/);
+    assert(!!match, 'the week-board Undo clearance constant was not found');
+    return Number(match![1]);
+  };
+  const weekBoardSaveBottom = 16;
+  const weekBoardSaveHeight = 48;
+  const minimumGap = 8;
+  const clearsSave = (source: string): boolean => weekBoardUndoBottom(source)
+    >= weekBoardSaveBottom + weekBoardSaveHeight + minimumGap;
+
+  run('R-107 — Week Undo and Save are simultaneously visible and tappable', () => {
+    assert(/<Animated\.View[\s\S]{0,180}styles\.wrap,/.test(toast), 'toast wrap is not mounted');
     assert(/testID="week-board-save"\s+style=\{styles\.weekBoardSave\}/.test(day), 'Save style is not mounted');
+    assert(/const weekBoardSaveVisible = weekBoardOpen/.test(day),
+      'the shared visibility owner for the two bottom actions is missing');
+    assert(/\{weekBoardSaveVisible \? \(/.test(day),
+      'Save no longer reads the shared bottom-action visibility owner');
+    assert(/<UndoToast\s+bottomOffset=\{weekBoardSaveVisible\s*\?\s*WEEK_BOARD_UNDO_BOTTOM\s*:\s*undefined\}/.test(day),
+      'Undo is not lifted while the week-board Save action is visible');
+    assert(/bottomOffset !== undefined \? \{ bottom: bottomOffset \} : null/.test(toast),
+      'UndoToast does not apply its caller-owned bottom clearance');
+    assert(clearsSave(day),
+      'Undo still occupies the Save control\'s vertical hit area');
     assert(overlayLayer(toast, 'wrap') > overlayLayer(day, 'weekBoardSave'),
-      'Save covers the visible/tappable Undo toast');
+      'Undo is clear of Save but no longer remains visible/tappable');
   });
-  run('R-107 — putting Undo behind Save makes its layering guard red', () => {
-    const lowered = toast.replace(/(wrap:\s*\{[^}]*\bzIndex:)\s*\d+/, '$1 0');
-    assert(lowered !== toast, 'layer mutation did not land');
-    assert(overlayLayer(lowered, 'wrap') <= overlayLayer(day, 'weekBoardSave'),
-      'layering mutation was not detected');
+  run('R-107 — moving Undo back over Save makes the clearance guard red', () => {
+    const overlapping = day.replace(
+      /const WEEK_BOARD_UNDO_BOTTOM = \d+;/,
+      'const WEEK_BOARD_UNDO_BOTTOM = 24;',
+    );
+    assert(overlapping !== day, 'clearance mutation did not land');
+    assert(!clearsSave(overlapping),
+      'the overlap mutation survived the simultaneous-action guard');
   });
 
   run('R-107 — at most one is visible, and the guard is in the COMPONENT', () => {

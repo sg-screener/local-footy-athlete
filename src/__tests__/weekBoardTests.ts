@@ -354,7 +354,8 @@ console.log('\n[5a] A changed Week board finishes through Save changes');
       && home.includes('testID="week-board-save"')
       && signedCopy('week.board.save') === 'Save changes');
   ok('Save appears only after the visible board differs from its opening state',
-    /weekBoardOpen && \(weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'\)/.test(home)
+    /const weekBoardSaveVisible = weekBoardOpen[\s\S]{0,100}weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'/.test(home)
+      && /\{weekBoardSaveVisible \? \(/.test(home)
       && /weekBoardEditFingerprint\(weekBoardRows\.map\(\(row\) => row\.board\)\)/.test(home));
   ok('saving briefly confirms, then returns to the ordinary Week view',
     home.includes("'week.board.saved'")
@@ -372,7 +373,8 @@ console.log('\n[5a] A changed Week board finishes through Save changes');
     'removing the banner must not remove the only way out of an unchanged editor');
   ok('a changed board still cannot silently leave without Save changes',
     /if \(weekBoardOpen && weekBoardHasChanges\) return;/.test(home)
-      && /weekBoardOpen && \(weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'\)/.test(home));
+      && /const weekBoardSaveVisible = weekBoardOpen[\s\S]{0,100}weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'/.test(home)
+      && /\{weekBoardSaveVisible \? \(/.test(home));
   ok('the real game move and add modes keep their instructional banners',
     /mode\.type === 'moveGame'[\s\S]{0,140}<MoveBanner text="Tap the day to move the game to"/.test(pickerRegion)
       && /mode\.type === 'addGame'[\s\S]{0,220}<MoveBanner/.test(pickerRegion));

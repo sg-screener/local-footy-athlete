@@ -64,7 +64,16 @@ import { UNDO_TOAST_COPY } from '../rules/undoToastCopy';
 /** How long the toast stays before it withdraws itself. */
 const VISIBLE_MS = 6000;
 
-export function UndoToast(): React.ReactElement | null {
+interface UndoToastProps {
+  /**
+   * Optional clearance for a sticky action owned by the current surface.
+   * The toast remains an overlay; the surface only tells it where the free
+   * bottom edge begins so both actions stay visible and tappable.
+   */
+  bottomOffset?: number;
+}
+
+export function UndoToast({ bottomOffset }: UndoToastProps = {}): React.ReactElement | null {
   const entries = useDecisionLedgerStore((state) => state.entries);
   const isFocused = useIsFocused();
   const [seenEntryId, setSeenEntryId] = useState<string | null>(
@@ -115,7 +124,14 @@ export function UndoToast(): React.ReactElement | null {
   };
 
   return (
-    <Animated.View style={[styles.wrap, { opacity: fade }]} pointerEvents="box-none">
+    <Animated.View
+      style={[
+        styles.wrap,
+        bottomOffset !== undefined ? { bottom: bottomOffset } : null,
+        { opacity: fade },
+      ]}
+      pointerEvents="box-none"
+    >
       {/* ADDRESSABLE, because a flow has to be able to prove this appeared on
           the surface the athlete acted on. The accessibility label stays the
           athlete's word ("Undo"); these ids are for the walk. */}

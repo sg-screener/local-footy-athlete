@@ -106,6 +106,10 @@ import {
 
 type DayPickerMode = 'normal' | 'moveGame' | 'addGame';
 
+// Save sits 16pt from the bottom and is 48pt high. Undo clears it by another
+// 8pt while both actions are live, leaving Save in its established position.
+const WEEK_BOARD_UNDO_BOTTOM = 72;
+
 /* ⚠ **THE THREE SESSION PICKER MODES ARE DELETED — R-218 FINAL SLICE.**
  *
  * `sessionAdd` / `sessionMove` / `sessionRemove` turned the whole week into a
@@ -580,6 +584,8 @@ export default function HomeScreenV2() {
   );
   const weekBoardHasChanges = weekBoardOpeningFingerprint !== null
     && currentWeekBoardFingerprint !== weekBoardOpeningFingerprint;
+  const weekBoardSaveVisible = weekBoardOpen
+    && (weekBoardHasChanges || weekBoardFinishState === 'confirmed');
 
   const closeWeekBoard = useCallback(() => {
     if (weekBoardCloseTimerRef.current) {
@@ -1705,7 +1711,7 @@ export default function HomeScreenV2() {
         </Pressable>
       </ScrollView>
 
-      {(weekBoardOpen && (weekBoardHasChanges || weekBoardFinishState === 'confirmed')) ? (
+      {weekBoardSaveVisible ? (
         <Button
           label={signedCopy(weekBoardFinishState === 'confirmed'
             ? 'week.board.saved'
@@ -2067,7 +2073,9 @@ export default function HomeScreenV2() {
         knowing this component exists. That is why there is one mount here and
         no toast call at any of the ten program-control call sites.
       */}
-      <UndoToast />
+      <UndoToast
+        bottomOffset={weekBoardSaveVisible ? WEEK_BOARD_UNDO_BOTTOM : undefined}
+      />
     </SafeAreaView>
   );
 }
