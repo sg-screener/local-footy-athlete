@@ -28,6 +28,9 @@ const {
   programmingAuditCatalogueIdentity,
   programmingAuditRowIsConditioning,
 } = require('../src/rules/programmingAuditIdentity');
+const {
+  validateEnergySystemExposureEvidence,
+} = require('../src/rules/energySystemExposureEvidence');
 
 function parseCsvLine(line) {
   const cells = [];
@@ -242,6 +245,22 @@ const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
   .map(({ gender, day }) => ({ gender, date: day.date, error: day.projectionError }));
 const restartFailures = year.athletes.flatMap((athlete) => athlete.restarts
   .filter((restart) => !restart.ok).map((restart) => ({ gender: athlete.gender, ...restart })));
+const energySystemEvidenceFindings = dayRecords.flatMap(({ gender, weekStart, day }) =>
+  validateEnergySystemExposureEvidence(day.energySystem).map((finding) => ({
+    gender, weekStart, date: day.date, finding, evidence: day.energySystem ?? null,
+  })));
+const weeklyEnergySystemCounts = year.athletes.flatMap((athlete) => athlete.weeks.map((week) => ({
+  gender: athlete.gender,
+  week: week.number,
+  weekStart: week.start,
+  phase: week.phase,
+  phaseWeek: week.phaseWeek,
+  totalConditioningCredits: week.days.reduce((total, day) =>
+    total + (day.energySystem?.conditioningCredits ?? 0), 0),
+  appProgrammedEnergySystemDays: week.days.filter((day) =>
+    (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
+  qualifyingSpeedDays: week.days.filter((day) => day.energySystem?.qualifyingSpeed).length,
+})));
 const missingConditioningModalities = occurrences.filter(({ row }) =>
   row.auditSurface === 'session_template' && programmingAuditRowIsConditioning(row) && !row.modalityLabel)
   .map(({ gender, day, row }) => ({
@@ -297,6 +316,7 @@ const report = {
     trace: 'distinct athlete + compiler decisionId pairs after rebuild/restart de-duplication',
     acceptedSelection: 'an attempt-selected identity counted as selected only when the accepted final rows contain that raw catalogue identity on the same athlete-date',
     concentration: 'trainable displayed row placements grouped by exercise movement or conditioning quality; withheld rows excluded',
+    energySystem: 'canonical classifier credits plus distinct app-programmed athlete-days; proper Speed counts once, anchors retain their existing separate credit',
   },
   denominators: {
     athleteYears: year.athletes.length,
@@ -311,6 +331,7 @@ const report = {
   conditioningFrequency: serialiseTallies(conditioningTallies),
   zeroPlacements: { count: zeroPlacements.length, classificationCounts: zeroClassificationCounts, rows: zeroPlacements },
   concentration: { exerciseMovement: exerciseConcentration, conditioningQuality: conditioningConcentration },
+  energySystem: { weeklyCounts: weeklyEnergySystemCounts, findings: energySystemEvidenceFindings },
   catalogueOrderMutation: orderComparison,
   remainingStrangeFinalSessions: {
     projectionErrors,
@@ -376,6 +397,12 @@ const markdown = [
   `- Primer sessions: ${strange.primers.length}; optional rows: ${strange.primers.reduce((total, primer) => total + primer.optionalRows, 0)}. Full composition is listed in the JSON receipt.`,
   `- Conditioning identity dose labels implying over 120 minutes: ${strange.implausibleConditioningDoses.length}.`,
   `- Athlete-weeks with more than one “one quality exposure” sentence: ${strange.duplicateQualityOwnershipWeeks.length}.`, '',
+  '## Weekly energy-system counts', '',
+  'These counts consume the canonical compiler evidence. Speed keeps its Speed identity and contributes once to the weekly conditioning total.', '',
+  '| Athlete | Week | Start | Phase | Total conditioning credits | App-programmed exposure days | Qualifying Speed days |',
+  '|---|---:|---|---|---:|---:|---:|',
+  ...weeklyEnergySystemCounts.map((row) => `| ${row.gender} | ${row.week} | ${row.weekStart} | ${row.phase} | ${row.totalConditioningCredits} | ${row.appProgrammedEnergySystemDays} | ${row.qualifyingSpeedDays} |`), '',
+  `Energy-system evidence findings: ${energySystemEvidenceFindings.length}.`, '',
   'Full dated rows for every non-zero finding are in `programming-selection-final-audit.json`.', '',
   '## Exact commands', '', '```sh',
   'node scripts/programming-remediation-year.cjs --kit=full --output=<audit>/authored',
@@ -402,4 +429,5 @@ console.log(JSON.stringify({
 }, null, 2));
 if (!orderComparison.same || orderComparison.differingAthleteDays !== 0 || projectionErrors.length ||
     restartFailures.length || missingConditioningModalities.length || squatlessLowerSessions.length ||
-    silentTeamGymSessions.length || duplicateQualityOwnershipWeeks.length) process.exitCode = 1;
+    silentTeamGymSessions.length || duplicateQualityOwnershipWeeks.length ||
+    energySystemEvidenceFindings.length) process.exitCode = 1;

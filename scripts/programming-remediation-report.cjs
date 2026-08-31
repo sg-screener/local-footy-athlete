@@ -2,6 +2,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const repo = path.resolve(__dirname, '..');
+require(path.join(repo, 'node_modules/sucrase/register'));
+const { validateEnergySystemExposureEvidence } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
 const root = path.resolve(process.argv[2] ?? 'outputs/programming-remedy-2026-08-28');
 const baselineRoot = process.argv[3] ? path.resolve(process.argv[3]) : null;
 const baselinePath = '/Users/samgeurts/.codex/visualizations/2026/08/26/01a03b69-9022-7041-b909-ca28d5e0d275/year-programs.json';
@@ -46,6 +49,17 @@ for (const world of ['original-partial', 'corrected-commercial']) {
     const title = `${athlete.gender === 'male' ? 'Male' : 'Female'} year · ${world === 'original-partial' ? 'original partial kit' : 'corrected commercial gym'}`;
     const days = daysOf(athlete), rows = days.flatMap(d => flatten([...d.rows, ...(d.speedRows ?? [])]));
     const warmup = days.flatMap(d => d.warmup ?? []);
+    const energySystemFindings = athlete.weeks.flatMap(week => week.days.flatMap(day =>
+      validateEnergySystemExposureEvidence(day.energySystem).map(finding => ({
+        week: week.number, date: day.date, finding,
+      }))));
+    const weeklyEnergySystemCounts = athlete.weeks.map(week => ({
+      week: week.number, weekStart: week.start, phase: week.phase, phaseWeek: week.phaseWeek,
+      totalConditioningCredits: week.days.reduce((n, day) => n + (day.energySystem?.conditioningCredits ?? 0), 0),
+      appProgrammedEnergySystemDays: week.days.filter(day =>
+        (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
+      qualifyingSpeedDays: week.days.filter(day => day.energySystem?.qualifyingSpeed).length,
+    }));
     const total = { world, gender: athlete.gender, revision: data.revision, weeks: athlete.weeks.length, athleteDays: days.length,
       displayedRowPlacements: rows.length, distinctExerciseDisplayNames: new Set(rows.map(r => r.name)).size,
       withheldRowPlacements: rows.filter(r => r.withheld).length,
@@ -55,6 +69,8 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       speedRowPlacements: days.reduce((n, d) => n + (d.speedRows?.length ?? 0), 0),
       distinctSpeedAthleteDays: days.filter(d => d.speedRows?.length).length,
       restartChecks: athlete.restarts.length,
+      weeklyEnergySystemCounts,
+      energySystemFindings,
       projectionErrors: days.filter(d => d.projectionError).map(d => ({ date: d.date, error: d.projectionError })) };
     totals.push(total);
     const before = baseline.athletes.find(a => a.gender === athlete.gender);
@@ -69,7 +85,7 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       beforeFrequency: frequency(before), afterFrequency: frequency(athlete), beforeSpacing: spacing(before), afterSpacing: spacing(athlete),
       weeks3and4: [2, 3].map(i => ({ week: i + 1, before: before.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })),
         after: athlete.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })) })) });
-    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rows.length} displayed row placements across ${days.length} athlete-days (${total.withheldRowPlacements} unavailable/Skip; ${total.trainableRowPlacements} trainable); ${total.distinctExerciseDisplayNames} distinct displayed names. Warm-ups are separate. Optional work is labelled; power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek}</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}${d.speedRows?.length ? `<h4>Speed</h4><ul>${d.speedRows.map(rowHTML).join('')}</ul>` : ''}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Warm-up</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`).join('')}`;
+    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rows.length} displayed row placements across ${days.length} athlete-days (${total.withheldRowPlacements} unavailable/Skip; ${total.trainableRowPlacements} trainable); ${total.distinctExerciseDisplayNames} distinct displayed names. Warm-ups are separate. Optional work is labelled; power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => { const energy = weeklyEnergySystemCounts.find(row => row.week === w.number); return `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek} · ${energy.appProgrammedEnergySystemDays} app energy-system days (${energy.qualifyingSpeedDays} Speed)</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}${d.speedRows?.length ? `<h4>Speed</h4><ul>${d.speedRows.map(rowHTML).join('')}</ul>` : ''}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Warm-up</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`; }).join('')}`;
     const filename = `${world}-${athlete.gender}-year.html`;
     fs.writeFileSync(path.join(root, filename), page(title, body));
     links.push(`<li><a href="${filename}">${esc(title)}</a></li>`);
@@ -84,4 +100,4 @@ const count = f => Object.values(f).reduce((n, v) => n + v.displayedRowPlacement
 const lines = comparisons.map(c => `| ${c.world} | ${c.gender} | ${count(c.beforeFrequency)} → ${count(c.afterFrequency)} | ${Object.keys(c.beforeFrequency).length} → ${Object.keys(c.afterFrequency).length} | ${c.beforeSpacing.adjacentCalendarDayPairs} → ${c.afterSpacing.adjacentCalendarDayPairs} |`);
 fs.writeFileSync(path.join(root, 'before-after-summary.md'), `# Before/after programming evidence\n\nBaseline ${comparisons[0].beforeRevision}; revised ${totals[0].revision}. Earlier evidence is unchanged.\n\n${units}\n\n| World | Athlete | Displayed rows (incl. Skip) | Distinct names | Adjacent same-part pairs |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n\nEach world contains 364 athlete-days. Full per-name placements and distinct athlete-days, every adjacency pair and week 3/4 layouts are in before-after-frequency-spacing.json. ${baselineRoot?'Each before/after pair has identical profile, dated action and phase inputs; partial and commercial worlds remain separate.':'Corrected commercial kit is a separate input world, not a source-only comparison.'}\n\n## NOT COVERED\n\nPhysical-device acceptance; original Speed frequency; clinical validation; proof that every adjacent pair is avoidable; onboarding 2 km skip-tap consistency.\n`);
 console.log(JSON.stringify(totals, null, 2));
-if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length)) process.exitCode = 1;
+if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length || t.energySystemFindings.length)) process.exitCode = 1;

@@ -13,6 +13,10 @@ import {
   type ConditioningRole,
   type VisibleSessionClassification,
 } from '../rules';
+import {
+  energySystemExposureEvidenceForWorkout,
+  validateEnergySystemExposureEvidence,
+} from '../rules/energySystemExposureEvidence';
 import type {
   RecoveryAddonBlock,
   SpeedBlock,
@@ -132,6 +136,17 @@ console.log('\n[1] team and fixture anchors');
     [result.contributions.hardExposures, result.contributions.hardDay], [1, 1]);
   eq('team training contributes one conditioning/running/sprint-COD exposure',
     [result.contributions.conditioning, result.contributions.running, result.contributions.sprintCod], [1, 1, 1]);
+  eq('annual evidence leaves the team anchor separate from app-programmed work',
+    energySystemExposureEvidenceForWorkout(team), {
+      protocolVersion: 1,
+      source: 'session_classification_adapter',
+      conditioningCredits: 1,
+      appProgrammedConditioningCredits: 0,
+      sprintHighSpeedCredits: 1,
+      qualifyingSpeed: false,
+      independentConditioning: false,
+      speedTemplateName: null,
+    });
   assertWeeklyParity('team training', team, result);
 }
 {
@@ -254,6 +269,72 @@ for (const [name, expected] of [
 }
 
 console.log('\n[4] speed, conditioning component, and finisher ownership');
+{
+  const qualifyingSpeedBlock: SpeedBlock = {
+    id: 'authored-speed-block',
+    title: 'Acceleration exposure',
+    label: 'Speed',
+    kind: 'true_speed',
+    placement: 'standalone',
+    durationMinutes: 13,
+    prescription: '8 x 20m accelerations',
+    modality: 'run',
+    templateName: '20 m Acceleration Reps',
+    counting: {
+      hardExposure: true,
+      mainStrength: false,
+      conditioningCredit: 'full',
+      createsHardDay: true,
+      sprintCodExposure: true,
+    },
+  };
+  const speed = workout('Authored Acceleration Exposure', {
+    speedBlock: qualifyingSpeedBlock,
+    intensity: 'High',
+  });
+  const evidence = energySystemExposureEvidenceForWorkout(speed);
+  eq('proper authored Speed contributes once and keeps sprint/high-speed identity', {
+    conditioning: evidence.conditioningCredits,
+    appProgrammed: evidence.appProgrammedConditioningCredits,
+    sprintHighSpeed: evidence.sprintHighSpeedCredits,
+    qualifyingSpeed: evidence.qualifyingSpeed,
+  }, { conditioning: 1, appProgrammed: 1, sprintHighSpeed: 1, qualifyingSpeed: true });
+  eq('proper authored Speed evidence passes its annual audit',
+    validateEnergySystemExposureEvidence(evidence), []);
+  ok('[MUTATION] annual audit rejects ignored proper Speed',
+    validateEnergySystemExposureEvidence({
+      ...evidence, conditioningCredits: 0, appProgrammedConditioningCredits: 0,
+    }).includes('qualifying_speed_missing_conditioning_credit'));
+  ok('[MUTATION] annual audit rejects two credits for one delivered session',
+    validateEnergySystemExposureEvidence({
+      ...evidence, conditioningCredits: 2, appProgrammedConditioningCredits: 2,
+    }).includes('one_session_received_duplicate_conditioning_credit'));
+  const primer = energySystemExposureEvidenceForWorkout({
+    ...speed, composedOptionalKind: 'primer',
+  });
+  eq('the same rows inside a Primer receive no conditioning or Speed credit', {
+    conditioning: primer.conditioningCredits,
+    appProgrammed: primer.appProgrammedConditioningCredits,
+    sprintHighSpeed: primer.sprintHighSpeedCredits,
+    qualifyingSpeed: primer.qualifyingSpeed,
+  }, { conditioning: 0, appProgrammed: 0, sprintHighSpeed: 0, qualifyingSpeed: false });
+  eq('missing annual evidence is a red audit finding',
+    validateEnergySystemExposureEvidence(undefined), ['missing_energy_system_evidence']);
+  const warmup = energySystemExposureEvidenceForWorkout({
+    ...speed,
+    speedBlock: {
+      ...qualifyingSpeedBlock,
+      placement: 'pre_lift',
+      templateName: 'Team-Training Warm-Up Dose',
+      counting: { ...qualifyingSpeedBlock.counting, conditioningCredit: 'none' },
+    },
+  });
+  eq('a warm-up rider receives no full exposure credit', {
+    conditioning: warmup.conditioningCredits,
+    appProgrammed: warmup.appProgrammedConditioningCredits,
+    qualifyingSpeed: warmup.qualifyingSpeed,
+  }, { conditioning: 0, appProgrammed: 0, qualifyingSpeed: false });
+}
 {
   const speedBlock: SpeedBlock = {
     id: 'speed-block',

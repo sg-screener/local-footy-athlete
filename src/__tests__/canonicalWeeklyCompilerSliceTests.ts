@@ -100,6 +100,10 @@ import { mobilityAddJourney } from './support/mobilityAddJourney';
 import { programmingInputTruth } from './support/programmingInputTruth';
 import { useCalendarStore } from '../store/calendarStore';
 import { speedTemplateConditioningCredit } from '../rules/conditioningCredit';
+import {
+  energySystemExposureEvidenceForWorkout,
+  validateEnergySystemExposureEvidence,
+} from '../rules/energySystemExposureEvidence';
 import { applyLighterDayForToday, lighterDayAvailableForDate } from '../utils/lighterDayTransaction';
 import { compileCanonicalLighterDayWorkout, compileCanonicalLighterDayContract } from '../rules/canonicalWeeklyLighterDayCompiler';
 import { resolveTemplateByName, renderableModalities } from '../rules/conditioningSelection';
@@ -3001,10 +3005,26 @@ async function main(): Promise<void> {
         conditioningCategory: undefined, hasCombinedConditioning: false,
         attachedConditioningKind: undefined };
       const classification = classifyVisibleSession(speedOnly);
+      const auditEvidence = energySystemExposureEvidenceForWorkout(speedOnly);
       ok(`${label} proper speed counts once as conditioning and retains sprint identity`,
         classification.contributions.conditioning === 1 &&
         classification.contributions.sprintCod === 1,
         classification.contributions);
+      ok(`${label} full-year evidence consumes the same speed credit as weekly validation`,
+        auditEvidence.conditioningCredits === classification.contributions.conditioning &&
+        auditEvidence.appProgrammedConditioningCredits === 1 &&
+        auditEvidence.qualifyingSpeed &&
+        validateEnergySystemExposureEvidence(auditEvidence).length === 0,
+        JSON.stringify(auditEvidence));
+      const ignoredSpeedEvidence = { ...auditEvidence,
+        conditioningCredits: 0, appProgrammedConditioningCredits: 0 };
+      ok(`[MUTATION] ${label} full-year audit fails when qualifying speed is ignored`,
+        validateEnergySystemExposureEvidence(ignoredSpeedEvidence)
+          .includes('qualifying_speed_missing_conditioning_credit'));
+      ok(`[MUTATION] ${label} full-year audit fails if one session receives two conditioning credits`,
+        validateEnergySystemExposureEvidence({
+          ...auditEvidence, conditioningCredits: 2, appProgrammedConditioningCredits: 2,
+        }).includes('one_session_received_duplicate_conditioning_credit'));
       const duplicatedLabel = { ...speedOnly, hasCombinedConditioning: true,
         attachedConditioningKind: 'component' as const, conditioningCategory: 'sprint' as const };
       ok(`${label} extra labels cannot give one sprint two conditioning credits`,
@@ -3013,6 +3033,10 @@ async function main(): Promise<void> {
       ok(`${label} warm-up rider is not a full conditioning exposure`,
         classifyVisibleSession({ ...speedOnly, speedBlock: speedBlockForTemplate(rider, 'pre_lift') })
           .contributions.conditioning === 0);
+      ok(`${label} warm-up rider carries no qualifying full-year speed credit`,
+        !energySystemExposureEvidenceForWorkout({
+          ...speedOnly, speedBlock: speedBlockForTemplate(rider, 'pre_lift'),
+        }).qualifyingSpeed);
       ok(`${label} optional primer is not a full conditioning exposure`,
         classifyVisibleSession({ ...speedOnly, composedOptionalKind: 'primer' })
           .contributions.conditioning === 0);
@@ -3040,6 +3064,9 @@ async function main(): Promise<void> {
         ok(`${label} combined sprint and intervals earn one conditioning credit, with speed retained`,
           classifyVisibleSession(speedWorkout).contributions.conditioning === 1 &&
           classifyVisibleSession(speedWorkout).contributions.sprintCod === 1);
+        ok(`${label} combined sprint and intervals export one app energy-system credit`,
+          energySystemExposureEvidenceForWorkout(speedWorkout)
+            .appProgrammedConditioningCredits === 1);
         const repeatSprintVariant = classifyVisibleSession({ ...speedWorkout, conditioningCategory: 'sprint' });
         ok(`${label} two sprint qualities in one session still earn one credit of each kind`,
           repeatSprintVariant.contributions.conditioning === 1 && repeatSprintVariant.contributions.sprintCod === 1);

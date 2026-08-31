@@ -6,6 +6,7 @@ const revision = require('node:child_process').execFileSync('git', ['rev-parse',
 require(path.join(repo, 'node_modules/sucrase/register'));
 const { getExerciseTags } = require(path.join(repo, 'src/data/exerciseTags'));
 const { resolveTemplateByName, templateDurationMinutes } = require(path.join(repo, 'src/rules/conditioningSelection'));
+const { validateEnergySystemExposureEvidence } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
 const checks = [], findings = [];
 const flat = rows => rows.flatMap(row => row.choices ? row.choices.flatMap(choice =>
   flat(choice.rows).map(r => ({ ...r, modalityLabel: r.modalityLabel ?? choice.modalityLabel }))) : [row]);
@@ -17,6 +18,17 @@ for (const world of ['original-partial', 'corrected-commercial']) {
     const days = athlete.weeks.flatMap(w => w.days), label = `${world}/${athlete.gender}`;
     const rows = days.flatMap(d => flat([...d.rows, ...(d.speedRows ?? [])]).map(row => ({ date: d.date, row })));
     const errors = days.filter(d => d.projectionError);
+    const energySystemEvidenceFindings = athlete.weeks.flatMap(week => week.days.flatMap(day =>
+      validateEnergySystemExposureEvidence(day.energySystem).map(finding => ({
+        week: week.number, weekStart: week.start, date: day.date, finding,
+      }))));
+    const weeklyEnergySystemCounts = athlete.weeks.map(week => ({
+      week: week.number, weekStart: week.start, phase: week.phase, phaseWeek: week.phaseWeek,
+      totalConditioningCredits: week.days.reduce((n, day) => n + (day.energySystem?.conditioningCredits ?? 0), 0),
+      appProgrammedEnergySystemDays: week.days.filter(day =>
+        (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
+      qualifyingSpeedDays: week.days.filter(day => day.energySystem?.qualifyingSpeed).length,
+    }));
     const painful = rows.filter(({ date, row }) => date >= '2026-11-17' && date <= '2026-11-26' &&
       ['horizontal_push', 'vertical_push'].includes(getExerciseTags(row.name)?.movement) && !row.withheld);
     const corrupt = rows.filter(({ row }) => /Barbell Bike|Chest-Supported DB Bike|Continuous Aerobic Bike/.test(row.name));
@@ -50,12 +62,15 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       optionalFlushRows: flush.filter(({ row }) => row.optional === true).length,
       coreFlushRows: flush.filter(({ row }) => row.optional !== true).length,
       invalidLandmineRows: invalidLandmine.length,
-      retiredAutomaticRows: retired.length };
+      retiredAutomaticRows: retired.length,
+      weeklyEnergySystemCounts,
+      energySystemEvidenceFindings };
     result.ok = result.weeks === 52 && result.athleteDays === 364 && result.restartChecks === 52 &&
       result.successfulRestarts === 52 && !errors.length && !painful.length && !corrupt.length &&
       !emptyLifts.length && !missingMode.length && !wrongMachineRecovery.length && power.length > 0 && !result.displayedPowerRestRows
-      && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length && result.optionalFlushRows === flush.length;
-    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine });
+      && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length &&
+      result.optionalFlushRows === flush.length && !energySystemEvidenceFindings.length;
+    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine, energySystemEvidenceFindings });
   }
 }
 const receipt = { revision,

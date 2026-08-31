@@ -349,8 +349,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'A proper authored sprint counts once toward overall conditioning while retaining speed identity. Warm-up riders, primers, display labels and duplicate block references cannot manufacture credit; combined speed plus intervals earn one session credit while both qualities remain distinguishable. Deload and restart retain the same typed identity. Explicit zero team-training answers are not missing answers.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-261; Sam, 2026-08-27, approved the shared conditioning-count rule and requested chunk 1.',
     guard: {
-      state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
-      receipt: 'Real onboarding, generated prescriptions and scheduled-deload restart witnesses; negative controls remove required hard conditioning, duplicate block references, substitute warm-up riders and change the stored legacy fence. The shared authored-template predicate is read by the speed builder, visible classifier and effective-week evaluator. See STATUS_TESTTRUTH step 19 for exact verification and remaining release blockers.',
+      state: 'guarded', by: 'test:canonical-weekly-compiler + test:session-classification', chainStatus: 'in_chain',
+      receipt: 'Real onboarding, generated prescriptions and scheduled-deload restart witnesses; negative controls remove required hard conditioning, duplicate block references, substitute warm-up riders, change the stored legacy fence, remove Speed credit from the annual evidence and give one session two credits. The shared authored-template predicate is read by the speed builder, visible classifier and effective-week evaluator. Full-year generation now persists that classifier result, and the annual audits validate it instead of inferring conditioning credit from display rows. Team Training remains an anchor with zero app-programmed credit. See STATUS_TESTTRUTH step 19 and STATUS_YEARREPAIR section 1 for exact verification and remaining release blockers.',
     },
   },
   {
