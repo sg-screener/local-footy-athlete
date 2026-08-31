@@ -26,8 +26,8 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Steps 1–4 complete; Step 5 is checkpointed with one product decision blocked;
-Step 6 next.
+Steps 1–4 and 6 complete; Step 5 is checkpointed with one product decision
+blocked; Step 7 next.
 
 ## Step 1 — compiler-owned automatic selection trace
 
@@ -317,3 +317,46 @@ NOT COVERED at this checkpoint: the blocked Primer decision, physical-iPhone
 acceptance, the full corrected lived-year rerun, modality persistence,
 deload-quality ownership and release-chain integration. Those continue in
 Steps 6–9; the phone remains untouched.
+
+## Step 6 — explicit conditioning modality through restart
+
+The current compiler already carries modality as typed data at each required
+boundary; no title/notes inference or new production writer was needed:
+
+- every authored template has an explicit `permittedModalities` field;
+- conditioning feasibility resolves the available/safe delivery into typed
+  `ergModality` / `conditioningFeasibility.resolvedModality` fields;
+- final composition writes `ConditioningOption.modality` and, for mixed work,
+  the exact `modalitySequence`; and
+- the visible session reads that option field into its separate mode label.
+
+The same-turn `29784175` conditioning-identity checkpoint removed the remaining
+name overwrite at the delivery boundary: equipment may select the mode but can
+no longer rename the selected authored template. That work was inspected only
+after its owner committed and cleared the shared paths.
+
+The missing proof was persistence. The general lived-year `visibleSignature`
+does not include `ConditioningOption.modality`, so its restart equality could
+remain green if every mode disappeared. `test:conditioning-modality-persistence`
+now drives a real onboarding/generation, requires every final option to carry a
+typed mode, proves that mode is allowed by the template's explicit modality
+set, requires the session renderer to expose a mode label, then closes/reopens
+the app and compares title + modality + mixed round sequence exactly.
+
+Verification:
+
+- `test:conditioning-modality-persistence`: 3 / 3.
+- `test:conditioning-templates`: 152 / 152 (recorded by the conditioning
+  identity owner at `29784175`).
+- `test:projection-ownership`: 13 / 13 and `test:signed-copy-extraction`: 7 / 7
+  (same checkpoint receipt).
+
+Mutation/liveness: the persistence tape is non-vacuous on a generated option;
+removing `option.modality` fails the typed-mode cell and changing it to a mode
+outside the selected template fails the explicit-permission cell. Dropping or
+changing it only during rehydration fails the exact post-restart receipt.
+
+NOT COVERED at this checkpoint: physical-iPhone rendering/VoiceOver, genuinely
+multi-option "Choose one" blocks, Step 5's blocked Primer decision,
+deload-quality ownership, release-chain integration and the corrected lived
+year. Those remain open; the phone remains untouched.
