@@ -68,7 +68,7 @@ import {
   type AutomaticCandidateTrace,
   type AutomaticProgrammingSelectionTrace,
 } from './programmingSelectionTrace';
-import { stableDecisionChoice } from './stableDecisionDiversity';
+import { stableDecisionOrder } from './stableDecisionDiversity';
 
 /* ── Entries ── */
 
@@ -238,6 +238,21 @@ export interface PowerSelectionContext {
    * change the outcome.
    */
   readonly kind?: PowerKind;
+  /** Occurrence of this family in the authored week. */
+  readonly seatIndex?: number;
+  /** Accepted power identities, supplied explicitly by the compiler boundary. */
+  readonly selectionContext?: {
+    readonly blockStartISO: string;
+    readonly history: readonly BlockPowerSelection[];
+  };
+}
+
+/** One accepted power identity per family/weekly seat. Dose remains elsewhere. */
+export interface BlockPowerSelection {
+  readonly blockStartISO: string;
+  readonly family: PowerFamily;
+  readonly seatIndex: number;
+  readonly exerciseName: string;
 }
 
 function hasEquipment(
@@ -311,6 +326,21 @@ export function eligiblePowerExercises(
 export function selectPowerExercise(
   context: PowerSelectionContext,
 ): PowerPoolEntry | null {
+  return decidePowerExercise(context).entry;
+}
+
+interface PowerExerciseDecision {
+  readonly entry: PowerPoolEntry | null;
+  readonly reason: string;
+  readonly orderedEligible: readonly PowerPoolEntry[];
+}
+
+/**
+ * Eligibility stays absolute. Among equally suitable choices, accepted history
+ * supplies weekly spacing, recent use and longer-term exposure before the
+ * decision-keyed stable tie-breaker. No catalogue position participates.
+ */
+function decidePowerExercise(context: PowerSelectionContext): PowerExerciseDecision {
   // Rule 3: reduced hands the lower slot to Pogo Hops, whatever else is
   // eligible. It is the SLOT rule, not a per-exercise one, so it applies across
   // every level and phase — but only to the family that carries the niggle.
@@ -318,17 +348,47 @@ export function selectPowerExercise(
     const takeover = POWER_EXERCISE_POOL.find(
       (entry) => entry.name === POWER_POOL_REDUCED_TAKEOVER,
     );
-    if (takeover) return takeover;
+    if (takeover) return { entry: takeover, reason: 'reduced_lower_takeover', orderedEligible: [takeover] };
   }
 
   const eligible = eligiblePowerExercises(context);
-  if (eligible.length === 0) return null;
-  if (eligible.length === 1) return eligible[0];
+  if (eligible.length === 0) return { entry: null, reason: 'no_eligible_power_exercise', orderedEligible: [] };
+  if (eligible.length === 1) return { entry: eligible[0], reason: 'single_eligible_power_exercise', orderedEligible: eligible };
 
-  // Rotate on block identity plus the cell, so a phase or experience change
-  // does not silently keep an athlete on the same movement forever.
-  const seed = `${context.blockId}|${context.family}|${context.phase}|${context.trainingAge}`;
-  return stableDecisionChoice(eligible, seed, (candidate) => candidate.name);
+  const seatIndex = context.seatIndex ?? 0;
+  const blockStartISO = context.selectionContext?.blockStartISO ?? context.blockId;
+  const history = context.selectionContext?.history ?? [];
+  const current = history.find((row) => row.blockStartISO === blockStartISO
+    && row.family === context.family && row.seatIndex === seatIndex);
+  const restored = eligible.find((candidate) => candidate.name === current?.exerciseName);
+  if (restored) {
+    return { entry: restored, reason: 'restored_recorded_selection',
+      orderedEligible: [restored, ...eligible.filter((candidate) => candidate !== restored)] };
+  }
+
+  const relevant = history.filter((row) => row.family === context.family
+    && row.blockStartISO <= blockStartISO);
+  const blocks = [...new Set(relevant.map((row) => row.blockStartISO))].sort().reverse();
+  const facts = (candidate: PowerPoolEntry) => {
+    const uses = relevant.filter((row) => row.exerciseName === candidate.name);
+    const lastBlock = uses.map((row) => row.blockStartISO).sort().at(-1) ?? null;
+    return {
+      weekly: uses.filter((row) => row.blockStartISO === blockStartISO).length,
+      recent: uses.filter((row) => blocks.slice(0, 3).includes(row.blockStartISO)).length,
+      annual: uses.length,
+      since: lastBlock === null ? Number.POSITIVE_INFINITY : blocks.indexOf(lastBlock),
+    };
+  };
+  const seed = `${blockStartISO}|${context.family}|${seatIndex}|${context.phase}|${context.trainingAge}`;
+  const ordered = stableDecisionOrder(eligible, seed, (candidate) => candidate.name)
+    .sort((left, right) => {
+      const a = facts(left);
+      const b = facts(right);
+      return a.weekly - b.weekly || a.recent - b.recent || a.annual - b.annual || b.since - a.since;
+    });
+  return { entry: ordered[0],
+    reason: history.length > 0 ? 'contextual_exposure_and_spacing' : 'deterministic_rotation_without_recorded_history',
+    orderedEligible: ordered };
 }
 
 /** The pool decision plus its candidate evidence; selection itself is unchanged. */
@@ -343,9 +403,13 @@ export function selectPowerExerciseWithTrace(
     readonly daysToGame: number | null;
   },
 ): { readonly entry: PowerPoolEntry | null; readonly trace: AutomaticProgrammingSelectionTrace } {
-  const entry = selectPowerExercise(context);
+  const decision = decidePowerExercise(context);
+  const entry = decision.entry;
   const eligible = new Set(eligiblePowerExercises(context).map((candidate) => candidate.name));
   if (context.reduced && context.family === 'lower') eligible.add(POWER_POOL_REDUCED_TAKEOVER);
+  const history = context.selectionContext?.history ?? [];
+  const blockStartISO = context.selectionContext?.blockStartISO ?? context.blockId;
+  const relevantBlocks = [...new Set(history.map((row) => row.blockStartISO))].sort().reverse();
   const rows: AutomaticCandidateTrace[] = POWER_EXERCISE_POOL.map((candidate) => {
     const rejectedBy: AutomaticCandidateRejection[] = [];
     if (candidate.family !== context.family) rejectedBy.push('wrong_movement_or_quality');
@@ -357,6 +421,9 @@ export function selectPowerExerciseWithTrace(
     if (!hasEquipment(candidate, context.availableEquipment)
       || (getExerciseTags(candidate.name)?.programming
         && !exerciseIsAvailableWith(candidate.name, context.availableEquipment))) rejectedBy.push('equipment');
+    const uses = history.filter((row) => row.exerciseName === candidate.name);
+    const lastBlock = uses.map((row) => row.blockStartISO).sort().at(-1) ?? null;
+    const blocksSince = lastBlock === null ? null : relevantBlocks.indexOf(lastBlock);
     return {
       name: candidate.name,
       eligible: eligible.has(candidate.name),
@@ -365,10 +432,10 @@ export function selectPowerExerciseWithTrace(
       score: {
         phasePriority: 0,
         athletePreference: false,
-        recentUsage: 0,
-        annualUsage: 0,
-        weeksOrBlocksSinceUse: null,
-        weeklyUsage: 0,
+        recentUsage: uses.filter((row) => relevantBlocks.slice(0, 3).includes(row.blockStartISO)).length,
+        annualUsage: uses.length,
+        weeksOrBlocksSinceUse: blocksSince === null || blocksSince < 0 ? null : blocksSince,
+        weeklyUsage: uses.filter((row) => row.blockStartISO === blockStartISO).length,
       },
     };
   });
@@ -386,7 +453,7 @@ export function selectPowerExerciseWithTrace(
         phase: context.phase,
         movementOrQuality: context.family,
         role: context.kind,
-        seatIndex: 0,
+        seatIndex: context.seatIndex ?? 0,
         equipment: [...context.availableEquipment],
         experience: traceContext.experience,
         injuries: traceContext.injuries,
@@ -394,9 +461,7 @@ export function selectPowerExerciseWithTrace(
       },
       candidates: rankSelectedFirst(rows, entry?.name ?? null),
       selected: entry?.name ?? null,
-      selectionReason: context.reduced && context.family === 'lower'
-        ? 'reduced_lower_takeover'
-        : entry ? 'deterministic_power_pool_rotation' : 'no_eligible_power_exercise',
+      selectionReason: decision.reason,
     },
   };
 }

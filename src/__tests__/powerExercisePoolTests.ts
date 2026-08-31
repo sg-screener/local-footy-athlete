@@ -27,6 +27,7 @@ import {
   POWER_EXERCISE_POOL,
   eligiblePowerExercises,
   selectPowerExercise,
+  selectPowerExerciseWithTrace,
   POWER_POOL_REDUCED_TAKEOVER,
   type PowerPoolEntry,
   type PowerSelectionContext,
@@ -270,6 +271,52 @@ ok(
     eligiblePowerExercises(ctx({ trainingAge: 'advanced' })).some((e) => e.name === name),
   ),
 );
+
+const contextualBase = ctx({ blockId: '2026-08-31' });
+const dominant = selectPowerExercise(contextualBase)!;
+const longHistory = Array.from({ length: 8 }, (_unused, index) => ({
+  blockStartISO: `2026-${String(index + 1).padStart(2, '0')}-01`,
+  family: 'lower' as const,
+  seatIndex: 0,
+  exerciseName: dominant.name,
+}));
+const exposureAware = selectPowerExercise({
+  ...contextualBase,
+  selectionContext: { blockStartISO: '2026-08-31', history: longHistory },
+});
+ok('longer-term exposure prevents one suitable power exercise dominating',
+  exposureAware?.name !== dominant.name, `dominant=${dominant.name}, picked=${exposureAware?.name}`);
+
+const sameWeekHistory = [{
+  blockStartISO: '2026-08-31', family: 'lower' as const, seatIndex: 0,
+  exerciseName: dominant.name,
+}];
+const spaced = selectPowerExercise({
+  ...contextualBase,
+  seatIndex: 1,
+  selectionContext: { blockStartISO: '2026-08-31', history: sameWeekHistory },
+});
+ok('a second weekly power seat prefers another equally suitable identity',
+  spaced?.name !== dominant.name, `first=${dominant.name}, second=${spaced?.name}`);
+
+const restored = selectPowerExercise({
+  ...contextualBase,
+  seatIndex: 0,
+  selectionContext: { blockStartISO: '2026-08-31', history: sameWeekHistory },
+});
+ok('an accepted power seat restores its recorded identity', restored?.name === dominant.name);
+
+const traced = selectPowerExerciseWithTrace({
+  ...contextualBase,
+  selectionContext: { blockStartISO: '2026-08-31', history: longHistory },
+}, {
+  dateISO: '2026-08-31', weekStartISO: '2026-08-31', dayOfWeek: 1,
+  experience: '5+ years', injuries: [], daysToGame: null,
+});
+const dominantTrace = traced.trace.candidates.find((candidate) => candidate.name === dominant.name);
+ok('power trace reports the accepted annual and recent use that ranked the choice',
+  dominantTrace?.score.annualUsage === 8 && dominantTrace.score.recentUsage === 3,
+  JSON.stringify(dominantTrace?.score));
 
 /* ── P4 — equipment ── */
 

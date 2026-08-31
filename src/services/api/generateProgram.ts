@@ -167,6 +167,7 @@ export interface GenerateProgramFromProfileOptions {
    */
   selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
   conditioningSelectionHistory?: readonly import('../../rules/conditioningSelection').BlockConditioningSelection[];
+  powerSelectionHistory?: readonly import('../../rules/powerExercisePool').BlockPowerSelection[];
   /** Optional observer for the actual canonical compiler's automatic choices. */
   selectionTracesOut?: import('../../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
   /**
@@ -851,6 +852,8 @@ export function canonicalProgramInputFromProfile(
     selectionHistory: selectionHistoryForBuild,
     conditioningSelectionHistory: options.conditioningSelectionHistory
       ?? require('../../store/blockSelectionHistoryStore').blockConditioningSelectionHistory(),
+    powerSelectionHistory: options.powerSelectionHistory
+      ?? require('../../store/blockSelectionHistoryStore').blockPowerSelectionHistory(),
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
@@ -971,7 +974,7 @@ export function generateProgramLocally(
       historyStore.recordBlockSelections(blockStart, selectionsAuthored, [
         ...priorConditioning, ...conditioningSelections.filter(entry => !priorConditioning.some(
           (prior: import('../../rules/conditioningSelection').BlockConditioningSelection) => prior.category === entry.category && prior.seatIndex === entry.seatIndex)),
-      ]);
+      ], compilation.powerSelections);
     }
   }
   return program;

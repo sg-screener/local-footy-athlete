@@ -39,6 +39,9 @@ export interface ComposedPowerPlacement {
   readonly availableEquipment?: readonly string[];
   readonly availableEquipmentByDay?: Readonly<Record<number, readonly string[]>>;
   readonly blockId?: string;
+  readonly blockStartISO?: string;
+  readonly selectionHistory?: readonly import('./powerExercisePool').BlockPowerSelection[];
+  readonly selectionsOut?: import('./powerExercisePool').BlockPowerSelection[];
   readonly selectionTracesOut?: import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
   readonly injuries?: readonly string[];
   readonly daysToGameByDay?: Readonly<Record<number, number | null>>;
@@ -178,6 +181,7 @@ export function materialiseComposedWeek(
    * only happens for callers that pass no power at all. */
   const allowance = context.power?.allowance;
   let primersPlaced = 0;
+  const powerSeats = new Map<string, number>();
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
@@ -231,12 +235,20 @@ export function materialiseComposedWeek(
         })()
         : primer;
       if (dosed) {
+        const powerSeat = powerSeats.get(dosed.family) ?? 0;
+        powerSeats.set(dosed.family, powerSeat + 1);
         const built = buildPowerRow(dosed, workoutId, {
           phase: context.power?.phase,
           experienceLevel: context.power?.experienceLevel as never,
           availableEquipment: (context.power?.availableEquipmentByDay?.[day.dayOfWeek]
             ?? context.power?.availableEquipment ?? []) as never,
           blockId: context.power?.blockId,
+          blockStartISO: context.power?.blockStartISO,
+          seatIndex: powerSeat,
+          selectionHistory: [
+            ...(context.power?.selectionHistory ?? []),
+            ...(context.power?.selectionsOut ?? []),
+          ],
           selectionTracesOut: context.power?.selectionTracesOut,
           traceContext: {
             dateISO: isoDateForWeekday(context.weekStartISO, day.dayOfWeek),
@@ -288,6 +300,17 @@ export function materialiseComposedWeek(
           (row) => composedIdentityFor(row.identity) === primerIdentity,
         );
         powerRow = alreadyInSession ? null : built;
+        if (powerRow && context.power?.blockStartISO && context.power.selectionsOut) {
+          if (!context.power.selectionsOut.some((row) => row.blockStartISO === context.power?.blockStartISO
+            && row.family === dosed.family && row.seatIndex === powerSeat)) {
+            context.power.selectionsOut.push({
+              blockStartISO: context.power.blockStartISO,
+              family: dosed.family,
+              seatIndex: powerSeat,
+              exerciseName: built.exercise?.name ?? '',
+            });
+          }
+        }
       }
     }
     if (powerRow) primersPlaced += 1;

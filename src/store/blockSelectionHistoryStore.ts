@@ -7,6 +7,7 @@ import {
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { registerQuarantineBoundary } from './refusedPayloadQuarantine';
 import { normalizeConditioningSelectionHistory, type BlockConditioningSelection } from '../rules/conditioningSelection';
+import type { BlockPowerSelection } from '../rules/powerExercisePool';
 
 /**
  * BLOCK SELECTION HISTORY — the durable carrier for WHICH EXERCISE each block
@@ -43,6 +44,7 @@ interface BlockSelectionHistoryState {
   /** Every recorded selection, most recent block FIRST. */
   selections: BlockExerciseSelection[];
   conditioningSelections: BlockConditioningSelection[];
+  powerSelections: BlockPowerSelection[];
   clear: () => void;
 }
 
@@ -55,9 +57,10 @@ registerQuarantineBoundary(BLOCK_SELECTION_HISTORY_KEY, {
   carriesMaterial: (envelope) => {
     try {
       const state = (JSON.parse(envelope) as {
-        state?: { selections?: unknown[]; conditioningSelections?: unknown[] };
+        state?: { selections?: unknown[]; conditioningSelections?: unknown[]; powerSelections?: unknown[] };
       }).state;
-      return (state?.selections ?? []).length > 0 || (state?.conditioningSelections ?? []).length > 0;
+      return (state?.selections ?? []).length > 0 || (state?.conditioningSelections ?? []).length > 0
+        || (state?.powerSelections ?? []).length > 0;
     } catch {
       return false;
     }
@@ -69,12 +72,14 @@ export const useBlockSelectionHistoryStore = create<BlockSelectionHistoryState>(
     (set) => ({
       selections: [],
       conditioningSelections: [],
-      clear: () => set({ selections: [], conditioningSelections: [] }),
+      powerSelections: [],
+      clear: () => set({ selections: [], conditioningSelections: [], powerSelections: [] }),
     }),
     {
       name: BLOCK_SELECTION_HISTORY_KEY,
       storage: createJSONStorage(() => asyncStorageCompat),
-      partialize: (state) => ({ selections: state.selections, conditioningSelections: state.conditioningSelections }) as BlockSelectionHistoryState,
+      partialize: (state) => ({ selections: state.selections, conditioningSelections: state.conditioningSelections,
+        powerSelections: state.powerSelections }) as BlockSelectionHistoryState,
     },
   ),
 );
@@ -89,6 +94,10 @@ export function blockSelectionHistory(): readonly BlockExerciseSelection[] {
 
 export function blockConditioningSelectionHistory(): readonly BlockConditioningSelection[] {
   return normalizeConditioningSelectionHistory(useBlockSelectionHistoryStore.getState().conditioningSelections ?? []);
+}
+
+export function blockPowerSelectionHistory(): readonly BlockPowerSelection[] {
+  return [...(useBlockSelectionHistoryStore.getState().powerSelections ?? [])];
 }
 
 /**
@@ -124,6 +133,7 @@ export function recordBlockSelections(
   blockStartISO: string,
   selections: readonly BlockExerciseSelection[],
   conditioningSelections?: readonly BlockConditioningSelection[],
+  powerSelections?: readonly BlockPowerSelection[],
 ): void {
   if (!blockStartISO) return;
   useBlockSelectionHistoryStore.setState((state) => {
@@ -150,7 +160,13 @@ export function recordBlockSelections(
       : [...conditioningSelections, ...(state.conditioningSelections ?? []).filter(entry => entry.blockStartISO !== blockStartISO)];
     const conditioningBlocks = [...new Set(nextConditioning.map(entry => entry.blockStartISO))].sort().reverse()
       .slice(0, BLOCK_SELECTION_HISTORY_DEPTH);
-    return { selections: kept, conditioningSelections: nextConditioning.filter(entry => conditioningBlocks.includes(entry.blockStartISO)) };
+    const nextPower = powerSelections === undefined ? (state.powerSelections ?? [])
+      : [...powerSelections, ...(state.powerSelections ?? []).filter(entry => entry.blockStartISO !== blockStartISO)];
+    const powerBlocks = [...new Set(nextPower.map(entry => entry.blockStartISO))].sort().reverse()
+      .slice(0, BLOCK_SELECTION_HISTORY_DEPTH);
+    return { selections: kept,
+      conditioningSelections: nextConditioning.filter(entry => conditioningBlocks.includes(entry.blockStartISO)),
+      powerSelections: nextPower.filter(entry => powerBlocks.includes(entry.blockStartISO)) };
   });
 }
 

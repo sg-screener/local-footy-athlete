@@ -26,7 +26,7 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Steps 1–3 complete; Step 4 next.
+Steps 1–4 complete; Step 5 next.
 
 ## Step 1 — compiler-owned automatic selection trace
 
@@ -194,3 +194,53 @@ NOT COVERED at this checkpoint: the stronger strength-pool/injury-recomposition
 tie above; contextual scoring beyond the existing legality/phase/history
 policy; all composition findings; modality persistence; deload ownership;
 release integration; final corrected audit. These remain Steps 4–9.
+
+## Step 4 — contextual selection, including accepted power history
+
+The selection system now uses every requested programming input at the layer
+that owns it. Movement/quality, phase, equipment, experience, injury and game
+proximity remain hard eligibility or policy rules in the strength, power and
+conditioning specialists. Variety cannot make an unsafe or unsuitable row
+eligible. Strength and conditioning already consumed accepted block history,
+weekly seats and athlete preference; the uncovered route was power, whose
+identity still came from a block hash with no accepted past.
+
+Power now has the same explicit domain boundary as strength/conditioning: one
+small `BlockPowerSelection` fact per block + family + weekly seat. The compiler
+passes prior accepted facts in, records the current compilation's distinct
+seats out, and persists them beside the other selection histories. A current
+seat restores exactly. A new seat ranks equally suitable candidates by weekly
+use, recent use, longer-term use and time since last use, then applies the
+catalogue-order-independent decision tie-breaker. Its real compiler trace now
+reports those same history facts rather than placeholder zeroes.
+
+Compared two designs:
+
+1. Give each selector a new weighted points score. Rejected: safety gates and
+   phase rules would become tradeable, and three weight tables would drift.
+2. Keep legality/phase/explicit preference as ordered programming rules, then
+   apply exposure facts only inside the remaining suitable cohort. Chosen.
+
+Verification:
+
+- `test:power-pool`: 94 / 94. Added live cells for long-term anti-dominance,
+  second-seat weekly spacing, current-seat restoration and non-zero trace use.
+- `test:block-selection-authority`: 5 / 5, including author/replay/probe
+  persistence boundaries.
+- `test:programming-selection-trace`: 6 / 6.
+- product TypeScript scope: 0 errors.
+- The pre-existing selection paths continue to provide: strength athlete pins,
+  phase hinge policy, progression continuity, weekly identity/group spacing and
+  block history; conditioning requested quality, role, modality feasibility,
+  weekly seat, recent quality/template history and accepted restoration.
+
+Mutation/liveness: flooding one otherwise-suitable power identity through eight
+accepted blocks makes the selector move away from it; removing the exposure
+ordering makes that cell fail. Recording the first weekly seat makes the second
+choose another suitable identity; removing the weekly count makes that cell
+fail. A current-block record is restored and the trace states 8 annual / 3
+recent uses for the deliberately dominant candidate.
+
+NOT COVERED at this checkpoint: composition repairs, explicit conditioning
+modality persistence, deload quality ownership, release-chain integration and
+the corrected lived-year audit. These remain Steps 5–9.

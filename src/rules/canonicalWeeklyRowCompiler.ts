@@ -48,6 +48,7 @@ export interface CompilationDiagnostic { readonly message: string; readonly deta
 export interface CanonicalProgramWeeksResult {
  readonly microcycles: Microcycle[]; readonly plans: CoachingPlan[];
  readonly selections: BlockExerciseSelection[]; readonly diagnostics: CompilationDiagnostic[];
+ readonly powerSelections: readonly import('./powerExercisePool').BlockPowerSelection[];
  readonly selectionTraces: readonly import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
 }
 const DAY_MAP: Record<string, number> = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
@@ -218,6 +219,7 @@ export interface CanonicalProgramWeeksInput {
    */
   selectionHistory?: readonly import('../rules/blockExerciseSelection').BlockExerciseSelection[];
   conditioningSelectionHistory?: readonly import('./conditioningSelection').BlockConditioningSelection[];
+  powerSelectionHistory?: readonly import('./powerExercisePool').BlockPowerSelection[];
   availableEquipmentTags: readonly EquipmentTag[];
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
@@ -255,6 +257,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
   const selections: BlockExerciseSelection[] = [];
   const diagnostics: CompilationDiagnostic[] = [];
   const selectionTraces: import('./programmingSelectionTrace').AutomaticProgrammingSelectionTrace[] = [];
+  const powerSelections: import('./powerExercisePool').BlockPowerSelection[] = [];
   const blockStates = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
     blockNumber: args.blockNumber ?? 1,
@@ -704,6 +707,9 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
               .map(([day, capabilities]) => [day, capabilities.tags])),
             blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
+            blockStartISO: args.blockStartISO,
+            selectionHistory: args.powerSelectionHistory ?? [],
+            selectionsOut: powerSelections,
             selectionTracesOut: selectionTraces,
             injuries: compiledActiveInjuryKeys,
             daysToGameByDay: compiledDaysToGame,
@@ -990,5 +996,5 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       updatedAt: args.authoredAtISO,
     };
   });
-  return { microcycles, plans, selections, diagnostics, selectionTraces };
+  return { microcycles, plans, selections, diagnostics, powerSelections, selectionTraces };
 }

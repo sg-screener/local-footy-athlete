@@ -1273,6 +1273,11 @@ export function buildPowerRow(
     availableEquipment: selection.availableEquipment ?? [],
     blockId: selection.blockId ?? 'block-1',
     kind: spec.kind,
+    seatIndex: selection.seatIndex,
+    selectionContext: selection.blockStartISO ? {
+      blockStartISO: selection.blockStartISO,
+      history: selection.selectionHistory ?? [],
+    } : undefined,
   } as const;
   const decision = selectPowerExerciseWithTrace(powerContext, selection.traceContext ?? {
     dateISO: 'unknown', weekStartISO: 'unknown', dayOfWeek: -1,
@@ -1339,6 +1344,9 @@ interface PowerBlockSelectionInput {
    * block-stability rule.
    */
   blockId?: string;
+  blockStartISO?: string;
+  seatIndex?: number;
+  selectionHistory?: readonly import('../rules/powerExercisePool').BlockPowerSelection[];
   selectionTracesOut?: import('../rules/programmingSelectionTrace').AutomaticProgrammingSelectionTrace[];
   traceContext?: {
     readonly dateISO: string;
