@@ -976,3 +976,34 @@ short/low-fatigue rows and that the affected injury day reads
 NOT COVERED: Sam's visual/tap acceptance, native onboarding, clinical
 validation, Dynamic Type/VoiceOver, or any whole-app device sweep. Build,
 in-place installation, installed-version query and launch were covered.
+
+## 2026-08-31 — `ATG Split Squat` display copy
+
+Sam corrected the athlete-facing casing from `Atg Split Squat` to
+`ATG Split Squat`. The catalogue, cue and video sources already carried the
+approved canonical identity; only the shared display formatter was changing
+the acronym into an ordinary title-cased word.
+
+Two fixes were compared:
+
+1. Add a one-name alias for `ATG Split Squat`. This would correct the current
+   row but leave the formatter ignorant of the acronym on any other surface.
+2. Add `ATG` to the shared formatter's known exercise-term owner. Chosen
+   because every existing screen and projection route already uses that owner,
+   and canonical matching remains untouched.
+
+Red-first evidence: the new exact `test:exercise-display` cell returned
+`Atg Split Squat` and the suite reported 29 / 1. After the acronym owner was
+corrected it reports 30 / 30. Removing that one mapping recreates the original
+named failure, so the cell is live.
+
+R-291 is recorded in `docs/RULINGS_REGISTRY.md` and registry row
+`LAW-atg-exercise-display-acronym` names the chained guard. The law-registry
+gate accepts the new row and reports 225 total / 204 guarded; it remains red on
+the same 21 inherited `UNENFORCED` laws. `test:compile` reports product 0 and
+devtools 0, retaining the same four inherited test-harness errors in three
+unrelated files.
+
+NOT COVERED at this checkpoint: the new physical-iPhone Release, visual glass
+acceptance, Dynamic Type/VoiceOver, and unrelated display-copy acronyms. The
+canonical programming identity, selection, cues and videos were not changed.

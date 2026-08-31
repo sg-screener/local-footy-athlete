@@ -7324,3 +7324,15 @@ Guard: `LAW-conditioning-athlete-copy-is-complete-and-clock-readable` and
 `test:conditioning-templates`. Supporting census and simulator verification:
 `test:conditioning-copy-census`, `.maestro/visible/conditioning-one-prescription.yaml`
 and `docs/STATUS_CONDNAMES.md`.
+
+**R-291** · ATG remains an acronym in exercise display copy, 2026-08-31.
+
+Owner: selectionrepair. Every athlete-facing exercise projection writes
+`ATG Split Squat`, never `Atg Split Squat`. The canonical catalogue identity
+was already correct; the shared display formatter must preserve `ATG` as an
+acronym rather than title-casing it as an ordinary word. Matching, cue, video
+and programming identities remain unchanged.
+
+Guard: `LAW-atg-exercise-display-acronym` and `test:exercise-display`.
+Verification status and physical-phone receipt:
+`docs/STATUS_SELECTIONREPAIR.md`.

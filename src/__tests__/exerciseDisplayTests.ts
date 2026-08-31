@@ -55,6 +55,12 @@ eq(
   'BB RDL ISO Hold Into EMOM',
 );
 
+eq(
+  'preserves ATG in the canonical split-squat name',
+  formatExerciseDisplayName('ATG Split Squat'),
+  'ATG Split Squat',
+);
+
 eq('handles null defensively', formatExerciseDisplayName(null), '');
 eq('handles blank defensively', formatExerciseDisplayName('   '), '');
 

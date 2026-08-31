@@ -2,6 +2,7 @@ import { conditioningDisplayTitleForName } from '../rules/conditioningDisplay';
 
 const KNOWN_EXERCISE_TERMS: Record<string, string> = {
   amrap: 'AMRAP',
+  atg: 'ATG',
   bb: 'BB',
   bbs: 'BBs',
   bw: 'BW',

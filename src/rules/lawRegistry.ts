@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-atg-exercise-display-acronym',
+    law: 'R-291: every athlete-facing exercise projection writes ATG Split Squat, never Atg Split Squat; the shared display formatter preserves ATG as an acronym without changing the canonical programming identity.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-291',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-display',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. The catalogue already authored ATG Split Squat, but the shared display formatter returned Atg Split Squat. The exact cell began red at 29/1. Adding ATG to the formatter acronym owner returned the suite green; deleting that one mapping recreates the original red. Matching, cues, videos and programming source identities were not changed. Physical Release receipt: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-290: every one of the 55 conditioning templates has one complete athlete-facing title, work, recovery, count, intensity and coaching cue. Sprint distance is shown as distance rather than an approximate duration, timing uses simple clock intervals or departures where that preserves the session intent, and every non-flush standalone session uses the approved Warm-up build-up copy. The signed template remains the owner of physiology, eligibility, modality limits and safety caps.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-290',
