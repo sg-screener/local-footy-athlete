@@ -2229,6 +2229,14 @@ function rollingHorizonFixtureSignature(
   ].join('|')).join('||');
 }
 
+function strongG1RepairFindings(
+  projection: RollingHorizonFixtureRepairProjection,
+) {
+  return projection.replan.gateway.craft.blocking.filter((finding) =>
+    finding.ruleId === 'g1_not_light' &&
+    (finding.severity === 'strong' || finding.severity === 'hard_stop'));
+}
+
 /**
  * The sole fixture rolling-horizon staging owner. It closes the dependency
  * graph, repairs every materialised week from the same accepted snapshot and
@@ -2328,13 +2336,24 @@ export function stageRollingHorizonFixtureRepair(args: {
     markedDays: args.afterMarkedDays,
     weekStarts,
   });
-  const search = searchRollingHorizonCandidateCombinations({
-    candidateGroups: projectionResults.map(({ weekStart, projection }) =>
-      projection.alternatives.map((alternative) => ({
+  const candidateGroups = projectionResults.map(({ weekStart, projection }) =>
+    projection.alternatives.map((alternative) => ({
         weekStart,
         overlay: alternative.overlay,
         replan: alternative.replan,
-      }))),
+      })).filter((candidate) => strongG1RepairFindings(candidate).length === 0));
+  if (candidateGroups.some((group) => group.length === 0)) {
+    const blockedWeeks = projectionResults.flatMap(({ weekStart, projection }) =>
+      projection.alternatives.some((alternative) =>
+        strongG1RepairFindings({
+          weekStart,
+          overlay: alternative.overlay,
+          replan: alternative.replan,
+        }).length === 0) ? [] : [weekStart]);
+    throw new Error(`fixture_repair_strong_g1_violation:${blockedWeeks.join(',')}`);
+  }
+  const search = searchRollingHorizonCandidateCombinations({
+    candidateGroups,
     score: (candidate) => scoreRollingHorizonFixtureCandidate({
       projections: candidate,
       activeFixtureDates,

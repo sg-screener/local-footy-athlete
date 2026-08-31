@@ -48,6 +48,7 @@ import type {
   PlanChangeMoveScopeId,
   PlanChangeBinScopeId,
   TeamNightMoveRouteId,
+  G1LandingRouteId,
 } from '../utils/planChangeTypes';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
@@ -190,6 +191,10 @@ export type ProgramControlAction =
       fromDate: string;
       toDate: string;
       scope?: PlanChangeMoveScopeId;
+      /** The exact answer selected in the G-1 warning. It is part of the
+       * durable move decision, not transient sheet state: replay must feed the
+       * compiler the same answered move that the athlete committed. */
+      g1Route?: G1LandingRouteId;
       /** R-226/R-231: the athlete's swap-or-keep answer when flagged lifts
        *  land on a team night. Travels the action so the durable door and the
        *  boot replay carry the SAME answer the sheet carried. */
@@ -382,6 +387,15 @@ export type ProgramControlAction =
        * known, so this payload states the SPAN and nothing else.
        */
       awaySpan?: { from: string; until: string };
+      /**
+       * The equipment half of the same Away answer. `null` means normal kit;
+       * an object means those owned items are unavailable for `awaySpan`.
+       * Presence (including null) declares the complete atomic Away intent.
+       */
+      awayEquipment?: {
+        tags: readonly EquipmentTag[];
+        conditioningModalities: readonly ConditioningEquipmentModality[];
+      } | null;
       /**
        * THE CHRISTMAS BREAK — SEAT_INBOX item 31 part 5, Sam 2026-08-13:
        * *"an athlete can select when their last team training is, and then

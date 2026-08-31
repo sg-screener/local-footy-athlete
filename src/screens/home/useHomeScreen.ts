@@ -1276,10 +1276,17 @@ export function useHomeScreen() {
    * club-bound work goes, solo work stays. The door that stood here sent
    * `clear_days` and lost the whole day.
    */
-  const handleApplyAwaySpan = useCallback(async (
+  const handleApplyAway = useCallback(async (
     span: { from: string; until: string },
+    equipment: EquipmentLimitationDecision | null,
   ) => {
     const todayISO = todayISOLocal();
+    const awayEquipment = equipment?.kind === 'missing_for_span'
+      ? {
+          tags: equipment.tags,
+          conditioningModalities: equipment.conditioningModalities,
+        }
+      : null;
     const result = await executeProgramControlActionDurably({
       type: 'set_schedule_modifier',
       source: {
@@ -1288,7 +1295,9 @@ export function useHomeScreen() {
         initiatedBy: 'tap',
       },
       scope: 'current_week',
-      payload: { date: span.from, todayISO, awaySpan: span },
+      // One durable answer owns both halves of the trip. Presence of
+      // `awayEquipment`, including null, makes this an atomic Away intent.
+      payload: { date: span.from, todayISO, awaySpan: span, awayEquipment },
       requiresRebuild: false,
       createsActiveModifier: true,
       oneOffOnly: false,
@@ -1347,32 +1356,6 @@ export function useHomeScreen() {
   const handleDismissChristmasBreakAsk = useCallback((dismissId: string) => {
     useCoachUpdatesStore.getState().dismissCoachNote(dismissId);
   }, []);
-
-  const handleApplyAwayEquipment = useCallback(async (
-    decision: EquipmentLimitationDecision,
-  ) => {
-    const todayISO = todayISOLocal();
-    const anchor = decision.kind === 'missing_for_span' ? decision.from : todayISO;
-    const result = await executeProgramControlActionDurably({
-      type: 'set_equipment_modifier',
-      source: {
-        screen: 'program_tab',
-        surface: 'away_this_week',
-        initiatedBy: 'tap',
-      },
-      scope: 'current_week',
-      payload: {
-        decision,
-        date: anchor,
-        todayISO,
-      },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { visibleWeek: weekDays, todayISO });
-    await handleProgramControlResult(result);
-    return result;
-  }, [weekDays, handleProgramControlResult]);
 
   // ── Missed sessions ──
   // The prompt does not own a parallel survey or move engine. It exposes the
@@ -1691,8 +1674,7 @@ export function useHomeScreen() {
     // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
     rolloverRefusal,
     handleRetryRollover,
-    handleApplyAwaySpan,
-    handleApplyAwayEquipment,
+    handleApplyAway,
     christmasBreakAsk,
     handleApplyChristmasBreak,
     handleDismissChristmasBreakAsk,

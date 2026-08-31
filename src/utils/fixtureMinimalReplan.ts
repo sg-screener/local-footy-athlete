@@ -262,7 +262,10 @@ function releaseProvenance(provenance: AvailabilityProvenance): boolean {
  * proximity rewrite documents. A day that is itself a fixture is the game's,
  * not G+1's.
  */
-function gamePlusOneDayNumbers(args: BuildFixtureMinimalReplanInput): Set<number> {
+function gameProximityDayNumbers(
+  args: BuildFixtureMinimalReplanInput,
+  offsetFromFixture: -1 | 1,
+): Set<number> {
   const fixtureDates = new Set<string>([
     ...args.proposedFixtures.map((fixture) => fixture.date.slice(0, 10)),
     ...Array.from(args.activeFixtureDates ?? [], (date) => date.slice(0, 10)),
@@ -275,12 +278,33 @@ function gamePlusOneDayNumbers(args: BuildFixtureMinimalReplanInput): Set<number
     date.setDate(date.getDate() + offset);
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (fixtureDates.has(iso)) continue;
-    const before = new Date(date);
-    before.setDate(before.getDate() - 1);
-    const beforeISO = `${before.getFullYear()}-${String(before.getMonth() + 1).padStart(2, '0')}-${String(before.getDate()).padStart(2, '0')}`;
-    if (fixtureDates.has(beforeISO)) days.add(date.getDay());
+    const fixture = new Date(date);
+    fixture.setDate(fixture.getDate() - offsetFromFixture);
+    const fixtureISO = `${fixture.getFullYear()}-${String(fixture.getMonth() + 1).padStart(2, '0')}-${String(fixture.getDate()).padStart(2, '0')}`;
+    if (fixtureDates.has(fixtureISO)) days.add(date.getDay());
   }
   return days;
+}
+
+function gamePlusOneDayNumbers(args: BuildFixtureMinimalReplanInput): Set<number> {
+  return gameProximityDayNumbers(args, 1);
+}
+
+/**
+ * Automatic repair never owns the athlete-warning exception. G-1 routes are
+ * explicit athlete answers; a fixture repair has no answer and therefore may
+ * not relocate strength or conditioning onto that day. Date-exact, using the
+ * same real-fixture authority as G+1, so a next-week Saturday protects this
+ * week's Friday without inventing a blanket weekday ban.
+ */
+function gameMinusOneDayNumbers(args: BuildFixtureMinimalReplanInput): Set<number> {
+  return gameProximityDayNumbers(args, -1);
+}
+
+function hasStrongG1Violation(gateway: Section18AcceptedWeekGatewayResult): boolean {
+  return gateway.craft.blocking.some((finding) =>
+    finding.ruleId === 'g1_not_light' &&
+    (finding.severity === 'strong' || finding.severity === 'hard_stop'));
 }
 
 /** Remove only fixture-owned content; unaffected app sessions remain byte-stable inputs. */
@@ -791,10 +815,12 @@ function addStrengthDeltaVariants(args: {
   // generated target (measured: the born-red guard's Monday came back as
   // "Lower Body Strength" through this very search).
   const gamePlusOneDays = gamePlusOneDayNumbers(args.input);
+  const gameMinusOneDays = gameMinusOneDayNumbers(args.input);
   const placementDays = args.input.availability.effectiveAvailableDayNumbers
     .filter((day) => {
       if (args.occupied.has(day)) return false;
       if (gamePlusOneDays.has(day)) return false;
+      if (gameMinusOneDays.has(day)) return false;
       const existing = sourceMap.get(day);
       return !existing || isOptional(existing) ||
         existing.workoutType === 'Recovery' || existing.workoutType === 'Rest' ||
@@ -1151,6 +1177,7 @@ export function buildFixtureMinimalReplan(
   const source = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts);
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
+  const gameMinusOneDays = gameMinusOneDayNumbers(args);
   const releasedDays = new Set(args.availability.days
     .filter((day) => day.provenance.some(releaseProvenance))
     .map((day) => day.dayNumber));
@@ -1221,6 +1248,7 @@ export function buildFixtureMinimalReplan(
           );
           const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
             if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
+            if (gameMinusOneDays.has(day)) return false;
             const workout = sourceMap.get(day);
             return !workout || (hasMainStrength(workout) && !isTeamTraining(workout)) ||
               workout.derivedSessionProvenance
@@ -1276,7 +1304,7 @@ export function buildFixtureMinimalReplan(
               surfaces: args.surfaces,
               resolveVisibleWorkouts: visibleResolver(args),
             });
-            if (gateway.status === 'impossible') {
+            if (gateway.status === 'impossible' || hasStrongG1Violation(gateway)) {
               rejectedCandidates.push({
                 gateway,
                 workouts: gateway.canonicalWorkouts,

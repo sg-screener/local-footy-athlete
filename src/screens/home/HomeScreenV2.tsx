@@ -169,8 +169,7 @@ export default function HomeScreenV2() {
     handleCancelMove,
     handleViewWorkout,
     handleApplyGuidedInjury,
-    handleApplyAwaySpan,
-    handleApplyAwayEquipment,
+    handleApplyAway,
     christmasBreakAsk,
     handleApplyChristmasBreak,
     handleDismissChristmasBreakAsk,
@@ -1781,59 +1780,49 @@ export default function HomeScreenV2() {
           // home on the day they return, and the program is normal again that
           // morning without them clearing anything.
           const span = { from: leaveISO, until: addDaysISO(returnISO, -1) };
-          // THE TRIP IS WRITTEN FOR EVERY ANSWER (Sam, 2026-08-13: *"yes clear
-          // team training and games while away"*). The club is shut to him
-          // whatever is in his suitcase; the equipment answer only decides what
-          // his OWN sessions look like.
-          const result = await handleApplyAwaySpan(span);
-          const ack = buildScheduleAcknowledgment(
-            result, equipment === 'same' ? 'away' : 'away_equipment');
-          recordScheduleAckPresented({
-            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
-          });
           const closeAll = () => {
             setAwayVisible(false);
             setWeekEditVisible(false);
             awayApplyBusyRef.current = false;
           };
-          if (!result?.ok || equipment === 'same') {
-            closeAll();
-            setScheduleAck(ack);
+          if (equipment === 'some') {
+            // The kit step is still part of this answer; no trip fact is
+            // committed until the athlete has supplied the missing-kit half.
+            setAwayEquipmentSpan(span);
+            awayApplyBusyRef.current = false;
             return;
           }
+          let decision: EquipmentLimitationDecision | null = null;
           if (equipment === 'bodyweight') {
             // Checklist #10: "bodyweight only as anohter option". The whole
             // kit goes through the same missing_for_span door the kit step
             // uses — the fullest version of the same answer, no new fact
             // shape. An already-bodyweight athlete has nothing to mark.
             const kit = ownedEquipmentKit();
-            if (kit.tags.length === 0 && kit.conditioningModalities.length === 0) {
-              closeAll();
-              setScheduleAck(ack);
-              return;
+            if (kit.tags.length > 0 || kit.conditioningModalities.length > 0) {
+              decision = {
+                kind: 'missing_for_span',
+                tags: kit.tags,
+                conditioningModalities: kit.conditioningModalities,
+                from: span.from,
+                until: span.until,
+              };
             }
-            const equipmentResult = await handleApplyAwayEquipment({
-              kind: 'missing_for_span',
-              tags: kit.tags,
-              conditioningModalities: kit.conditioningModalities,
-              from: span.from,
-              until: span.until,
-            });
-            const equipmentAck = buildScheduleAcknowledgment(equipmentResult, 'away_equipment');
-            recordScheduleAckPresented({
-              traceId: equipmentResult?.traceId, surface: 'away_this_week', tone: equipmentAck.tone,
-            });
-            closeAll();
-            setScheduleAck(equipmentAck);
-            return;
           }
-          setAwayEquipmentSpan(span);
-          awayApplyBusyRef.current = false;
+          const result = await handleApplyAway(span, decision);
+          const ack = buildScheduleAcknowledgment(
+            result, equipment === 'same' ? 'away' : 'away_equipment');
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
+          closeAll();
+          setScheduleAck(ack);
         }}
         onAwayKitApply={async (decision) => {
           // CLOSING IS THE CONFIRMATION, so it may only happen on success — the
           // athlete must never watch a sheet dismiss over a refused commit.
-          const result = await handleApplyAwayEquipment(decision);
+          if (!awayEquipmentSpan) return;
+          const result = await handleApplyAway(awayEquipmentSpan, decision);
           const ack = buildScheduleAcknowledgment(result, 'away_equipment');
           setScheduleAck(ack);
           recordScheduleAckPresented({
@@ -4351,7 +4340,9 @@ function AwayFlowBody({ visible, kitSpan, onApplyKit, onKitBack, onClose, onDone
           <>
             <SheetHeader title="Away" subtitle="Do you have your normal equipment?" />
             <SheetDescription>
-              Away {shortDayMonthLabel(leaveISO)} to {shortDayMonthLabel(returnISO)}.
+              Away {shortDayMonthLabel(leaveISO)} through{' '}
+              {shortDayMonthLabel(addDaysISO(returnISO, -1))}. Returning{' '}
+              {shortDayMonthLabel(returnISO)} — your normal plan resumes that day.
             </SheetDescription>
             {/* THREE ANSWERS, SAM'S OWN LIST (checklist #10, 2026-08-26):
                 "same gear, some gear (taken to a scrollable pop up ... which

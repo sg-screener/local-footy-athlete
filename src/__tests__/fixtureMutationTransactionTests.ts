@@ -52,6 +52,7 @@ import {
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { undoLastDecision } from '../store/undoLastDecision';
 import {
   beginAthleteActionTrace,
   clearAthleteActionDiagnosticEvents,
@@ -59,6 +60,11 @@ import {
   getAthleteActionTracesV2,
 } from '../utils/athleteActionDiagnostics';
 import { executeHomeGameMutation } from './support/homeGameMutationCompat';
+import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
+import {
+  validateProgramWeek,
+  validatorDaysFromResolvedWeek,
+} from '../rules/weekStructureValidator';
 
 const WEEK_START = '2026-03-23';
 const SATURDAY = '2026-03-28';
@@ -185,6 +191,41 @@ function visibleSemantic(athlete: OnboardingData): string {
   });
 }
 
+function fixtureSafetyAcrossMaterialisedHorizon(athlete: OnboardingData): {
+  strongG1: string[]; strongG2: string[]; signatures: string[];
+} {
+  const starts = (useProgramStore.getState().currentProgram?.microcycles ?? [])
+    .map((week) => week.startDate.slice(0, 10));
+  const weeks = starts.map((start) => deriveVisibleWeekLive(start, WEEK_START));
+  const gameDates = weeks.flatMap((week) => week
+    .filter((day) => /Game/i.test(`${day.workout?.name ?? ''} ${day.workout?.workoutType ?? ''}`))
+    .map((day) => day.date));
+  const strongG1: string[] = [];
+  const strongG2: string[] = [];
+  for (const week of weeks) {
+    const report = validateProgramWeek({
+      days: validatorDaysFromResolvedWeek(week),
+      anchors: { gameDates },
+      profile: athlete,
+    });
+    for (const finding of report.findings) {
+      if (finding.severity !== 'strong' && finding.severity !== 'hard_stop') continue;
+      if (finding.ruleId === 'g1_not_light') strongG1.push(`${finding.dates.join(',')}:${finding.detail}`);
+      if (finding.ruleId.startsWith('g2_')) strongG2.push(`${finding.ruleId}:${finding.dates.join(',')}`);
+    }
+  }
+  return {
+    strongG1,
+    strongG2,
+    signatures: weeks.map((week) => JSON.stringify(week.map((day) => ({
+      date: day.date,
+      id: day.workout?.planEntryId ?? day.workout?.id ?? null,
+      name: day.workout?.name ?? null,
+      rows: day.workout?.exercises.map((row) => row.exercise?.name) ?? [],
+    })))),
+  };
+}
+
 async function assertFixtureMutation(args: {
   phase: 'In-season' | 'Pre-season';
   withFixture: boolean;
@@ -211,6 +252,9 @@ async function assertFixtureMutation(args: {
       result.outcome !== 'impossible',
     JSON.stringify(result),
   );
+  const safety = fixtureSafetyAcrossMaterialisedHorizon(athlete);
+  assert(safety.strongG1.length === 0,
+    `fixture ${args.action} delivered strong G-1 work: ${safety.strongG1.join(' | ')}`);
   assert(lastAdjustment()?.kind === args.expectedKind,
     `kind=${lastAdjustment()?.kind}`);
   assert(
@@ -606,6 +650,64 @@ async function main(): Promise<void> {
       /executeFixtureMutationTransaction\(command\)/.test(coachAdapter) &&
       !/rebuildLocalWeek|runCoachMutationTransaction|upsertGameChangeCoachNoteFromDiff/.test(coachAdapter)),
     'Coach adapter introduced a second fixture mutation engine');
+  });
+
+  await run('15 Saturday-to-Sunday repair stays G-1 safe across the next fixture, restart and Undo', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const before = fixtureSafetyAcrossMaterialisedHorizon(athlete);
+    const mondayBefore = deriveVisibleWeekLive(WEEK_START, WEEK_START)
+      .find((day) => day.date === WEEK_START)?.workout;
+    assert(mondayBefore, 'known journey did not reach Monday work');
+    const moved = await executeFixtureMutationTransaction(input({
+      action: 'move', fixtureKind: 'game', sourceDate: SATURDAY, targetDate: SUNDAY,
+      source: source('known-phone-sat-to-sun'),
+    }));
+    assert(moved.outcome === 'accepted', JSON.stringify(moved));
+    const after = fixtureSafetyAcrossMaterialisedHorizon(athlete);
+    assert(after.strongG1.length === 0,
+      `published the known G-1 violation: ${after.strongG1.join(' | ')}`);
+    assert(after.strongG2.length === 0,
+      `published work forbidden by the existing G-2 rules: ${after.strongG2.join(' | ')}`);
+    const afterRows = after.signatures.join('|');
+    const mondayIdentity = mondayBefore.planEntryId ?? mondayBefore.id;
+    assert(afterRows.includes(mondayIdentity),
+      `displaced Monday training ${mondayIdentity} was silently deleted`);
+    const exactAfter = JSON.stringify(after.signatures);
+    const { relaunchApp } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const restart = await relaunchApp({ storage: localStorageData, todayISO: WEEK_START });
+    assert(restart.ok, restart.error ?? 'restart failed');
+    assert(JSON.stringify(fixtureSafetyAcrossMaterialisedHorizon(athlete).signatures) === exactAfter,
+      'restart reconstructed a different repaired horizon');
+    const undone = await undoLastDecision();
+    assert(undone.outcome === 'undone', JSON.stringify(undone));
+    assert(JSON.stringify(fixtureSafetyAcrossMaterialisedHorizon(athlete).signatures)
+      === JSON.stringify(before.signatures), 'Undo did not restore the pre-move horizon');
+  });
+
+  await run('16 Sunday-to-Saturday and bye-week Remove remain G-1 safe without a blanket G-2 ban', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const toSunday = await executeFixtureMutationTransaction(input({
+      action: 'move', fixtureKind: 'game', sourceDate: SATURDAY, targetDate: SUNDAY,
+    }));
+    assert(toSunday.outcome === 'accepted', JSON.stringify(toSunday));
+    const toSaturday = await executeFixtureMutationTransaction(input({
+      action: 'move', fixtureKind: 'game', sourceDate: SUNDAY, targetDate: SATURDAY,
+    }));
+    assert(toSaturday.outcome === 'accepted', JSON.stringify(toSaturday));
+    assert(fixtureSafetyAcrossMaterialisedHorizon(athlete).strongG1.length === 0,
+      'Sunday-to-Saturday delivered strong G-1 work');
+    const removed = await executeFixtureMutationTransaction(input({
+      action: 'remove', fixtureKind: 'game', sourceDate: SATURDAY,
+    }));
+    assert(removed.outcome === 'accepted', JSON.stringify(removed));
+    assert(fixtureSafetyAcrossMaterialisedHorizon(athlete).strongG1.length === 0,
+      'bye-week removal delivered strong G-1 work');
+    const sourceText = require('fs').readFileSync(
+      `${__dirname}/../utils/fixtureMinimalReplan.ts`, 'utf8') as string;
+    assert(!/gameMinusTwoDayNumbers|gameMinusTwoDays/.test(sourceText),
+      'fixture repair invented a blanket G-2 exclusion instead of using the existing validator rules');
   });
 }
 

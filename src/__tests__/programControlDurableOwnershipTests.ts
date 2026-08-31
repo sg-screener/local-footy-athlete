@@ -831,12 +831,12 @@ async function main(): Promise<void> {
     // PROPERTY is unchanged and is the whole point — the result is
     // acknowledged, the ack reaches the tape, and the sheet may only close on
     // `ok`, because closing IS the confirmation.
-    assert(/const result = await handleApplyAwayEquipment\(decision\);[\s\S]{0,300}?setScheduleAck\(ack\);/
+    assert(/const result = await handleApplyAway\(awayEquipmentSpan, decision\);[\s\S]{0,300}?setScheduleAck\(ack\);/
       .test(screen),
       'the away commit does not acknowledge its result');
     assert(/recordScheduleAckPresented\(\{\s*\n?\s*traceId: result\?\.traceId, surface: 'away_this_week', tone: ack\.tone,/.test(screen),
       'away_this_week: the ack presentation is not recorded on the tape');
-    assert(/if \(result\?\.ok\) setAwayEquipmentSpan\(null\);/.test(screen),
+    assert(/if \(result\?\.ok\) \{[\s\S]{0,120}?setAwayEquipmentSpan\(null\);/.test(screen),
       'the away equipment sheet closes without checking `ok` — closing IS the '
       + 'confirmation, so an unconditional close reports a success that did not '
       + 'happen');
@@ -849,22 +849,17 @@ async function main(): Promise<void> {
       && !/^\s*handleApplyShortOnTimeToday,\s*$/m.test(hook),
       'useHomeScreen still authors or exports the removed UI handler');
 
-    // ITEM 28: THE AWAY DOOR IS AN EQUIPMENT WRITER NOW, AND THAT IS THE CELL.
-    // The `travel` schedule fact it used to write marked the away dates
-    // UNAVAILABLE — it removed the sessions — which is the opposite of Sam's
-    // ruling twice over (*"if yes, follow same program"*) and would also have
-    // made this item vacuous: an equipment answer dated over days that hold no
-    // session substitutes nothing.
-    const awayStart = hook.indexOf('const handleApplyAwayEquipment');
+    // Away is one schedule action carrying its linked equipment answer. A
+    // second durable equipment action would reintroduce partial application.
+    const awayStart = hook.indexOf('const handleApplyAway');
     assert(awayStart > 0, 'useHomeScreen no longer owns an away handler at all');
     const awayBody = hook.slice(awayStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', awayStart));
-    assert(/type: 'set_equipment_modifier'/.test(awayBody)
-      && /surface: 'away_this_week'/.test(awayBody),
-      'the away handler no longer writes an equipment decision through the door '
-      + 'that names it');
-    assert(!/set_schedule_modifier/.test(awayBody) && !/clear_days/.test(awayBody),
-      'the away handler is writing a schedule fact again — that is the door that '
-      + 'took the athlete\'s sessions away while they were travelling');
+    assert(/type: 'set_schedule_modifier'/.test(awayBody)
+      && /surface: 'away_this_week'/.test(awayBody)
+      && /awaySpan: span, awayEquipment/.test(awayBody),
+      'the away handler no longer carries travel and equipment through one action');
+    assert(!/type: 'set_equipment_modifier'/.test(awayBody) && !/clear_days/.test(awayBody),
+      'the away handler has regained a second equipment write or day-clearing route');
   });
 
   // ────────────────────────────────────────────────────────────────────────

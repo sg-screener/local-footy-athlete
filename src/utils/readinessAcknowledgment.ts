@@ -39,6 +39,8 @@ interface ReadinessResultLike {
   /** The fixture's own kind, from the one owner that also picks the card
    *  label (`FixtureAvailabilityKind`) — selects the §10 sentence variant. */
   inertFixtureVariant?: string;
+  /** Typed refusal used to choose athlete copy. Never rendered raw. */
+  failureReason?: string;
 }
 
 /**
@@ -215,6 +217,20 @@ export function buildScheduleAcknowledgment(
         ? "Got it — logged that you're short on time today. Today's session is "
           + 'compressed to fit — main lift kept, inside 35 minutes.'
         : "Got it — logged that you're short on time today.",
+    };
+  }
+  // Away is a two-fact atomic transaction. Its typed refusal must not collapse
+  // into the generic sentence that hid the preserved-phone failure.
+  if ((door === 'away' || door === 'away_equipment') && result?.failureReason) {
+    if (result.failureReason === 'accepted_revision_changed') {
+      return {
+        tone: 'error',
+        message: 'Your trip was not saved because your week changed while it was being applied. Travel and equipment stayed unchanged.',
+      };
+    }
+    return {
+      tone: 'error',
+      message: 'Your trip was not saved because the rebuilt week could not be safely verified. Travel and equipment stayed unchanged.',
     };
   }
   // R-228a: the failure states itself; no retry promise.

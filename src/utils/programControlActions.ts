@@ -81,6 +81,7 @@ import {
   type AthleteActionType,
 } from './athleteActionDiagnostics';
 import { runCoachMutationTransaction } from '../store/coachMutationTransaction';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import {
   createOrUpdateInjuryEpisode,
   proposeInjuryEpisodeFacts,
@@ -98,6 +99,7 @@ import {
   isTemporaryEquipmentFact,
   isInjurySourceFact,
   isNonInjuryTemporarySourceFact,
+  normalizeTemporarySourceFacts,
   temporaryFactScope,
   temporarySourceFactId,
   type TemporarySourceFactScope,
@@ -191,6 +193,9 @@ export interface ProgramControlActionResult {
   inertReason?: TemporarySourceFactInertReason;
   /** The fixture's kind — picks the §10 sentence variant. */
   inertFixtureVariant?: FixtureAvailabilityKind;
+  /** Typed internal refusal carried to the acknowledgment mapper. Never render
+   * this raw; it selects useful athlete copy and remains available to traces. */
+  failureReason?: string;
 }
 
 const SETUP_ACTIONS = new Set<ProgramControlActionType>([
@@ -415,6 +420,7 @@ function planChangeForAction(action: ProgramControlAction): PlanChange | null {
       fromDate: action.payload.fromDate,
       toDate: action.payload.toDate,
       ...(action.payload.scope ? { scope: action.payload.scope } : {}),
+      ...(action.payload.g1Route ? { g1Route: action.payload.g1Route } : {}),
       // R-226: the answer travels; dropping it here re-raised the ask as a
       // refusal on the durable path (caught by the equivalence harness when
       // R-231 made the standard world's moved session carry flagged lifts).
@@ -472,6 +478,10 @@ export function programControlActionForPlanChange(
         // the sheet offered "just the gym session", the payload could not say
         // so, and the whole day moved.
         ...(change.scope ? { scope: change.scope } : {}),
+        // The G-1 answer is part of the move itself. Omitting it here made the
+        // durable twin reconstruct an unanswered move and refuse after the
+        // athlete had already selected one of the four routes.
+        ...(change.g1Route ? { g1Route: change.g1Route } : {}),
         // R-226: the swap-or-keep answer rides the same boundary.
         ...(change.teamNightContentRoute
           ? { teamNightContentRoute: change.teamNightContentRoute }
@@ -1685,6 +1695,7 @@ async function executeProgramControlActionDurablyWithinTrace(
         message: result.ok
           ? 'Equipment available again. The accepted program was recomposed and verified.'
           : 'The equipment restriction was not cleared because the accepted program could not be verified.',
+        failureReason: result.ok ? undefined : result.reason,
         fallbackToCoach: false,
         route: routeProgramControlAction(action).route,
       };
@@ -1741,6 +1752,7 @@ async function executeProgramControlActionDurablyWithinTrace(
       requiresRebuild: false,
       createdModifierIds: ok ? [fact.factId] : undefined,
       message: result.message,
+      failureReason: ok ? undefined : result.reason,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };
@@ -1815,6 +1827,8 @@ async function executeProgramControlActionDurablyWithinTrace(
     const sourceSurface = action.source.surface ?? action.source.screen;
     const awayDates = scheduleModifierAwayDates(action);
     const awaySpan = action.payload.awaySpan;
+    const atomicAwayIntent = awaySpan &&
+      Object.prototype.hasOwnProperty.call(action.payload, 'awayEquipment');
     const breakSpan = action.payload.noTeamTrainingSpan;
     /* THE "SHORT ON TIME TODAY" DOOR IS DELETED (Sam, 2026-08-21).
      *
@@ -1861,6 +1875,59 @@ async function executeProgramControlActionDurablyWithinTrace(
           sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
           sourceSurface,
         });
+    if (atomicAwayIntent && awaySpan) {
+      const accepted = normalizeAcceptedMaterialContext(
+        useProgramStore.getState().acceptedMaterialContext,
+      );
+      const awayEquipment = action.payload.awayEquipment;
+      const equipmentFact = awayEquipment ? createTemporaryEquipmentFact({
+        observedDate: awaySpan.from.slice(0, 10),
+        scope: temporaryFactScope({
+          kind: 'window',
+          from: awaySpan.from.slice(0, 10),
+          until: awaySpan.until.slice(0, 10),
+        }),
+        mode: 'without',
+        equipmentTags: awayEquipment.tags,
+        conditioningModalities: awayEquipment.conditioningModalities,
+        sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+        sourceSurface,
+      }) : null;
+      const nextFacts = normalizeTemporarySourceFacts({
+        value: [
+          ...accepted.temporarySourceFacts,
+          fact,
+          ...(equipmentFact ? [equipmentFact] : []),
+        ],
+      });
+      const atomic = await commitTemporarySourceFactSet({
+        nextFacts,
+        targetFactId: fact.factId,
+        todayISO,
+        reason: 'temporary_source_fact:atomic_away',
+        expectedAcceptedRevision: accepted.revision,
+      });
+      if (atomic.ok) {
+        // The live door and restart both settle through the same compiler fold.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { settleDerivedWorldAfterDecision } = require('../store/quiescentBoot');
+        await settleDerivedWorldAfterDecision();
+      }
+      return {
+        ok: atomic.ok,
+        changedProgram: atomic.changedProgram,
+        requiresRebuild: false,
+        createdModifierIds: atomic.ok
+          ? [fact.factId, ...(equipmentFact ? [equipmentFact.factId] : [])]
+          : undefined,
+        message: atomic.ok
+          ? 'Travel dates and equipment were saved together.'
+          : 'Your trip was not applied because the rebuilt week could not be safely verified. Travel and equipment stayed unchanged.',
+        failureReason: atomic.ok ? undefined : atomic.reason,
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
     const result = await transactTemporarySourceFact({
       operation: 'create',
       fact,
@@ -1891,6 +1958,7 @@ async function executeProgramControlActionDurablyWithinTrace(
       requiresRebuild: false,
       createdModifierIds: ok ? [fact.factId] : undefined,
       message: result.message,
+      failureReason: ok ? undefined : result.reason,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
       // The typed WHY of an inert commit (fixture day — §7) flows through so

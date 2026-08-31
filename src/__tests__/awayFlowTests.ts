@@ -45,6 +45,7 @@ const memory = new Map<string, string>();
 import * as fs from 'fs';
 import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { DEV_E2E_STANDARD_PROFILE } from '../dev/e2e/devE2EStandardProfile';
 
 const {
   ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
@@ -101,6 +102,7 @@ console.log('\n-- The away flow (SEAT_INBOX item 28) --');
 
 function profile() {
   return {
+    ...DEV_E2E_STANDARD_PROFILE,
     trainingLocation: 'Commercial gym' as const,
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete' as const,
@@ -166,7 +168,7 @@ const LAST_DAY_AWAY = '2026-08-26';
 const TODAY = '2026-08-13';
 
 const awayAction = {
-  type: 'set_equipment_modifier' as const,
+  type: 'set_schedule_modifier' as const,
   source: {
     screen: 'program_tab' as const,
     surface: 'away_this_week',
@@ -174,12 +176,10 @@ const awayAction = {
   },
   scope: 'current_week' as const,
   payload: {
-    decision: {
-      kind: 'missing_for_span' as const,
+    awaySpan: { from: LEAVE, until: LAST_DAY_AWAY },
+    awayEquipment: {
       tags: ['barbell', 'machine'] as const,
       conditioningModalities: ['row'] as const,
-      from: LEAVE,
-      until: LAST_DAY_AWAY,
     },
     date: LEAVE,
     todayISO: TODAY,
@@ -198,6 +198,15 @@ function equipmentFacts() {
   ) as any[];
 }
 
+function travelFacts() {
+  const accepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  return accepted.temporarySourceFacts.filter(
+    (fact: any) => fact.factKind === 'schedule' && fact.scheduleKind === 'travel',
+  ) as any[];
+}
+
 async function main(): Promise<void> {
   await Promise.all([
     useProgramStore.persist.rehydrate(),
@@ -211,8 +220,8 @@ async function main(): Promise<void> {
   const facts = equipmentFacts();
   const fact = facts[0];
   run('the away answer commits', result.ok === true, result.message);
-  run('[1] the away answer is ONE equipment fact, marked as missing',
-    facts.length === 1 && fact?.mode === 'without'
+  run('[1] the away answer atomically commits one trip and one equipment fact',
+    travelFacts().length === 1 && facts.length === 1 && fact?.mode === 'without'
       && fact?.equipmentTags.includes('barbell')
       && fact?.equipmentTags.includes('machine')
       && fact?.conditioningModalities.includes('row'),
@@ -253,13 +262,19 @@ async function main(): Promise<void> {
 
   // ── [4] "I'M BACK NOW" IS THE EARLY EXIT ─────────────────────────────────
   const cleared = await executeProgramControlActionDurably({
-    ...awayAction,
-    payload: { decision: { kind: 'available_again' }, date: TODAY, todayISO: TODAY },
+    type: 'clear_fatigue_status',
+    source: awayAction.source,
+    scope: 'current_and_future',
+    payload: { modifierId: travelFacts()[0]?.factId, date: TODAY },
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: false,
   } as any, { todayISO: TODAY });
-  run('[4] "equipment available again" resolves the away fact early',
+  run('[4] clearing the trip resolves travel and linked equipment together',
     cleared.ok === true
-      && equipmentFacts().every((f) => f.status !== 'active'),
-    equipmentFacts().map((f) => f.status));
+      && equipmentFacts().every((f) => f.status !== 'active')
+      && travelFacts().every((f) => f.status !== 'active'),
+    [...travelFacts(), ...equipmentFacts()].map((f) => f.status));
 
   // ── [5] THE DOOR NEVER TAKES THE SESSIONS AWAY AGAIN ─────────────────────
   // SOURCE-PINNED, because the regression is a single line returning to one
@@ -270,14 +285,16 @@ async function main(): Promise<void> {
   // the whole equipment answer above is vacuous if the sessions are not there.
   const hook = fs.readFileSync(
     path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
-  const awayStart = hook.indexOf('const handleApplyAwayEquipment');
+  const awayStart = hook.indexOf('const handleApplyAway');
   const awayBody = awayStart >= 0
     ? hook.slice(awayStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', awayStart))
     : '';
-  run('[5] the away door still exists and writes an equipment decision',
-    awayStart >= 0 && /type: 'set_equipment_modifier'/.test(awayBody));
-  run('[5b] the equipment half writes no schedule fact of its own',
-    awayBody.length > 0 && !/set_schedule_modifier/.test(awayBody));
+  run('[5] the away door writes the complete answer through one schedule action',
+    awayStart >= 0
+      && /type: 'set_schedule_modifier'/.test(awayBody)
+      && /awayEquipment/.test(awayBody));
+  run('[5b] the away door has no second equipment transaction',
+    awayBody.length > 0 && !/type: 'set_equipment_modifier'/.test(awayBody));
 
   // THE TRIP HALF WRITES A SCHEDULE FACT AND MUST NEVER CLEAR A DAY AGAIN.
   // Sam ruled BOTH things: the plan keeps running *"if yes, follow same
@@ -285,7 +302,7 @@ async function main(): Promise<void> {
   // `clear_days` payload cannot express the second without breaking the first —
   // it takes the whole day, gym session and all — which is why this cell names
   // the payload rather than the behaviour.
-  const spanStart = hook.indexOf('const handleApplyAwaySpan');
+  const spanStart = awayStart;
   const spanBody = spanStart >= 0
     ? hook.slice(spanStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', spanStart))
     : '';
@@ -361,6 +378,7 @@ async function main(): Promise<void> {
   // Retired post-generation rewrite probes [8]-[12]. The generated-week
   // probes below, and compilerYear/clearFacts, exercise travel at its input owner.
   const genProfile = {
+    ...DEV_E2E_STANDARD_PROFILE,
     trainingLocation: 'Commercial gym' as const,
     equipment: ['Full Gym'],
     equipmentSelectionCompleteness: 'complete' as const,
