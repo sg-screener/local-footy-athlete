@@ -4,6 +4,8 @@ import { chooseInjurySessionAdditions } from '../utils/injurySessionAdjustment';
 import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
+import { resolveComposedDose } from '../rules/composedDose';
+import { decideBlockBoundaryLoads, type BlockHistorySignal } from '../rules/blockBoundaryProgression';
 
 let passed = 0;
 function check(name: string, fn: () => void): void {
@@ -59,6 +61,48 @@ check('injury composition is independent of strength catalogue order', () => {
   } finally {
     for (const entries of arrays) entries.reverse();
   }
+});
+
+check('shoulder-prehab keeps its authored dose instead of inheriting an ordinary accessory band', () => {
+  const dose = resolveComposedDose({
+    identity: 'Bottoms-Up KB Press',
+    isMainLift: false,
+    poolSlot: null,
+    selectionSlot: 'shoulder_prehab',
+    seasonPhase: 'In-season',
+    offseasonSubphase: null,
+    authoredFallback: [2, 15, 15],
+  });
+  assert.deepEqual([dose.sets, dose.repsMin, dose.repsMax], [2, 6, 8]);
+  assert.equal(dose.category, 'authored_exercise');
+});
+
+check('shoulder-prehab load history is held rather than promoted as an ordinary strength lift', () => {
+  const history = {
+    qualifies: true,
+    lastRecordedLoadByExercise: { 'Bottoms-Up KB Press': 8 },
+  } as unknown as BlockHistorySignal;
+  const decisions = decideBlockBoundaryLoads({
+    history,
+    nextBlockWorkouts: [{
+      workoutType: 'Strength',
+      exercises: [{
+        id: 'row-bottoms-up', exerciseId: 'bottoms-up-press',
+        exercise: { name: 'Bottoms-Up KB Press', category: 'strength' },
+        prescribedSets: 2, prescribedRepsMin: 6, prescribedRepsMax: 8,
+        prescribedWeightKg: 8,
+        section18Evidence: {
+          protocolVersion: 1, role: 'strength_accessory', strengthPattern: null,
+          mainStrengthPattern: null, slot: 'shoulder_prehab',
+          provenance: 'composer_declaration',
+        },
+      }],
+    } as never],
+  });
+  assert.deepEqual(decisions.find((decision) => decision.exerciseName === 'Bottoms-Up KB Press'), {
+    exerciseId: 'bottoms-up-press', exerciseName: 'Bottoms-Up KB Press',
+    kind: 'history_held', previousLoadKg: 8, nextLoadKg: 8,
+  });
 });
 
 console.log(`programming final composition: ${passed} passed`);

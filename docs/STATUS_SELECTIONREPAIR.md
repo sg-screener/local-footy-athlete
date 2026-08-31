@@ -455,3 +455,43 @@ NOT COVERED at this checkpoint: physical-iPhone execution, native onboarding
 taps, athlete profiles outside the audited male/female inputs, Step 5's blocked
 Primer-length decision, and the final corrected lived-year classification and
 strange-session review in Step 9. The phone remains untouched.
+
+## Step 5 audit correction — prehab dose/load route
+
+The first Step 9 rerun proved the original Bottoms-Up diagnosis was only half
+closed. The identity no longer entered an ordinary strength candidate set, but
+when the legitimate `shoulder_prehab` route selected it, the composer still
+discarded the shoulder-health pool's authored 2 × 6–8 dose in favour of the
+generic 2 × 15 accessory band. At block boundaries the same row was then read
+as an ordinary progressable strength accessory: the corrected year showed 8 kg
+on its first occurrence and 36 kg for 2 × 15 by the final block.
+
+Compared two repairs:
+
+1. Cap `Bottoms-Up KB Press` by name. Rejected again: a spelling-specific cap
+   leaves every later shoulder-prehab identity exposed to the same route leak.
+2. Let the typed `shoulder_prehab` selection slot retain the dose authored by
+   its own pool, and make block progression hold exact recorded load on that
+   route instead of applying the main/secondary lift increment policy. Chosen.
+
+Red-first evidence: the new final-composition cells initially received 2 × 15
+instead of 2 × 6–8 and a qualifying 8 kg history produced
+`history_progressed`. They now pass with the authored dose and
+`history_held: 8 → 8`.
+
+Verification:
+
+- `test:programming-final-composition`: 4 / 4.
+- `test:block-two-progression`: 41 / 41.
+- `test:pools`: the same 478 / 4 baseline as clean checkpoint `959a9b87`; its
+  four stale caution/pin expectations are unrelated to dose or progression.
+- `test:compile`: product 0 and devtools 0; the same four inherited test-scope
+  errors remain.
+
+NOT COVERED at this correction: Step 5's Primer-length decision and the
+injury-adjusted part-name decision discovered by the final audit. The latter
+currently says `Lower Squat` after a 6/10 calf/Achilles injury correctly pauses
+all lower patterns and replaces them with upper/core work; Sam must choose
+whether that part should use its actual `Upper Pull` identity or a generic
+injury-adjusted identity. The full corrected audit is rerun in Step 9; no phone
+was touched.

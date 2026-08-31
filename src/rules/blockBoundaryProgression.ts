@@ -971,11 +971,12 @@ export function decideBlockBoundaryLoads(args: {
       // 'correct' the athlete's recorded number; their number remains the
       // base."* The increment is added to what they lifted, not to a
       // lattice-tidied version of it.
-      const increment = mayAutomaticallyIncrease(exerciseName)
+      const routeAllowsIncrease = row.section18Evidence?.slot !== 'shoulder_prehab';
+      const increment = routeAllowsIncrease && mayAutomaticallyIncrease(exerciseName)
         ? smallestPracticalIncrementKg(exerciseName, previousLoadKg)
         : null;
       // The same predicate `blockExerciseSelection` reads, so the two can never drift.
-      if (progressedFromOwnHistory({ exerciseName, history }) && increment !== null) {
+      if (routeAllowsIncrease && progressedFromOwnHistory({ exerciseName, history }) && increment !== null) {
         decisions.push({
           ...base,
           kind: 'history_progressed',

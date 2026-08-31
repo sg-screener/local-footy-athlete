@@ -36,6 +36,8 @@ import type { OffseasonSubphase } from './offseasonSubphase';
 import { estimateStartingWeight } from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { getExerciseTags } from '../data/exerciseTags';
+import { SHOULDER_HEALTH_POOL } from '../data/exercisePools';
+import type { SessionSlot } from './sessionSlotCoverage';
 
 export interface ComposedDose {
   readonly restSeconds?: number;
@@ -160,6 +162,8 @@ export interface ComposedDoseInput {
   readonly isMainLift: boolean;
   /** The pool slot the row was selected for, when it has one. */
   readonly poolSlot: PoolSlotKey | null;
+  /** The compiler route using this identity; prehab keeps its pool-authored dose. */
+  readonly selectionSlot?: SessionSlot;
   readonly seasonPhase: SeasonPhase;
   readonly offseasonSubphase: OffseasonSubphase | null;
   /** The band the composer would otherwise author — used only where nothing rules. */
@@ -176,6 +180,24 @@ export interface ComposedDoseInput {
 export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
   const authored = getExerciseTags(input.identity)?.prescription;
   if (authored && !input.isMainLift) return { ...authored, category: 'authored_exercise' };
+  if (input.selectionSlot === 'shoulder_prehab' && !input.isMainLift) {
+    const entry = SHOULDER_HEALTH_POOL.find((candidate) =>
+      composedIdentityFor(candidate.name) === composedIdentityFor(input.identity));
+    if (entry) {
+      const prescriptionType = entry.prescriptionType === 'reps'
+        || entry.prescriptionType === 'duration'
+        || entry.prescriptionType === 'duration_minutes'
+        ? entry.prescriptionType : undefined;
+      return {
+        sets: entry.sets,
+        repsMin: entry.repsMin,
+        repsMax: entry.repsMax,
+        category: 'authored_exercise',
+        ...(prescriptionType ? { prescriptionType } : {}),
+        ...(entry.perSide ? { perSide: true } : {}),
+      };
+    }
+  }
   if (input.isMainLift && input.poolSlot) {
     const scheme = mainLiftSchemeForSlot(input.poolSlot, input.seasonPhase, input.offseasonSubphase);
     if (scheme) {

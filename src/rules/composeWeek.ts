@@ -1920,6 +1920,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         identity,
         isMainLift,
         poolSlot: selectedPoolSlot,
+        selectionSlot: slot,
         seasonPhase: inputs.seasonPhase,
         offseasonSubphase: inputs.offseasonSubphase,
         authoredFallback,

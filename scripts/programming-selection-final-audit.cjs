@@ -58,7 +58,7 @@ function flattenRows(rows, inheritedModality) {
 function addTally(map, key, occurrence) {
   const tally = map.get(key) ?? { placements: 0, dates: new Set(), weeks: new Set(), genders: new Set() };
   tally.placements += 1;
-  tally.dates.add(`${occurrence.gender}|${occurrence.date}`);
+  tally.dates.add(`${occurrence.gender}|${occurrence.day.date}`);
   tally.weeks.add(`${occurrence.gender}|${occurrence.weekStart}`);
   tally.genders.add(occurrence.gender);
   map.set(key, tally);
@@ -165,7 +165,7 @@ function concentration(labelOf, filter) {
     const family = labelOf(occurrence);
     const row = families.get(family) ?? { placements: 0, dates: new Set(), identities: new Map() };
     row.placements += 1;
-    row.dates.add(`${occurrence.gender}|${occurrence.date}`);
+    row.dates.add(`${occurrence.gender}|${occurrence.day.date}`);
     row.identities.set(occurrence.row.name, (row.identities.get(occurrence.row.name) ?? 0) + 1);
     families.set(family, row);
   }
@@ -196,13 +196,17 @@ const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
   .map(({ gender, day }) => ({ gender, date: day.date, error: day.projectionError }));
 const restartFailures = year.athletes.flatMap((athlete) => athlete.restarts
   .filter((restart) => !restart.ok).map((restart) => ({ gender: athlete.gender, ...restart })));
-const missingConditioningModalities = occurrences.filter(({ row }) => resolveTemplateByName(row.name) && !row.modalityLabel)
+const missingConditioningModalities = occurrences.filter(({ row }) =>
+  (row.domainRole ?? row.role) === 'conditioning' && resolveTemplateByName(row.name) && !row.modalityLabel)
   .map(({ gender, day, row }) => ({ gender, date: day.date, template: row.name }));
 const squatlessLowerSessions = dayRecords.filter(({ day, rows }) =>
   (day.parts ?? []).some((part) => part.kind === 'strength' && /lower squat/i.test(part.name)) &&
   !rows.some((row) => !row.withheld && getExerciseTags(row.name)?.movement === 'squat' &&
     ['main_lift', 'main_strength'].includes(row.domainRole ?? row.role)))
-  .map(({ gender, day, rows }) => ({ gender, date: day.date, parts: day.parts, rows: rows.map((row) => row.name) }));
+  .map(({ gender, day, rows }) => ({
+    gender, date: day.date, parts: day.parts, rows: rows.map((row) => row.name),
+    modifiers: day.modifiers ?? [],
+  }));
 const silentTeamGymSessions = dayRecords.filter(({ day, rows }) => day.type === 'Team Training' &&
   rows.some((row) => ['power', 'main_lift', 'accessory', 'main_strength', 'strength_accessory'].includes(row.domainRole ?? row.role)) &&
   !(day.parts ?? []).some((part) => part.kind === 'strength'))
