@@ -147,3 +147,64 @@ NOT COVERED:
 - Title and personal-pace colour hierarchy; Sam's correction named the
   structured labels specifically.
 - Physical-iPhone Release acceptance, Dynamic Type and VoiceOver.
+
+## 2026-08-31 — athlete hierarchy replaces the field stack
+
+Sam supplied the target card hierarchy and caught a semantic defect in the
+same screenshot: a Bike session was showing a min/km running pace. The previous
+card was still a styled database projection (`Mode:`, `Work:`, `Recovery:`,
+`Rounds:`, `Intensity:`), so changing font treatments could not make it read
+like an athlete instruction.
+
+Two options were compared:
+
+1. Rearrange and strip labels inside the React card.
+2. Add one pure athlete-card projection above React and make both card paths
+   consume its named concepts.
+
+The second landed. `conditioningCardPresentation` now lifts the canonical
+conditioning lines into modality, structure, work/recovery, recovery detail,
+intensity, cue and total. It handles the continuous-session exception without
+showing a fake `1 block`, and the full 55-template sweep proves every authored
+template reaches structure, intensity and cue. React only applies the approved
+visual hierarchy.
+
+The 30-second card projects exactly:
+
+- `Bike`
+- `2 blocks × 5 rounds`
+- `30s hard / 30s easy`
+- `2–3 min between blocks`
+- `100–110% MAS`
+- `Repeat the same effort throughout each block; do not sprint.`
+
+The personal-target gate reads typed delivered modality. Only exact `Run`
+allows `personalPaceLine`; every machine, mixed, walking and run/walk modality
+returns no target. The lime copy now says `Your target` / `Estimated target`.
+
+Test-first receipt: the three new C13 projection cells first stopped on the
+absent projection; the session source contract began 80 / 6, and identity
+printed the former `Mode:` values before stopping on the absent relevance
+owner. After implementation, `test:conditioning-templates` is 156 / 156,
+`test:session-template` is 85 / 1 with only its pre-existing numeric-index red,
+the new plain-modality cells are green at 63 / 8 with the same eight concurrent
+generation failures, and the eight-arm personal-target relevance matrix is in
+the fully green template suite. `test:conditioning-copy-census` moved its
+target line green and remains red only on the pre-existing `Total` allow-list
+cell. Product TypeScript is 0 errors.
+
+Mutation/liveness: forcing the non-continuous card projection to allow a
+personal target for every modality killed both the exact Bike-card cell and the
+eight-arm relevance matrix at 154 / 156. Restoring the exact-Run condition
+returned the suite to 156 / 156.
+
+Simulator receipt: the cold-seeded `conditioning-showcase` Bike card passed
+exact assertions for all six hierarchy lines, absence of all five database
+labels and absence of `Your target`. The real card was captured at
+`/private/tmp/lfa-mode-verified.png`.
+
+NOT COVERED:
+
+- Physical-iPhone Release acceptance, Dynamic Type and VoiceOver.
+- A glass capture of a pure Run card showing its relevant personal target; its
+  typed modality matrix is covered in `test:conditioning-identity`.

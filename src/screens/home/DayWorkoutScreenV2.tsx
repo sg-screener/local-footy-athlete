@@ -156,6 +156,7 @@ import {
 } from './dayWorkoutHelpers';
 import { isTeamTrainingItem } from '../../utils/teamTraining';
 import { personalPaceLine } from '../../rules/masPace';
+import { conditioningCardPresentationFromText } from '../../rules/conditioningDisplay';
 import {
   buildSessionTemplate,
   sessionListLabels,
@@ -3373,12 +3374,12 @@ function ConditioningChoiceRow({
                   {option.description}
                 </Text>
               ) : null}
-              {option.modalityLabel ? <Text style={styles.conditioningOptionDescription}>{option.modalityLabel}</Text> : null}
               {option.rows.map((exercise: any, idx: number) => (
                 <ConditioningRow
                   key={exercise.id}
                   exercise={exercise}
                   idx={idx}
+                  modality={option.modalityLabel}
                   onQuickSwap={onQuickSwap}
                   onQuickRemove={onQuickRemove}
                 />
@@ -3904,27 +3905,78 @@ function StrengthExerciseCard({
  * logging a faster 2km reprices every card at once and no stored number can go
  * stale. See `rules/masPace.ts` for why that is structural rather than tidy.
  */
-function usePersonalPace(notes: string | null | undefined) {
+function usePersonalPace(notes: string | null | undefined, supportsPersonalTarget: boolean) {
   const answer = useProfileStore((s: any) => s.onboardingData?.twoKmTimeTrial);
   const performanceTesting = useProfileStore((s: any) => s.onboardingData?.performanceTesting);
   const experienceLevel = useProfileStore((s: any) => s.onboardingData?.experienceLevel);
   return React.useMemo(
-    () => personalPaceLine({ intensityText: notes, answer, performanceTesting, experienceLevel }),
-    [notes, answer, performanceTesting, experienceLevel],
+    () => supportsPersonalTarget
+      ? personalPaceLine({ intensityText: notes, answer, performanceTesting, experienceLevel })
+      : null,
+    [notes, supportsPersonalTarget, answer, performanceTesting, experienceLevel],
   );
 }
 
-/** One typography owner for every structured conditioning prescription. */
-function ConditioningPrescriptionCopy({
+/** One athlete-facing hierarchy for both standalone and choice conditioning. */
+function ConditioningCardBody({
   copy,
-  style,
-  testID,
+  modality,
+  exerciseToken,
 }: {
   copy: string;
-  style: any;
-  testID?: string;
+  modality?: string;
+  exerciseToken: string;
 }) {
-  return <Text style={style} testID={testID}>{copy}</Text>;
+  const presentation = React.useMemo(
+    () => conditioningCardPresentationFromText(copy, modality),
+    [copy, modality],
+  );
+  const personalTarget = usePersonalPace(copy, presentation.supportsPersonalTarget);
+  return (
+    <View
+      style={styles.conditioningCardBody}
+      testID={`workout-exercise-prescription-${exerciseToken}`}
+    >
+      {presentation.modality ? (
+        <Text
+          style={styles.conditioningModality}
+          testID={`conditioning-mode-${exerciseToken}`}
+        >
+          {presentation.modality}
+        </Text>
+      ) : null}
+      {presentation.structure ? (
+        <Text style={styles.conditioningStructure}>{presentation.structure}</Text>
+      ) : null}
+      {presentation.workRecovery ? (
+        <Text style={styles.conditioningWorkRecovery}>{presentation.workRecovery}</Text>
+      ) : null}
+      {presentation.recoveryDetail ? (
+        <Text style={styles.conditioningRecoveryDetail}>{presentation.recoveryDetail}</Text>
+      ) : null}
+      {presentation.intensity || presentation.cue ? (
+        <View style={styles.conditioningIntensitySection}>
+          {presentation.intensity ? (
+            <Text style={styles.conditioningIntensity}>{presentation.intensity}</Text>
+          ) : null}
+          {presentation.cue ? (
+            <Text style={styles.conditioningCue}>{presentation.cue}</Text>
+          ) : null}
+        </View>
+      ) : null}
+      {presentation.total ? (
+        <Text style={styles.conditioningTotal}>{presentation.total}</Text>
+      ) : null}
+      {personalTarget ? (
+        <Text
+          style={styles.conditioningPersonalTarget}
+          testID={`workout-exercise-pace-${exerciseToken}`}
+        >
+          {personalTarget}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 /**
@@ -3953,7 +4005,6 @@ function ConditioningPhaseRow({
   const description = exercise.notes || exercise.exercise?.description || '';
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
-  const paceLine = usePersonalPace(description);
 
   return (
     <View
@@ -3967,21 +4018,12 @@ function ConditioningPhaseRow({
           </Text>
         </View>
       </View>
-      {modalityLabel ? <Text style={styles.conditioningPhaseBody} testID={`conditioning-mode-${exerciseToken}`}>{modalityLabel}</Text> : null}
       {description ? (
-        <ConditioningPrescriptionCopy
+        <ConditioningCardBody
           copy={description}
-          style={styles.conditioningPhaseBody}
-          testID={`workout-exercise-prescription-${exerciseToken}`}
+          modality={modalityLabel}
+          exerciseToken={exerciseToken}
         />
-      ) : null}
-      {paceLine ? (
-        <Text
-          style={styles.personalPace}
-          testID={`workout-exercise-pace-${exerciseToken}`}
-        >
-          {paceLine}
-        </Text>
       ) : null}
       <ConditioningCompletionRow checkbox={checkbox} />
       <QuickExerciseActions
@@ -3999,12 +4041,14 @@ function ConditioningPhaseRow({
 interface ConditioningRowProps {
   exercise: any;
   idx: number;
+  modality?: string;
   onQuickSwap: (exercise: EditableExercise) => void;
   onQuickRemove: (exercise: EditableExercise) => void;
 }
 function ConditioningRow({
   exercise,
   idx,
+  modality,
   onQuickSwap,
   onQuickRemove,
 }: ConditioningRowProps) {
@@ -4014,11 +4058,6 @@ function ConditioningRow({
   const prescription = formatConditioningRowPrescription(exercise);
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
-  // The RAW notes, not `cleanNotes(notes)`: step 2 of that cleaner replaces
-  // every en dash with a space, so "90–100% MAS" reaches the glass as
-  // "90 100% MAS" and a band parse over the cleaned string would read a lone
-  // 100. Parse the words the row CARRIES, render beneath the words it SHOWS.
-  const paceLine = usePersonalPace(notes);
 
   return (
     <View
@@ -4039,19 +4078,11 @@ function ConditioningRow({
           </Text>
         ) : null}
         {notes ? (
-          <ConditioningPrescriptionCopy
-            copy={cleanNotes(notes)}
-            style={styles.conditioningRowNotes}
-            testID={`workout-exercise-prescription-${exerciseToken}`}
+          <ConditioningCardBody
+            copy={notes}
+            modality={modality}
+            exerciseToken={exerciseToken}
           />
-        ) : null}
-        {paceLine ? (
-          <Text
-            style={styles.personalPace}
-            testID={`workout-exercise-pace-${exerciseToken}`}
-          >
-            {paceLine}
-          </Text>
         ) : null}
         <QuickExerciseActions
           exercise={editableExerciseForRow(exercise)!}
@@ -6205,12 +6236,67 @@ const styles = StyleSheet.create({
   },
 
   // ── Conditioning (pure) ──
-  conditioningPhaseBody: {
-    color: '#D0D0D0',
-    fontSize: SESSION_ROW_TEXT_SIZE,
-    lineHeight: 23,
+  conditioningCardBody: {
+    marginTop: 3,
+  },
+  conditioningModality: {
+    color: '#A8A8A8',
+    fontSize: 14,
+    fontStyle: 'italic',
+    lineHeight: 19,
+  },
+  conditioningStructure: {
+    color: '#F2F2F2',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 21,
+    marginTop: 13,
+  },
+  conditioningWorkRecovery: {
+    color: '#E2E2E2',
+    fontSize: 15,
     fontWeight: '500',
+    lineHeight: 21,
+    marginTop: 3,
+  },
+  conditioningRecoveryDetail: {
+    color: '#B8B8B8',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 21,
+  },
+  conditioningIntensitySection: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.07)',
+    marginTop: 13,
+    paddingTop: 11,
+  },
+  conditioningIntensity: {
+    color: '#F2F2F2',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 21,
+  },
+  conditioningCue: {
+    color: '#B8B8B8',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 21,
+    marginTop: 2,
+  },
+  conditioningTotal: {
+    color: '#B8B8B8',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 21,
     marginTop: 5,
+  },
+  conditioningPersonalTarget: {
+    color: colors.accent.lime,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+    marginTop: 12,
   },
   conditioningCompletionRow: {
     minHeight: 22,
@@ -6312,22 +6398,6 @@ const styles = StyleSheet.create({
     fontSize: SESSION_ROW_TEXT_SIZE,
     fontWeight: '700',
     marginTop: 2,
-  },
-  conditioningRowNotes: {
-    color: '#8A8A8A',
-    fontSize: SESSION_ROW_TEXT_SIZE,
-    lineHeight: 20,
-    marginTop: 5,
-  },
-  // The derived pace is a PRESCRIPTION, not a note — it is the number the
-  // athlete runs to — so it takes the prescription's accent rather than the
-  // grey the notes sit in. One step quieter than the prescription line above
-  // it so the two do not compete for the same row.
-  personalPace: {
-    color: colors.accent.lime,
-    fontSize: SESSION_ROW_TEXT_SIZE,
-    fontWeight: '700',
-    marginTop: 3,
   },
 
   // ── Feedback + Finish ──

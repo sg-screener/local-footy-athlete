@@ -808,10 +808,10 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
     conditioningPhaseSource,
   );
 
-  const structuredCopyStart = screen.indexOf('function ConditioningPrescriptionCopy(');
+  const structuredCopyStart = screen.indexOf('function ConditioningCardBody(');
   const structuredCopyEnd = screen.indexOf('function ConditioningPhaseRow(', structuredCopyStart);
   ok(
-    'the shared conditioning-copy renderer is present before its typography contract is checked',
+    'the shared conditioning-card body is present before its hierarchy is checked',
     structuredCopyStart >= 0 && structuredCopyEnd > structuredCopyStart,
     `${structuredCopyStart}:${structuredCopyEnd}`,
   );
@@ -819,45 +819,34 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
     ? screen.slice(structuredCopyStart, structuredCopyEnd)
     : '';
   ok(
-    'Work, Recovery, count and Intensity use the same weight as their values',
+    'the card body consumes the one structured athlete-facing projection',
     structuredCopySource.length > 0
-      && !/CONDITIONING_EMPHASISED_LABELS/.test(screen)
-      && !/conditioningPrescriptionLabel/.test(screen)
-      && /<Text style=\{style\} testID=\{testID\}>\{copy\}<\/Text>/.test(structuredCopySource),
+      && /conditioningCardPresentationFromText\(copy, modality\)/.test(structuredCopySource)
+      && !/ConditioningPrescriptionCopy/.test(screen),
     structuredCopySource,
   );
   ok(
-    'both standalone and choice conditioning rows use the shared structured-copy renderer',
-    (screen.match(/<ConditioningPrescriptionCopy\b/g) ?? []).length === 2,
-    `${(screen.match(/<ConditioningPrescriptionCopy\b/g) ?? []).length} mount(s)`,
+    'both standalone and choice conditioning rows use the shared conditioning-card body',
+    (screen.match(/<ConditioningCardBody\b/g) ?? []).length === 2,
+    `${(screen.match(/<ConditioningCardBody\b/g) ?? []).length} mount(s)`,
   );
   ok(
-    'conditioning prescription lines keep readable vertical breathing room in both row paths',
-    /conditioningPhaseBody:\s*\{[\s\S]*?lineHeight:\s*23\b/.test(screen)
-      && /conditioningRowNotes:\s*\{[\s\S]*?lineHeight:\s*20\b/.test(screen),
+    'the card uses modality, prominent structure, prescription, recovery and intensity tiers',
+    /conditioningModality:\s*\{[\s\S]*?fontSize:\s*14\b/.test(screen)
+      && /conditioningStructure:\s*\{[\s\S]*?fontSize:\s*16\b[\s\S]*?fontWeight:\s*'700'/.test(screen)
+      && /conditioningWorkRecovery:\s*\{[\s\S]*?fontSize:\s*15\b/.test(screen)
+      && /conditioningRecoveryDetail:\s*\{[\s\S]*?fontSize:\s*15\b/.test(screen)
+      && /conditioningIntensitySection:\s*\{[\s\S]*?borderTopWidth:\s*1\b/.test(screen),
   );
   ok(
-    'the conditioning title and prescription keep a small visual gap',
-    /conditioningPhaseBody:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen)
-      && /conditioningRowNotes:\s*\{[\s\S]*?marginTop:\s*5\b/.test(screen),
+    'personal pace targets are gated by the typed displayed modality',
+    /usePersonalPace\(copy, presentation\.supportsPersonalTarget\)/.test(structuredCopySource),
   );
-  const conditioningTextStyles = [
-    'conditioningPhaseBody',
-    'conditioningOptionTitle',
-    'conditioningOptionDescription',
-    'conditioningRowName',
-    'conditioningRowPrescription',
-    'conditioningRowNotes',
-    'personalPace',
-  ];
   ok(
-    'every line inside a conditioning card uses the same 15-point text size',
-    /const SESSION_ROW_TEXT_SIZE\s*=\s*15\b/.test(screen)
-      && /exerciseName:\s*\{[\s\S]*?fontSize:\s*SESSION_ROW_TEXT_SIZE\b/.test(screen)
-      && conditioningTextStyles.every((styleName) => new RegExp(
-        `${styleName}:\\s*\\{[\\s\\S]*?fontSize:\\s*SESSION_ROW_TEXT_SIZE\\b`,
-      ).test(screen)),
-    conditioningTextStyles.join(', '),
+    'the database-like field labels are absent from the card renderer',
+    !/Mode:\s*\{modality/.test(structuredCopySource)
+      && !/Work:|Recovery:|Rounds:|Intensity:/.test(structuredCopySource),
+    structuredCopySource,
   );
 
   ok(

@@ -110,10 +110,10 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
       const labels = changed.exercises.filter(row => changed.conditioningBlock?.options.some(o => o.exerciseIds.includes(row.id)))
         .map(row => conditioningModeLabelForRow(changed, row.id));
       ok(`clarity/${gender}/${workout.dayOfWeek}: a modality change replaces every old machine instruction`,
-        labels.length > 0 && labels.every(l => l === 'Mode: Bike'), JSON.stringify(labels));
+        labels.length > 0 && labels.every(l => l === 'Bike'), JSON.stringify(labels));
       ok(`clarity/${gender}/${workout.dayOfWeek}: final session reads the selected machine`,
         buildSessionTemplate(changed).items.some(item => item.kind === 'exercise' && item.presentation === 'conditioning_phase'
-          && item.modalityLabel === 'Mode: Bike'));
+          && item.modalityLabel === 'Bike'));
       const projected = project({ week: view().map(day => day.workout?.id === workout.id ? { ...day, workout: changed } : day),
         weekStart: date });
       const shown = buildSessionTemplate(changed).items.flatMap(item => item.kind === 'exercise' ? [item.row] : []);

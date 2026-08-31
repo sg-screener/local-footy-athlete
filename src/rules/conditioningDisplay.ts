@@ -63,6 +63,105 @@ export interface ConditioningDisplayLine {
   readonly text: string;
 }
 
+/**
+ * The session card's visual hierarchy. These are athlete-facing concepts, not
+ * the workbook's field names: the screen renders them directly and never has
+ * to rearrange `Work:`, `Recovery:` or `Rounds:` strings itself.
+ */
+export interface ConditioningCardPresentation {
+  readonly modality: string | null;
+  readonly structure: string;
+  readonly workRecovery: string | null;
+  readonly recoveryDetail: string | null;
+  readonly intensity: string;
+  readonly cue: string;
+  readonly total: string | null;
+  readonly supportsPersonalTarget: boolean;
+}
+
+function compactSecondUnits(text: string): string {
+  return text.replace(/(\d(?:[\d.–—-]*\d)?)\s+s\b/g, '$1s');
+}
+
+function structureText(line: ConditioningDisplayLine, raw: string): string {
+  const withoutRedundantBlockDuration = raw
+    .replace(/\s*\([^)]*\bper\s+(?:block|set)\)\s*$/i, '')
+    .trim();
+  if (/\b(?:reps?|rounds?|blocks?|sets?)\b/i.test(withoutRedundantBlockDuration)) {
+    return withoutRedundantBlockDuration;
+  }
+  return `${withoutRedundantBlockDuration} ${line.label!.toLowerCase()}`;
+}
+
+/**
+ * One universal conditioning-card projection.
+ *
+ * The persisted row remains the canonical newline projection for compatibility
+ * and history. This reader lifts those known lines back into named display
+ * concepts once, outside React, so every card path gets the same hierarchy.
+ */
+export function conditioningCardPresentation(
+  lines: readonly ConditioningDisplayLine[],
+  modality?: string | null,
+): ConditioningCardPresentation {
+  const labelled = (label: string) => lines.find((line) => line.label === label);
+  const work = labelled('Work')?.text.trim() ?? '';
+  const recovery = labelled('Recovery')?.text.trim() ?? '';
+  const count = lines.find((line) =>
+    line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks');
+  const intensity = labelled('Intensity')?.text.trim() ?? '';
+  const cue = lines.filter((line) => line.label === null).map((line) => line.text.trim())
+    .filter(Boolean).join(' ');
+  const total = labelled('Total')?.text.trim() || null;
+
+  const continuous = /\bcontinuous\b/i.test(work) && /^none\s*\(continuous\)$/i.test(recovery);
+  if (continuous) {
+    return {
+      modality: modality || null,
+      structure: work,
+      workRecovery: null,
+      recoveryDetail: null,
+      intensity,
+      cue,
+      total,
+      supportsPersonalTarget: modality === 'Run',
+    };
+  }
+
+  const recoveryParts = recovery.split(';').map((part) => part.trim()).filter(Boolean);
+  const countParts = (count?.text ?? '').split(/,\s*(?=[^,;]*\bbetween\b)/i)
+    .map((part) => part.trim()).filter(Boolean);
+  const primaryRecovery = recoveryParts[0] ?? '';
+  const detail = [...recoveryParts.slice(1), ...countParts.slice(1)].join('; ') || null;
+
+  return {
+    modality: modality || null,
+    structure: count && countParts[0] ? structureText(count, countParts[0]) : work,
+    workRecovery: work
+      ? [compactSecondUnits(work), compactSecondUnits(primaryRecovery)].filter(Boolean).join(' / ')
+      : null,
+    recoveryDetail: detail,
+    intensity,
+    cue,
+    total,
+    supportsPersonalTarget: modality === 'Run',
+  };
+}
+
+/** Lift the stored compatibility text into the universal card projection. */
+export function conditioningCardPresentationFromText(
+  copy: string,
+  modality?: string | null,
+): ConditioningCardPresentation {
+  const lines: ConditioningDisplayLine[] = copy.split('\n').map((raw) => {
+    const match = /^(Work|Recovery|Rounds|Reps|Blocks|Intensity|Total):\s*(.*)$/.exec(raw.trim());
+    return match
+      ? { label: match[1], text: match[2] }
+      : { label: null, text: raw.trim() };
+  }).filter((line) => line.text.length > 0);
+  return conditioningCardPresentation(lines, modality);
+}
+
 export interface ConditioningDisplayInput {
   readonly template: ConditioningTemplate;
   /** The concrete count materialised on this row; absent callers use the same midpoint rule. */

@@ -343,7 +343,7 @@ for (const weekIndex of [2, 3]) {
     sessionItem?.kind === 'exercise'
       ? { title: sessionItem.row?.exercise?.name, mode: sessionItem.modalityLabel }
       : null,
-    { title: 'Continuous Aerobic Run', mode: 'Mode: Run' });
+    { title: 'Continuous Aerobic Run', mode: 'Run' });
   ok('the structural warm-up keeps its own name',
     names[0] === CONDITIONING_WARMUP_ROW_NAME, names);
   ok('so no session names one exercise twice',
@@ -354,23 +354,22 @@ for (const weekIndex of [2, 3]) {
     substituted.conditioningBlock?.options?.[0]?.exerciseIds);
 }
 
-eq('single-mode labels use one professional Mode field', [
+eq('single-mode labels use one clean modality name', [
   conditioningModeLabel('running'),
   conditioningModeLabel('bike'),
   conditioningModeLabel('bike', ['air_bike']),
   conditioningModeLabel('row'),
   conditioningModeLabel('ski'),
-], ['Mode: Run', 'Mode: Bike', 'Mode: Air Bike', 'Mode: RowErg', 'Mode: SkiErg']);
+], ['Run', 'Bike', 'Air Bike', 'RowErg', 'SkiErg']);
 eq('mixed-mode labels retain only the ordered modes',
-  conditioningModeLabel('mixed', ['bike', 'row']), 'Mode: Bike → RowErg');
-
+  conditioningModeLabel('mixed', ['bike', 'row']), 'Bike → RowErg');
 for (const [family, expectedMode] of [
-  ['treadmill', 'Mode: Run'],
-  ['outdoor_running', 'Mode: Run'],
-  ['hill_running_or_walking', 'Mode: Run / Walk'],
-  ['brisk_walking', 'Mode: Walk'],
-  ['bodyweight_circuit', 'Mode: Bodyweight'],
-  ['safe_mixed_modal', 'Mode: Mixed'],
+  ['treadmill', 'Run'],
+  ['outdoor_running', 'Run'],
+  ['hill_running_or_walking', 'Run / Walk'],
+  ['brisk_walking', 'Walk'],
+  ['bodyweight_circuit', 'Bodyweight'],
+  ['safe_mixed_modal', 'Mixed'],
 ] as const) {
   const source = workout([row('delivery-main', 'Continuous Aerobic Run')], {
           conditioningFeasibility: { resolvedSubstitutionFamily: family } as never,
@@ -378,7 +377,7 @@ for (const [family, expectedMode] of [
   const delivered = applyResolvedConditioningSubstitution(source);
   eq(`${family} preserves the selected template identity`,
     delivered.exercises[0]?.exercise?.name, 'Continuous Aerobic Run');
-  eq(`${family} has one clean Mode field`,
+  eq(`${family} has one clean modality line`,
     conditioningModeLabelForRow(delivered, 'delivery-main'), expectedMode);
 }
 

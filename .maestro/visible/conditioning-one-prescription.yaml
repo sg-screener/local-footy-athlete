@@ -26,23 +26,29 @@ tags:
     timeout: 20000
 - scrollUntilVisible:
     element:
-      text: "4×4 VO₂ Max"
+      text: "30-Second Hard Intervals"
     direction: DOWN
     timeout: 10000
 - assertVisible:
     id: "workout-exercise-prescription-cond-.*"
 - assertVisible:
     id: "conditioning-mode-cond-.*"
-    text: "Mode: Bike"
+    text: "Bike"
 - scrollUntilVisible:
     element:
-      text: ".*Choose a pace you can repeat across all 4 rounds.*"
+      text: ".*Repeat the same effort throughout each block; do not sprint.*"
     direction: DOWN
     timeout: 10000
-- assertVisible: ".*Work: 4 min hard.*"
-- assertVisible: ".*Recovery: 3 min complete rest.*"
-- assertVisible: ".*Rounds: 4.*"
-- assertVisible: ".*Choose a pace you can repeat across all 4 rounds.*"
+- assertVisible: "2 blocks × 5 rounds"
+- assertVisible: "30s hard / 30s easy"
+- assertVisible: "2–3 min between blocks"
+- assertVisible: "100–110% MAS"
+- assertVisible: ".*Repeat the same effort throughout each block; do not sprint.*"
+- assertNotVisible: ".*Work:.*"
+- assertNotVisible: ".*Recovery:.*"
+- assertNotVisible: ".*Rounds:.*"
+- assertNotVisible: ".*Intensity:.*"
+- assertNotVisible: ".*Your target:.*"
 - assertNotVisible: "Hard Intervals"
 - assertNotVisible: "Choose one.*"
 - assertNotVisible: ".*1:1.*"

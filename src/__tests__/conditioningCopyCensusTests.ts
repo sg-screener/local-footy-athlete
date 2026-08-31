@@ -126,12 +126,12 @@ sweep('percentage ranges use an en dash, never a hyphen (`90-100%`)',
 sweep('no km/h speed reaches an athlete-facing line',
   (text) => /km\s*\/\s*h|kmh|km per hour/i.test(text));
 {
-  const shaped = new RegExp(`^Your pace: \\d:[0-5]\\d(?:${EN_DASH}\\d:[0-5]\\d)? min/km$`);
+  const shaped = new RegExp(`^Your target: \\d:[0-5]\\d(?:${EN_DASH}\\d:[0-5]\\d)? min/km$`);
   const withPace = rendered.filter((r) => r.paceLine !== null);
-  ok('control: MAS-referencing templates do produce a pace line',
+  ok('control: MAS-referencing templates do produce a personal target line',
     withPace.length >= 10, `${withPace.length} of ${rendered.length}`);
   const bad = withPace.filter((r) => !shaped.test(r.paceLine as string));
-  ok(`every pace line reads \`m:ss${EN_DASH}m:ss min/km\``,
+  ok(`every personal target reads \`m:ss${EN_DASH}m:ss min/km\``,
     bad.length === 0, bad.slice(0, 6).map((r) => `${r.name} :: ${r.paceLine}`).join('\n      '));
 }
 // The arithmetic itself, against Sam's stated formula rather than my own code.

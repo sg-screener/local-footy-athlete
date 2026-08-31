@@ -7204,3 +7204,30 @@ but structured prescription labels may not differ from their values.
 Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
 `test:session-template`. Verification status and NOT COVERED:
 `docs/STATUS_CONDNAMES.md`.
+
+**R-286** · Conditioning cards use an athlete hierarchy, not database fields, 2026-08-31.
+
+Owner: condnames. Sam replaced the session card's labelled field stack with a
+universal athlete-facing hierarchy: template name, plain modality, prominent
+session structure, work/recovery pair, between-block recovery, intensity, one
+coaching cue, then a relevant personal target in lime. The 30-second hard card
+therefore reads `Bike`, `2 blocks × 5 rounds`, `30s hard / 30s easy`, `2–3 min
+between blocks`, `100–110% MAS`, then its cue. `Mode:`, `Work:`, `Recovery:`,
+`Rounds:` and `Intensity:` do not render.
+
+This supersedes R-283's `Mode:` prefix, R-284's one-size instruction and
+R-285's labelled-line treatment. The modality is a quiet italic line, structure
+is the clearest text, and a divider separates structure from intensity. One
+shared pure projection owns the hierarchy for all 55 authored templates and
+both session render paths.
+
+A min/km personal target is relevant only when the typed delivered modality is
+exactly `Run`. Bike, Air Bike, RowErg, SkiErg, mixed, walk and run/walk sessions
+show no running target. The relevant lime line is named `Your target`, matching
+the approved mock-up; an unmeasured estimate keeps its honest `Estimated
+target` qualifier.
+
+Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription`,
+`test:conditioning-templates`, `test:conditioning-identity`,
+and `test:session-template`. Supporting copy-census verification and NOT
+COVERED: `docs/STATUS_CONDNAMES.md`.

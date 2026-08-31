@@ -52,17 +52,14 @@ import { registerSignedCopy, signedCopy, type SignedCopy,
 /**
  * THE WORDS ARE THE TERMINAL'S AND THIS SAYS SO.
  *
- * Sam ruled the FEATURE (ruling 6) and the NUMBER (ruling 2, MAS = 2km average
- * speed × 1.00). He has not seen these two sentences. They are registered as
- * `derived_number` — the template carries only figures the app computed — and
- * marked PROPOSED here rather than dressed up as signed, which is the
- * `effortScale` pattern before he said *"Rest are fine"*.
+ * Sam ruled the FEATURE (ruling 6), the NUMBER (ruling 2, MAS = 2km average
+ * speed × 1.00), and the athlete-facing `Your target` label in R-286's approved
+ * conditioning mock. They remain registered as `derived_number` because the
+ * changing figures are computed from the athlete's own result at read time.
  */
-const PROPOSED = 'PROPOSED by the terminal 2026-08-13, not yet shown to Sam. The '
-  + 'FEATURE is his: docs/STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md ruling 6, '
-  + '"deriving per-athlete paces into the %MAS template rows". The NUMBER is his '
-  + 'ruling 2, "MAS = 2km average speed x 1.00, no correction". Only the wording '
-  + 'is unsigned.';
+const TARGET_PROVENANCE = 'Sam: docs/STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md '
+  + 'rulings 2 and 6 own the MAS calculation and derived target; '
+  + 'docs/RULINGS_REGISTRY.md R-286 owns the athlete-facing Your target label.';
 
 /**
  * MEASURED AND ESTIMATED ARE TWO DIFFERENT SENTENCES, AND THAT IS THE POINT.
@@ -85,32 +82,32 @@ registerSignedCopy([
   {
     id: MAS_PACE_COPY.measuredRange,
     source: 'derived_number',
-    provenance: PROPOSED,
+    provenance: TARGET_PROVENANCE,
     /* ⚠ **km/h UNDER A PACE LABEL — SAM, 2026-08-20.** *"The pace must be
      * calculated using `60 / kmh`, rounded to the nearest second. Do not
      * relabel km/h values as min/km."* This line called a SPEED a pace and
      * printed it in km/h with a hyphen; a footballer reading "Your pace:
      * 13.5-15 km/h" is being handed the wrong quantity in the wrong unit with
      * the wrong dash. Now `m:ss–m:ss min/km`, faster end first. */
-    text: 'Your pace: {fast}–{slow} min/km',
+    text: 'Your target: {fast}–{slow} min/km',
   },
   {
     id: MAS_PACE_COPY.measuredSingle,
     source: 'derived_number',
-    provenance: PROPOSED,
-    text: 'Your pace: {pace} min/km',
+    provenance: TARGET_PROVENANCE,
+    text: 'Your target: {pace} min/km',
   },
   {
     id: MAS_PACE_COPY.estimatedRange,
     source: 'derived_number',
-    provenance: PROPOSED,
-    text: 'Estimated pace: {fast}–{slow} min/km',
+    provenance: TARGET_PROVENANCE,
+    text: 'Estimated target: {fast}–{slow} min/km',
   },
   {
     id: MAS_PACE_COPY.estimatedSingle,
     source: 'derived_number',
-    provenance: PROPOSED,
-    text: 'Estimated pace: {pace} min/km',
+    provenance: TARGET_PROVENANCE,
+    text: 'Estimated target: {pace} min/km',
   },
 ]);
 

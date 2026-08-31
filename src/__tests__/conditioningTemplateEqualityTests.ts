@@ -58,6 +58,8 @@ import {
   codDecelPermitted,
 } from '../rules/conditioningSelection';
 import {
+  conditioningCardPresentation,
+  conditioningCardPresentationFromText,
   conditioningDisplayLines,
   conditioningDisplayTitleForName,
 } from '../rules/conditioningDisplay';
@@ -989,6 +991,56 @@ ok(
       && oneMinuteFlush.lines.some((line) =>
         line.label === 'Rounds' && line.text === '6'),
     `${oneMinuteFlush?.title} :: ${JSON.stringify(oneMinuteFlush?.lines ?? [])}`);
+
+  const hardThirty = projected.find(({ template }) =>
+    template.name === '30:30 Hard Intermittent');
+  const hardThirtyCard = hardThirty
+    ? conditioningCardPresentationFromText(
+      hardThirty.lines.map((line) => line.label ? `${line.label}: ${line.text}` : line.text).join('\n'),
+      'Bike',
+    )
+    : null;
+  ok('[C13] the universal card projection matches the approved athlete hierarchy',
+    JSON.stringify(hardThirtyCard) === JSON.stringify({
+      modality: 'Bike',
+      structure: '2 blocks × 5 rounds',
+      workRecovery: '30s hard / 30s easy',
+      recoveryDetail: '2–3 min between blocks',
+      intensity: '100–110% MAS',
+      cue: 'Repeat the same effort throughout each block; do not sprint.',
+      total: null,
+      supportsPersonalTarget: false,
+    }),
+    JSON.stringify(hardThirtyCard));
+  ok('[C13] a min/km personal target is relevant only to a pure Run modality',
+    hardThirty !== undefined
+      && JSON.stringify([
+        'Run', 'Bike', 'Air Bike', 'RowErg', 'SkiErg', 'Bike → RowErg', 'Run / Walk', null,
+      ].map((modality) => conditioningCardPresentation(
+        hardThirty.lines,
+        modality,
+      ).supportsPersonalTarget)) === JSON.stringify([
+        true, false, false, false, false, false, false, false,
+      ]));
+
+  const continuous = projected.find(({ template }) =>
+    template.name === 'Continuous Aerobic Run');
+  const continuousCard = continuous
+    ? conditioningCardPresentation(continuous.lines, 'Run')
+    : null;
+  ok('[C13] a continuous session promotes its duration instead of showing a fake one-block interval',
+    continuousCard?.structure === '30–50 min continuous'
+      && continuousCard.workRecovery === null
+      && continuousCard.supportsPersonalTarget,
+    JSON.stringify(continuousCard));
+
+  const incompleteCards = projected.filter(({ lines }) => {
+    const card = conditioningCardPresentation(lines, 'Bike');
+    return !card.structure || !card.intensity || !card.cue;
+  });
+  ok('[C13] all 55 templates reach the same structure-intensity-cue hierarchy',
+    incompleteCards.length === 0,
+    incompleteCards.map(({ template }) => template.name).join(' | '));
 }
 
 // ── C14: ROTATE THE ELIGIBLE POOL — NEVER RESTART AT THE FIRST ROW ─────────

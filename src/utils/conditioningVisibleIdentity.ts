@@ -29,11 +29,10 @@ export function conditioningModeLabel(
   if (!modality) return undefined;
   if (modality === 'mixed') {
     const names = sequence?.map(m => ({ run: 'Run', bike: 'Bike', air_bike: 'Air Bike', row: 'RowErg', ski: 'SkiErg' })[m]);
-    return names?.length ? `Mode: ${names.join(' → ')}` : undefined;
+    return names?.length ? names.join(' → ') : undefined;
   }
-  if (modality === 'bike' && sequence?.[0] === 'air_bike') return 'Mode: Air Bike';
-  return { bike: 'Mode: Bike', row: 'Mode: RowErg', ski: 'Mode: SkiErg',
-    running: 'Mode: Run' }[modality];
+  if (modality === 'bike' && sequence?.[0] === 'air_bike') return 'Air Bike';
+  return { bike: 'Bike', row: 'RowErg', ski: 'SkiErg', running: 'Run' }[modality];
 }
 
 /** Only the typed option owning this row can label it; never parse a lift name. */
@@ -45,15 +44,15 @@ export function conditioningModeLabelForRow(workout: Partial<Workout>, id: strin
   switch (workout.conditioningFeasibility?.resolvedSubstitutionFamily) {
     case 'treadmill':
     case 'outdoor_running':
-      return 'Mode: Run';
+      return 'Run';
     case 'hill_running_or_walking':
-      return 'Mode: Run / Walk';
+      return 'Run / Walk';
     case 'brisk_walking':
-      return 'Mode: Walk';
+      return 'Walk';
     case 'bodyweight_circuit':
-      return 'Mode: Bodyweight';
+      return 'Bodyweight';
     case 'safe_mixed_modal':
-      return 'Mode: Mixed';
+      return 'Mixed';
     default:
       return undefined;
   }
