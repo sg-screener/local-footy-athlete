@@ -50,6 +50,7 @@ import {
 } from '../data/sessionFlowMenus';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { resolveTrainingAgePolicy, TRAINING_AGE_LEVELS } from '../rules/trainingAgePolicy';
+import { resolveExerciseName } from '../utils/loadEstimation';
 import { readSheetRecords, parseXlsxWorksheet } from './support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -77,8 +78,8 @@ function ok(name: string, condition: unknown, detail?: string): void {
 }
 
 const sheetRows = readSheetRecords(SHEET, SHEET_TAB, SHEET_HEADER_ROW);
-const namespacedSheet = '<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData><x:row r="1"><x:c r="A1" t="s"><x:v>1</x:v></x:c><x:c r="C1" t="inlineStr"><x:is><x:t>Hold &amp; </x:t><x:t>lift</x:t></x:is></x:c></x:row></x:sheetData></x:worksheet>';
-ok('XLSX reads namespace prefixes, shared strings, rich text and blank columns',
+const namespacedSheet = '<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData><x:row r="1"><x:c r="A1" t="s"><x:v>1</x:v></x:c><x:c r="B1" t="str"/><x:c r="C1" t="inlineStr"><x:is><x:t>Hold &amp; </x:t><x:t>lift</x:t></x:is></x:c></x:row></x:sheetData></x:worksheet>';
+ok('XLSX reads namespace prefixes, shared strings, rich text and self-closing blank cells',
   JSON.stringify(parseXlsxWorksheet(namespacedSheet, ['unused', 'Pike lift'])) === JSON.stringify([['Pike lift', '', 'Hold & lift']]));
 let rejectedBadString = false;
 try { parseXlsxWorksheet(namespacedSheet, []); } catch { rejectedBadString = true; }
@@ -93,7 +94,7 @@ console.log('\n[1] THE SHEET — still reads as Sam signed it');
    together with its pool entry, cue, tags, load list and vocabulary entry. The
    number moves with the sheet; that is what makes this cell a ratchet rather
    than a decoration. */
-ok('the sheet holds 210 exercise rows (eleven additions and one barbell variant)', sheetRows.length === 210, `found ${sheetRows.length}`);
+ok('the sheet holds 209 canonical exercise rows after the pulldown identity merge', sheetRows.length === 209, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -313,8 +314,10 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // `everyone` and not a regression (136 -> 137). Total 198 -> 199.
 // Then 137 -> 136 and 199 -> 198 on 2026-08-21 with the Light Skipping deletion.
 // The eleven-exercise intake adds Horse Stance Hold as `everyone` (141 -> 142).
+// The 2026-09-01 identity merge removes the duplicate one-arm pulldown row
+// while preserving it as a read alias, so the canonical count returns to 141.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 142,
+  everyone: 141,
   everyone_regression: 11,
   one_plus_years: 38,
   two_plus_years: 17,
@@ -387,19 +390,23 @@ ok(
 );
 
 ok(
-  'Single-Arm Pulldown has its authored row',
+  'Single-Arm Lat Pulldown owns the one merged authored row',
   (() => {
-    const entry = muscleMetadataFor('Single-Arm Pulldown');
+    const entry = muscleMetadataFor('Single-Arm Lat Pulldown');
     return (
       entry !== null &&
       entry.pool === 'Upper pull vertical' &&
       entry.primary.join(',') === 'Lats' &&
-      entry.secondary.join(',') === 'Upper back,Midline' &&
+      entry.secondary.join(',') === 'Biceps,Upper back,Midline' &&
       entry.experienceGate === 'everyone'
     );
   })(),
-  JSON.stringify(muscleMetadataFor('Single-Arm Pulldown')),
+  JSON.stringify(muscleMetadataFor('Single-Arm Lat Pulldown')),
 );
+ok('the retired spelling is absent from current sheet/code but resolves at legacy ingress',
+  !sheetRows.some((row) => row.Exercise === 'Single-Arm Pulldown')
+    && !EXERCISE_MUSCLE_METADATA.some((entry) => entry.exercise === 'Single-Arm Pulldown')
+    && resolveExerciseName('Single-Arm Pulldown') === 'Single-Arm Lat Pulldown');
 
 /* ── The experience crosswalk ── */
 

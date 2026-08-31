@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-upper-split-composition-and-pulldown-identity',
+    law: 'R-299: Single-Arm Lat Pulldown is the sole current identity and the retired spelling is read-ingress only. Normal male Upper Push and Upper Pull each have six rows with one accessory slot; female split tables remain separate. One explicit variation-family owner prevents same-session near-duplicates across composition, Add and Swap. Easier split-upper sessions retain their important movement planes and trim low-value accessories before producing many one-set rows.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-299',
+    guard: {
+      state: 'guarded',
+      by: 'test:composer-b1 + test:exercise-canonicalisation + test:deload-law',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `condpair`. Red first: the composer still authored seven male split rows, the retired pulldown spelling remained in current pools/cues/equipment/metadata, same-day selection had only exact-name avoidance, and the G-1 route preserved six rows while reducing four of them to one set. The shared male slot tables now own the six-row structures, while the distinct seven-row female tables are unchanged. One explicit variation-family map is consumed by composition, Add and Swap; no name parsing is used. Legacy identity canonicalisation runs before current writing and block-history progression. The release boundary executes normal, injury-adjusted, athlete Add/Swap, G-1 and scheduled-deload routes; the annual male/female saved/restarted run adds zero retired-identity or family collisions and remains 0/728 under catalogue reversal. The exercise workbook/code equality gate holds the one canonical row. Final receipt and NOT COVERED: docs/STATUS_CONDPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-template-and-selected-modality-must-be-compatible',
     law: 'R-298: each of the 55 conditioning templates explicitly declares supported typed modalities. Distance and running identities are Run-only, Air Bike identities are Air Bike-only and Erg identities are machine-only. A required incompatible modality selects a stable same-quality compatible template; typed warm-up copy follows the selected mode, the pair survives save/restart, and final composition refuses an incompatible pair.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-298',

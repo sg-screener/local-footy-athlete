@@ -15,6 +15,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 require('sucrase/register');
 const { CONDITIONING_TEMPLATES } = require('../src/data/conditioningTemplates');
+const { exerciseVariationFamily } = require('../src/rules/exerciseVariationFamily');
 
 const repo = path.resolve(__dirname, '..');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lfa-programming-order-year-'));
@@ -68,10 +69,26 @@ const labelModes = {
 };
 let conditioningRows = 0;
 const modalityMismatches = [];
+const exerciseIdentityMismatches = [];
 for (const athlete of authoredYear.athletes) {
   for (const week of athlete.weeks) {
     for (const day of week.days) {
+      const variationFamilies = new Map();
       for (const row of day.rows ?? []) {
+        if (row.name === 'Single-Arm Pulldown') {
+          exerciseIdentityMismatches.push(`${athlete.gender} ${day.date}: retired pulldown identity displayed`);
+        }
+        const family = exerciseVariationFamily(row.name);
+        if (family) {
+          const previous = variationFamilies.get(family);
+          if (previous) {
+            exerciseIdentityMismatches.push(
+              `${athlete.gender} ${day.date}: ${previous} + ${row.name} share ${family}`,
+            );
+          } else {
+            variationFamilies.set(family, row.name);
+          }
+        }
         if (row.role !== 'conditioning' && row.role !== 'speed') continue;
         conditioningRows += 1;
         const template = templateByName.get(row.name);
@@ -87,6 +104,9 @@ for (const athlete of authoredYear.athletes) {
       }
     }
   }
+}
+if (exerciseIdentityMismatches.length !== 0) {
+  throw new Error(`full-year exercise identity/family mismatches=${exerciseIdentityMismatches.length}\n${exerciseIdentityMismatches.slice(0, 20).join('\n')}`);
 }
 if (conditioningRows === 0 || modalityMismatches.length !== 0) {
   throw new Error(`full-year conditioning identity/modality mismatches=${modalityMismatches.length}; rows=${conditioningRows}\n${modalityMismatches.slice(0, 20).join('\n')}`);
@@ -113,4 +133,5 @@ if (directTravelRows !== 4) throw new Error(`expected 4 direct Going Away athlet
 console.log(`PASS reversing every automatic catalogue changes ${receipt.differingAthleteDays} / 728 athlete-days across 2 athlete-years`);
 console.log(`PASS ${directTravelRows} direct Going Away athlete-date rows and every later saved/restarted day are identical`);
 console.log(`PASS full-year conditioning identity/modality mismatch count is ${modalityMismatches.length} across ${conditioningRows} displayed conditioning/speed rows (audit baseline: 68)`);
+console.log(`PASS full-year retired-identity and same-variation-family mismatch count is ${exerciseIdentityMismatches.length}`);
 console.log('NOT COVERED: physical iPhone, native onboarding taps, athletes outside the audited male/female inputs');

@@ -45,6 +45,7 @@ import { executeProgramControlActionDurably } from '../utils/programControlActio
 import { coachRevisionExistingExerciseNames } from '../utils/coachRevisionTemplateContext';
 import { recordDay, setJourneyClock } from './support/athleteJourney';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { exerciseVariationFamily } from '../rules/exerciseVariationFamily';
 armTotalsOrRed();
 // Mutations run in isolated child processes: no shared checkout is edited.
 const mutation = process.env.LFA_INTAKE_MUTATION;
@@ -155,6 +156,26 @@ async function main() {
     && leaves.filter(leaf => leaf.id !== 'mobility_drills').every(leaf =>
       !legalAddCandidates({ ...args, leaf: leaf.id }).some(candidate => candidate.name === 'Horse Stance Hold')));
   check('Add does not offer any existing session identity', legalAddFamilies({ ...args, existingExerciseNames: allNames }).length === 0);
+  const upperWithBenchAndOverhead = legalAddCandidates({
+    ...args,
+    leaf: 'upper_push',
+    existingExerciseNames: ['Bench Press', 'Overhead Press'],
+  });
+  check('Add blocks every occupied bench/overhead variation family while retaining Dips',
+    upperWithBenchAndOverhead.every((candidate) => ![
+      exerciseVariationFamily('Bench Press'), exerciseVariationFamily('Overhead Press'),
+    ].includes(exerciseVariationFamily(candidate.name)))
+    && upperWithBenchAndOverhead.some((candidate) => candidate.name === 'Dips'));
+  const pullWithPulldown = legalAddCandidates({
+    ...args,
+    leaf: 'upper_pull',
+    existingExerciseNames: ['Lat Pulldown'],
+  });
+  check('Add never offers another member of an occupied pulldown family',
+    pullWithPulldown.every((candidate) =>
+      exerciseVariationFamily(candidate.name) !== exerciseVariationFamily('Lat Pulldown')));
+  check('the retired Single-Arm Pulldown identity is absent from every Add choice',
+    !choices.some((candidate) => candidate.name === 'Single-Arm Pulldown'));
   for (const originalExercise of ['Back Squat', 'Bench Press', 'RDLs']) {
     const options = getTapSwapChoices({ originalExercise, reason: 'preference', environment, existingExerciseNames: [] });
     const groups = groupTapSwapChoices(options);

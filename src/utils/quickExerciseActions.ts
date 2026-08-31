@@ -80,6 +80,7 @@ export function rankedQuickSwapChoices(args: {
     ],
     profile: args.profile,
     requiredFamily: args.requiredFamily,
+    replacingExerciseName: args.originalExercise,
   }).filter((candidate) => typedFamilyCorrectsName || (
     candidate.proximity === 'same_leaf'
       && classifyExerciseRole(candidate.name) === originalRole

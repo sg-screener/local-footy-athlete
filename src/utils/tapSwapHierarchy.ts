@@ -41,6 +41,7 @@ import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2
 import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 import { getMondayISOForDate, selectMicrocycleForDate } from './programBlockState';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
+import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -871,7 +872,11 @@ export function getTapSwapChoices(args: {
     dedupeChoices(trainingChoices),
     args.originalExercise,
     environment,
-  );
+  ).filter((choice) => !choice.name || !exerciseVariationConflictsWithSession({
+    candidate: choice.name,
+    existingExerciseNames: args.existingExerciseNames ?? [],
+    replacingExerciseName: args.originalExercise,
+  }));
   /**
    * ⚠ **RECOVERY IS NOT AN ANSWER FOR A STRENGTH ROW.**
    *

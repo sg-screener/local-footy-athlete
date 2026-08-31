@@ -137,9 +137,10 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
 
 /**
  * A push-ONLY or pull-ONLY day. Sam clarified the complete shapes on
- * 2026-08-21: both keep one horizontal and one vertical main movement, then
- * receive two direction-matched accessory opportunities, their own arm work,
- * their own shoulder-girdle work, and core. Seven is the ceiling; a slot that
+ * 2026-08-21, then reduced by Sam on 2026-09-01: both keep one horizontal and
+ * one vertical main movement, then receive one direction-matched accessory,
+ * their own arm work, their own shoulder-girdle work, and core. Six is the
+ * ceiling; a slot that
  * equipment or an injury makes impossible is disclosed and dropped by the
  * composer rather than replaced with work from the opposite direction.
  *
@@ -159,13 +160,13 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  */
 export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'push_accessory_1', 'push_accessory_2',
+  'push_accessory_1',
   'triceps', 'shoulders', 'core',
 ];
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'pull_accessory_1', 'pull_accessory_2',
+  'pull_accessory_1',
   'biceps', 'traps', 'core',
 ];
 

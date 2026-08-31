@@ -11,6 +11,10 @@ import type { ProgramControlAction } from '../types/programControlAction';
 import type { TapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import { classifyExerciseRole } from '../utils/sessionRoles';
+import {
+  exerciseVariationConflictsWithSession,
+  exerciseVariationFamily,
+} from '../rules/exerciseVariationFamily';
 
 let passed = 0;
 let failed = 0;
@@ -117,6 +121,20 @@ assert(pallofRanked.every((choice) => classifyExerciseRole(choice.name!) === 'mi
   'a midline Quick Swap never broadens into power, main lifts or unrelated accessories');
 assert(!pallofRanked.some((choice) => choice.name === 'Box Jumps'),
   'Box Jumps can never be offered as a Band Pallof Press replacement');
+const occupiedFamilySwap = rankedQuickSwapChoices({
+  originalExercise: 'Bench Press',
+  reason: 'preference',
+  environment: healthyEnvironment,
+  existingExerciseNames: ['Bench Press', 'Overhead Press', 'Dips'],
+});
+assert(occupiedFamilySwap.every((choice) =>
+  exerciseVariationFamily(choice.name) !== exerciseVariationFamily('Overhead Press')),
+  'Swap cannot introduce a second member of a family occupied by another row');
+assert(!exerciseVariationConflictsWithSession({
+  candidate: 'Incline DB Bench',
+  existingExerciseNames: ['Bench Press', 'Overhead Press', 'Dips'],
+  replacingExerciseName: 'Bench Press',
+}), 'Swap evaluates collisions after removing the original row');
 let attempted: readonly string[] = [];
 for (const expected of ['A', 'B', 'C', 'A']) {
   const next = nextQuickSwapChoice(choices, attempted);

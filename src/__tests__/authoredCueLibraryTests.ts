@@ -402,7 +402,7 @@ function main(): void {
       'Copenhagen Plank (Half)',
     ];
     for (const name of renamed) {
-      ok(`${name} has a cue`, Boolean(EXERCISE_CUES[name]));
+      ok(`${name} has a cue through its canonical identity`, Boolean(EXERCISE_CUES[resolveExerciseName(name)]));
 
       // Conditioning modalities are sessions, not demoed movements — they have
       // never been in the video map (nor had 'Bike Sprints' before the rename).
@@ -433,6 +433,8 @@ function main(): void {
           `resolveExerciseName('${name}') gave '${resolved}': no load profile and not bodyweight`);
       }
     }
+    ok('the retired Single-Arm Pulldown identity is not a current cue key',
+      !Object.prototype.hasOwnProperty.call(EXERCISE_CUES, 'Single-Arm Pulldown'));
   }
 
   console.log('\n[6] Pool coverage — every prescribable exercise is complete');

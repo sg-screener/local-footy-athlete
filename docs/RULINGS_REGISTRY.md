@@ -7494,3 +7494,35 @@ through chained `test:conditioning-templates` (which invokes the complete
 template/modality gate). The persistence and full-year catalogue-order gates
 remain release-blocking through `test:programming-selection-release`.
 Verification status and NOT COVERED: `docs/STATUS_CONDPAIR.md`.
+
+**R-299** · Canonical pulldown identity and six-row male upper splits, 2026-09-01.
+
+Owner: condpair. `Single-Arm Lat Pulldown` is the only current athlete-facing
+and writable identity. `Single-Arm Pulldown` remains only as a legacy
+read-ingress alias, so old saved programs and training history reopen and
+progress under the canonical identity without data loss. Cues, video,
+equipment, injury metadata, progression and authored sheet data resolve to the
+one canonical row.
+
+Normal male Upper Push and Upper Pull each contain six strength rows: their two
+main planes, one direction-matched accessory, arm work, shoulder-girdle work and
+Midline. The second push/pull accessory seats are retired from current male
+composition. The separately ruled female split tables remain unchanged.
+
+Same-session near-duplicate prevention is explicit typed data, not name
+parsing. The shared composer, athlete Add and athlete Swap routes consume the
+same variation-family owner. It currently binds the ruled pulldown family and
+the relevant bench-, overhead-press-, row-, bodyweight-pull- and RDL-variation
+families. An occupied family cannot be selected again in the same session.
+
+When either upper split is made easier, its important movement planes survive.
+Low-value accessory rows are removed before the remaining dose is reduced, so
+G-1 and scheduled deload routes do not produce a long list of one-set
+exercises.
+
+Guard: `LAW-upper-split-composition-and-pulldown-identity` through the chained
+`test:composer-b1 + test:exercise-canonicalisation + test:deload-law` gates. The
+focused `test:upper-split-composition` boundary, workbook equality and annual
+male/female save/restart and catalogue-reversal sweep remain release-blocking
+through `test:programming-selection-release`. Verification status and NOT
+COVERED: `docs/STATUS_CONDPAIR.md`.

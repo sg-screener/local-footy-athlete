@@ -678,7 +678,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     primary: ['Lats'],
     secondary: ['Biceps', 'Upper back', 'Midline'],
     experienceGate: 'everyone',
-    note: 'MERGED per Sam: absorbs Single-Arm Pulldown (alias). Keeping this name + cue — say the word to flip the name.',
+    note: 'Canonical identity; legacy records load through the read-ingress alias.',
     flagged: false,
   },
 
@@ -1006,16 +1006,6 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: 'Moved per Sam from Arms—biceps (it lived in the biceps pool; now vertical pull).',
     flagged: false,
   },
-  {
-    exercise: 'Single-Arm Pulldown',
-    pool: 'Upper pull vertical',
-    primary: ['Lats'],
-    secondary: ['Upper back', 'Midline'],
-    experienceGate: 'everyone',
-    note: '',
-    flagged: false,
-  },
-
   /* ── Shoulders ── */
   {
     exercise: 'Cable Face Pull',

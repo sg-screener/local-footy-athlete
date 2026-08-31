@@ -439,7 +439,8 @@ export const DEFAULT_EXERCISES: Exercise[] = [
  * (pulling logged sets across rotated anchors in the same slot).
  */
 export function findOrCreateExercise(name: string): Exercise {
-  const lower = name.toLowerCase();
+  const canonicalName = resolveExerciseName(name);
+  const lower = canonicalName.toLowerCase();
 
   // Pass 1 — exact match (case-insensitive). Always preferred.
   const exact = DEFAULT_EXERCISES.find((e) => e.name.toLowerCase() === lower);
@@ -454,7 +455,7 @@ export function findOrCreateExercise(name: string): Exercise {
   // (because "trap bar deadlift".includes("deadlift") is true), silently
   // breaking cross-cycle anchor rotation. For non-pool AI-suggested names
   // (typos, regional variants) the fuzzy fallback is still useful.
-  if (!findPoolEntry(name)) {
+  if (!findPoolEntry(canonicalName)) {
     const fuzzy = DEFAULT_EXERCISES.find(
       (e) => e.name.toLowerCase().includes(lower) || lower.includes(e.name.toLowerCase()),
     );
@@ -464,8 +465,8 @@ export function findOrCreateExercise(name: string): Exercise {
   // Pass 3 — fall through to a custom Exercise.
   return {
     id: `ex-custom-${lower.replace(/[^a-z0-9]/g, '-')}`,
-    name,
-    description: name,
+    name: canonicalName,
+    description: canonicalName,
     exerciseType: 'Compound',
     muscleGroups: [],
     equipmentRequired: [],

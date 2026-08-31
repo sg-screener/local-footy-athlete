@@ -155,7 +155,7 @@ export function parseXlsxWorksheet(xml: string, sharedStrings: readonly string[]
 
   for (const rowMatch of sheetData[1].matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
     const cells: string[] = [];
-    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*?)(?:\s*\/>|>([\s\S]*?)<\/c>)/g)) {
       const attributes = cellMatch[1];
       const body = cellMatch[2] ?? '';
       const reference = /r="([A-Z]+\d+)"/.exec(attributes);

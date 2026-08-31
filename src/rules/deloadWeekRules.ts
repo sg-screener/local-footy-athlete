@@ -94,10 +94,10 @@ export interface DeloadWeekPolicy {
    */
   athleteIsBeatUp?: boolean;
   /**
-   * The G-1 choice is literally “Same session but easier”: every selected
-   * exercise stays and its dose shrinks. Scheduled/readiness WEEK deloads keep
-   * the existing accessory-count trim unless their caller explicitly asks for
-   * this day-scoped mode.
+   * The G-1 choice is “Same session but easier”: the important movement-plane
+   * rows stay and their dose shrinks. Split upper sessions trim low-value
+   * accessories before scattering the session across many one-set rows.
+   * Other session families retain their established identity-preserving path.
    */
   preserveExerciseSelection?: boolean;
 }
@@ -472,11 +472,34 @@ export function applyStrengthDeloadToExercises(
   exercises: WorkoutExercise[],
   policy: DeloadWeekPolicy,
 ): WorkoutExercise[] {
-  const accessoryIndexes = exercises
+  const rawAccessoryIndexes = exercises
     .map((exercise, index) => ({ exercise, index }))
     .filter(({ exercise }) => !isConditioningExerciseRow(exercise)
       && isAccessoryStrengthRow(exercise))
     .map(({ index }) => index);
+  const slotFor = (exercise: WorkoutExercise): string | null => (
+    exercise as unknown as { section18Evidence?: { slot?: string | null } }
+  ).section18Evidence?.slot ?? null;
+  const importantUpperSlots = new Set([
+    'horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull',
+  ]);
+  const slots = exercises.map(slotFor);
+  const isSplitUpper = (
+    (slots.includes('horizontal_push') && slots.includes('vertical_push'))
+    || (slots.includes('horizontal_pull') && slots.includes('vertical_pull'))
+  );
+  // Important movement planes lead the keep order. A low-value isolation row
+  // never survives merely because it happened to be authored before the other
+  // plane that gives an upper split session its structure.
+  const accessoryIndexes = [...rawAccessoryIndexes].sort((left, right) => {
+    const leftImportant = importantUpperSlots.has(slots[left] ?? '');
+    const rightImportant = importantUpperSlots.has(slots[right] ?? '');
+    if (leftImportant !== rightImportant) return leftImportant ? -1 : 1;
+    const leftDose = Math.round(exercises[left].prescribedSets * DELOAD_LAW.mainLiftSetMultiplier);
+    const rightDose = Math.round(exercises[right].prescribedSets * DELOAD_LAW.mainLiftSetMultiplier);
+    if ((leftDose > 1) !== (rightDose > 1)) return leftDose > 1 ? -1 : 1;
+    return left - right;
+  });
 
   // "cut to 2-3, or half, whichever is LESS" — the cap and the half compete,
   // and the smaller number wins. With 8 accessories the cap (3) wins; with 4
@@ -485,9 +508,14 @@ export function applyStrengthDeloadToExercises(
     DELOAD_LAW.accessoryMaxKept,
     Math.floor(accessoryIndexes.length * DELOAD_LAW.accessoryKeepMultiplier),
   );
-  const removeIndexes = policy.preserveExerciseSelection
-    ? new Set<number>()
-    : new Set(accessoryIndexes.slice(keepCount));
+  const removeIndexes = policy.preserveExerciseSelection && isSplitUpper
+    ? new Set(rawAccessoryIndexes.filter((index) => (
+        !importantUpperSlots.has(slots[index] ?? '')
+        && Math.round(exercises[index].prescribedSets * DELOAD_LAW.mainLiftSetMultiplier) <= 1
+      )))
+    : policy.preserveExerciseSelection
+      ? new Set<number>()
+      : new Set(accessoryIndexes.slice(keepCount));
 
   return exercises
     .filter((_, index) => !removeIndexes.has(index))

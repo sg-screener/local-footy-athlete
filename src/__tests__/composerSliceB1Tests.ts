@@ -26,6 +26,10 @@ import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { EQUIPMENT_TAG_LABELS } from '../rules/equipmentVocabulary';
 import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
 import { exerciseIsAvailableWith } from '../data/exerciseEquipmentRequirement';
+import {
+  exerciseVariationFamily,
+  sessionHasExerciseVariationCollision,
+} from '../rules/exerciseVariationFamily';
 
 armTotalsOrRed();
 
@@ -212,23 +216,44 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
   const split = composeWeek(inputs({ plannedDays: [UPPER_PUSH_DAY, UPPER_PULL_DAY] }));
   const splitPush = split.days.find((candidate) => candidate.kind === 'upper_split_push');
   const splitPull = split.days.find((candidate) => candidate.kind === 'upper_split_pull');
-  ok('[SAM] a full-gym split PUSH authors the ruled seven-row shape',
+  ok('[SAM] a full-gym split PUSH authors the ruled six-row shape',
     JSON.stringify(splitPush?.rows.map((row) => row.slot)) === JSON.stringify([
-      'horizontal_push', 'vertical_push', 'push_accessory_1', 'push_accessory_2',
+      'horizontal_push', 'vertical_push', 'push_accessory_1',
       'triceps', 'shoulders', 'core',
     ]), JSON.stringify(splitPush?.rows.map((row) => `${row.slot}:${row.identity}`)));
-  ok('[SAM] a full-gym split PULL authors the ruled seven-row shape',
+  ok('[SAM] a full-gym split PULL authors the ruled six-row shape',
     JSON.stringify(splitPull?.rows.map((row) => row.slot)) === JSON.stringify([
-      'horizontal_pull', 'vertical_pull', 'pull_accessory_1', 'pull_accessory_2',
+      'horizontal_pull', 'vertical_pull', 'pull_accessory_1',
       'biceps', 'traps', 'core',
     ]), JSON.stringify(splitPull?.rows.map((row) => `${row.slot}:${row.identity}`)));
-  ok('[SAM] split upper sessions never exceed seven rows',
-    split.days.every((candidate) => candidate.rows.length <= 7),
+  ok('[SAM] male split upper sessions never exceed six rows',
+    split.days.every((candidate) => candidate.rows.length <= 6),
     JSON.stringify(split.days.map((candidate) => `${candidate.kind}:${candidate.rows.length}`)));
   ok('[non-vacuity] each split row is a distinct exercise',
     split.days.every((candidate) => new Set(candidate.rows.map((row) => row.identity)).size
       === candidate.rows.length),
     JSON.stringify(split.days.map((candidate) => candidate.rows.map((row) => row.identity))));
+  ok('[typed family] every composed split day has at most one exercise per variation family',
+    split.days.every((candidate) => !sessionHasExerciseVariationCollision(
+      candidate.rows.map((row) => row.identity))),
+    JSON.stringify(split.days.map((candidate) => candidate.rows.map((row) => [
+      row.identity, exerciseVariationFamily(row.identity),
+    ]))));
+  ok('[typed family] three pulldown spellings are one explicit family',
+    new Set(['Lat Pulldown', 'Neutral-Grip Pulldown', 'Single-Arm Lat Pulldown']
+      .map(exerciseVariationFamily)).size === 1
+    && exerciseVariationFamily('Lat Pulldown') !== null);
+  ok('[typed family] bench variants collide while Bench + Overhead Press + Dips do not',
+    sessionHasExerciseVariationCollision(['Bench Press', 'Incline DB Bench', 'DB Bench Press'])
+    && !sessionHasExerciseVariationCollision(['Bench Press', 'Overhead Press', 'Dips']));
+
+  const female = composeWeek(inputs({
+    profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate', gender: 'female' } as never,
+    plannedDays: [UPPER_PUSH_DAY, UPPER_PULL_DAY],
+  }));
+  ok('[female control] the separate female split structures remain seven rows',
+    female.days.every((candidate) => candidate.rows.length === 7),
+    JSON.stringify(female.days.map((candidate) => candidate.rows.map((row) => row.slot))));
 }
 
 // ── CLAUSE (d) — session counts honest ─────────────────────────────────────

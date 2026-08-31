@@ -26,7 +26,7 @@ armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 import { EXERCISE_CUES, getExerciseCue } from '../data/exerciseCues';
-import { CONDITIONING_META } from '../data/exerciseTags';
+import { CONDITIONING_META, EXERCISE_TAGS } from '../data/exerciseTags';
 import { MOBILITY_POOL, POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import {
@@ -48,6 +48,10 @@ import {
 } from '../utils/exerciseCanonicalisation';
 import { isExempt } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
+import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
+import { findOrCreateExercise } from '../data/defaultProgram';
+import { loadForReplacementExercise, readBlockHistory } from '../rules/blockBoundaryProgression';
 import {
   cuelessSessionCards,
   cuelessStrengthCards,
@@ -199,6 +203,46 @@ console.log('\n[5] "Farmers Carry" regression fixture (the AI-backend spelling)'
   ok('resolveExerciseName("Farmers Carry") keeps the curated load anchor',
     Boolean(EXERCISE_LOAD_MAP[resolveExerciseName('Farmers Carry')]),
     `resolved to ${JSON.stringify(resolveExerciseName('Farmers Carry'))}`);
+}
+
+console.log('\n[legacy pulldown] one current identity, one read-only alias');
+{
+  const legacy = 'Single-Arm Pulldown';
+  const canonical = 'Single-Arm Lat Pulldown';
+  ok('legacy saved names reopen under the canonical athlete-facing name',
+    canonicalExerciseName(legacy) === canonical && resolveExerciseName(legacy) === canonical,
+    `${canonicalExerciseName(legacy)} / ${resolveExerciseName(legacy)}`);
+  ok('the current selectable vocabulary contains only the canonical pulldown identity',
+    selectableExerciseNames().includes(canonical) && !selectableExerciseNames().includes(legacy));
+  ok('the legacy name is absent from current cue/tag/equipment registries',
+    !Object.prototype.hasOwnProperty.call(EXERCISE_CUES, legacy)
+    && !Object.prototype.hasOwnProperty.call(EXERCISE_TAGS, legacy)
+    && !Object.prototype.hasOwnProperty.call(EXERCISE_EQUIPMENT_REQUIREMENT, legacy));
+  ok('legacy cue and display lookup resolves to the merged canonical content',
+    buildCueText(legacy) === buildCueText(canonical) && hasCuratedCue(legacy));
+  ok('the current exercise writer stores the canonical name even when legacy data enters it',
+    findOrCreateExercise(legacy).name === canonical,
+    `got ${findOrCreateExercise(legacy).name}`);
+  const history = readBlockHistory({
+    feedbackByDate: {
+      '2026-08-10': {
+        dateStr: '2026-08-10', completion: 'full', feeling: 'good', soreness: 'none',
+        strength: [{
+          exerciseId: 'legacy-pulldown', exerciseName: legacy, completion: 'full',
+          prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 10,
+          weightKg: 32.5,
+        }],
+      } as any,
+    },
+    blockStartISO: '2026-08-10', blockEndISO: '2026-08-10', requiredStrengthSessions: 1,
+  });
+  ok('legacy training history merges onto the canonical progression identity',
+    history.lastRecordedLoadByExercise[canonical] === 32.5
+    && history.lastRecordedLoadByExercise[legacy] === undefined
+    && loadForReplacementExercise({
+      exerciseName: canonical, recordedLoadByExercise: history.lastRecordedLoadByExercise,
+    }) === 32.5,
+    JSON.stringify(history.lastRecordedLoadByExercise));
 }
 
 console.log('\n[6] Token-order & abbreviation variants resolve (run-3 cue coverage hole)');

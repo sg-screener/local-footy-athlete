@@ -2199,27 +2199,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
-  'Single-Arm Pulldown': {
-    movement: 'vertical_pull', region: 'upper', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: {
-      'groin': 'good',
-      'hip': 'good',
-      'quad': 'good',
-      'hamstring': 'good',
-      'knee': 'good',
-      'calf': 'good',
-      'ankle/foot': 'good',
-      'ribs': 'good',
-      'lowerBack': 'caution',
-      'neck': 'good',
-      'shoulder': 'caution',
-      'elbow': 'caution',
-      'wrist/hand': 'caution',
-    },
-  },
-
   'Single-Arm Lat Pulldown': {
     movement: 'vertical_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: true,

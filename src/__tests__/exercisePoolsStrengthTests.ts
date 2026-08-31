@@ -38,6 +38,7 @@ import {
 } from '../data/exercisePoolsStrength';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
+import { resolveExerciseName } from '../utils/loadEstimation';
 
 // ── R-083: A POOL MAY NOW ANSWER "NOTHING THIS KIT CAN DO" ─────────────────
 //
@@ -140,9 +141,13 @@ section('1. Classification');
   assert(neutralPulldown?.slot === 'vertical_pull' && neutralPulldown?.role === 'accessory',
     'Neutral-Grip Pulldown → vertical_pull/accessory (new entry)');
 
-  const straightArm = classifyPoolSlot('Single-Arm Pulldown');
+  const straightArm = classifyPoolSlot(resolveExerciseName('Single-Arm Pulldown'));
   assert(straightArm?.slot === 'vertical_pull' && straightArm?.role === 'accessory',
-    'Single-Arm Pulldown → vertical_pull/accessory (new entry)');
+    'legacy Single-Arm Pulldown resolves to the canonical vertical_pull/accessory');
+  assert(!Object.values(STRENGTH_POOLS).some((group) =>
+    [...group.anchor.entries, ...group.accessory.entries]
+      .some((entry) => entry.name === 'Single-Arm Pulldown')),
+    'the retired spelling is absent from current strength pools');
 
   const walkingLunges = classifyPoolSlot('Walking Lunges');
   assert(walkingLunges?.slot === 'squat' && walkingLunges?.role === 'accessory',

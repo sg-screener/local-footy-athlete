@@ -537,7 +537,6 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Lat Pulldown',            loadRatio: 0.80 },
         { name: 'Neutral-Grip Pulldown',   loadRatio: 0.80 },
         { name: 'Single-Arm Lat Pulldown', loadRatio: 0.40 },
-        { name: 'Single-Arm Pulldown',   loadRatio: 0.50 },
       ],
     },
   },

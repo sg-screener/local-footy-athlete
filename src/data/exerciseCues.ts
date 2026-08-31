@@ -773,11 +773,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Single-Arm Lat Pulldown': {
     primaryCue: 'Pull the handle to the shoulder, lead with the lat, V grip attachment.',
-    secondaryCue: 'Control the return, full stretch at the top.',
-  },
-  'Single-Arm Pulldown': {
-    primaryCue: 'Use V grip on pulldown machine.',
-    secondaryCue: 'Stay tight through midline.',
+    secondaryCue: 'Stay tight through the midline; control the return to a full stretch.',
   },
   'Single-Arm Shrug': {
     primaryCue: 'One side at a time, shoulder straight up.',

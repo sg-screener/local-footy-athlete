@@ -275,8 +275,8 @@ function candidateFor(name: string): Candidate | null {
 
 /**
  * ⚠ **DEDUPED BY CANONICAL NAME, BECAUSE `EXERCISE_TAGS` HAS ALIASES IN IT.**
- * `Single-Arm Pulldown` and `Single-Arm Lat Pulldown` are two keys that
- * `resolveExerciseName` collapses to one exercise. MEASURED before the fix: a
+ * The retired one-arm pulldown spelling and its canonical lat-pulldown name
+ * are legacy/current keys that `resolveExerciseName` collapses to one exercise. MEASURED before the fix: a
  * 4/10 shoulder was offered `Single-Arm Lat Pulldown` TWICE in a three-option
  * menu — which is the ladder telling the athlete it has fewer answers than it
  * does, and would let one session receive the same row twice.

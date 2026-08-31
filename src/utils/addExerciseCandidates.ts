@@ -57,6 +57,7 @@ import { CONDITIONING_META, getExerciseTags, type ConditioningTier } from '../da
 import { SECTION_LABELS, type SessionExecutionSectionId } from './sessionExecutionChecklist';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { exerciseProgrammingAllows } from './exerciseFilter';
+import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
 
 export interface AddCandidate {
   restSeconds?: number;
@@ -332,6 +333,8 @@ export interface AddCandidateArgs {
   sessionKind?: Workout['composedOptionalKind'];
   environment: TapSwapEnvironment;
   existingExerciseNames?: readonly string[];
+  /** Swap-only: this row leaves before the candidate arrives. */
+  replacingExerciseName?: string;
   profile?: OnboardingData | null;
 }
 
@@ -408,6 +411,11 @@ function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
     const target = LEAF_FOR_POOL[group.id];
     for (const name of group.names) {
       if (present.has(resolveExerciseName(name).toLowerCase())) continue;
+      if (exerciseVariationConflictsWithSession({
+        candidate: name,
+        existingExerciseNames: args.existingExerciseNames ?? [],
+        replacingExerciseName: args.replacingExerciseName,
+      })) continue;
       if (!assessTapSwapCandidateSafety(name, args.environment).safe) continue;
       if ((args.section === 'primer' || args.sessionKind === 'primer') && !exerciseProgrammingAllows(name, {
         ...args.environment, route: 'primer',

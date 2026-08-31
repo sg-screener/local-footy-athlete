@@ -76,7 +76,6 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
   'Side Plank Row': 'bands',
   'Spanish Squat Hold': 'bands',
   'Hamstring Curl': 'machine',
-  'Single-Arm Pulldown': 'machine',
   'Single-Leg Leg Press': 'machine',
   'Single-Arm Lat Pulldown': 'machine',
 

@@ -597,6 +597,53 @@ const describeRows = (workout: Workout): string =>
 
 /* ── Result ── */
 
+console.log('\n[upper easier] important planes survive; low-value one-set scatter does not');
+{
+  const upperRow = (
+    name: string,
+    sets: number,
+    slot: string,
+    role: 'main_strength' | 'strength_accessory',
+  ): WorkoutExercise => row(name, sets, {
+    section18Evidence: {
+      protocolVersion: 1,
+      role,
+      strengthPattern: role === 'main_strength' ? 'push' : null,
+      mainStrengthPattern: role === 'main_strength' ? 'push' : null,
+      slot,
+      provenance: 'composer_declaration',
+    },
+  } as Partial<WorkoutExercise>);
+  const normalUpperPush = [
+    upperRow('Bench Press', 3, 'horizontal_push', 'main_strength'),
+    upperRow('Overhead Press', 3, 'vertical_push', 'strength_accessory'),
+    upperRow('Dips', 2, 'push_accessory_1', 'strength_accessory'),
+    upperRow('Skull Crushers', 2, 'triceps', 'strength_accessory'),
+    upperRow('Lateral Raise', 2, 'shoulders', 'strength_accessory'),
+    upperRow('Ab Wheel', 2, 'core', 'strength_accessory'),
+  ];
+  const g1Policy = resolveDoorDeloadPolicy({
+    door: 'readiness', seasonPhase: 'In-season', preserveExerciseSelection: true,
+  })!;
+  const easier = applyStrengthDeloadToExercises(normalUpperPush, g1Policy);
+  const names = easier.map((entry) => entry.exercise?.name);
+  const oneSetRows = easier.filter((entry) => entry.prescribedSets === 1);
+  ok('G-1 easier keeps both important upper push planes',
+    names.includes('Bench Press') && names.includes('Overhead Press'), names.join(', '));
+  ok('G-1 easier trims accessory rows before creating a many-row one-set session',
+    oneSetRows.length <= 2 && easier.length < normalUpperPush.length,
+    `${easier.length} rows; one-set=${oneSetRows.map((entry) => entry.exercise?.name).join(', ')}`);
+
+  const scheduled = applyStrengthDeloadToExercises(normalUpperPush, policy);
+  const scheduledNames = scheduled.map((entry) => entry.exercise?.name);
+  ok('scheduled deload keeps both important upper push planes too',
+    scheduledNames.includes('Bench Press') && scheduledNames.includes('Overhead Press'),
+    scheduledNames.join(', '));
+  ok('scheduled deload also avoids many different one-set rows',
+    scheduled.filter((entry) => entry.prescribedSets === 1).length <= 2,
+    scheduled.map((entry) => `${entry.exercise?.name}:${entry.prescribedSets}`).join(', '));
+}
+
 console.log(
   `\nDeload law: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
 );

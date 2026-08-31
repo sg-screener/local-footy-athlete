@@ -98,6 +98,7 @@ import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome'
 import {
   equipmentClassFor,
   resolveLoadAuthority,
+  resolveExerciseName,
   startingWeightForAthlete,
 } from '../utils/loadEstimation';
 import { EQUIPMENT } from '../data/equipmentLattice';
@@ -702,7 +703,7 @@ export function readBlockHistory(args: {
       if (log.completion === 'skipped') continue;
       const load = log.weightKg;
       if (typeof load === 'number' && Number.isFinite(load) && load > 0) {
-        lastRecordedLoadByExercise[log.exerciseName] = load;
+        lastRecordedLoadByExercise[resolveExerciseName(log.exerciseName)] = load;
       }
     }
   }
@@ -720,7 +721,7 @@ export function readBlockHistory(args: {
       if (log.completion === 'skipped') continue;
       const sets = log.prescribedSets;
       if (typeof sets === 'number' && Number.isFinite(sets) && sets > 0) {
-        lastRecordedPrescribedSetsByExercise[log.exerciseName] = sets;
+        lastRecordedPrescribedSetsByExercise[resolveExerciseName(log.exerciseName)] = sets;
       }
     }
   }
@@ -872,7 +873,7 @@ export function progressedFromOwnHistory(args: {
   exerciseName: string;
   history: BlockHistorySignal;
 }): boolean {
-  const recorded = args.history.lastRecordedLoadByExercise[args.exerciseName];
+  const recorded = args.history.lastRecordedLoadByExercise[resolveExerciseName(args.exerciseName)];
   if (typeof recorded !== 'number') return false;
   if (!args.history.qualifies) return false;
   if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
@@ -905,7 +906,7 @@ export function loadForReplacementExercise(args: {
   /** Every load this athlete has recorded, by exact canonical exercise name. */
   recordedLoadByExercise?: Readonly<Record<string, number>>;
 }): number | undefined {
-  const name = args.exerciseName;
+  const name = resolveExerciseName(args.exerciseName);
   if (!name) return undefined;
 
   // ── 1. ITS OWN RECORDED HISTORY WINS, ALWAYS ──

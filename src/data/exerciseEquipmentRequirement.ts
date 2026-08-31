@@ -189,7 +189,6 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Single-Arm DB Floor Press": ['dumbbells'],
   "Single-Arm DB Row": ['dumbbells'],
   "Single-Arm Lat Pulldown": ['machine'],
-  "Single-Arm Pulldown": ['machine'],
   "Single-Arm Shrug": ['dumbbells'],
   "Single-Leg Calf Raise": [],
   "Single-Leg Hip Thrust": [],

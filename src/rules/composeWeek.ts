@@ -72,6 +72,11 @@ import {
   type AutomaticCandidateTrace,
   type AutomaticProgrammingSelectionTrace,
 } from './programmingSelectionTrace';
+import {
+  exerciseVariationFamily,
+  sameExerciseVariationFamily,
+  type ExerciseVariationFamily,
+} from './exerciseVariationFamily';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -1490,6 +1495,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
      * decision, which is stated at that line and is why this is applied where
      * it is and nowhere else. */
     const identitiesThisDay = new Set<ComposedExerciseIdentity>();
+    const variationFamiliesThisDay = new Set<ExerciseVariationFamily>();
     // ⚠ THE FULL-BODY SHAPE DECLARES ITS OWN PATTERNS. The plan's answer for
     // this case was upper-only and Sam has overruled it, so asking the plan
     // which patterns the day carries would re-impose the ruling he replaced —
@@ -1614,7 +1620,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * through the existing temporary-substitute path — deterministic from
        * the same inputs on both sides of a boot. */
       const rdlAlreadyOnDay = slot === 'single_leg_hip'
-        && [...identitiesThisDay].some((id) => RDL_FAMILY_IDENTITIES.has(id));
+        && [...identitiesThisDay].some((id) => sameExerciseVariationFamily(id, 'RDLs'));
       const withoutRdlFamily = (
         list: readonly ComposedExerciseIdentity[],
       ): readonly ComposedExerciseIdentity[] => {
@@ -1622,8 +1628,17 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         const filtered = list.filter((id) => !RDL_FAMILY_IDENTITIES.has(id));
         return filtered.length > 0 ? filtered : list;
       };
-      const baseLegal = legalUnder(excluded, inputs.kit);
-      const legalBeforeDayIdentity = withoutRdlFamily(legalUnder(excludedToday, kitToday));
+      const withoutUsedVariationFamily = (
+        list: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => list.filter((id) => {
+        const family = exerciseVariationFamily(id);
+        return family === null || !variationFamiliesThisDay.has(family);
+      });
+      const baseLegalBeforeDayFamily = legalUnder(excluded, inputs.kit);
+      const baseLegal = withoutUsedVariationFamily(baseLegalBeforeDayFamily);
+      const legalBeforeDayIdentity = withoutUsedVariationFamily(
+        withoutRdlFamily(legalUnder(excludedToday, kitToday)),
+      );
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
       const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));
@@ -1631,6 +1646,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */
       if (baseLegal.length === 0) {
+        if (baseLegalBeforeDayFamily.length > 0) {
+          gaps.push({ dayOfWeek: planned.dayOfWeek, slot, cause: 'already_on_day', wouldNeed: null });
+          continue;
+        }
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
         if (!planeChoice) {
@@ -1844,7 +1863,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           }).identity
         : selection.identity;
       const changedByDayIdentity = identitiesThisDay.has(selection.identity)
-        || (rdlAlreadyOnDay && RDL_FAMILY_IDENTITIES.has(selection.identity));
+        || [...identitiesThisDay].some((id) => sameExerciseVariationFamily(id, selection.identity));
       const substitutionCause: NonNullable<ComposedRow['substitutedFor']>['cause'] | undefined =
         !substitutedToday ? undefined
           : excludedToday.has(selection.identity) ? 'excluded_today'
@@ -1927,6 +1946,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       });
       usedThisWeek.add(identity);
       identitiesThisDay.add(identity);
+      const selectedVariationFamily = exerciseVariationFamily(identity);
+      if (selectedVariationFamily) variationFamiliesThisDay.add(selectedVariationFamily);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {
         groupsUsedHere.add(chosenGroup);
