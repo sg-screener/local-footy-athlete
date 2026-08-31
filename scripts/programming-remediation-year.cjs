@@ -19,6 +19,21 @@ const replace = (from, to) => {
 replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
 if (fullKit) replace('const profile=athleteAnswers(archetype);',
   "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
+replace('const events = [];', `const programmingSelectionTraceBatches = [];
+let programmingSelectionTraceAthlete = 'not_started';
+app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionTraceObserver((traces) => {
+  programmingSelectionTraceBatches.push({ athlete: programmingSelectionTraceAthlete, traces });
+});
+const events = [];`);
+replace('async function run(gender) {', `async function run(gender) {
+  programmingSelectionTraceAthlete = gender;`);
+replace("save('year-programs.json',data);", `save('year-programs.json',data);
+  save('programming-selection-traces.json', {
+    schemaVersion: 1,
+    revision: data.revision,
+    sourceDriverSha256: ${JSON.stringify(originalHash)},
+    traceBatches: programmingSelectionTraceBatches,
+  });`);
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
   "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
@@ -32,7 +47,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy'],
+  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);
