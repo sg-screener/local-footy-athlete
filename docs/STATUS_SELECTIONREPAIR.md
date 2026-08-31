@@ -1094,3 +1094,39 @@ acceptance, athlete profiles beyond the preserved male/female year inputs,
 performed-collision execution on glass, Dynamic Type/VoiceOver, and a whole-app
 PASS. The programming defect and its full-year class are covered; L10 acceptance
 still requires Sam's phone.
+
+### Physical Release receipt for R-292
+
+- Product checkpoint: `608706211bbba8caf38ebcc9662ff1d73ddb07f7`.
+- Fresh isolated `xcodebuild clean build`, Release/iphoneos: exit 0 and
+  `BUILD SUCCEEDED`. Product source was clean before and after the build;
+  unrelated shared docs and untracked files were untouched.
+- Artifact:
+  `/private/tmp/lfa-phone-warmup-60870621.FheNVJ/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app`.
+- Bundle: `com.localfootyathlete.app`, version `1.0.0 (1)`. Standalone
+  `main.jsbundle`: 8,397,308 bytes, SHA-256
+  `cfac0971a95742309adc3e6f9165726d52a28f78f3b0e876863da92724a0540d`.
+- Executable SHA-256:
+  `f23301304fc95876db5f3caa5c84ff2d1a6014426049b924a7041807800065b9`.
+- Strict/deep signature verification passed under Apple Development: Samuel
+  Geurts, team `66M7FZ6G37`.
+- Fresh device discovery selected only Sam's available paired iPhone 16 Pro Max
+  (`AFA21856-881E-587B-96D5-60817FD11018`); Renee's phone was unavailable and
+  was not targeted.
+- In-place installation succeeded into bundle container
+  `F291E496-0341-456F-9CBD-5E87C5A49822`. No uninstall, reset, app-data clearing,
+  or data-container operation occurred.
+- Two parallel post-install queries briefly collided while CoreDevice was
+  reconnecting. No reinstall followed. Sequential discovery, launch and version
+  queries then succeeded; the device reports version 1.0.0, bundle version 1,
+  and the later process snapshot contains the exact installed executable as PID
+  36527.
+
+BLOCKED-BY: sam — glass acceptance only. Exact question: when you reopen the
+same session, does `Crab Walks` now appear in only one section, with the warm-up
+slot replaced by a different legal movement?
+
+NOT COVERED: Sam's visual/tap acceptance of that exact session, a performed-row
+collision on device, Dynamic Type/VoiceOver, and a whole-app device sweep.
+Build, signature, in-place install, installed-version query and persistent launch
+were covered.
