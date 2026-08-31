@@ -51,6 +51,7 @@ import {
   buildJournalLoadModel,
   calendarWeeksBefore,
   combineProvenance,
+  completedSessionLoadAU,
   conditioningSRPE,
   deriveSessionLoad,
   journalWeekStartOf,
@@ -70,6 +71,7 @@ import { JOURNAL_LOAD_WEIGHTS } from '../rules/journalWeek';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { sourceMutation } from './support/sourceMutation';
 
 let pass = 0;
 let fail = 0;
@@ -1057,6 +1059,121 @@ ok('a zero duration is not an answer', strengthSRPE(7, 0) === null);
   ok('all four kinds of experienced load exist, and are four distinct functions',
     kinds.every((fn) => typeof fn === 'function') && new Set(kinds).size === 4,
     kinds.map((fn) => typeof fn));
+}
+
+// ── ONE COMPLETED-LOAD TOTAL — every accepted session kind, exactly once ──
+{
+  const strength = deriveSessionLoad(session('2026-08-10', {
+    difficulty: 7, actualMinutes: 60,
+  }));
+  const conditioning = deriveSessionLoad(session('2026-08-11', {
+    conditioning: { rpe: 8, totalTimeMinutes: 30 },
+  }));
+  const team = deriveSessionLoad(session('2026-08-12', {
+    teamTraining: { effort: 7, durationMinutes: 80 },
+  }));
+  const game = deriveSessionLoad(session('2026-08-15', {
+    game: { bodyRpe: 9, timeOnGroundMinutes: 110, playedWholeGame: true, feel: 3 },
+  }));
+  ok('completed strength load is 60 x 7 = 420 AU', strength.completedLoadAU === 420,
+    strength.completedLoadAU);
+  ok('completed conditioning load is 30 x 8 = 240 AU', conditioning.completedLoadAU === 240,
+    conditioning.completedLoadAU);
+  ok('completed team-training load is 80 x 7 = 560 AU', team.completedLoadAU === 560,
+    team.completedLoadAU);
+  ok('completed game load is 110 x 9 = 990 AU', game.completedLoadAU === 990,
+    game.completedLoadAU);
+
+  const combined = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      session('2026-08-10', {
+        difficulty: 7, actualMinutes: 60,
+        conditioning: { rpe: 8, totalTimeMinutes: 30 },
+      }),
+      session('2026-08-11', { teamTraining: { effort: 7, durationMinutes: 80 } }),
+      session('2026-08-15', {
+        game: { bodyRpe: 9, timeOnGroundMinutes: 110, playedWholeGame: true, feel: 3 },
+      }),
+    ],
+    sessionsPlannedThisWeek: 3,
+    plannedStrength: [],
+  });
+  ok('one canonical weekly total adds all four completed kinds once',
+    combined.thisWeek.completedLoadAU === 2210,
+    combined.thisWeek.completedLoadAU);
+  ok('a combined day visits one feedback entry once while retaining both real components',
+    combined.thisWeek.sessionsRecorded === 3
+      && deriveSessionLoad(session('2026-08-10', {
+        difficulty: 7, actualMinutes: 60,
+        conditioning: { rpe: 8, totalTimeMinutes: 30 },
+      })).completedLoadAU === 660,
+    combined.thisWeek);
+
+  const sameDay = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      session('2026-08-10', { difficulty: 7, actualMinutes: 60 }),
+      session('2026-08-10', { conditioning: { rpe: 8, totalTimeMinutes: 30 } }),
+    ],
+    sessionsPlannedThisWeek: 2,
+    plannedStrength: [],
+  });
+  ok('two genuinely separate completed sessions on one date each contribute once',
+    sameDay.thisWeek.sessionsRecorded === 2 && sameDay.thisWeek.completedLoadAU === 660,
+    sameDay.thisWeek);
+
+  const zero = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [session('2026-08-10')],
+    sessionsPlannedThisWeek: 1,
+    plannedStrength: [],
+  });
+  ok('skipped optional and Totally Cooked rest records contribute zero',
+    zero.thisWeek.completedLoadAU === 0, zero.thisWeek.completedLoadAU);
+  const completedOptional = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [session('2026-08-10', { difficulty: 6, actualMinutes: 20 })],
+    sessionsPlannedThisWeek: 1,
+    plannedStrength: [],
+  });
+  ok('a completed optional session contributes its actual load',
+    completedOptional.thisWeek.completedLoadAU === 120,
+    completedOptional.thisWeek.completedLoadAU);
+  ok('a rest day with no accepted feedback contributes zero',
+    buildJournalLoadModel({ weekStart: THIS_WEEK, sessions: [], sessionsPlannedThisWeek: 0,
+      plannedStrength: [] }).thisWeek.completedLoadAU === 0);
+  ok('deleting or undoing a completion removes it from reconstructed totals',
+    buildJournalLoadModel({ weekStart: THIS_WEEK, sessions: [], sessionsPlannedThisWeek: 1,
+      plannedStrength: [] }).thisWeek.completedLoadAU === 0
+      && completedOptional.thisWeek.completedLoadAU === 120);
+
+  const rolling = buildJournalLoadModel({
+    weekStart: THIS_WEEK,
+    sessions: [
+      session(THIS_WEEK, { difficulty: 7, actualMinutes: 60 }),
+      session(weeksBefore(THIS_WEEK, 1), { difficulty: 5, actualMinutes: 20 }),
+      session(weeksBefore(THIS_WEEK, 2), { difficulty: 5, actualMinutes: 20 }),
+      session(weeksBefore(THIS_WEEK, 3), { difficulty: 5, actualMinutes: 20 }),
+      session(weeksBefore(THIS_WEEK, 4), { difficulty: 10, actualMinutes: 90 }),
+    ],
+    sessionsPlannedThisWeek: 1,
+    plannedStrength: [],
+  });
+  ok('the rolling total uses this week plus exactly three prior calendar weeks',
+    rolling.rollingFourWeekCompletedLoadAU === 720,
+    rolling.rollingFourWeekCompletedLoadAU);
+
+  const mutant = sourceMutation<typeof import('../rules/journalLoad')>(
+    require.resolve('../rules/journalLoad'),
+    '+ (parts.gameSRPE ?? 0);',
+    '+ 0;',
+  );
+  ok('mutation: dropping one completed session kind is detected',
+    mutant.completedSessionLoadAU({ strengthSRPE: 420, conditioningSRPE: 240,
+      teamTrainingSRPE: 560, gameSRPE: 990 }) !== 2210
+      && completedSessionLoadAU({ strengthSRPE: 420, conditioningSRPE: 240,
+        teamTrainingSRPE: 560, gameSRPE: 990 }) === 2210);
 }
 
 console.log(`\njournalLoadTests: ${pass} passed, ${fail} failed`);

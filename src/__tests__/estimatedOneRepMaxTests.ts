@@ -66,6 +66,42 @@ const zeroMutation = sourceMutation<typeof import('../rules/estimatedOneRepMax')
 check('mutation: unanswered exclusion rejects assumed zero', zeroMutation.estimateLastSetOneRepMaxKg({ ...basis, rir: null }) !== null
   && estimateLastSetOneRepMaxKg({ ...basis, rir: null }) === null);
 
+// Sam's 2026-08-31 correction to audit F002: checking the exercise means the
+// prescribed final working-set reps were completed. The ordinary athlete flow
+// owns the saved weight and RIR answer; incidental per-set reps are not a
+// second estimator input.
+const prescribedBench = {
+  id: 'bench-session', exercises: [{ id: 'bench-row', exerciseId: 'bench',
+    prescribedSets: 3, prescribedRepsMin: 10, prescribedRepsMax: 10,
+    prescribedWeightKg: 50, exercise: { id: 'bench', name: 'Bench Press' } }],
+} as any;
+const prescribedBenchInputs = buildLastSetFeedbackInputs({
+  date: '2026-09-28', workout: prescribedBench, choices: { bench_press: 'bench_press' },
+  completion: 'full', weightOverrides: { bench: 62.5 },
+  executionItems: [{ itemId: 'exercise:bench-row', completed: true }] as any,
+  loggedSets: { 'bench-row': [{ id: 'audit-incidental-12', loggedWorkoutId: 'log',
+    workoutExerciseId: 'bench-row', setNumber: 3, actualWeightKg: 62.5,
+    actualReps: 12, completed: true, createdAt: '', updatedAt: '' }] },
+});
+check('audit F002 reclassified: 62.5 kg uses prescribed 10 reps, not incidental 12',
+  prescribedBenchInputs.length === 1
+    && prescribedBenchInputs[0].actualWeightKg === 62.5
+    && prescribedBenchInputs[0].actualReps === 10);
+const incidentalRepsMutation = sourceMutation<typeof import('../utils/strengthLogging')>(
+  require.resolve('../utils/strengthLogging'),
+  'actualReps: displayReps(row.prescribedRepsMin, row.prescribedRepsMax),',
+  'actualReps: anyLast?.actualReps ?? displayReps(row.prescribedRepsMin, row.prescribedRepsMax),',
+);
+check('mutation: incidental logged reps cannot replace the prescribed-rep convention',
+  incidentalRepsMutation.buildLastSetFeedbackInputs({
+    date: '2026-09-28', workout: prescribedBench, choices: { bench_press: 'bench_press' },
+    completion: 'full', weightOverrides: { bench: 62.5 },
+    executionItems: [{ itemId: 'exercise:bench-row', completed: true }] as any,
+    loggedSets: { 'bench-row': [{ id: 'audit-incidental-12', loggedWorkoutId: 'log',
+      workoutExerciseId: 'bench-row', setNumber: 3, actualWeightKg: 62.5,
+      actualReps: 12, completed: true, createdAt: '', updatedAt: '' }] },
+  })[0]?.actualReps === 12 && prescribedBenchInputs[0].actualReps === 10);
+
 check('warmup and incomplete are excluded', lastCompletedWorkingSet([...sets, { ...sets[0], id: 'warmup', setNumber: 3, kind: 'warmup' }, { ...sets[0], setNumber: 4, completed: false }])?.id === 'last');
 check('last missing measurement does not fall back to earlier set', lastCompletedWorkingSet([...sets, { ...sets[0], id: 'missing', setNumber: 3, actualReps: undefined }])?.id === 'missing');
 check('Bulgarians choose last non-dominant set, not last dominant set', lastCompletedWorkingSet([

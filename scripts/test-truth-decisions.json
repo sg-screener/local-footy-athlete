@@ -1253,9 +1253,24 @@
       ],
       "evidenceKind": "equivalent_current_journeys_plus_consolidated_menu_checks"
     },
+    "test:lived-history-foundations": {
+      "kind": "current_contract",
+      "reason": "Real-onboarding lived-history preflight through accepted exercise and session transactions, normalized intent, durable disk, cold restart and phase change. It covers exact strength/conditioning/team/game loads, completed and skipped optionals, weekly/rolling totals and prescribed-rep Estimated 1RM reconstruction; a deliberate minutes-loss mutation is refused and rolls back.",
+      "productionPaths": [
+        "src/store/sessionOutcomeTransaction.ts",
+        "src/rules/journalLoad.ts",
+        "src/utils/strengthLogging.ts"
+      ],
+      "contractRefs": [
+        "R-272",
+        "R-277"
+      ],
+      "witnessScript": "test:lived-history-foundations",
+      "evidenceKind": "green_now"
+    },
     "test:estimated-1rm": {
       "kind": "current_contract",
-      "reason": "Approved last completed working set/RIR method, exact inputs and optional answers, four chart-only alternatives, session-bodyweight pull-ups, non-dominant Bulgarians, separate method histories and actual save/reopen for both sexes. Replaces obsolete best-set and prescription-as-measurement assertions without changing programming loads.",
+      "reason": "Approved saved exercise weight plus prescribed final-set repetitions plus last-set RIR method, exact optional-answer boundaries, four chart-only alternatives, session-bodyweight pull-ups, non-dominant Bulgarians, separate method histories and actual save/reopen for both sexes. Audit F002 is explicitly guarded as an intentional simplification; incidental set-rep data cannot replace the prescribed-rep convention and no programming loads change.",
       "productionPaths": [
         "src/rules/estimatedOneRepMax.ts",
         "src/rules/progressMainLiftStrength.ts",

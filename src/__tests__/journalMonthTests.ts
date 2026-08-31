@@ -65,6 +65,7 @@ const week = (weekStart: string, conditioningSRPE: number): JournalLoadWeekTotal
   weekStart,
   strengthMainLiftTonnageKg: 0,
   conditioningSRPE,
+  completedLoadAU: conditioningSRPE,
   sessionsMeasured: 1,
   sessionsRecorded: 1,
   liftsUnmeasured: 0,

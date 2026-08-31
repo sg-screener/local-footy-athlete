@@ -289,7 +289,7 @@ export async function commitSessionOutcomeTransaction(
     const target = resolveSessionOutcomeTarget(intent.date, commandTodayISO);
     normalizedIntent = normalizeIntent(intent, target);
     candidateFeedback = feedbackFromIntent(normalizedIntent);
-    const semanticHash = deterministicHash(semanticOutcomeFact(candidateFeedback));
+    const semanticHash = deterministicHash(semanticAcceptedAnswers(normalizedIntent));
     receipt = {
       protocolVersion: 1,
       transactionId: `session-outcome:${intent.date}:${target.workout.planEntryId ?? target.workout.id}:${semanticHash}`,
@@ -336,8 +336,8 @@ export async function commitSessionOutcomeTransaction(
         const state = useProgramStore.getState();
         const existing = state.sessionFeedback[intent.date];
         const sameSemanticOutcome = !!existing &&
-          semanticFingerprint(semanticOutcomeFact(existing)) ===
-            semanticFingerprint(semanticOutcomeFact(candidateFeedback));
+          semanticFingerprint(semanticAcceptedAnswers(existing)) ===
+            semanticFingerprint(semanticAcceptedAnswers(normalizedIntent));
         if (sameSemanticOutcome && existing.outcomeReceipt) {
           return {
             status: 'idempotent',
@@ -356,9 +356,12 @@ export async function commitSessionOutcomeTransaction(
       didApply: () => true,
       verifyAfterPersistence: () => {
         const persisted = useProgramStore.getState().sessionFeedback[intent.date];
-        const expected = semanticFingerprint(semanticOutcomeFact(candidateFeedback));
+        // The oracle is the normalized athlete intent, not the object we just
+        // attempted to persist. Comparing candidate to storage would let a
+        // candidate-builder omission validate its own data loss.
+        const expected = semanticFingerprint(semanticAcceptedAnswers(normalizedIntent));
         return {
-          ok: !!persisted && semanticFingerprint(semanticOutcomeFact(persisted)) === expected,
+          ok: !!persisted && semanticFingerprint(semanticAcceptedAnswers(persisted)) === expected,
           reason: 'session_outcome_fact_changed_after_persistence',
         };
       },
@@ -618,15 +621,65 @@ function feedbackFromIntent(intent: RecordSessionOutcomeIntent): SessionFeedback
     ...(intent.conditioning ? { conditioning: intent.conditioning } : {}),
     ...(intent.notes ? { notes: intent.notes } : {}),
     ...(Number.isFinite(intent.difficulty) ? { difficulty: intent.difficulty } : {}),
+    ...(Number.isFinite(intent.actualMinutes) ? { actualMinutes: intent.actualMinutes } : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
     ...(intent.game ? { game: intent.game } : {}),
     ...(intent.teamTraining ? { teamTraining: intent.teamTraining } : {}),
   };
 }
 
-function semanticOutcomeFact(feedback: SessionFeedback): Omit<SessionFeedback, 'outcomeReceipt'> {
-  const { outcomeReceipt: _receipt, ...fact } = feedback;
-  return fact;
+/**
+ * One semantic shape for both sides of the accepted-answer boundary.
+ *
+ * `RecordSessionOutcomeIntent` and `SessionFeedback` deliberately use different
+ * storage names (`date`/`dateStr`, `reason`/the typed reason fields). Mapping
+ * both into one shape makes the normalized athlete intent the independent
+ * verification oracle. A field dropped while building or persisting feedback
+ * therefore cannot disappear from both the candidate and its own expectation.
+ */
+function semanticAcceptedAnswers(
+  value: RecordSessionOutcomeIntent | SessionFeedback,
+): Record<string, unknown> {
+  const isIntent = 'sessionIdentity' in value;
+  const completion = value.completion;
+  const components = (isIntent
+    ? value.componentOutcomes
+    : value.components ?? []).map((component) => ({
+      componentId: component.componentId,
+      kind: component.kind,
+      label: component.label,
+      completion: component.completion,
+      reason: isIntent
+        ? component.reason
+        : component.completion === 'partial'
+          ? component.partialReason ?? null
+          : component.completion === 'skipped'
+            ? component.skipReason ?? null
+            : null,
+    }));
+  const reason = isIntent
+    ? value.reason
+    : completion === 'partial'
+      ? value.partialReason ?? null
+      : completion === 'skipped'
+        ? value.skipReason ?? null
+        : null;
+  return {
+    date: isIntent ? value.date : value.dateStr,
+    completion,
+    feeling: value.feeling ?? null,
+    soreness: value.soreness ?? null,
+    reason,
+    components,
+    strength: value.strength ?? null,
+    conditioning: value.conditioning ?? null,
+    notes: value.notes ?? null,
+    difficulty: value.difficulty ?? null,
+    actualMinutes: value.actualMinutes ?? null,
+    executionItems: value.executionItems ?? null,
+    game: value.game ?? null,
+    teamTraining: value.teamTraining ?? null,
+  };
 }
 
 function deterministicHash(value: unknown): string {

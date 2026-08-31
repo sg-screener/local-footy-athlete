@@ -1,0 +1,75 @@
+appId: com.localfootyathlete.app
+name: Mounted lived-history minutes and RPE preflight
+tags:
+  - e2e
+  - visible
+  - lived-history
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: one-set-strength
+- tapOn:
+    id: view-workout-button
+- extendedWaitUntil:
+    visible:
+      id: session-execution-check-.*
+    timeout: 10000
+- tapOn:
+    id: session-execution-check-.*
+- assertVisible:
+    id: session-execution-check-.*
+    text: '.*checked.*'
+- scrollUntilVisible:
+    element:
+      id: finish-session-action
+    direction: DOWN
+- tapOn:
+    id: finish-session-action
+- extendedWaitUntil:
+    visible:
+      id: session-feedback-sheet
+    timeout: 10000
+- takeScreenshot: artifacts/lived-history/feedback-sheet
+- scrollUntilVisible:
+    element:
+      id: session-feedback-rpe-grid
+    direction: DOWN
+- tapOn:
+    id: session-feedback-rpe-grid
+    point: 67%, 50%
+- assertVisible:
+    id: session-feedback-rpe-grid-readout
+    text: '7 — hard'
+- scrollUntilVisible:
+    element:
+      id: strength-feedback-minutes
+    centerElement: true
+- tapOn:
+    id: strength-feedback-minutes
+- inputText: '60'
+- assertVisible:
+    id: strength-feedback-minutes
+    text: '60'
+- tapOn: 'Time spent training \(estimate\)'
+- scrollUntilVisible:
+    element:
+      id: session-feedback-save-.*
+    direction: DOWN
+- tapOn:
+    id: session-feedback-save-.*
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 20000
+- assertVisible:
+    id: day-complete-mon
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: one-set-strength
+- assertVisible:
+    id: program-screen
+- assertVisible:
+    id: day-complete-mon
+- takeScreenshot: artifacts/lived-history/minutes-rpe-reopened

@@ -183,18 +183,18 @@ const censusCounts = Object.values(
 );
 ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
-    && Object.keys(decisionRegistry.decisions).length === 192
+    && Object.keys(decisionRegistry.decisions).length === 193
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 29
+  censusCounts.current_contract === 30
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',
       'test:injury-fallback-journey', 'test:coach-weekly-reduction',
       'test:approved-icons', 'test:session-execution',
       'test:slot-coverage', 'test:power-counting', 'test:section18-v2', 'test:exercise-intake',
-      'test:estimated-1rm', 'test:session-section-add']
+      'test:estimated-1rm', 'test:lived-history-foundations', 'test:session-section-add']
       .every(label => decisionRegistry.decisions[label]?.kind === 'current_contract'
         && decisionRegistry.decisions[label]?.witnessScript === label)
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',

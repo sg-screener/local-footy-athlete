@@ -329,6 +329,8 @@ export interface JournalSessionLoad {
    * substituted.
    */
   readonly strengthSRPE: number | null;
+  /** Every completed component's athlete-reported minutes x RPE, in AU. */
+  readonly completedLoadAU: number;
   /** Lifts whose tonnage could not be computed — reported, never assumed zero. */
   readonly liftsUnmeasured: number;
   /** True when either stream produced a number. */
@@ -343,6 +345,8 @@ export interface JournalLoadWeekTotals {
   readonly weekStart: string;
   readonly strengthMainLiftTonnageKg: number;
   readonly conditioningSRPE: number;
+  /** Canonical completed load across all recorded session kinds, in AU. */
+  readonly completedLoadAU: number;
   readonly sessionsMeasured: number;
   readonly sessionsRecorded: number;
   readonly liftsUnmeasured: number;
@@ -415,6 +419,8 @@ export interface JournalLoadModel {
   readonly thisWeek: JournalLoadWeekTotals;
   /** Completed weeks before this one, most recent first. */
   readonly history: readonly JournalLoadWeekTotals[];
+  /** This week plus the three preceding calendar weeks, in completed-load AU. */
+  readonly rollingFourWeekCompletedLoadAU: number;
   /** Constant-free facts about the evidence — signed by having no constants. */
   readonly coverage: Derived<JournalLoadCoverage>;
   readonly strengthStream: Derived<StreamComparison | null>;
@@ -604,6 +610,23 @@ export function gameSRPE(outcome: GameSessionOutcome | null): number | null {
   return rpe * minutes;
 }
 
+/**
+ * One completed-load owner. Each accepted feedback fact is visited once and
+ * each genuinely measured component on that fact contributes once. Missing or
+ * skipped work has no measured component and therefore contributes zero.
+ */
+export function completedSessionLoadAU(parts: {
+  readonly strengthSRPE: number | null;
+  readonly conditioningSRPE: number | null;
+  readonly teamTrainingSRPE: number | null;
+  readonly gameSRPE: number | null;
+}): number {
+  return (parts.strengthSRPE ?? 0)
+    + (parts.conditioningSRPE ?? 0)
+    + (parts.teamTrainingSRPE ?? 0)
+    + (parts.gameSRPE ?? 0);
+}
+
 // ─── Layer 3: the region distribution ────────────────────────────────────
 
 function addRegion(
@@ -739,6 +762,12 @@ export function deriveSessionLoad(
   const matchSrpe = gameSRPE(session.game ?? null);
   const liftSrpe = strengthSRPE(session.difficulty ?? null, session.actualMinutes ?? null);
   const srpe = conditioningSRPE(session.conditioning);
+  const completedLoadAU = completedSessionLoadAU({
+    strengthSRPE: liftSrpe,
+    conditioningSRPE: srpe,
+    teamTrainingSRPE: teamSrpe,
+    gameSRPE: matchSrpe,
+  });
   if (srpe !== null && session.conditioning) {
     const muscles = conditioningSessionMuscles({
       exercise: session.conditioning.sessionName ?? '',
@@ -762,6 +791,7 @@ export function deriveSessionLoad(
     teamTrainingSRPE: teamSrpe,
     gameSRPE: matchSrpe,
     strengthSRPE: liftSrpe,
+    completedLoadAU,
     liftsUnmeasured,
     // A TEAM NIGHT THE ATHLETE RATED IS A MEASURED SESSION. Leaving it out of
     // this flag would have the week report "unmeasured" for a day whose load
@@ -789,12 +819,14 @@ function totalsForWeek(
   const upperLower = { upper: 0, lower: 0 };
   let strength = 0;
   let conditioning = 0;
+  let completedLoadAU = 0;
   let measured = 0;
   let liftsUnmeasured = 0;
 
   for (const session of sessions) {
     strength += session.strengthMainLiftTonnageKg ?? 0;
     conditioning += session.conditioningSRPE ?? 0;
+    completedLoadAU += session.completedLoadAU;
     if (session.measured) measured += 1;
     liftsUnmeasured += session.liftsUnmeasured;
     for (const [muscle, amount] of Object.entries(session.regions)) {
@@ -811,6 +843,7 @@ function totalsForWeek(
     weekStart,
     strengthMainLiftTonnageKg: strength,
     conditioningSRPE: conditioning,
+    completedLoadAU,
     sessionsMeasured: measured,
     sessionsRecorded: sessions.length,
     liftsUnmeasured,
@@ -885,6 +918,8 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
       });
 
   const streamWindow = windowTotals(JOURNAL_LOAD_CONSTANTS.streamNormalWindowWeeks.value);
+  const rollingFourWeekCompletedLoadAU = thisWeek.completedLoadAU
+    + windowTotals(3).reduce((sum, week) => sum + (week?.completedLoadAU ?? 0), 0);
 
   // ── Coverage: derived from NO constant, so it stands signed ──
   const coverage = derived<JournalLoadCoverage>({
@@ -1066,6 +1101,7 @@ export function buildJournalLoadModel(input: BuildJournalLoadInput): JournalLoad
     weekStart: input.weekStart,
     thisWeek,
     history,
+    rollingFourWeekCompletedLoadAU,
     coverage,
     strengthStream,
     conditioningStream,

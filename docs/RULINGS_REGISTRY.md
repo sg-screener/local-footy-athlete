@@ -6944,6 +6944,14 @@ editable weight, rep, bodyweight or setup/technique field, no Skip action, no
 last-set summary and no repeated approximation caveat in this popup. Setup no
 longer gates Lat Pulldown or partitions a lift's new history. Existing saved raw
 observations remain readable; no stored athlete data is deleted or rewritten.
+**Audit F002 reclassified by Sam, 2026-08-31:** the saved exercise weight plus
+the displayed prescribed repetitions for the completed final working set plus
+the athlete's last-set RIR answer are the intended estimator inputs. A checked
+3 × 3 supplies 3 reps, 3 × 5 supplies 5 and 4 × 8 supplies 8. The ordinary
+athlete flow does not require actual per-set repetition entry, so audit-injected
+or incidental logged reps must not replace the prescribed value. F002 is an
+intentional product simplification, not a software defect; the historical audit
+receipt remains unchanged.
 This explicitly authorizes the feature previously excluded from R-270's intake.
 Guard: `LAW-estimated-1rm-last-set-rir`, `test:estimated-1rm`.
 Research, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
@@ -7032,3 +7040,26 @@ System face, heading hierarchy, normal casing and screen structures remain.
 Guard: `LAW-renee-typography-app-wide`, `test:prototype-typography` and
 `test:day-first-timeline`.
 Verification status and NOT COVERED: `docs/STATUS_LEGIBLETYPE.md`.
+
+**R-277** · Accepted lived-history integrity and completed load, 2026-08-31.
+
+Owner: historyfix. A completed strength outcome stores the athlete's actual
+minutes on the existing canonical session-feedback fact beside session RPE. A
+transaction reports committed only when every semantically accepted answer in
+the normalized athlete intent matches the persisted fact; the candidate being
+written cannot serve as its own verification oracle. A verification failure
+restores the prior accepted state.
+
+Completed session load is actual minutes × session RPE in AU. Strength,
+conditioning, team training and games all contribute through one completed-load
+derivation, each measured component exactly once. Combined day records are
+visited once, genuinely separate same-day sessions each contribute once,
+skipped optional sessions and rest days contribute zero, completed optional
+sessions contribute their actual load, removal removes the load, and restart or
+phase change reconstructs the same daily, weekly and four-week rolling history.
+This monitoring history does not automatically rewrite future programming.
+
+Guard: `LAW-accepted-lived-history-integrity`, `test:journal-load` (including
+its production `test:lived-history-foundations` journey and deliberate
+minutes-loss mutation). Verification and NOT COVERED:
+`docs/STATUS_HISTORYFIX.md`.

@@ -141,6 +141,13 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-accepted-lived-history-integrity',
+    law: 'R-277: accepted actual session minutes persist on the canonical feedback fact and transaction success compares every normalized athlete answer with persisted state. Completed strength, conditioning, team-training and game loads each contribute actual minutes times RPE exactly once to reconstructable daily, weekly and four-week totals; skipped, rest and removed work contributes zero and the history survives restart and phase changes without rewriting future programming.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-277',
+    guard: { state: 'guarded', by: 'test:journal-load', chainStatus: 'in_chain',
+      receipt: 'journalLoadTests asserts the four exact AU values, one canonical aggregate, combined and same-day identities, optional/rest/removal and rolling windows, with a killed omitted-kind mutation. Its chained livedHistoryFoundationTests walks real onboarding, accepted exercise/session transactions, disk, cold restart and phase change; deliberately dropping actualMinutes between normalized intent and persistence is refused and rolls back.' },
+  },
+  {
     id: 'LAW-athlete-added-strength-outside-planner-cap',
     law: 'R-274: the four-session strength maximum governs LFA-authored sessions only. True athlete-added strength retains typed AthletePlacement origin through session and exercise edits, restart and Undo; it remains in completed workload/history but outside planner-frequency and Section 18 maximum enforcement. Editing an existing programmed session retains ownership without exempting its frequency. Five app-authored sessions still breach, and safety stays canonical.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-274',
@@ -149,10 +156,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-estimated-1rm-last-set-rir',
-    law: 'R-272: four chart-only lift alternatives preserve separate histories. Only actual last completed working-set load/reps plus optional RIR 0–4 with effective reps <=15 produce a versioned estimate. Skip/unanswered/open-ended 5+ do not. Pull-ups use session bodyweight and display added load; Bulgarians use one non-dominant-leg total external load. No prescription fallback, program-load changes, confidence badges or PB awards.',
+    law: 'R-272: four chart-only lift alternatives preserve separate histories. New estimates use the actual saved exercise weight, displayed prescribed repetitions for the completed final working set and optional last-set RIR 0–4; incidental per-set reps do not replace the prescription. Effective reps above 15, skip, unanswered and open-ended 5+ produce no estimate. Pull-ups use session bodyweight and added load; Bulgarians use one non-dominant-leg total external load. No program-load changes, confidence badges or PB awards.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-272',
     guard: { state: 'guarded', by: 'test:estimated-1rm', chainStatus: 'in_chain',
-      receipt: 'estimatedOneRepMaxTests uses real onboarding, actual Add/log/feedback transactions, chart switches and process restart for both sexes. Published-curve and boundary assertions protect the calculation inputs. Final verification and native coverage: docs/STATUS_INTAKE.md.' },
+      receipt: 'estimatedOneRepMaxTests uses real onboarding, actual Add/log/feedback transactions, chart switches and process restart for both sexes. The exact F002 guard proves 62.5 kg on a checked 3 x 10 Bench uses 10 prescribed reps even when an incidental 12-rep set exists; mutating the builder to prefer that set is killed. Published-curve and boundary assertions preserve skipped/RIR 5+, Pull-Up, Lat Pulldown, Bulgarian and separate-history rules. Final verification: docs/STATUS_HISTORYFIX.md.' },
   },
   {
     id: 'LAW-session-section-add-context',
