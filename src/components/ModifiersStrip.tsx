@@ -2,9 +2,9 @@
  * THE ACTIVE-MODIFIERS STRIP — ONE COMPONENT, FOUR PROGRAM SURFACES.
  *
  * Her prototype calls it `dayModifierNotification`: an info glyph, a bold count
- * line, a quiet second line, and the WHOLE strip is the tap target. It appears
- * above the day card (ruling 4), at the top of the week view (the seat's note on
- * ruling 7), plus a permanent My Status doorway in both Program headers.
+ * line, a quiet second line, and the WHOLE strip is the tap target. That exact
+ * notice appears above both the day card and the week list, plus a permanent My
+ * Status doorway in both Program headers.
  *
  * **THE SEAT'S OWN WORDS ARE THE SPEC: "same component as the day screen's, not
  * a second one."** Multiple copies of a four-line row are multiple places for the count
@@ -40,14 +40,9 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
   // surfaces stay mounted at zero, stating the honest zero condition.
   const doorway = surface === 'day-header' || surface === 'week-header';
   if (count <= 0 && !doorway) return null;
-  const weekSurface = surface === 'week';
   const headerSurface = doorway;
   const countLabel = signedCopy(
     count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
-    { count },
-  );
-  const weekLabel = signedCopy(
-    count === 1 ? 'modifiers.strip.week_one' : 'modifiers.strip.week',
     { count },
   );
   const primaryLabel = headerSurface ? signedCopy('coach.status.title') : countLabel;
@@ -59,29 +54,11 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
       onPress={onPress}
       testID={`modifiers-strip-${surface}`}
       accessibilityRole="button"
-      accessibilityLabel={weekSurface
-        ? weekLabel
-        : `${primaryLabel}. ${secondaryLabel}`}
-      style={({ pressed }) => [weekSurface
-        ? styles.weekStrip
-        : headerSurface
-          ? styles.coachStrip
-          : styles.strip,
+      accessibilityLabel={`${primaryLabel}. ${secondaryLabel}`}
+      style={({ pressed }) => [headerSurface ? styles.coachStrip : styles.strip,
         pressed && { opacity: 0.7 }]}
     >
-      {weekSurface ? (
-        <>
-          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none"
-            stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Circle cx="12" cy="12" r="9" />
-            <Path d="M12 16v-5" />
-            <Path d="M12 8h.01" />
-          </Svg>
-          <Text style={styles.weekText} testID={`modifiers-strip-${surface}-count`}>
-            {weekLabel}
-          </Text>
-        </>
-      ) : headerSurface ? (
+      {headerSurface ? (
         <>
           {/* Grey, not lime — Sam, 2026-08-27, against the template. The
               doorway is a route, and the lime here was the last of the glow. */}
@@ -137,19 +114,6 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
 // value here is already on these screens: the info blue is the "Time" chip's,
 // the greys are the day card's, and the sizes are the timeline's.
 const styles = StyleSheet.create({
-  weekStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 2,
-    backgroundColor: 'transparent',
-  },
-  weekText: {
-    color: '#C8FF00', fontSize: 10, fontWeight: '800', lineHeight: 13,
-    letterSpacing: 0.25,
-  },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',

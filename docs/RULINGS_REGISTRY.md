@@ -758,7 +758,12 @@ Conditioning swapped. **It was FOUR, not three — excluded and pinned are
 opposites.** · `BUILT`.
 
 **R-023** · *"yes — one line on week, small card on day, read-only both"* · The
-modifier indicator's shape. · `BUILT`.
+modifier indicator's shape. **Corrected from physical-device feedback,
+2026-08-31:** Day's small card is now the canonical presentation on both Program
+views. Week retains its own surface identity for tests and accessibility, but it
+must not branch into separate copy, markup or styles. Both notices remain
+read-only and open the same My Status destination. · `BUILT`. Guard:
+`test:program-tab-read-only-modifiers`.
 
 **R-072** · *"equipment is usually only just for that session - there is no
 longer a button on the day screen that allows you to edit equipment. you can

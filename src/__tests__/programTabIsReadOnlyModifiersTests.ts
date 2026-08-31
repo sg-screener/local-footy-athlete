@@ -287,6 +287,23 @@ run('Day and Week headers carry the same permanent My Status doorway', () => {
     'the shared strip still carries the retired Coach doorway variant');
 });
 
+// Sam's physical-device correction, 2026-08-31: the WEEK notice is not a
+// compact variant. It must be the DAY notice, byte-for-byte in presentation,
+// while retaining its own surface id so flows can still name where they are.
+// A shared component with a surface branch is still two presentations, which
+// is the exact defect this cell prevents from returning.
+run('the Week active-modifier notice uses the exact Day presentation', () => {
+  const strip = read('src/components/ModifiersStrip.tsx');
+  assert(!/surface\s*===\s*['"]week['"]/.test(strip),
+    'ModifiersStrip still selects a Week-only rendering branch instead of the Day notice');
+  const weekOnlyOwners = ['weekStrip', 'weekText', 'weekLabel', 'modifiers.strip.week'];
+  const survivors = weekOnlyOwners.filter((owner) => strip.includes(owner));
+  assert(survivors.length === 0,
+    `Week still owns separate modifier presentation state: ${survivors.join(', ')}`);
+  assert(/headerSurface\s*\?\s*styles\.coachStrip\s*:\s*styles\.strip/.test(strip),
+    'non-header Day and Week notices do not resolve through the one shared strip style');
+});
+
 console.log(`\nprogram tab read-only modifiers: ${passed} passed, ${failed} failed`);
 if (failures.length) {
   console.log('\nFAILURES:');

@@ -1380,17 +1380,12 @@ export default function HomeScreenV2() {
           </View>
         ) : (
           <View style={styles.dayList}>
-            {/* ── ITEM 16 (a): THE WEEK'S ONE LINE, ABOVE THE SEVEN ROWS ──
-                Same component, asking for the WEEK surface, which is the branch
-                that draws a single quiet line instead of the day's card. The
-                surface name is deliberately not repeated as a literal in this
-                prose: a comment carrying the exact string a gate greps for can
-                answer for the code instead of the code doing it (`a comment is
-                not a shipped string`), and this comment had already swallowed a
-                mutation that was aimed at the mount below it. It sits above
-                `day-row-mon` because it is about the week those rows are, and
-                the athlete should not have to scroll to learn the week is being
-                changed. Read-only here too — the line opens My Status. */}
+            {/* The Week notice uses the exact Day card presentation. `surface`
+                remains distinct only so flows and accessibility diagnostics can
+                name the route they reached; it is not a styling switch. It sits
+                above `day-row-mon` because it is about the week those rows are,
+                and the athlete should not have to scroll to learn the week is
+                being changed. Read-only here too — the card opens My Status. */}
             <ModifiersStrip
               surface="week"
               count={modifierCount}

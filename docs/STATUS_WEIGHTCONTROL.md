@@ -4,9 +4,9 @@ Owner: `weightcontrol`
 
 ## Current issue
 
-On the installed iPhone 16 Pro Max Release build, the Estimated 1RM questions
-appear before the ordinary feedback, duplicate session-owned load and reps, add
-unrequested fields, and do not match the established popup.
+On the installed iPhone 16 Pro Max Release build, the Week active-modifier
+notice is a compact lime line while Day shows a neutral two-line card. Week must
+use the exact Day presentation.
 
 ## Evidence before the fix
 
@@ -237,3 +237,69 @@ owners rather than adding a Back-Squat-only path.
 - Physical Dynamic Type and VoiceOver order.
 - Individual predictive accuracy of the underlying Estimated 1RM method; this
   change is input ownership and presentation, not a new calculation formula.
+
+---
+
+## Issue 4 — Week active-modifier notice differs from Day
+
+The physical Release screenshots show the same modifier count rendered as a
+neutral two-line card on Day and a small lime line on Week.
+
+### Cause and options
+
+Both routes already mount the shared `ModifiersStrip`, but that component used
+`surface === 'week'` to select separate copy, markup, icon dimensions and
+`weekStrip` / `weekText` styles. Sharing the file therefore did not mean sharing
+the presentation.
+
+1. Restyle the Week branch until its current values visually match Day. This
+   leaves two implementations that can drift on the next change.
+2. Remove the Week presentation branch. Keep `surface="week"` only as route
+   identity for test IDs, while both non-header routes execute the one Day
+   notice branch.
+
+Option 2 landed. The Day and permanent My Status header paths are unchanged;
+only Week's rendered notice changes.
+
+### Coverage
+
+- Before the new cell, `test:program-tab-read-only-modifiers` was 10/10.
+- Test-first proof against the installed-checkpoint implementation: 10 passed /
+  1 failed at **the Week active-modifier notice uses the exact Day
+  presentation**.
+- Fixed source: 11 passed / 0 failed. The guard rejects any Week-only surface
+  branch, copy owner or style owner and requires both non-header mounts to use
+  the one `styles.strip` path.
+- Zero active modifiers still hides both notices. One and multiple modifiers
+  use the same singular/plural count owner and Day subline on both routes.
+- Both cards remain read-only, retain distinct route-specific test IDs and open
+  the same My Status destination.
+- `test:modifier-lifecycle` — 241/241 restriction journeys, My Status 10/10,
+  Program read-only modifiers 11/11 and modifier phrases 4/4.
+- Preservation checks: `test:session-execution` — 206/206;
+  `test:undo-reversal` — 28/28; `test:injury-recomposition` — 186/186;
+  `test:signed-copy-extraction` — 7/7.
+- `test:compile` reports 0 product errors and 0 devtool errors. Its overall
+  result remains red on the same three inherited test-harness errors in
+  `canonicalWeeklyCompilerSliceTests.ts` and `fatiguePlumbingTests.ts`.
+- `test:day-first-timeline` is unchanged at its inherited 55/56 boundary: the
+  generated three-week probe still does not reach a Gunshow day. The modifier
+  notice cell inside that suite remains green; the unreachable diagnostic was
+  not treated as a product requirement.
+- Repository boundaries are unchanged: `test:ruling-registry` 5/8,
+  `test:law-registry` 13/14 (21 of 217 laws still `UNENFORCED`), and
+  `test:repo-law-guards` 51/63. Their named missing-file, registry-debt,
+  report/inbox/flow/store and source-anchor failures predate and do not involve
+  these five scoped files.
+- Preserved-data iPhone 17 Pro simulator: the real athlete currently has zero
+  active modifiers, so both notices correctly hide. A temporary development
+  display-only count probe wrote no athlete state and showed the Day and Week
+  route IDs with the same neutral bordered card, 21-point blue info glyph,
+  count line, grey **Currently impacting your program** subline and chevron.
+  The probe was removed, Week returned to Day, and the real zero state was
+  confirmed hidden again.
+
+### Not covered yet
+
+- Fixed Release build on Sam's physical iPhone.
+- Physical Dynamic Type and VoiceOver order.
