@@ -26,10 +26,10 @@ Owner: `selectionrepair`
 
 ## Current step
 
-Original Steps 1–9 are complete. Sam's 2026-08-31 audit follow-up is now being
-worked in the order he gave: Primer composition, injury composition, missing
-routes, conditioning labels and classification reconciliation are complete.
-The final isolated audit is next.
+Original Steps 1–9 and all six 2026-08-31 follow-up steps are complete at
+scoped checkpoints. The final isolated audit and release chain are green for
+their named surfaces. Athlete-facing completion remains awaiting Sam's physical
+iPhone acceptance under L10.
 
 ## 2026-08-31 follow-up 1 — every Primer is seven low-fatigue rows
 
@@ -874,3 +874,67 @@ NOT COVERED: the complete male/female 52-week rerun (step 6), physical-iPhone
 Release acceptance, clinical validation, every possible injury/kit combination,
 and the other 31 broken conditioning-duration occurrences. The exact corrected
 case is evidence for step 2 only; step 4 still owns the duration class.
+
+## 2026-08-31 follow-up 6 — final isolated audit and exact remainder
+
+Completed against exact implementation checkpoint
+`b4f53a55332fb26bf96cd6a137bd79205d0b962f`. The preserved driver generated
+two real-onboarding athlete journeys, one male and one female, for 52 weeks / 364
+athlete-days each. The denominator is 728 final athlete-days, 104 athlete-weeks
+and 5,493 visible row placements. All 104 weekly restart checks completed
+without mismatch.
+
+Sam's requested coordinates are closed in the final evidence:
+
+- 24 Primers have zero optional rows and zero Acceleration, Trap Bar Deadlift,
+  High Box Squat or Bench Press rows.
+- On 2027-03-01 both athletes have workout and strength-part identity
+  `Injury-Adjusted Session`, with `Steady Aerobic Blocks`, raw identity
+  `Steady Blocks (3×8 min or 4×6 min)`, modality Bike and dose `4 × 6 min`.
+  The high calf/Achilles modifier still says running is limited; no run-named
+  row remains.
+- `Seated Good Morning (Barbell)` has 77 visible final placements and
+  `Seated Good Morning` has 74. Neither remains in a missing-route class.
+- Conditioning labels implying more than 120 minutes: 0, down from 32.
+- `incorrectly_tagged_or_classified`: 0, down from 29. Twenty-five old entries
+  have actual final raw-identity placements. Four are proved attempt-only:
+  Lateral Bounds 8 attempt wins / 0 accepted-final, Suitcase Carry 3 / 0,
+  Two-Minute Repeats 4 / 0 and 1 km Repeats 2 / 0.
+
+The exact remaining zero-placement catalogue result is 71 / 215 identities:
+25 eligible but out-ranked, 24 intentionally manual/special-use, 18 ineligible
+for these two athletes, and the four named attempt-only identities. Zero
+placement is not used as a programming objective and none is called a tag
+defect merely for not appearing.
+
+Final named-surface verification:
+
+- `test:programming-selection-release`: exit 0. It includes the fresh 0 / 728
+  catalogue-order mutation, trace 10 / 10, reachability 6 / 6, power pool
+  94 / 94, modality persistence 3 / 3, weekly deload owner 11 / 11, block-two
+  progression 41 / 41, final composition 6 / 6 and generated-week assembly
+  30 / 30.
+- `test:compile`: product 0, devtools 0. The same inherited test-harness scope
+  remains red with four errors in three unrelated test files.
+- `test:law-registry`: 224 total rows, 203 guarded and 21 inherited
+  `UNENFORCED`; the new follow-up rulings are guarded. The existing registry
+  debt remains honestly red.
+
+Durable final report:
+
+- `docs/PROGRAMMING_SELECTION_FOLLOWUP_FINAL_AUDIT_2026-08-31.md`
+- Full dated local JSON:
+  `output/programming-selection-followup-final/report/programming-selection-final-audit.json`
+
+BLOCKED-BY: sam — physical-iPhone acceptance only. Exact question for Sam:
+after a clean Release build is installed, can you confirm on the phone that an
+added Primer contains only the seven short/low-fatigue rows, a fully replaced
+injury day is visibly named `Injury-Adjusted Session`, and the off-feet
+conditioning card shows a sensible Bike duration? No build was installed or
+phone state changed by this seat.
+
+NOT COVERED: physical-iPhone execution/acceptance, native onboarding taps,
+athlete profiles beyond the preserved male/female inputs, clinical validation
+of injury programming, and a whole-app PASS. Every requested implementation and
+audit step is complete; athlete-facing DONE remains blocked only on Sam's L10
+device acceptance.

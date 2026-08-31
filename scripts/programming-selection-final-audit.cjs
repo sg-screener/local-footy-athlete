@@ -332,7 +332,6 @@ const report = {
     'Native onboarding taps',
     'Athlete profiles beyond the preserved male/female lived-year inputs',
     'Clinical validation of injury programming',
-    'Step 5 Primer-length product decision still awaiting Sam',
   ],
 };
 
@@ -374,7 +373,7 @@ const markdown = [
   `- Team Training days with gym rows but no explicit Strength part: ${strange.silentTeamGymSessions.length}.`,
   `- Shoulder-injury window: ${strange.shoulderInjuryTricepsRows} triceps-named rows / ${strange.shoulderInjuryTrainableRows} trainable rows (${strange.shoulderInjuryTricepsShare}%).`,
   `- Bottoms-Up KB Press maximum: ${strange.bottomsUpKbPressMaximum ? `${strange.bottomsUpKbPressMaximum.kg} kg for ${strange.bottomsUpKbPressMaximum.dose} on ${strange.bottomsUpKbPressMaximum.date}` : 'not placed'}.`,
-  `- Primer sessions: ${strange.primers.length}; composition is listed in the JSON receipt because Step 5 remains a product decision.`,
+  `- Primer sessions: ${strange.primers.length}; optional rows: ${strange.primers.reduce((total, primer) => total + primer.optionalRows, 0)}. Full composition is listed in the JSON receipt.`,
   `- Conditioning identity dose labels implying over 120 minutes: ${strange.implausibleConditioningDoses.length}.`,
   `- Athlete-weeks with more than one “one quality exposure” sentence: ${strange.duplicateQualityOwnershipWeeks.length}.`, '',
   'Full dated rows for every non-zero finding are in `programming-selection-final-audit.json`.', '',
