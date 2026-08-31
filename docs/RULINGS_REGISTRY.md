@@ -6981,13 +6981,12 @@ Guard: `LAW-athlete-added-strength-outside-planner-cap`,
 `test:section18-v2` and `test:canonical-weekly-compiler`.
 Verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
 
-**R-275** · Missed-session move, dated fatigue sequence and Week banner, 2026-08-30.
+**R-275** · Missed-session move and dated fatigue sequence, 2026-08-30.
 
 Owner: fatiguecatchup. The missed-session question has three signed answers:
 “Yes, log it”, “No, skip it” and “No, move it”. Move opens the existing Week
 board and authorises only that prompt's past, unlogged item to move to today or
-the future; it must not turn future work into a past obligation. The board's
-banner reads “Sessions / games”.
+the future; it must not turn future work into a past obligation.
 
 Every fatigue choice writes one dated fact. Bit tired is noted only. Pretty flat
 slightly reduces that date through the canonical lighter-day transformation.
@@ -7005,6 +7004,12 @@ be okay to train as planned, but if you start feeling flatter, let me know and
 we’ll pull things back.”** This replaces “Noted — today stays as planned.” It
 does not change the recorded fact, fatigue level, program derivation, later
 lighter-day threshold or consecutive-day deload behaviour.
+
+**Week-editor heading removed from physical-device feedback, 2026-08-31:** the
+redundant “Sessions / games” banner above the editable board is absent. The
+actual game move/add picker instructions remain, an unchanged editor can still
+leave through the existing Day / Week control, and a changed editor still
+finishes through Save changes.
 
 This supersedes R-035/R-038's rolling seven-day readiness horizon and its rule
 that cooked sessions remain offered. Illness remains a separate door and does

@@ -825,13 +825,9 @@ export function registerProjectionCopy(): void {
      * 2026-08-25 (R-217): the section plus *"will replace the 'add an exercise'
      * option in the 3 dot menu"*. A signed string with no surface is copy the
      * next build finds, trusts as ruled, and puts back on a menu he cleared. */
-    /* R-275 — the compact subject label for the Week board. */
-    {
-      id: 'week.board.banner',
-      source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-30, R-275, verbatim.',
-      text: 'Sessions / games',
-    },
+    /* `week.board.banner` is DEREGISTERED — Sam, 2026-08-31: the Week editor
+     * does not need a Sessions / games heading above the board. Keeping an
+     * unmounted signed row would leave stale copy available to be remounted. */
     {
       id: 'week.board.save',
       source: 'sam_ruling',

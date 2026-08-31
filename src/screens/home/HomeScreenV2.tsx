@@ -988,7 +988,8 @@ export default function HomeScreenV2() {
                     onPress={() => {
                       // Manage Week is a deliberate editing visit. Once a
                       // change is visible, Save changes is its only finish.
-                      if (weekBoardOpen) return;
+                      if (weekBoardOpen && weekBoardHasChanges) return;
+                      if (weekBoardOpen) closeWeekBoard();
                       if (option === 'today' && expandedWeekIdx >= 0) {
                         setPreferredDayIdx(expandedWeekIdx);
                       }
@@ -1193,18 +1194,6 @@ export default function HomeScreenV2() {
           <MoveBanner
             text={currentPhase === 'Pre-season' ? 'Tap the day to set the practice match' : 'Tap the day to set as game day'}
             onCancel={handleCancelMove}
-          />
-        )}
-        {/* ⚠ **THE BOARD BORROWS THE PICKER'S BANNER, AND THAT IS THE POINT.**
-          * It is the shape the athlete already knows for "the week is in a
-          * different mode right now, here is the way out" — a second banner
-          * treatment for the same idea would be a second visual language for
-          * one state. Its Cancel is the ONLY exit, because the board replaces
-          * the day rows: without it the week would have no way back. */}
-        {weekBoardOpen && (
-          <MoveBanner
-            text={signedCopy('week.board.banner')}
-            onCancel={weekBoardHasChanges ? undefined : closeWeekBoard}
           />
         )}
         {/* ⚠ **A REFUSED DROP SAYS WHY.** The box springs home either way, and a

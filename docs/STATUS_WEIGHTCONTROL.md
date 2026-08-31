@@ -493,3 +493,100 @@ program decision:
 
 - Sam's physical acceptance of Issues 1–6 on this installed build.
 - Physical Dynamic Type and VoiceOver sweep.
+
+---
+
+## Issue 7 — redundant Sessions / games heading in the Week editor
+
+The physical Release Week editor showed a full-width **Sessions / games**
+banner between the week navigator and the editable board. Sam ruled that this
+heading is not needed.
+
+### Cause and affected states
+
+This was not a board-layout accident. `HomeScreenV2` deliberately mounted the
+generic `MoveBanner` whenever `weekBoardOpen` was true, and
+`projectionCopy.ts`, the copy authoring sheet and R-275 all still required the
+heading. The same `MoveBanner` component also serves the real **move game** and
+**add game** picker states, but those mounts are separate and remain required.
+
+The board banner also carried the unchanged editor's only Cancel action. The
+existing Day / Week control already owned transient Week-presentation cleanup,
+but an unconditional `if (weekBoardOpen) return` prevented it from being used.
+Deleting only the banner would therefore have removed the visible heading and
+created an unchanged editor with no exit.
+
+### Options and fix
+
+1. Hide only the banner's text or restyle it to zero height. This leaves stale
+   signed copy, a hidden control and the same exit ownership split.
+2. Withdraw the board-only copy and mount, while letting the existing Day /
+   Week control close an unchanged editor. Once the board differs from its
+   opening projection, keep the control blocked and retain **Save changes** as
+   the only finish.
+
+Option 2 landed. The board now starts directly beneath the week navigator.
+The real game move/add instructional banners, board boxes, add and bin actions,
+drag/drop, canonical transactions, dirty fingerprint and Save confirmation are
+unchanged. The authoritative copy sheet now marks the former heading
+`WITHDRAWN`, so the equality binder enforces absence rather than asking a later
+change to restore it.
+
+### Regression and liveness proof
+
+- Test-first run against the installed-checkpoint design: `test:week-board`
+  changed from its inherited 80 passed / 1 unrelated product-fixture failure to
+  80 passed / 4 failed. The three new red cells named the mounted/registered
+  heading, the blocked unchanged exit and the changed-editor Save boundary.
+- Fixed: 84 passed / 1 failed. The remaining failure is the pre-existing
+  **adapter still supplies the plan where the composer has none** fixture and
+  is not treated as this product requirement.
+- Liveness mutation: a direct literal `<MoveBanner text="Sessions / games" />`
+  was temporarily remounted, bypassing signed copy. The suite changed from
+  84/1 to 83/2 and the heading-absence cell alone joined the inherited failure.
+  Restoring the source returned it to 84/1.
+- The source test proves its picker-region anchors exist before inspecting the
+  region; it checks the board-only mount and copy registration are absent while
+  both real game picker banners remain.
+- `test:missed-session-prompt` — 34/34, including **No, move it** opening the
+  same board with the typed past-source permission.
+- `test:plan-change-producer` completed with exit 0; its canonical weekly
+  compiler chain finished at 10,390/10,390, covering accepted transactions,
+  restart, fixtures, injury, equipment, section Add/Remove/Move and Undo.
+- `test:fixture-mutation-transaction` — 14/14; `test:undo-reversal` — 28/28;
+  `test:session-action-shell` — 65/65.
+- `test:modifier-lifecycle` — 241/241, My Status 11/11, Program read-only
+  modifiers 11/11 and modifier phrases 4/4.
+- `test:compile` reports 0 product and 0 devtool errors. Its overall result is
+  unchanged red on the same three inherited test-harness errors in
+  `canonicalWeeklyCompilerSliceTests.ts` and `fatiguePlumbingTests.ts`.
+- `test:copy-rulings-binding` confirms the withdrawn heading is absent. The
+  suite remains at its inherited 7/9 boundary on one unrelated missing signed
+  refusal and three older unused proposals; **Sessions / games** is no longer
+  among those failures.
+- `test:law-registry` remains at its inherited 13/14 boundary because 21 of 217
+  laws remain `UNENFORCED`. The updated R-275 row is guarded in-chain by the
+  Week-board test as well as the existing fatigue, missed-session and producer
+  suites.
+
+### Simulator
+
+The preserved-data iPhone 17 Pro simulator passed a non-destructive Maestro
+route: Day → Week → Edit this week → Manage week. The board was visible,
+**Sessions / games** was absent, and **week-board-save** was absent before a
+change. The existing Day control then closed the unchanged editor successfully.
+A second run was visually inspected: the first editable row sat directly under
+the week navigator with no empty banner gap. No add, move, delete, Save or
+athlete-state action was performed, and the simulator was returned to Day.
+
+### Unresolved questions
+
+- None for the scoped product behaviour. Physical acceptance remains pending.
+
+### Not covered yet
+
+- A new fixed Release build on Sam's physical iPhone.
+- Dirty-editor Save confirmation on glass was not exercised because that would
+  change preserved athlete data; the fingerprint/Save path and canonical
+  transaction matrix are automated and green.
+- Physical Dynamic Type and VoiceOver reading order.

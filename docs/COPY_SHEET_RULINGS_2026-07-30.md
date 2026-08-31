@@ -2587,7 +2587,7 @@ add, move and remove either kind of planned content.
 | Week popup, travel explanation | "Adjust around travel or time away" | SIGNED — retained |
 | Week popup, management row | "Manage week" | SIGNED — new single management row |
 | Week popup, management explanation | "Add, move or remove what’s planned" | SIGNED — games and training together |
-| Week board banner | "Sessions / games" | SIGNED — Sam, 2026-08-30, R-275; compact subject label for both managed kinds |
+| Week board banner | WITHDRAWN: "Sessions / games" | Sam, 2026-08-31 physical-device feedback: the editable board does not need this heading |
 | Past move refusal | "Only the unlogged session in this prompt can move out of the past." | SIGNED — Sam, 2026-08-30, R-275; the prompt authorises one historical source only |
 | Board plus heading | "Add to this day" | SIGNED |
 | Board plus, training choice | "Training session" | SIGNED |

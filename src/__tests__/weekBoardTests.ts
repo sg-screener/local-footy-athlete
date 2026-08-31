@@ -338,6 +338,13 @@ console.log('\n[5a] A changed Week board finishes through Save changes');
   const path = require('path');
   const home = fs.readFileSync(
     path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  const projectionCopy = fs.readFileSync(
+    path.resolve(__dirname, '..', 'rules', 'projectionCopy.ts'), 'utf8');
+  const pickerStart = home.indexOf('{/* ── Picker banners ── */}');
+  const refusalStart = home.indexOf('{/* ⚠ **A REFUSED DROP SAYS WHY.');
+  const pickerRegion = pickerStart >= 0 && refusalStart > pickerStart
+    ? home.slice(pickerStart, refusalStart)
+    : '';
   const boardRegion = home.slice(
     home.indexOf('{weekBoardOpen\n              ? ('),
     home.indexOf(': weekViewDays.map', home.indexOf('{weekBoardOpen\n              ? (')),
@@ -353,8 +360,22 @@ console.log('\n[5a] A changed Week board finishes through Save changes');
     home.includes("'week.board.saved'")
       && signedCopy('week.board.saved') === 'Changes saved'
       && /setWeekBoardFinishState\('confirmed'\)[\s\S]{0,1000}setWeekBoardOpen\(false\)/.test(home));
-  ok('a changed board cannot silently leave through the old Cancel action',
-    /onCancel=\{weekBoardHasChanges \? undefined : closeWeekBoard\}/.test(home));
+  ok('the picker-banner region is found before its contents are checked',
+    pickerStart >= 0 && refusalStart > pickerStart && pickerRegion.length > 100);
+  ok('the Week editor has no redundant Sessions / games heading',
+    !home.includes("signedCopy('week.board.banner')")
+      && !projectionCopy.includes("id: 'week.board.banner'")
+      && !pickerRegion.includes('weekBoardOpen'),
+    'the heading was still mounted and registered as signed product copy');
+  ok('an unchanged board can leave through the existing Day / Week shape control',
+    /if \(weekBoardOpen && weekBoardHasChanges\) return;/.test(home),
+    'removing the banner must not remove the only way out of an unchanged editor');
+  ok('a changed board still cannot silently leave without Save changes',
+    /if \(weekBoardOpen && weekBoardHasChanges\) return;/.test(home)
+      && /weekBoardOpen && \(weekBoardHasChanges \|\| weekBoardFinishState === 'confirmed'\)/.test(home));
+  ok('the real game move and add modes keep their instructional banners',
+    /mode\.type === 'moveGame'[\s\S]{0,140}<MoveBanner text="Tap the day to move the game to"/.test(pickerRegion)
+      && /mode\.type === 'addGame'[\s\S]{0,220}<MoveBanner/.test(pickerRegion));
 }
 
 /* ══ 6. The scope a dragged box travels under ══ */
