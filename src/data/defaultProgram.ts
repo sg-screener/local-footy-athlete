@@ -1907,9 +1907,10 @@ export function buildWorkoutsFromCoach(
             feel,
             ergModality: templateErgModality,
             variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
+            weekInBlock: rotationContext?.weekInBlock,
           })
         : offFeetTemplate
-          ? composeConditioningRows(offFeetTemplate, dateStr)
+          ? composeConditioningRows(offFeetTemplate, dateStr, { weekInBlock: rotationContext?.weekInBlock })
           : null;
       if (offFeet && offFeet.length > 0) {
         const tagged = tagAsShiftedFromRun(offFeet);
@@ -1936,6 +1937,7 @@ export function buildWorkoutsFromCoach(
             feel,
             ergModality: templateErgModality,
             variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
+            weekInBlock: rotationContext?.weekInBlock,
           }),
           shiftedFromRun: false,
         };
@@ -1956,6 +1958,7 @@ export function buildWorkoutsFromCoach(
           feel,
           ergModality: templateErgModality,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
+          weekInBlock: rotationContext?.weekInBlock,
         }),
         shiftedFromRun: forcedOffFeet,
       };
@@ -2042,6 +2045,7 @@ export function buildWorkoutsFromCoach(
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
           ergModality: planEntry.ergModality as ErgModality | undefined,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
+          weekInBlock: rotationContext?.weekInBlock,
         });
       // Stamp workoutId on all exercises
       for (const ex of condExercises) {
@@ -2415,6 +2419,7 @@ export function buildWorkoutsFromCoach(
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
           ergModality: planEntry.ergModality as ErgModality | undefined,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
+          weekInBlock: rotationContext?.weekInBlock,
         });
 
       // Re-number: strength exercises keep their order, conditioning appends after

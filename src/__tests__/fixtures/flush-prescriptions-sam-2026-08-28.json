@@ -3,10 +3,10 @@
     "name": "Short Flush",
     "workPeriod": "1 min easy",
     "restPeriod": "1 min complete rest, including transitions; after every round, including the last",
-    "setsRounds": "4 rounds",
+    "setsRounds": "5 rounds",
     "intensity": "Easy, 2–3/10; full conversation throughout",
     "workToRest": "1:1",
-    "totalSessionTime": "8 min, including all rests, preparation and transitions",
+    "totalSessionTime": "10 min, including all rests, preparation and transitions",
     "effortCue": "Start the timer before the first round, which includes your preparation. Change machines during recovery, or stay on one machine. Finish when the timer ends.",
     "modalityNotes": "Bike, Air Bike, RowErg or SkiErg. One machine or rotate between rounds; transitions are included in recovery."
   },

@@ -40,7 +40,7 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
     !composeConditioningRows(templates.find(t => t.name === '10 m Acceleration Reps')!, '2026-09-28').at(-1)!.notes!.includes('not a max sprint'));
   const air = composeConditioningRows(templates.find(t => t.name === 'Air Bike Accelerations')!, '2026-09-28').at(-1)!.notes!;
   ok('clarity: the Air Bike cue gives one short power-drop stop rule',
-    /stop when your power begins to drop/i.test(air)
+    /stop if power begins to drop/i.test(air)
       && !/5%|extend recovery/i.test(air));
   ok('clarity: an unspecified mixed mode is not presented as a complete prescription',
     !/Mixed modalities/.test(conditioningModeLabel('mixed') ?? ''));
@@ -85,9 +85,11 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
   }
   ok('clarity: the equipment matrix actually reaches mixed flush prescriptions',mixed>0);
   const tempo = templates.find(t => t.name === 'Extensive Tempo (100 m repeats)')!;
+  const runningTempo = conditioningAthletePrescription(tempo, undefined, 'running');
+  const bikeTempo = conditioningAthletePrescription(tempo, undefined, 'bike');
   ok('clarity: running retains walking recovery and machine wording retains active recovery',
-    /walk/i.test(conditioningAthletePrescription(tempo, undefined, 'running').recovery)
-    && /active recovery/i.test(conditioningAthletePrescription(tempo, undefined, 'bike').recovery));
+    /walk/i.test(`${runningTempo.work}\n${runningTempo.recovery}`)
+    && /active recovery/i.test(`${bikeTempo.work}\n${bikeTempo.recovery}`));
   ok('clarity: complete rest and its numbers are never changed by a modality',
     ['running', 'bike', 'air_bike', 'row', 'ski', 'mixed'].every(mode =>
       conditioningWordingForModality('60 s complete rest', mode as never) === '60 s complete rest'));

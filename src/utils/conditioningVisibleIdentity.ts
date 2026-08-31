@@ -219,11 +219,18 @@ function authoredTemplateStructure(
   if (!template) return null;
   const option = workout.conditioningBlock?.options
     .find((candidate) => candidate.exerciseIds.includes(rowId(row)));
+  // The generated row already carries the exact week rung. Read it first so a
+  // 35-minute week cannot be collapsed back to the catalogue's default rung.
+  const stored = String(row.notes ?? '');
+  const storedWork = /^Work:\s*(.+)$/m.exec(stored)?.[1];
+  const storedCount = /^(?:Sets|Rounds|Reps|Blocks):\s*(.+)$/m.exec(stored)?.[1];
   const prescription = conditioningAthletePrescription(template, undefined, option?.modality);
-  const duration = textDurationSeconds(prescription.work);
+  const work = storedWork ?? prescription.work;
+  const countText = storedCount ?? prescription.setsRounds;
+  const duration = textDurationSeconds(work);
   if (!duration) return { intervalised: false, structured: false };
-  const count = prescriptionBoutCount(prescription.setsRounds) ?? 1;
-  const intervalised = count > 1 && !/\bcontinuous\b/i.test(prescription.work);
+  const count = prescriptionBoutCount(countText) ?? 1;
+  const intervalised = count > 1 && !/\bcontinuous\b/i.test(work);
   return {
     boutCount: intervalised ? count : undefined,
     boutSeconds: intervalised ? duration : undefined,

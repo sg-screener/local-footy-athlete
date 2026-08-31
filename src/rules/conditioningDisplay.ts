@@ -42,7 +42,11 @@
 import type { ConditioningQuality, ConditioningTemplate } from '../data/conditioningTemplates';
 import { doseMidpoint, parseConditioningDose } from './conditioningDose';
 import type { ConditioningOption } from '../types/domain';
-import { CONDITIONING_ATHLETE_COPY } from './conditioningAthleteCopy';
+import {
+  CONDITIONING_ATHLETE_COPY,
+  resolveConditioningAthleteCopy,
+  type ConditioningDoseContext,
+} from './conditioningAthleteCopy';
 
 /** Wording only: the selected mode owns movement instructions, never dose.
  * Walking/spinning remain ACTIVE recovery; complete rest is never rewritten.
@@ -50,7 +54,7 @@ import { CONDITIONING_ATHLETE_COPY } from './conditioningAthleteCopy';
  */
 export function conditioningWordingForModality(text: string, modality?: ConditioningOption['modality']): string {
   if (!modality) return text;
-  if (/^5–10 min build-up\n/i.test(text)) return conditioningWarmupCopyForModality(modality);
+  if (/^(?:5–10|5|10) min build-up\n/i.test(text)) return conditioningWarmupCopyForModality(modality);
   const active = text.replace(/\beasy spin\/paddle\b/gi, 'easy active recovery');
   if (modality === 'running') return active;
   const movementWording = active
@@ -74,11 +78,12 @@ export function conditioningWarmupCopyForModality(modality: ConditioningOption['
         : modality === 'ski'
           ? 'Start easy on the SkiErg, then build the effort smoothly, increasing the intensity as you go.'
           : 'Start easy on the first machine, then build the effort smoothly as you move through the selected ergs.';
-  return `5–10 min build-up\n${instruction}`;
+  const duration = modality === 'running' ? 10 : 5;
+  return `${duration} min build-up\n${instruction}`;
 }
 
 export interface ConditioningDisplayLine {
-  /** `Work`, `Recovery`, `Rounds`, `Intensity`, `Effort`, or an unlabelled cue. */
+  /** `Work`, `Recovery`, `Sets`, `Rounds`, `Intensity`, `Effort`, or an unlabelled cue. */
   readonly label: string | null;
   readonly text: string;
 }
@@ -128,7 +133,7 @@ export function conditioningCardPresentation(
   const work = labelled('Work')?.text.trim() ?? '';
   const recovery = labelled('Recovery')?.text.trim() ?? '';
   const count = lines.find((line) =>
-    line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks');
+    line.label === 'Sets' || line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks');
   const authoredIntensity = labelled('Intensity')?.text.trim() ?? '';
   const effort = labelled('Effort')?.text.trim() ?? '';
   const intensity = effort ? `Effort: ${effort}` : authoredIntensity;
@@ -154,8 +159,12 @@ export function conditioningCardPresentation(
   const recoveryParts = recovery.split(';').map((part) => part.trim()).filter(Boolean);
   const countParts = (count?.text ?? '').split(/,\s*(?=[^,;]*\bbetween\b)/i)
     .map((part) => part.trim()).filter(Boolean);
-  const primaryRecovery = recoveryParts[0] ?? '';
-  const detail = [...recoveryParts.slice(1), ...countParts.slice(1)].join('; ') || null;
+  const recoveryIsBetweenSets = /\bbetween sets\b/i.test(recoveryParts[0] ?? '');
+  const primaryRecovery = recoveryIsBetweenSets ? '' : (recoveryParts[0] ?? '');
+  const detail = [
+    ...(recoveryIsBetweenSets ? recoveryParts : recoveryParts.slice(1)),
+    ...countParts.slice(1),
+  ].join('; ') || null;
 
   return {
     modality: modality || null,
@@ -177,7 +186,7 @@ export function conditioningCardPresentationFromText(
   modality?: string | null,
 ): ConditioningCardPresentation {
   const lines: ConditioningDisplayLine[] = copy.split('\n').map((raw) => {
-    const match = /^(Work|Recovery|Rounds|Reps|Blocks|Intensity|Effort|Total):\s*(.*)$/.exec(raw.trim());
+    const match = /^(Work|Recovery|Sets|Rounds|Reps|Blocks|Intensity|Effort|Total):\s*(.*)$/.exec(raw.trim());
     return match
       ? { label: match[1], text: match[2] }
       : { label: null, text: raw.trim() };
@@ -197,6 +206,8 @@ export interface ConditioningDisplayInput {
    * trial — the pace line is then OMITTED rather than guessed.
    */
   readonly masKmh?: number | null;
+  /** Exact week rung materialised before the row is persisted. */
+  readonly doseContext?: ConditioningDoseContext;
 }
 
 /**
@@ -291,8 +302,9 @@ export function conditioningAthletePrescription(
   template: ConditioningTemplate,
   resolvedSetsRounds?: number | null,
   modality?: ConditioningOption['modality'],
+  doseContext: ConditioningDoseContext = {},
 ): ConditioningAthletePrescription {
-  const approved = CONDITIONING_ATHLETE_COPY[template.name];
+  const approved = resolveConditioningAthleteCopy(template.name, doseContext);
   const authoredCount = approved?.setsRounds ?? stripAuthoringNotes(template.setsRounds ?? '');
   const simpleCount = /^(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)\s+(reps?|rounds?|blocks?)(?:\s*\([^)]*\))?$/i
     .exec(authoredCount);
@@ -473,7 +485,9 @@ function roundsLine(template: ConditioningTemplate): ConditioningDisplayLine | n
   const bare = /^([\d\s\u2013-]+?)\s*(reps?|rounds?|sets?|blocks?)$/i.exec(authored);
   if (bare) {
     const unit = bare[2].toLowerCase();
-    const label = unit.startsWith('block') ? 'Blocks' : QUALITY_DOSE_LABEL[template.quality];
+    const label = unit.startsWith('block') ? 'Blocks'
+      : unit.startsWith('set') ? 'Sets'
+        : QUALITY_DOSE_LABEL[template.quality];
     return { label, text: bare[1].trim() };
   }
 
@@ -498,6 +512,8 @@ export function conditioningDisplayLines(
   const prescription = conditioningAthletePrescription(
     template,
     input.resolvedSetsRounds,
+    input.modality,
+    input.doseContext,
   );
   const lines: ConditioningDisplayLine[] = [];
 
@@ -514,7 +530,7 @@ export function conditioningDisplayLines(
    * semicolon. Sam removed heart-rate copy from conditioning cards on
    * 2026-08-26, so that internal monitoring note is filtered here and the
    * actionable intensity target is the only one rendered. */
-  const approved = CONDITIONING_ATHLETE_COPY[template.name];
+  const approved = resolveConditioningAthleteCopy(template.name, input.doseContext);
   const clauses = stripAuthoringNotes(approved?.intensity ?? template.intensity ?? '')
     .split(';').map((clause) => clause.trim()).filter(Boolean);
   const intensityClauses = clauses.filter((clause) => !isHeartRateClause(clause));

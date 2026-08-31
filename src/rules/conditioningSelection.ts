@@ -861,8 +861,13 @@ function conditioningRow(
 }
 
 /** Sets for the headline row: the authored governing quantity, or 1. */
-function headlineSets(template: ConditioningTemplate): number {
-  const parsed = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);
+function headlineSets(template: ConditioningTemplate, opts: Pick<ComposeOptions, 'weekInBlock'> = {}): number {
+  const parsed = parseConditioningDose(conditioningAthletePrescription(
+    template,
+    undefined,
+    undefined,
+    { weekInBlock: opts.weekInBlock },
+  ).setsRounds);
   if (!parsed.ok) return 1;
   return Math.max(1, Math.round(doseMidpoint(parsed.quantity)));
 }
@@ -913,7 +918,7 @@ export const CONDITIONING_WARMUP_COPY_ID = 'part.row.conditioning.warmup';
 export const CONDITIONING_WARMUP_ROW_NAME = 'Warm-up';
 
 export const CONDITIONING_WARMUP_COPY =
-  '5–10 min build-up\n'
+  '10 min build-up\n'
   + 'Start with an easy jog, then progress into run-throughs, increasing the intensity as you go.';
 
 export interface ComposeOptions {
@@ -937,6 +942,8 @@ export interface ComposeOptions {
    * which is the honest answer rather than an invented one.
    */
   readonly authoredMinimumDose?: boolean;
+  /** 1-based build week used to resolve exact prescription ladders. */
+  readonly weekInBlock?: number;
   /**
    * The athlete's measured MAS in km/h, for the `Your pace` line. Optional and
    * OMITTED rather than guessed: an athlete with no recorded time trial is told
@@ -968,7 +975,7 @@ export function composeConditioningRows(
   }
   const resolvedSetsRounds = template.intervalPrescription?.rounds ?? (opts.authoredMinimumDose
     ? headlineSetsLow(template)
-    : headlineSets(template));
+    : headlineSets(template, opts));
   rows.push(
     conditioningRow(
       `${prefix}-main`,
@@ -987,6 +994,10 @@ export function composeConditioningRows(
         template,
         masKmh: opts.masKmh ?? null,
         resolvedSetsRounds,
+        doseContext: {
+          weekInBlock: opts.weekInBlock,
+          authoredMinimumDose: opts.authoredMinimumDose,
+        },
       }),
       opts.authoredAtISO,
     ),

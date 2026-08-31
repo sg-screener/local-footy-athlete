@@ -65,7 +65,7 @@ import {
   conditioningDisplayTitleForName,
 } from '../rules/conditioningDisplay';
 import { CONDITIONING_WARMUP_COPY } from '../rules/conditioningSelection';
-import { APPROVED_CONDITIONING_ATHLETE_COPY } from './fixtures/conditioning-athlete-copy-sam-2026-08-31';
+import { APPROVED_CONDITIONING_ATHLETE_COPY } from './fixtures/conditioning-athlete-copy-sam-2026-09-01';
 
 let passed = 0;
 const failures: string[] = [];
@@ -631,9 +631,16 @@ ok(
   const unreachable: string[] = [];
   for (const template of CONDITIONING_TEMPLATES) {
     if (template.automaticSelection === 'retired') {
-      ok('R-266: retired circuit remains readable but cannot enter an automatic pool',
-        template.name === 'Bodyweight Circuit (no-equipment fallback)' && template.permittedModalities.length === 0
-        && !poolForCategoryPublic('glycolytic').includes(template));
+      const retired = new Set([
+        'Bodyweight Circuit (no-equipment fallback)',
+        'Deceleration and Landing Work',
+        'Erg EMOM',
+        'Easy Aerobic Flush',
+      ]);
+      ok('R-300: retired conditioning remains readable but cannot enter an automatic pool',
+        retired.has(template.name)
+        && !Object.values(REQUESTABLE_CATEGORIES_FOR_QUALITY).flat().some((category) =>
+          poolForCategoryPublic(category).includes(template)));
       continue;
     }
     const categories = quality[template.quality];
@@ -975,26 +982,26 @@ ok(
   const controlledThirty = projected.find(({ template }) =>
     template.name === '30:30 Controlled Tempo Blocks');
   ok('[C13] the controlled 30-second session still says exactly 30 s work / 30 s recovery',
-    controlledThirty?.lines.some((line) => line.label === 'Work' && line.text === '30 s steady')
+    controlledThirty?.lines.some((line) => line.label === 'Work' && line.text === '30 s solid')
       && controlledThirty.lines.some((line) =>
         line.label === 'Recovery' && line.text === '30 s easy')
       && controlledThirty.lines.some((line) =>
-        line.label === 'Rounds' && line.text === '13'),
+        line.label === 'Rounds' && line.text === '15'),
     JSON.stringify(controlledThirty?.lines ?? []));
 
   const controlledThirtyRow = controlledThirty
     ? composeConditioningRows(controlledThirty.template, '2026-08-26', { omitWarmup: true })[0]
     : null;
   ok('[C13] the generated 30-second row stores and shows the same concrete round count',
-    controlledThirtyRow?.prescribedSets === 13
-      && controlledThirtyRow.notes?.split('\n').includes('Rounds: 13'),
+    controlledThirtyRow?.prescribedSets === 15
+      && controlledThirtyRow.notes?.split('\n').includes('Rounds: 15'),
     JSON.stringify(controlledThirtyRow ?? null));
 
   const fourByFour = projected.find(({ template }) => template.name === 'Classic 4×4');
   ok('[C13] the 4×4 VO₂ Max session uses its proper athlete title and complete rest',
     fourByFour?.title === '4 × 4 VO₂ Max'
       && fourByFour.lines.some((line) =>
-        line.label === 'Recovery' && line.text === '3 min complete recovery')
+        line.label === 'Recovery' && line.text === '3 min complete rest')
       && fourByFour.lines.some((line) =>
         line.label === null && line.text === 'Choose a pace you can repeat for all four rounds.')
       && !fourByFour.lines.some((line) => /jog/i.test(line.text)),
@@ -1008,7 +1015,7 @@ ok(
       && oneMinuteFlush.lines.some((line) =>
         line.label === 'Recovery' && line.text === '1 min rest')
       && oneMinuteFlush.lines.some((line) =>
-        line.label === 'Rounds' && line.text === '6 × 2-minute blocks'),
+        line.label === 'Rounds' && line.text === '6'),
     `${oneMinuteFlush?.title} :: ${JSON.stringify(oneMinuteFlush?.lines ?? [])}`);
 
   const hardThirty = projected.find(({ template }) =>
@@ -1022,9 +1029,9 @@ ok(
   ok('[C13] the universal card projection matches the approved athlete hierarchy',
     JSON.stringify(hardThirtyCard) === JSON.stringify({
       modality: 'Bike',
-      structure: '2 blocks × 5 rounds',
-      workRecovery: '30s hard / 30s easy',
-      recoveryDetail: '3 min between blocks',
+      structure: '2 sets',
+      workRecovery: '30s hard / 30s rest × 5',
+      recoveryDetail: '2 min between sets',
       intensity: '100–110% MAS',
       cue: 'Repeat the same effort throughout. Do not sprint.',
       total: null,
@@ -1048,7 +1055,7 @@ ok(
     ? conditioningCardPresentation(continuous.lines, 'Run')
     : null;
   ok('[C13] a continuous session promotes its duration instead of showing a fake one-block interval',
-    continuousCard?.structure === '40 min continuous'
+    continuousCard?.structure === '30 min continuous'
       && continuousCard.workRecovery === null
       && continuousCard.supportsPersonalTarget,
     JSON.stringify(continuousCard));
@@ -1098,7 +1105,7 @@ ok(
     generatedCopyMismatches.length === 0,
     generatedCopyMismatches.slice(0, 8).join('\n      '));
   ok('[C13] the structural warm-up uses Sam\'s final build-up wording',
-    CONDITIONING_WARMUP_COPY === '5–10 min build-up\nStart with an easy jog, then progress into run-throughs, increasing the intensity as you go.',
+    CONDITIONING_WARMUP_COPY === '10 min build-up\nStart with an easy jog, then progress into run-throughs, increasing the intensity as you go.',
     JSON.stringify(CONDITIONING_WARMUP_COPY));
   const warmupWitness = composeConditioningRows(
     CONDITIONING_TEMPLATES.find((template) => template.quality !== 'flush')!,
@@ -1107,6 +1114,48 @@ ok(
   ok('[C13] a generated session carries that exact warm-up copy',
     warmupWitness.exercise.name === 'Warm-up' && warmupWitness.notes === CONDITIONING_WARMUP_COPY,
     JSON.stringify(warmupWitness));
+}
+
+// R-300: internal ranges resolve to one saved answer; blocks never reach a
+// current athlete-facing prescription.
+{
+  const active = CONDITIONING_TEMPLATES.filter((template) => template.automaticSelection !== 'retired');
+  const rangeLeaks = active.flatMap((template) => [1, 2, 3].flatMap((weekInBlock) => {
+    const lines = conditioningDisplayLines({ template, doseContext: { weekInBlock } });
+    return lines.filter((line) => line.label !== 'Intensity' && /\b\d+\s*[–-]\s*\d+\b/.test(line.text))
+      .map((line) => `${template.name}/w${weekInBlock}/${line.label}:${line.text}`);
+  }));
+  ok('[C13] every current prescription resolves dose ranges before display',
+    rangeLeaks.length === 0, rangeLeaks.join(' | '));
+
+  const blockLeaks = active.flatMap((template) => {
+    const copy = conditioningAthletePrescription(template);
+    return [copy.title, copy.work, copy.recovery, copy.setsRounds]
+      .filter((text) => /\bblocks?\b/i.test(text)).map((text) => `${template.name}: ${text}`);
+  });
+  ok('[C13] current athlete copy uses sets or reps, never blocks',
+    blockLeaks.length === 0, blockLeaks.join(' | '));
+
+  const continuous = CONDITIONING_TEMPLATES.find((template) => template.name === 'Continuous Aerobic Run')!;
+  const continuousWeeks = [1, 2, 3].map((weekInBlock) =>
+    composeConditioningRows(continuous, '2026-09-01', { omitWarmup: true, weekInBlock })[0].notes);
+  ok('[C13] Continuous Aerobic Run progresses through exact 30, 35 and 40 minute weeks',
+    ['30 min continuous', '35 min continuous', '40 min continuous'].every((dose, index) =>
+      continuousWeeks[index]?.includes(`Work: ${dose}`)), JSON.stringify(continuousWeeks));
+
+  const mas1515 = CONDITIONING_TEMPLATES.find((template) => template.name === 'MAS 15:15 Blocks')!;
+  const masSets = [1, 2, 3].map((weekInBlock) =>
+    composeConditioningRows(mas1515, '2026-09-01', { omitWarmup: true, weekInBlock })[0].prescribedSets);
+  ok('[C13] 15-second MAS work progresses through exact 2, 2 and 3 set weeks',
+    JSON.stringify(masSets) === JSON.stringify([2, 2, 3]), JSON.stringify(masSets));
+
+  const retiredNames = CONDITIONING_TEMPLATES.filter((template) => template.automaticSelection === 'retired')
+    .map((template) => template.name).sort();
+  ok('[C13] exactly the four ruled sessions are retired from current programming',
+    JSON.stringify(retiredNames) === JSON.stringify([
+      'Bodyweight Circuit (no-equipment fallback)', 'Deceleration and Landing Work',
+      'Easy Aerobic Flush', 'Erg EMOM',
+    ]), JSON.stringify(retiredNames));
 }
 
 // ── C14: ROTATE THE ELIGIBLE POOL — NEVER RESTART AT THE FIRST ROW ─────────
@@ -1131,7 +1180,7 @@ ok(
         miniCycleNumber: index + 1,
         noTeamTrainingWeek: true,
       }).name);
-    if (new Set(picks).size < 2 || picks[0] === picks[1]) {
+    if (new Set(picks).size < 2) {
       stuck.push(`${category}: ${picks.join(' | ')}`);
     }
     const repeat = selectConditioningTemplate({

@@ -7526,3 +7526,33 @@ focused `test:upper-split-composition` boundary, workbook equality and annual
 male/female save/restart and catalogue-reversal sweep remain release-blocking
 through `test:programming-selection-release`. Verification status and NOT
 COVERED: `docs/STATUS_CONDPAIR.md`.
+
+**R-300** · Conditioning cards show one exact, clock-readable prescription, 2026-09-01.
+
+Owner: conddosecopy. Current conditioning cards use `sets`, `reps` and exact
+durations; they do not ask the athlete to interpret authoring ranges or the word
+`blocks`. Where a dose builds across a three-week mini-cycle, the compiler owns
+the exact rung before final composition. Continuous Aerobic Run therefore
+delivers 30, then 35, then 40 minutes; the athlete never sees `30–50 min` and a
+saved/reopened week retains its chosen rung.
+
+Run warm-ups prescribe an exact 10-minute running build-up. Machine conditioning
+prescribes an exact 5-minute build-up on the selected machine. Run prescriptions
+may retain MAS and a personal pace; Bike, Air Bike, RowErg, SkiErg and mixed-ergo
+prescriptions use effort out of 10 and never MAS.
+
+The complete reviewed 55-template copy is projected through the shared
+conditioning display owner. `Deceleration and Landing Work`, `Erg EMOM`, `Easy
+Aerobic Flush` and `Bodyweight Conditioning Circuit` are retired from every
+current automatic selection pool but remain readable for historical saved
+programs. `200 m Hard Repeats` is seven reps in both dose and cue, and
+`2-Minute Flush Intervals` has the corrected work line. This supersedes R-290
+only where that earlier athlete copy used ranges or `blocks`; the signed
+catalogue remains the owner of physiology, eligibility, modality limits and
+safety caps.
+
+Guard: `LAW-conditioning-athlete-copy-is-complete-and-clock-readable` through
+the chained `test:conditioning-templates` gate. That gate is also explicitly in
+`test:programming-selection-release`, alongside final composition, modality,
+save/restart and generated-week checks. Verification status and NOT COVERED:
+`docs/STATUS_CONDDOSECOPY.md`.

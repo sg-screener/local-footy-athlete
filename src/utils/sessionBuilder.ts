@@ -1653,6 +1653,8 @@ export function buildConditioningTemplate(
     variant?: ConditioningVariant;
     ergModality?: ErgModality;
     attachedConditioningKind?: AttachedConditioningKind;
+    /** Exact build-week prescription rung. */
+    weekInBlock?: number;
   },
 ): WorkoutExercise[] {
   // Sprint rescue volumes: the Stage B pins rule the retired micro-dose and
@@ -1681,6 +1683,7 @@ export function buildConditioningTemplate(
       omitWarmup: opts?.combined === true,
       authoredMinimumDose: true,
       masKmh: opts?.masKmh ?? null,
+      weekInBlock: opts?.weekInBlock,
     });
   }
   if (!template) {
@@ -1695,6 +1698,7 @@ export function buildConditioningTemplate(
   return composeConditioningRows(template, dateStr, {
     omitWarmup: opts?.combined === true,
     masKmh: opts?.masKmh ?? null,
+    weekInBlock: opts?.weekInBlock,
   });
 }
 

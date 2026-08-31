@@ -51,7 +51,8 @@ export function conditioningCategoryTruth(ok: Check) {
     }
   }
   ok('[C12 current] COD is reachable as COD, not declared missing or relabelled glycolytic',
-    poolForCategoryPublic('cod_decel')?.length === CONDITIONING_TEMPLATES.filter(t => t.quality === 'cod_decel').length
+    poolForCategoryPublic('cod_decel')?.length === CONDITIONING_TEMPLATES.filter(t =>
+      t.quality === 'cod_decel' && t.automaticSelection !== 'retired').length
       && poolForCategoryPublic('cod_decel')?.every(t => t.quality === 'cod_decel') === true);
   for (const role of ['optional_flush', 'optional_recovery_aerobic'] as const) {
     ok(`[C12 current] ${role}: recovery demand selects flush rather than ordinary aerobic work`,

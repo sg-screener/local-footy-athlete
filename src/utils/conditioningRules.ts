@@ -611,7 +611,9 @@ export function resolveConditioning(
   // from it any more; every template name carries a META triple (curated
   // ruling first, sheet-derived otherwise), so the tier/injury filters
   // below work unchanged.
-  const allConditioning = CONDITIONING_TEMPLATES.map((template) => template.name);
+  const allConditioning = CONDITIONING_TEMPLATES
+    .filter((template) => template.automaticSelection !== 'retired')
+    .map((template) => template.name);
   const tierFiltered = allConditioning.filter(name => {
     const meta = CONDITIONING_META[name];
     return meta && eligibleTiers.includes(meta.tier);

@@ -43,7 +43,10 @@ export function assertConditioningTemplateModalityCompatibility(workout: Partial
 }
 
 export function isTemplateIdentityModalityContractValid(template: ConditioningTemplate): boolean {
-  if (template.automaticSelection === 'retired') return template.permittedModalities.length === 0;
+  // Retired rows may retain their historical modality contract so an old saved
+  // session still reopens honestly. The bodyweight circuit is the one
+  // modality-less legacy row.
+  if (template.automaticSelection === 'retired' && template.permittedModalities.length === 0) return true;
   if (template.baseUnit === 'distance') {
     return template.permittedModalities.length === 1 && template.permittedModalities[0] === 'run';
   }

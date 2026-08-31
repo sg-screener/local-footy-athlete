@@ -25,9 +25,11 @@ const retired = 'Bodyweight Circuit (no-equipment fallback)';
 
 /** R-266: actual composed prescriptions, not presence-of-field assertions. */
 export async function flushPrescriptionTruth(storage: Map<string, string>, ok: Check) {
-  const flushes = CONDITIONING_TEMPLATES.filter(t => t.quality === 'flush');
-  ok('flush: all seven saved template identities remain resolvable', flushes.length === 7
-    && flushes.every(t => resolveTemplateByName(t.name) === t));
+  const allFlushes = CONDITIONING_TEMPLATES.filter(t => t.quality === 'flush');
+  const flushes = allFlushes.filter(t => t.automaticSelection !== 'retired');
+  ok('flush: all seven saved identities remain readable while six remain current',
+    allFlushes.length === 7 && flushes.length === 6
+    && allFlushes.every(t => resolveTemplateByName(t.name) === t));
   for (const t of flushes) for (const minimum of [false, true]) {
     const rows = composeConditioningRows(t, '2026-07-13', { authoredMinimumDose: minimum });
     const row = rows.at(-1)!;

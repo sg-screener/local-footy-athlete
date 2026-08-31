@@ -241,13 +241,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
-    law: 'R-290: every one of the 55 conditioning templates has one complete athlete-facing title, work, recovery, count, intensity and coaching cue. Sprint distance is shown as distance rather than an approximate duration, timing uses simple clock intervals or departures where that preserves the session intent, and every non-flush standalone session uses the approved Warm-up build-up copy. The signed template remains the owner of physiology, eligibility, modality limits and safety caps.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-290',
+    law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-300',
     guard: {
       state: 'guarded',
       by: 'test:conditioning-templates',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-08-31 by seat `condnames`. TEST FIRST: replacing the former partial projection with Sam\'s complete fixture produced two named reds for all 55 cards and the structural Warm-up; both now pass, along with a second all-55 generated-workout-row comparison and an emitted Warm-up witness. Selection safety, total-duration role caps and stored recovery were moved back to the signed fields after the first run proved display wording could otherwise alter internal physiology readers. MUTATION/LIVENESS: replacing the 30-second hard cue with `MUTATION: wrong cue.` killed both the exact 55-card cell and the universal card cell; restoring it returned 161/161. The 55-row copy census is 35/35. The simulator flow rendered the revised card, completed it, reloaded and reopened it successfully. NOT COVERED: all 55 templates individually on glass, physical-iPhone Release, VoiceOver and Dynamic Type.',
+      receipt: 'R-300 EXTENSION 2026-09-01 by seat `conddosecopy`. Red-first: the reviewed 55-card fixture, exact-dose/range checks and four-template retirement checks failed against the prior projection before the shared resolver, compiler week context and selection exclusions were added. The same gate is now a direct link in test:programming-selection-release. Mutation receipts and final measured results: docs/STATUS_CONDDOSECOPY.md. NOT COVERED: all 55 templates individually on glass, physical-iPhone Release, VoiceOver and Dynamic Type.',
     },
   },
   {

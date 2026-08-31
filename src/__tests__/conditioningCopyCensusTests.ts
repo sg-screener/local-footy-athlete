@@ -51,6 +51,7 @@ const EN_DASH = '–';
 /** Every line every athlete can read, tagged with the template it came from. */
 interface Rendered {
   readonly name: string;
+  readonly current: boolean;
   readonly lines: readonly ConditioningDisplayLine[];
   readonly paceLine: string | null;
 }
@@ -60,7 +61,7 @@ interface Rendered {
 const TRIAL = { seconds: 480 } as never;
 
 const rendered: Rendered[] = (CONDITIONING_TEMPLATES as readonly never[]).map((t) => {
-  const template = t as unknown as { name: string; intensity?: string };
+  const template = t as unknown as { name: string; intensity?: string; automaticSelection?: string };
   const pace = personalPaceLine({
     intensityText: template.intensity ?? '',
     answer: TRIAL,
@@ -76,6 +77,7 @@ const rendered: Rendered[] = (CONDITIONING_TEMPLATES as readonly never[]).map((t
   const rendered = (cleanNotes(projected.map((l) => (l.label ? `${l.label}: ${l.text}` : l.text)).join('\n')) ?? '').split('\n');
   return {
     name: template.name,
+    current: template.automaticSelection !== 'retired',
     lines: projected.map((l, i) => {
       const shown = rendered[i] ?? '';
       const text = l.label && shown.startsWith(`${l.label}: `) ? shown.slice(l.label.length + 2) : shown;
@@ -144,12 +146,8 @@ const APPROVED_LABELS = ['Work', 'Recovery', 'Rounds', 'Reps', 'Sets', 'Blocks',
 sweep('every label is an approved athlete-facing word',
   (_text, label) => label !== null && !APPROVED_LABELS.includes(label));
 {
-  const bad = rendered.filter((r) => {
-    const recovery = r.lines.find((l) => l.label === 'Recovery');
-    const sets = r.lines.find((l) => l.label === 'Sets');
-    return Boolean(recovery) && Boolean(sets);
-  });
-  ok('interval work counts Rounds, never `Sets` (Sam: not "Sets: 4 reps")',
+  const bad = rendered.filter((r) => r.current && r.lines.some((l) => l.label === 'Blocks'));
+  ok('current athlete copy uses Sets rather than Blocks',
     bad.length === 0, bad.map((r) => r.name).join(' | '));
 }
 // `Rounds: 6–8 reps` says "rounds" and "reps" about one number. A bare quantity
