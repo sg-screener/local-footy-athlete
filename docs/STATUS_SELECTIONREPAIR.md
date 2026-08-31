@@ -27,7 +27,56 @@ Owner: `selectionrepair`
 ## Current step
 
 Steps 1–4 and 6 complete; Step 5 is checkpointed with one product decision
-blocked; Step 7 next.
+blocked. Sam's 2026-08-31 audit follow-up is now being worked in the order he
+gave: Primer composition first, injury composition second, missing routes
+third, conditioning labels fourth, classification reconciliation fifth, then
+the final isolated audit rerun.
+
+## 2026-08-31 follow-up 1 — every Primer is seven low-fatigue rows
+
+Sam superseded R-129's three optional exercises. The one shared
+`SESSION_SLOTS.primer` composition now ends after its seventh row: two hip
+mobility drills, one upper mobility drill, one lower/midline mobility drill,
+Pogo Hops, upper power and lower power. Acceleration, Trap Bar Deadlift / High
+Box Squat and Bench Press are absent from both generator-placed and
+athlete-added Primers. Extra work remains available by adding Strength; no
+Strength composition was changed.
+
+Two designs were compared:
+
+1. Filter the three names after generation in each placement/write route.
+   Rejected because generated, athlete-added and coach-template Primers could
+   drift and the removed exercises would still be authored upstream.
+2. Remove the optional slots at `SESSION_SLOTS.primer`, the common composition
+   owner. Chosen because every existing route already calls this source.
+
+Regression and liveness receipts:
+
+- Red first: `test:primer-session` reported 22 passed / 3 failed. S7 observed
+  10 rows on a real date; W1 and W2 observed the same 10-row coach-template and
+  canonical write path.
+- After the source correction: `test:primer-session` reported 25 / 25 across 40
+  dates, the visible session template and the write canonicaliser.
+- Mutation: restoring only the Acceleration slot produced eight rows and killed
+  S7, W1 and W2; restoring the corrected source returned 25 / 25.
+- `test:programming-final-composition`: 6 / 6.
+- `test:law-registry`: the new R-288 row is well formed, resolves and names a
+  chained guard. The suite remains red only on its measured inherited backlog:
+  21 `UNENFORCED` rows among 221 total laws.
+- Wider diagnostic truth was not hidden: `test:exercise-intake` reached and
+  passed the complete Primer suite, then remained red on the pre-existing power
+  deload identity cell (`Vertical Jump` versus `Broad Jumps`). `test:release`
+  stopped in its bootstrap because the existing `exercise-removal-restart`
+  seed could not find a Back Squat. Neither failure names Primer composition.
+
+The correction moves toward the north star: one composition decision was
+removed at the source instead of being stored or filtered separately by route.
+
+NOT COVERED at this checkpoint: physical-phone presentation; the high
+calf/Achilles conditioning case; injury-adjusted session naming; the two Seated
+Good Morning routes; 32 conditioning-duration labels; the 29 classification
+entries; and the fresh two-athlete, 52-week final audit. These are the remaining
+follow-up steps and no whole-job completion is claimed.
 
 ## Step 1 — compiler-owned automatic selection trace
 

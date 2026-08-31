@@ -3,20 +3,17 @@
  *
  * *"Add primer program - 2 hip mobility drills, upper back mobility drill, 1
  * extra drill (not hip or upper back mobility), pogo hops 2x10, explosive upper
- * body, explosive lower body, optional 3 accelerations for 15m at 90%, optional
- * heavy but easy lifts for low reps"*, amended the same day: keep every tick
- * box, remove the weight control from the whole session, slot 3 draws the WHOLE
- * signed upper region.
+ * body, explosive lower body"*. Sam amended the composition on 2026-08-31:
+ * every Primer ends there. Acceleration, a heavy lower lift and Bench Press are
+ * not optional Primer rows; an athlete who wants more adds Strength separately.
  *
  * ⚠ **WHAT THIS SUITE IS FOR, BEYOND "THE SESSION EXISTS".** The Primer is the
- * first session in the app that mixes stretching, jumping and MAIN LIFTS in one
- * place, and two of this repo's known defect classes aim straight at it:
+ * first session in the app that mixes stretching and jumping in one place, and
+ * two of this repo's known defect classes aim straight at it:
  *
  *  - A SESSION RE-TYPED BY ITS OWN ROWS. A Prehab session once classified as
- *    `lower_strength` at HIGH stress because it drew Cossack Squat. A Primer
- *    carries `Bench Press` and `Trap Bar Deadlift` BY NAME, so the same
- *    inference would hand the week a hard strength exposure the athlete never
- *    took. Cells [C1]-[C3].
+ *    `lower_strength` at HIGH stress because it drew Cossack Squat. Primer's
+ *    typed identity must remain the counting source. Cells [C1]-[C3].
  *  - A CONTROL RENDERED FROM THE WRONG QUESTION. The weight stepper is chosen by
  *    exercise NAME, and the tempting fix — adding these lifts to the no-load
  *    name set — would have stripped the stepper from every strength session in
@@ -199,55 +196,24 @@ run('S6. Pogo Hops is never prescribed TWICE in one session', () => {
   }
 });
 
-run('S7. the three skippable rows are marked optional, and RENDER as optional', () => {
-  // ⚠ **THIS CELL USED TO ASSERT THE WORD "Optional" IN THE ROW NOTES**, because
-  // when it was written the copy was the only carrier — the flag had been
-  // deleted for having no reader. Sam then read the session: *"the strength work
-  // and the accelerations are still in the main session - they should be
-  // optional"*. Copy that SAYS optional in a list of prescribed work is not the
-  // same as a row the screen PLACES in the optional cluster, and this cell now
-  // asserts the second thing, through the real template owner.
-  const built = primerOn(DATES[0]);
-  const rows = built.exercises ?? [];
-  const marked = rows.filter((row) => (row as { optionalNoPenalty?: boolean }).optionalNoPenalty);
-  assert(marked.length === 3,
-    `${marked.length} rows are marked skippable; R-129 authors three (the `
-    + 'accelerations, the heavy lower lift and the bench)');
-  const names = marked.map((row) => row.exercise?.name ?? '');
-  assert(names.indexOf('Acceleration') !== -1,
-    `the skippable rows are ${names.join(', ')} — the accelerations are not among them`);
-  // AND THE RENDERER AGREES. A flag no surface reads is the shape this field was
-  // deleted for once already.
-  const template = buildSessionTemplate(built) as { items: readonly { optional?: boolean; row?: { exercise?: { name?: string } } }[] };
-  const optionalItems = template.items.filter((item) => item.optional);
-  assert(optionalItems.length === 3,
-    `the session template put ${optionalItems.length} rows in the optional cluster, not 3`);
-  const lastThree = template.items.slice(-3);
-  assert(lastThree.every((item) => item.optional),
-    'the optional rows are not the last three on the screen — D2 puts the optional '
-    + 'cluster below all prescribed work, and Sam authored them last');
-});
-
-run('S8. the heavy lower lift ROTATES between the two Sam named', () => {
-  const seen = new Set<string>();
+run('S7. every generated or athlete-added Primer is exactly seven low-fatigue rows', () => {
+  const forbidden = new Set(['Acceleration', 'Trap Bar Deadlift', 'High Box Squat', 'Bench Press']);
   for (const date of DATES) {
-    for (const name of rowNames(primerOn(date))) {
-      if (name === 'Trap Bar Deadlift' || name === 'High Box Squat') seen.add(name);
-    }
+    const built = primerOn(date);
+    const names = rowNames(built);
+    assert(names.length === 7,
+      `${date}: the Primer contains ${names.length} rows, not the ruled seven: ${names.join(', ')}`);
+    const extras = names.filter((name) => forbidden.has(name));
+    assert(extras.length === 0,
+      `${date}: the Primer quietly added ${extras.join(', ')}; extra work belongs in Strength`);
+    assert(!(built.exercises ?? []).some((row) =>
+      (row as { optionalNoPenalty?: boolean }).optionalNoPenalty),
+      `${date}: the Primer still contains an optional-no-penalty exercise row`);
+    const template = buildSessionTemplate(built) as { items: readonly { optional?: boolean }[] };
+    assert(template.items.length === 7 && template.items.every((item) => !item.optional),
+      `${date}: the visible template contains ${template.items.length} rows, including `
+      + `${template.items.filter((item) => item.optional).length} optional rows`);
   }
-  assert(seen.has('Trap Bar Deadlift') && seen.has('High Box Squat'),
-    `across ${DATES.length} seeds only ${[...seen].join(', ') || 'nothing'} appeared. `
-    + 'Sam authored the row as "TB dead OR high box squat" — a frozen choice is not a choice');
-});
-
-run('S9. the heavy lift is prescribed BELOW the 3-rep floor, as ruled', () => {
-  const rows = primerOn(DATES[0]).exercises ?? [];
-  const heavyLower = rows.find((row) =>
-    row.exercise?.name === 'Trap Bar Deadlift' || row.exercise?.name === 'High Box Squat');
-  assert(!!heavyLower, 'no heavy lower lift in the session');
-  assert(heavyLower!.prescribedRepsMin === 2 && heavyLower!.prescribedSets === 2,
-    `the heavy lower lift came out ${heavyLower!.prescribedSets}x`
-    + `${heavyLower!.prescribedRepsMin}, not the authored 2 x 2`);
 });
 
 run('S10. an off-crosswalk experience answer still gets a Primer, not a crash', () => {
@@ -291,15 +257,13 @@ run('S12. CONTROL — every other composed session KEEPS its provenance prefix',
     + 'removed app-wide instead of for the Primer');
 });
 
-run('S13. every authored dose renders exactly as authored, in its own unit', () => {
+run('S13. every remaining timed dose renders exactly as authored, in its own unit', () => {
   // The DOSE THE ATHLETE READS, not the dose in the data — the two disagreed on
   // Sam's phone in three ways at once, all of them formatters:
   //   a timed hold authored 2 x 30-45 SECONDS read "2 × 20" — a rep snapper
   //     applied to a stretch, falling back to the nearest rep target because
   //     none sits inside 30-45;
-  //   its per-side qualifier was lost;
-  //   the heavy lift authored 2 x 2 read "2 × 3", revoking Sam's own exception
-  //     to the 3-rep minimum on the screen after the data had honoured it.
+  //   its per-side qualifier was lost.
   //
   // Asked BY UNIT, not by exercise name: the mobility picks rotate by seed, and
   // a cell naming one drill passes or fails on the draw rather than on the rule.
@@ -320,14 +284,6 @@ run('S13. every authored dose renders exactly as authored, in its own unit', () 
       + `${row.prescribedRepsMin}-${row.prescribedRepsMax}s but reads "${shown}", `
       + `not "${expected}"`);
   }
-  const distance = rows.find((row) => row.prescriptionType === 'distance');
-  assert(!!distance && formatStrengthSetsReps(distance) === '3 × 15m',
-    `the accelerations read "${distance ? formatStrengthSetsReps(distance) : '<absent>'}", not "3 × 15m"`);
-  const heavy = rows.find((row) =>
-    row.exercise?.name === 'Trap Bar Deadlift' || row.exercise?.name === 'High Box Squat');
-  assert(!!heavy, 'no heavy lower lift in the session');
-  assert(formatStrengthSetsReps(heavy!) === '2 × 2',
-    `the heavy lift reads "${formatStrengthSetsReps(heavy!)}", not the authored "2 × 2"`);
 });
 
 run('S14. CONTROL — an ordinary rep RANGE still snaps to the approved vocabulary', () => {
@@ -349,9 +305,7 @@ run('C1. a Primer is classified `primer`, NOT a strength session', () => {
   assert(units.length === 1,
     `the Primer produced ${units.length} units: ${units.map((u) => u.category).join(', ')}`);
   assert(units[0].category === 'primer',
-    `a Primer classified as "${units[0].category}". It carries Bench Press and a `
-    + 'trap bar deadlift by name, so a name- or exercise-driven classifier reads main '
-    + 'strength — this must come from the typed marker');
+    `a Primer classified as "${units[0].category}"; this must come from its typed marker`);
 });
 
 run('C2. its stress is LOW, so it can never take a hard day', () => {
@@ -393,9 +347,8 @@ run('L1. a Primer does not ask for a weight', () => {
 });
 
 run('L2. CONTROL — a Gunshow and an ordinary session still DO', () => {
-  // THE CELL THAT MATTERS. The one-line fix for L1 was to add Trap Bar Deadlift
-  // and Bench Press to the no-load NAME set, which would have stripped the
-  // stepper from every strength session in the app and passed L1 perfectly.
+  // L1 is session-scoped. Removing load entry from Primer must not remove it
+  // from another optional or ordinary strength session.
   const gunshow = buildDerivedSession(
     'arms_pump', DATES[0], 'primer-tests', 'control', DEFAULT_ATHLETE_CONTEXT,
   ) as Workout;
@@ -409,17 +362,17 @@ run('L2. CONTROL — a Gunshow and an ordinary session still DO', () => {
 
 console.log('\n-- W. the WRITE path --');
 
-run('W1. the canonicaliser returns every authored row, untouched', () => {
+run('W1. the canonicaliser returns all seven ruled rows, untouched', () => {
   // ⚠ **THE CELL THIS SUITE WAS MISSING, AND SAM PAID FOR ITS ABSENCE FOUR
   // TIMES.** Every other cell here drives the COMPOSER. `finaliseWorkoutAfterMutation`
   // runs on the WRITE — it is a strength-session canonicaliser that re-derives a
   // day's intent and rebuilds its content as power + strength + conditioning,
-  // dropping everything else. MEASURED with the guard disabled: a 10-row Primer
+  // dropping everything else. MEASURED with the guard disabled: a Primer
   // came back with SIX, having deleted `Hip 90/90 Stretch`, `Pogo Hops`,
   // `Explosive Push-up` and `Lateral Jump` — the whole explosive half.
   const built = buildCoachRevisionTemplateWorkout('primer_session', '2026-07-05') as Workout;
-  assert(!!built && (built.exercises ?? []).length === 10,
-    `the template built ${(built?.exercises ?? []).length} rows, not 10 — this cell `
+  assert(!!built && (built.exercises ?? []).length === 7,
+    `the template built ${(built?.exercises ?? []).length} rows, not 7 — this cell `
     + 'cannot measure the write path against a broken input');
   const before = rowNames(built);
   const result = finaliseWorkoutAfterMutation(built, {
@@ -433,18 +386,17 @@ run('W1. the canonicaliser returns every authored row, untouched', () => {
     `the write path reordered the session:\n  before ${before.join(', ')}\n  after  ${after.join(', ')}`);
 });
 
-run('W2. the authored DOSE survives the write, including the 2-rep exception', () => {
+run('W2. the write path cannot restore the three removed optional exercises', () => {
   const built = buildCoachRevisionTemplateWorkout('primer_session', '2026-07-05') as Workout;
   const result = finaliseWorkoutAfterMutation(built, {
     date: '2026-07-05', phase: 'In-season', offseasonSubphase: 'not_off_season',
   } as never) as { workout: Workout };
-  const heavy = (result.workout.exercises ?? []).find((row) =>
-    row.exercise?.name === 'Trap Bar Deadlift' || row.exercise?.name === 'High Box Squat');
-  assert(!!heavy, 'the heavy lower lift did not survive the write');
-  assert(heavy!.prescribedRepsMin === 2 && heavy!.prescribedSets === 2,
-    `the heavy lift came out of the write at ${heavy!.prescribedSets}x`
-    + `${heavy!.prescribedRepsMin}, not the authored 2 x 2. Sam ruled the 3-rep `
-    + 'exception for this session and the write path was undoing it');
+  const forbidden = new Set(['Acceleration', 'Trap Bar Deadlift', 'High Box Squat', 'Bench Press']);
+  const after = rowNames(result.workout);
+  assert(after.length === 7,
+    `the write path returned ${after.length} Primer rows, not seven: ${after.join(', ')}`);
+  assert(after.every((name) => !forbidden.has(name)),
+    `the write path restored removed Primer work: ${after.filter((name) => forbidden.has(name)).join(', ')}`);
 });
 
 run('W3. CONTROL — an ordinary session still GOES THROUGH the canonicaliser', () => {

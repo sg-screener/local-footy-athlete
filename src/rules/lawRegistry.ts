@@ -141,6 +141,13 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-primer-stays-seven-low-fatigue-rows',
+    law: 'R-288: every generated and athlete-added Primer contains exactly seven low-fatigue rows and no optional Acceleration, heavy lower lift or Bench Press. Athletes who want more work add a separate Strength session.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-288',
+    guard: { state: 'guarded', by: 'test:exercise-intake (test:primer-session S7/W1/W2)', chainStatus: 'in_chain',
+      receipt: 'Red-first 2026-08-31: the real shared composer and coach-template write path each returned 10 rows and failed S7/W1/W2. R-288 removes the three extras at SESSION_SLOTS.primer, the common source used by generated and athlete-added routes. The guard walks 40 dates, the visible template and the post-mutation canonicaliser, and rejects any forbidden identity, optional marker or row count other than seven. Final verification: docs/STATUS_SELECTIONREPAIR.md.' },
+  },
+  {
     id: 'LAW-accepted-lived-history-integrity',
     law: 'R-277: accepted actual session minutes persist on the canonical feedback fact and transaction success compares every normalized athlete answer with persisted state. Completed strength, conditioning, team-training and game loads each contribute actual minutes times RPE exactly once to reconstructable daily, weekly and four-week totals; skipped, rest and removed work contributes zero and the history survives restart and phase changes without rewriting future programming.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-277',

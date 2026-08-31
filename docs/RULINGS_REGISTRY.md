@@ -7249,3 +7249,22 @@ membership, not speed selection, dose, sprint credit or conditioning credit.
 Guard: `LAW-session-speed-rows-and-order`, `test:session-template` and
 `test:session-execution`. Verification status and NOT COVERED:
 `docs/STATUS_CONDNAMES.md`.
+
+**R-288** · A Primer always ends after its seventh low-fatigue row, 2026-08-31.
+
+Owner: selectionrepair. Sam removed the three former optional exercise rows
+from every Primer: Acceleration, the rotating Trap Bar Deadlift / High Box
+Squat row, and Bench Press. A Primer remains two hip-mobility drills, one upper
+mobility drill, one further lower/midline mobility drill, Pogo Hops, one upper
+power exercise and one lower power exercise. The same composition applies to
+generator-placed and athlete-added Primers. Athletes who want more work add a
+separate Strength session.
+
+This supersedes only R-129's optional Acceleration and heavy-but-easy rows. It
+does not alter Primer placement, purpose, duration, low-stress counting,
+mobility regions, power selection, load-control behaviour or the female-path
+placement amendment in R-130.
+
+Guard: `LAW-primer-stays-seven-low-fatigue-rows` and `test:exercise-intake`
+(`test:primer-session` S7/W1/W2). Verification status and NOT COVERED:
+`docs/STATUS_SELECTIONREPAIR.md`.

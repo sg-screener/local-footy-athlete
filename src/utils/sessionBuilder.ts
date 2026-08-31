@@ -345,8 +345,9 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
    *
    * *"2 hip mobility drills, upper back mobility drill, 1 extra drill (not hip
    * or upper back mobility), pogo hops 2x10, explosive upper body, explosive
-   * lower body, optional 3 accelerations for 15m at 90%, optional heavy but
-   * easy lifts for low reps"*.
+   * lower body"*. R-288 removes the former three optional exercise rows from
+   * this one shared composition owner, so generated and athlete-added Primers
+   * cannot diverge.
    *
    * ⚠ **SLOT 3 IS THE WHOLE `upper` REGION, INCLUDING `pec-doorway`.** Sam
    * wrote "upper BACK"; the signed region is broader and holds a chest stretch.
@@ -383,33 +384,6 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
     // and Pogo Hops is the only one. The guarantee lives in the pool owner; a
     // second copy here would have read like the thing holding it.
     { power: 'lower', count: 1, sets: 2, repsMin: 3, repsMax: 3, restSeconds: 90 },
-    {
-      authored: [{
-        names: ['Acceleration'],
-        sets: 3, repsMin: 15, repsMax: 15, restSeconds: 90,
-        prescriptionType: 'distance',
-        notes: 'Build to about 90%. Walk back, take your time between each one.',
-        optional: true,
-      }],
-    },
-    {
-      authored: [
-        {
-          names: ['Trap Bar Deadlift', 'High Box Squat'],
-          sets: 2, repsMin: 2, repsMax: 2, restSeconds: 120,
-          notes: 'Heavy but easy, around 70%. '
-            + 'Every rep fast - leave plenty in the tank.',
-          optional: true,
-        },
-        {
-          names: ['Bench Press'],
-          sets: 2, repsMin: 3, repsMax: 3, restSeconds: 120,
-          notes: 'Heavy but easy, around 70%. '
-            + 'Every rep fast - leave plenty in the tank.',
-          optional: true,
-        },
-      ],
-    },
   ],
 };
 
