@@ -52,14 +52,18 @@ export function conditioningWordingForModality(text: string, modality?: Conditio
   if (!modality) return text;
   const active = text.replace(/\beasy spin\/paddle\b/gi, 'easy active recovery');
   if (modality === 'running') return active;
-  return active
+  const movementWording = active
     .replace(/\bwalk(?:-back)?\b/gi, match => /^[A-Z]/.test(match) ? 'Easy active recovery' : 'easy active recovery')
     .replace(/\((\d+(?:[–-]\d+)?\s*(?:km|m))\)/g, '($1 running equivalent)')
     .replace(/\bper (\d+\s*m)\b/g, 'per effort ($1 running equivalent)');
+  return movementWording.replace(/^Intensity:\s*(.+)$/gim, (_line, intensity: string) => {
+    const projected = conditioningIntensityDisplayForModality(intensity.trim(), modality);
+    return projected ? `${projected.label}: ${projected.text}` : '';
+  }).replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export interface ConditioningDisplayLine {
-  /** `Work`, `Recovery`, `Rounds`, `Intensity`, or an unlabelled cue. */
+  /** `Work`, `Recovery`, `Rounds`, `Intensity`, `Effort`, or an unlabelled cue. */
   readonly label: string | null;
   readonly text: string;
 }
@@ -110,7 +114,9 @@ export function conditioningCardPresentation(
   const recovery = labelled('Recovery')?.text.trim() ?? '';
   const count = lines.find((line) =>
     line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks');
-  const intensity = labelled('Intensity')?.text.trim() ?? '';
+  const authoredIntensity = labelled('Intensity')?.text.trim() ?? '';
+  const effort = labelled('Effort')?.text.trim() ?? '';
+  const intensity = effort ? `Effort: ${effort}` : authoredIntensity;
   const cue = lines.filter((line) => line.label === null).map((line) => line.text.trim())
     .filter(Boolean).join(' ');
   const total = labelled('Total')?.text.trim() || null;
@@ -156,7 +162,7 @@ export function conditioningCardPresentationFromText(
   modality?: string | null,
 ): ConditioningCardPresentation {
   const lines: ConditioningDisplayLine[] = copy.split('\n').map((raw) => {
-    const match = /^(Work|Recovery|Rounds|Reps|Blocks|Intensity|Total):\s*(.*)$/.exec(raw.trim());
+    const match = /^(Work|Recovery|Rounds|Reps|Blocks|Intensity|Effort|Total):\s*(.*)$/.exec(raw.trim());
     return match
       ? { label: match[1], text: match[2] }
       : { label: null, text: raw.trim() };
@@ -166,6 +172,8 @@ export function conditioningCardPresentationFromText(
 
 export interface ConditioningDisplayInput {
   readonly template: ConditioningTemplate;
+  /** Selected typed delivery mode. Omitted while writing generic stored copy. */
+  readonly modality?: ConditioningOption['modality'];
   /** The concrete count materialised on this row; absent callers use the same midpoint rule. */
   readonly resolvedSetsRounds?: number | null;
   /**
@@ -174,6 +182,69 @@ export interface ConditioningDisplayInput {
    * trial — the pace line is then OMITTED rather than guessed.
    */
   readonly masKmh?: number | null;
+}
+
+/**
+ * One deterministic bridge from the template's intended intensity to the
+ * signed 1–10 effort scale used elsewhere in the app. It reads intensity only:
+ * never template name, description, cue or catalogue position.
+ *
+ * The ordered branches are semantic. Explicit /10 copy wins; truly maximal
+ * work is 10; MAS bands retain their distinct easy/tempo/power intent; then the
+ * authored plain-language scale supplies the remaining hard/easy cases.
+ */
+export function conditioningEffortRating(intendedIntensity: string): number | null {
+  const intensity = stripAuthoringNotes(intendedIntensity).trim();
+  if (!intensity) return null;
+
+  const explicit = /(\d+)(?:\s*[–-]\s*(\d+))?\s*\/\s*10\b/.exec(intensity);
+  if (explicit) {
+    const low = Number(explicit[1]);
+    const high = explicit[2] ? Number(explicit[2]) : low;
+    const midpoint = Math.round((low + high) / 2);
+    return midpoint >= 1 && midpoint <= 10 ? midpoint : null;
+  }
+
+  if (/\b(?:all[- ]out|maximal intent|maximal repeat|maximal)\b/i.test(intensity)
+    && !/\bnot maximal\b/i.test(intensity)) return 10;
+
+  const percentage = /(approximately\s*)?(\d+)\s*(?:[–-]\s*(\d+)\s*)?%\s*(MAS)?/i.exec(intensity);
+  if (percentage) {
+    const low = Number(percentage[2]);
+    const high = percentage[3] ? Number(percentage[3]) : low;
+    const isMas = !!percentage[4];
+    if (!isMas) {
+      if (low >= 95) return 10;
+      if (low >= 90) return 9;
+      if (low >= 70) return 6;
+      if (low >= 65 && high <= 75) return 5;
+      if (low >= 65) return 6;
+    } else {
+      if (high >= 110) return 9;
+      if (low >= 90) return 8;
+      if (low >= 70) return 6;
+      if (low >= 65 && high <= 75) return 5;
+      if (low >= 65) return 6;
+    }
+  }
+
+  if (/\bvery hard\b/i.test(intensity)) return 8;
+  if (/\bhard\b/i.test(intensity)) return 7;
+  if (/\bcontrolled\b/i.test(intensity)) return 6;
+  if (/\b(?:very easy|low intensity|easy)\b/i.test(intensity)) return 3;
+  return null;
+}
+
+/** The one intensity-unit display rule, keyed only by selected typed mode. */
+export function conditioningIntensityDisplayForModality(
+  intendedIntensity: string,
+  modality?: ConditioningOption['modality'],
+): ConditioningDisplayLine | null {
+  const cleaned = stripAuthoringNotes(intendedIntensity).trim();
+  if (!cleaned) return null;
+  if (!modality || modality === 'running') return { label: 'Intensity', text: cleaned };
+  const rating = conditioningEffortRating(cleaned);
+  return rating === null ? null : { label: 'Effort', text: `${rating}/10` };
 }
 
 /**
@@ -433,12 +504,11 @@ export function conditioningDisplayLines(
     .split(';').map((clause) => clause.trim()).filter(Boolean);
   const intensityClauses = clauses.filter((clause) => !isHeartRateClause(clause));
 
-  if (intensityClauses.length > 0) {
-    lines.push({
-      label: 'Intensity',
-      text: intensityClauses.join('; '),
-    });
-  }
+  const intensityLine = conditioningIntensityDisplayForModality(
+    intensityClauses.join('; '),
+    input.modality,
+  );
+  if (intensityLine) lines.push(intensityLine);
   const cue = athleteSentence(approved?.cue ?? template.effortCue ?? '');
   if (cue) lines.push({ label: null, text: cue });
   if (template.quality === 'flush') lines.push({ label: 'Total', text: prescription.totalSessionTime });

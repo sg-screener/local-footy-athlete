@@ -67,6 +67,11 @@ export interface CoachRevisionTemplateDefinition {
   strengthIntent?: StrengthIntent;
   /** Derived-session type for buildDerivedSession (composed session types). */
   derivedType?: 'arms_pump' | 'prehab_accessories' | 'primer';
+  /** Explicit delivery identity for addable conditioning; never inferred from copy. */
+  conditioningModality?: 'bike' | 'row' | 'ski' | 'mixed';
+  conditioningModalitySequence?: Array<'bike' | 'air_bike' | 'row' | 'ski'>;
+  /** Authored effort intent projected through the shared modality display rule. */
+  conditioningIntensity?: string;
 }
 
 const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
@@ -78,6 +83,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 25,
+    conditioningModality: 'bike',
+    conditioningModalitySequence: ['bike'],
+    conditioningIntensity: 'Very easy, 2–3/10',
   },
   {
     templateId: 'easy_zone2_row',
@@ -86,6 +94,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 28,
+    conditioningModality: 'row',
+    conditioningModalitySequence: ['row'],
+    conditioningIntensity: 'Very easy, 2–3/10',
   },
   {
     templateId: 'easy_zone2_ski',
@@ -94,6 +105,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 28,
+    conditioningModality: 'ski',
+    conditioningModalitySequence: ['ski'],
+    conditioningIntensity: 'Very easy, 2–3/10',
   },
   {
     templateId: 'flushout_3030',
@@ -103,6 +117,8 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 24,
+    conditioningModality: 'mixed',
+    conditioningIntensity: 'Very easy, 3/10',
   },
   {
     templateId: 'flushout_1on_1off',
@@ -112,6 +128,8 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 24,
+    conditioningModality: 'mixed',
+    conditioningIntensity: 'Very easy, 3/10',
   },
   {
     templateId: 'flushout_2on_1off',
@@ -121,6 +139,8 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'flush',
     byeOnly: false,
     durationMinutes: 24,
+    conditioningModality: 'mixed',
+    conditioningIntensity: 'Easy, 4–5/10',
   },
   // ── Work capacity: harder off-legs conditioning, bye weeks only ──
   {
@@ -131,6 +151,8 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'work_capacity',
     byeOnly: true,
     durationMinutes: 24,
+    conditioningModality: 'mixed',
+    conditioningIntensity: 'Hard, 7–8/10',
   },
   {
     templateId: 'metcon_offlegs',
@@ -161,6 +183,8 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     category: 'work_capacity',
     byeOnly: true,
     durationMinutes: 28,
+    conditioningModality: 'mixed',
+    conditioningIntensity: 'Hard but repeatable, 7/10',
   },
   // ── Mobility: COMPOSED from Sam's pool, never a pre-built bundle ──
   //
@@ -336,6 +360,9 @@ interface ConditioningTemplateRow {
 }
 
 function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): ConditioningTemplateRow[] {
+  const notes = (copy: string) => def.conditioningIntensity
+    ? `${copy}\nIntensity: ${def.conditioningIntensity}`
+    : copy;
   if (def.templateId === 'easy_zone2_row') {
     return [{
       key: 'main',
@@ -344,7 +371,7 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
       repsMin: 8,
       repsMax: 8,
       restSeconds: 120,
-      notes: '3 x 8min zone 2 on Rower. 2min complete rest between blocks. Smooth, conversational rhythm.',
+      notes: notes('3 x 8min zone 2 on Rower. 2min complete rest between blocks. Smooth, conversational rhythm.'),
     }];
   }
   if (def.templateId === 'easy_zone2_ski') {
@@ -355,7 +382,7 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
       repsMin: 8,
       repsMax: 8,
       restSeconds: 120,
-      notes: '3 x 8min zone 2 on SkiErg. 2min complete rest between blocks. Relaxed rhythm, no grind.',
+      notes: notes('3 x 8min zone 2 on SkiErg. 2min complete rest between blocks. Relaxed rhythm, no grind.'),
     }];
   }
   return [{
@@ -365,7 +392,7 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
     repsMin: def.durationMinutes,
     repsMax: def.durationMinutes,
     restSeconds: 0,
-    notes: def.description,
+    notes: notes(def.description),
   }];
 }
 
@@ -415,6 +442,8 @@ export function buildCoachRevisionTemplateWorkout(
         title: def.label,
         description: def.description,
         exerciseIds: rowIds,
+        modality: def.conditioningModality,
+        modalitySequence: def.conditioningModalitySequence,
       }],
     },
     exercises: rows.map((row, index) => {

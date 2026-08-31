@@ -15,6 +15,9 @@ import { project } from '../../rules/projectVisibleWeek';
 
 type Check = (label: string, value: boolean, detail?: string) => void;
 const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+const prescriptionNumbers = (copy: string) => copy.split('\n')
+  .filter(line => !/^(?:Intensity|Effort):/.test(line))
+  .join('\n').match(/\d+(?:\.\d+)?/g);
 export async function conditioningClarity(storage: Map<string, string>, ok: Check) {
   const templates = CONDITIONING_TEMPLATES;
   ok('clarity: all 55 authored templates have individually reviewed coaching copy',
@@ -72,8 +75,11 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
       !!recovery && !!projectedDose?.some(line => line.replace(/^Rest:/, 'Recovery:') === recovery));
     ok(`clarity/${t.name}/${machines}: resolved machine instructions contain no walking recovery`,
       !!actual && !/\bwalk(?:ing)?\b|spin\/paddle/i.test(actual.notes ?? ''), actual?.notes);
+    ok(`clarity/${t.name}/${machines}: selected machine uses one effort rating and never MAS`,
+      !!actual && /^Effort: (?:[1-9]|10)\/10$/m.test(actual.notes ?? '')
+      && !/\bMAS\b/.test(actual.notes ?? ''), actual?.notes);
     ok(`clarity/${t.name}/${machines}: wording preserves all dose numbers and complete-rest instructions`,
-      !!actual && JSON.stringify((actual.notes ?? '').match(/\d+(?:\.\d+)?/g)) === JSON.stringify(rows.at(-1)!.notes!.match(/\d+(?:\.\d+)?/g))
+      !!actual && JSON.stringify(prescriptionNumbers(actual.notes ?? '')) === JSON.stringify(prescriptionNumbers(rows.at(-1)!.notes ?? ''))
       && ((actual.notes ?? '').includes('complete rest') === rows.at(-1)!.notes!.includes('complete rest'))
       && actual.prescribedSets === rows.at(-1)!.prescribedSets && actual.restSeconds === rows.at(-1)!.restSeconds);
   }
@@ -116,6 +122,16 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
       ok(`clarity/${gender}/${workout.dayOfWeek}: final session reads the selected machine`,
         buildSessionTemplate(changed).items.some(item => item.kind === 'exercise' && item.presentation === 'conditioning_phase'
           && item.modalityLabel === 'Bike'));
+      const changedIds = new Set(changed.conditioningBlock?.options.flatMap(option => option.exerciseIds) ?? []);
+      const changedCards = buildSessionTemplate(changed).items.flatMap(item =>
+        item.kind === 'exercise' && item.presentation === 'conditioning_phase' && changedIds.has(item.row.id)
+          ? [String(item.row.notes ?? '')]
+          : []);
+      const changedIntensityCards = changedCards.filter(copy => /^(?:Intensity|Effort):/m.test(copy));
+      ok(`clarity/${gender}/${workout.dayOfWeek}: modality swap changes the intensity measure, not the prescription`,
+        changedIntensityCards.length > 0 && changedCards.every(copy => !/\bMAS\b/.test(copy))
+        && changedIntensityCards.every(copy => /^Effort: (?:[1-9]|10)\/10$/m.test(copy)),
+        JSON.stringify(changedCards));
       const projected = project({ week: view().map(day => day.workout?.id === workout.id ? { ...day, workout: changed } : day),
         weekStart: date });
       const shown = buildSessionTemplate(changed).items.flatMap(item => item.kind === 'exercise' ? [item.row] : []);

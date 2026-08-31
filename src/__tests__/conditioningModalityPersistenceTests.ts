@@ -20,14 +20,16 @@ import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './su
 import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { resolveTemplateByName, renderableModalities } from '../rules/conditioningSelection';
+import { compileInjuryConditioning } from '../rules/canonicalInjuryConditioning';
+import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 
 type Mode = 'bike' | 'row' | 'ski' | 'running' | 'mixed';
 interface ModeReceipt {
   date: string;
   title: string;
-  mode: Mode;
+  mode?: Mode;
   sequence: string[];
-  rendered: string[];
+  rendered: Array<{ modality: string; copy: string }>;
 }
 
 let passed = 0;
@@ -43,11 +45,13 @@ function receipts(): ModeReceipt[] {
     if (!workout) return [];
     const rendered = buildSessionTemplate(workout).items
       .filter((item) => item.kind === 'exercise' && item.presentation === 'conditioning_phase')
-      .map((item) => item.kind === 'exercise' ? item.modalityLabel ?? '' : '');
+      .map((item) => item.kind === 'exercise'
+        ? { modality: item.modalityLabel ?? '', copy: String(item.row.notes ?? '') }
+        : { modality: '', copy: '' });
     return (workout.conditioningBlock?.options ?? []).map((option) => ({
       date: day.date,
       title: option.title,
-      mode: option.modality as Mode,
+      mode: option.modality as Mode | undefined,
       sequence: [...(option.modalitySequence ?? [])],
       rendered,
     }));
@@ -68,8 +72,16 @@ async function main(): Promise<void> {
     assert.ok(before.every((receipt) =>
       ['bike', 'row', 'ski', 'running', 'mixed'].includes(receipt.mode)),
     JSON.stringify(before));
-    assert.ok(before.every((receipt) => receipt.rendered.some(Boolean)),
+    assert.ok(before.every((receipt) => receipt.rendered.some((row) => !!row.modality)),
       JSON.stringify(before));
+  });
+
+  check('generated non-running cards show Effort out of 10 and never MAS', () => {
+    const nonRunning = before.filter((receipt) => receipt.mode !== 'running');
+    assert.ok(nonRunning.length > 0, JSON.stringify(before));
+    assert.ok(nonRunning.every((receipt) => receipt.rendered.every((row) =>
+      /Effort: (?:[1-9]|10)\/10/.test(row.copy) && !/\bMAS\b/.test(row.copy))),
+    JSON.stringify(nonRunning));
   });
 
   check('the selected modality is permitted by the selected authored template', () => {
@@ -87,10 +99,60 @@ async function main(): Promise<void> {
     }
   });
 
+  check('injury-adjusted conditioning uses the same typed intensity wording', () => {
+    const source = quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START))
+      .find((day) => day.workout?.conditioningBlock?.options.length)?.workout;
+    assert.ok(source, 'the real generated week reached no conditioning workout');
+    const constraint = buildGuidedInjuryConstraint({
+      region: 'lower_body', area: 'Calf / Achilles', severity: 6,
+      severityBand: 'moderate', adjustmentLevel: 'moderate',
+      seriousSymptoms: false, triggers: ['running'],
+    }, { todayISO: YEAR_START });
+    const adjusted = compileInjuryConditioning({
+      workout: source!, profile, dateISO: YEAR_START, constraints: [constraint],
+    });
+    const cards = buildSessionTemplate(adjusted).items.flatMap((item) =>
+      item.kind === 'exercise' && item.presentation === 'conditioning_phase'
+        ? [{ modality: item.modalityLabel ?? '', copy: String(item.row.notes ?? '') }]
+        : []);
+    assert.ok(cards.length > 0, JSON.stringify(adjusted.conditioningFeasibility));
+    assert.ok(cards.every((card) => card.modality === 'Run'
+      ? /Intensity:/.test(card.copy) && !/Effort:/.test(card.copy)
+      : !!card.modality && /Effort: (?:[1-9]|10)\/10/.test(card.copy)
+        && !/\bMAS\b/.test(card.copy)), JSON.stringify(cards));
+  });
+
   const boot = await quietAsync(() => relaunchApp({ storage: durable, todayISO: YEAR_START }));
   check('conditioning modality and round sequence survive save and restart exactly', () => {
     assert.ok(boot.ok, JSON.stringify(boot));
     assert.deepEqual(receipts(), before);
+  });
+
+  const runningBase = athleteAnswers({ ...ARCHETYPES[6], extraGame: false });
+  const runningProfile = {
+    ...runningBase,
+    equipmentAnswer: {
+      ...runningBase.equipmentAnswer!,
+      modalities: {},
+    },
+  };
+  const runningInstalled = await quietAsync(() => coldStartThroughOnboarding({
+    profile: runningProfile,
+    installDayISO: YEAR_START,
+  }));
+  if (runningInstalled.onboardingRefusal) throw new Error(JSON.stringify(runningInstalled.onboardingRefusal));
+  const runningBefore = receipts().filter((receipt) =>
+    receipt.rendered.some((row) => row.modality === 'Run'));
+  check('generated running cards retain MAS or running-native intensity wording', () => {
+    assert.ok(runningBefore.length > 0, JSON.stringify(receipts()));
+    assert.ok(runningBefore.every((receipt) => receipt.rendered.every((row) =>
+      /Intensity:/.test(row.copy) && !/Effort:/.test(row.copy))), JSON.stringify(runningBefore));
+  });
+  const runningBoot = await quietAsync(() => relaunchApp({ storage: durable, todayISO: YEAR_START }));
+  check('running modality and intensity wording also survive save and restart exactly', () => {
+    assert.ok(runningBoot.ok, JSON.stringify(runningBoot));
+    assert.deepEqual(receipts().filter((receipt) =>
+      receipt.rendered.some((row) => row.modality === 'Run')), runningBefore);
   });
 
   console.log(`conditioning modality persistence: ${passed} passed`);

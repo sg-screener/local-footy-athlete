@@ -1130,3 +1130,87 @@ NOT COVERED: Sam's visual/tap acceptance of that exact session, a performed-row
 collision on device, Dynamic Type/VoiceOver, and a whole-app device sweep.
 Build, signature, in-place install, installed-version query and persistent launch
 were covered.
+
+## 2026-08-31 — conditioning intensity units follow typed modality
+
+Sam reported a Bike `30:30 Controlled Tempo Blocks` card whose selected mode
+was correctly Bike while its intensity still read `65–80% MAS`. The stored row
+copy was generic, but the shared read-time modality projection changed only
+movement/recovery words and left the running intensity unit behind.
+
+The red-first instrument counted 46 distinct non-running
+template-by-permitted-modality projections containing MAS, across the complete
+55-template catalogue and its typed permitted modes. Its denominator was all
+55 authored templates; its counted unit was one template plus one permitted
+non-running modality, not one athlete session. The exact Bike, RowErg, SkiErg
+and mixed-ergo tempo cards all reproduced `Intensity: 65–80% MAS`.
+
+Two designs were compared:
+
+1. Rewrite stored row notes when a machine is selected. Rejected because swaps,
+   injury substitutions and restart could leave stale derived copy, and every
+   writer would have to repeat the rule.
+2. Keep the generic prescription and derive the visible intensity unit at the
+   shared read boundary from the selected typed modality. Chosen because every
+   current conditioning card already crosses that boundary and modality remains
+   one typed fact.
+
+The shared display owner now retains `Intensity` for Running and emits
+`Effort: X/10` for Bike, Air Bike, RowErg, SkiErg and mixed work. The effort
+number is derived only from the template's intended-intensity field—not its
+name, description, cue or catalogue position. The mapping does not collapse:
+`Short Flush` is 3/10, `30:30 Controlled Tempo Blocks` is 6/10, `Classic 4×4`
+is 8/10 and `Air Bike Accelerations` is 10/10. Work, recovery, rounds, cues,
+dose, selection and placement are unchanged.
+
+Athlete-added conditioning exposed a second source defect: its eight template
+definitions had no typed modality. Those definitions now explicitly declare
+Bike, RowErg, SkiErg or mixed plus their authored intensity intent. No mode is
+inferred from the label or prose. The actual standalone Add and attached Add
+journeys now render typed effort wording and retain their existing content and
+restart behaviour.
+
+Regression and liveness receipts:
+
+- Red first: `test:conditioning-intensity-modality` reported 7 passed / 10
+  failed and named all 46 non-running MAS projections.
+- Final `test:conditioning-intensity-modality`: 19 / 19 across all 55 authored
+  templates, every permitted modality, all eight athlete-addable conditioning
+  templates, exact Bike/RowErg/SkiErg/mixed cards, running MAS and pace, JSON
+  reconstruction, reversed catalogue order and the one shared display path.
+- Mutation: bypassing the typed-modality branch recreates
+  `Intensity: 65–80% MAS` on Bike while the production branch remains
+  `Effort: 6/10`; the named liveness cell passes.
+- `test:conditioning-intensity-routes`: 3,298 / 3,298. It covers the complete
+  template-by-machine display matrix, real generated sessions and real modality
+  swaps while preserving every non-intensity prescription number.
+- `test:conditioning-modality-persistence`: 7 / 7 after its chained 19-cell and
+  3,298-cell guards. Real generation, injury adjustment, process restart and
+  running reconstruction preserve the exact typed mode and wording.
+- `test:conditioning-copy-census`: 35 / 35.
+- Direct `sessionSectionAddTests.ts`: the new standalone and attached
+  conditioning checks pass; the suite reports 272 / 274 only because its two
+  old `primer/optional` expectations still ask for the three Primer extras Sam
+  removed under R-288.
+- `test:session-template`: 87 / 88; the conditioning-card hierarchy checks pass
+  and the inherited source-shape check for the numeric row index remains red.
+- `test:programming-selection-release` exited 0, including the two-athlete
+  catalogue-order year (0 changed of 728 athlete-days), the new release-blocking
+  intensity/persistence gates and the remaining selection chain.
+- `test:compile`: product 0 errors and devtools 0 errors; the command remains red
+  on four inherited test-harness errors in `canonicalWeeklyCompilerSliceTests`,
+  `fatiguePlumbingTests` and `fixtureMutationTransactionTests`.
+- `test:law-registry`: the R-293 row is well formed, names an existing chained
+  guard and resolves its ruling. The gate remains red only on the inherited 21
+  `UNENFORCED` rows: 227 total / 206 guarded.
+
+R-293 and `LAW-conditioning-intensity-unit-follows-typed-modality` bind this
+rule to the chained `test:conditioning-identity` gate; the programming release
+chain also runs the full route and persistence guard. This work is saved as one
+path-scoped checkpoint stamped `Agent: selectionrepair`.
+
+NOT COVERED at this checkpoint: native layout/glass, Dynamic Type, VoiceOver,
+historic conditioning records that genuinely predate typed modality metadata,
+athlete profiles outside the two release profiles, and a whole-app PASS. Per
+Sam's instruction, neither physical phone was discovered, built for, installed
+to, launched or otherwise touched.

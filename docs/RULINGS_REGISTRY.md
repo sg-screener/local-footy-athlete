@@ -7354,3 +7354,23 @@ movements still survive re-derivation.
 Guard: `LAW-warmup-never-repeats-session-exercise` and `test:mobility-flow`.
 Verification status and physical-phone receipt:
 `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-293** · Conditioning intensity units follow typed modality, 2026-08-31.
+
+Owner: selectionrepair. The selected typed conditioning modality owns the
+athlete-facing intensity measure. Running retains the authored MAS percentage
+or running pace. Bike, Air Bike, RowErg, SkiErg and mixed-ergo work display
+`Effort: X/10`, with the value deterministically derived from that template's
+authored intended intensity. The modality is never inferred from a session
+name, description, cue or catalogue position.
+
+This is a read-time projection over the selected conditioning option. Generic
+stored prescription copy remains modality-neutral, so generated sessions,
+added sessions, swaps, injury substitutions and restart reconstruction all use
+the same rule without rewriting dose, work, recovery, rounds, instructions,
+selection or placement.
+
+Guard: `LAW-conditioning-intensity-unit-follows-typed-modality` through the
+chained `test:conditioning-identity` gate. The same census is release-blocking
+through `test:conditioning-modality-persistence`. Verification status and NOT
+COVERED: `docs/STATUS_SELECTIONREPAIR.md`.

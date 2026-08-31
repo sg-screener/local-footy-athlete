@@ -17,6 +17,7 @@ import { extractVisibleProgramItemsFromWorkout } from '../../utils/visibleProgra
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import { useProgramStore } from '../../store/programStore';
 import { formatConditioningRowPrescription } from '../../screens/home/dayWorkoutHelpers';
+import { buildSessionTemplate } from '../../utils/sessionTemplate';
 
 type Check = (label: string, value: boolean, detail?: string) => void;
 const machines = ['bike', 'air_bike', 'row', 'ski'] as const;
@@ -143,6 +144,17 @@ export async function flushPrescriptionTruth(storage: Map<string, string>, ok: C
       if (options.length) ok(`flush/${t.name}/${kit}/${injury}: actual visible total matches resolved dose`,
         extractVisibleProgramItemsFromWorkout(result).filter(i => i.source === 'conditioning_option')
           .every(i => i.durationMinutes === templateDurationMinutes(t)));
+      if (options.length) {
+        const cards = buildSessionTemplate(result).items.flatMap(item =>
+          item.kind === 'exercise' && item.presentation === 'conditioning_phase'
+            ? [{ modality: item.modalityLabel, copy: String(item.row.notes ?? '') }]
+            : []);
+        ok(`flush/${t.name}/${kit}/${injury}: injury-adjusted cards use the selected typed intensity unit`,
+          cards.length > 0 && cards.every(card => card.modality === 'Run'
+            ? /^Intensity:/m.test(card.copy)
+            : !!card.modality && /^Effort: (?:[1-9]|10)\/10$/m.test(card.copy)
+              && !/\bMAS\b/.test(card.copy)), JSON.stringify(cards));
+      }
     }
     for (const machine of kit) {
       const changed = applyConditioningModalityToWorkout(candidate, { fromModality: null,

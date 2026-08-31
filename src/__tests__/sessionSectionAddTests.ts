@@ -55,6 +55,15 @@ async function main() {
       check(`${label}: reached named session shape`, category === 'primer' ? workout.composedOptionalKind === 'primer' : workout.exercises.length > 0);
       const beforePlan = buildSessionExecutionPlan({ workout, template: buildSessionTemplate(workout), mobilityFlow: null });
       check(`${label}: the rendered session actually offers this section`, beforePlan.sections.some(item => item.id === section));
+      if (category === 'conditioning_light') {
+        const cards = buildSessionTemplate(workout).items.flatMap(item =>
+          item.kind === 'exercise' && item.presentation === 'conditioning_phase'
+            ? [{ modality: item.modalityLabel, copy: String(item.row.notes ?? '') }]
+            : []);
+        check(`${label}: added Conditioning session uses explicit typed effort wording`,
+          cards.length > 0 && cards.every(card => !!card.modality && card.modality !== 'Run'
+            && /^Effort: (?:[1-9]|10)\/10$/m.test(card.copy) && !/\bMAS\b/.test(card.copy)), cards);
+      }
       const profile = useProfileStore.getState().onboardingData;
       const environment = resolveTapSwapEnvironment({ scheduleState: buildScheduleStateImperative(), date,
         gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), date)], profile,
@@ -119,6 +128,13 @@ async function main() {
     const attach = quiet(() => applyPlanChange({ change: { kind: 'add_category', date, category: 'conditioning_light' }, visibleWeek: read(), todayISO: date, applyOverride: () => undefined }));
     let workout = read().find(day => day.date === date)!.workout!;
     check(`${gender}: reached combined strength/conditioning`, attach.ok && getSessionComponentRows(workout).strengthRows.length > 0 && getSessionComponentRows(workout).conditioningRows.length > 0);
+    const attachedCards = buildSessionTemplate(workout).items.flatMap(item =>
+      item.kind === 'exercise' && item.presentation === 'conditioning_phase'
+        ? [{ modality: item.modalityLabel, copy: String(item.row.notes ?? '') }]
+        : []);
+    check(`${gender}: attached Conditioning session uses explicit typed effort wording`,
+      attachedCards.length > 0 && attachedCards.every(card => !!card.modality && card.modality !== 'Run'
+        && /^Effort: (?:[1-9]|10)\/10$/m.test(card.copy) && !/\bMAS\b/.test(card.copy)), attachedCards);
     const profile = useProfileStore.getState().onboardingData;
     const env = resolveTapSwapEnvironment({ scheduleState: buildScheduleStateImperative(), date, gameDates: [], profile, activeConstraints: [], readinessSignal: null });
     const candidate = legalAddCandidates({ environment: env, profile, section: 'conditioning', leaf: 'easy_flush', existingExerciseNames: workout.exercises.map(row => row.exercise.name) })[0];

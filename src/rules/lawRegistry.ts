@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-conditioning-intensity-unit-follows-typed-modality',
+    law: 'R-293: conditioning intensity display is derived at read time from the selected typed modality. Running retains the authored MAS percentage or running pace; Bike, Air Bike, RowErg, SkiErg and mixed-ergo work display a template-specific Effort rating out of 10. Names, descriptions and catalogue position never decide the modality, and prescriptions, selection and placement remain unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-293',
+    guard: {
+      state: 'guarded',
+      by: 'test:conditioning-identity',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `selectionrepair`. Red first: 46 distinct non-running template-by-permitted-modality projections across the complete 55-template catalogue still displayed MAS, including Bike, RowErg, SkiErg and mixed-ergo 30:30 Controlled Tempo Blocks. The shared conditioning display owner now selects Intensity versus Effort from the typed modality and derives the rating only from the template intended-intensity field. Exact cards, all-55 matrix, mixed mode, running pace, real generation, swaps, injury compilation, JSON reconstruction and process restart are guarded. Reversing catalogue order leaves every receipt unchanged; bypassing the typed branch recreates the original reds. Final receipt and NOT COVERED: docs/STATUS_SELECTIONREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-warmup-never-repeats-session-exercise',
     law: 'R-292: a derived Mobility / Warm-up never repeats a canonical exercise identity already prescribed in visible session work; the selector takes the next legal candidate from the same authored slot, and completed-flow retention yields only at that exact load-bearing collision.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-292',
