@@ -73,13 +73,11 @@ export function buildProgressMainLiftHistories(input: {
       const raw = lift.lastSetEstimate;
       let estimate: number | null = null;
       let method = 'legacy_brzycki';
-      let context = '';
       if (raw) {
         if (raw.liftId !== id || raw.exerciseId !== lift.exerciseId
           || raw.workoutExerciseId !== lift.workoutExerciseId) continue;
         estimate = estimateLastSetOneRepMaxKg(raw);
         method = raw.method;
-        context = typeof raw.setup === 'string' ? raw.setup.trim() : '';
       } else if (lift.estimateCaptureVersion === undefined) {
         const basis = lift.oneRepMaxBasis ?? legacyBasis(lift);
         if (basis && (id !== 'pull_up' || (basis.bodyWeightKg ?? 0) > 0)) {
@@ -90,12 +88,12 @@ export function buildProgressMainLiftHistories(input: {
       // Exact approved aliases identify the lift. A manual Add and an automatic
       // row can have different storage IDs for that same exercise; those IDs
       // establish provenance above, not different physiological variations.
-      const key = JSON.stringify([method, id, context]);
+      const key = JSON.stringify([method, id]);
       const byContext = seriesByLift.get(id) ?? new Map();
       const series = byContext.get(key) ?? {
         method,
         label: [method === 'legacy_brzycki' ? 'Legacy estimate · no RIR' : 'Last-set estimate',
-          id === 'bulgarian_split_squat' ? 'Non-dominant leg · total external load' : '', context]
+          id === 'bulgarian_split_squat' ? 'Non-dominant leg · total external load' : '']
           .filter(Boolean).join(' · '),
         weeks: new Map<string, number>(),
       };

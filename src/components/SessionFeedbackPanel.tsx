@@ -900,7 +900,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
       ? collectLoggedStrengthSets(workout, loggedSets, activeLoggedWorkout?.id) : undefined,
     executionItems: executionSummary?.items,
     completion: strengthComponentCompletion,
-    bodyWeightKg, existing: existing?.strength,
+    bodyWeightKg, existing: existing?.strength, weightOverrides,
   }).map((input) => lastSetDrafts[input.workoutExerciseId]?.setId === input.setId
     ? lastSetDrafts[input.workoutExerciseId] : input);
   const conditioningWasPerformed =
@@ -1322,8 +1322,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
        was the "subtitle under 'log session'" Sam had already removed once, from
        the sheet header, while the panel kept drawing its own copy. */
     <View testID="session-feedback-panel">
-      {lastSetInputs.map((input) => <LastSetRirQuestion key={input.setId} input={input}
-        onChange={(next) => setLastSetDrafts((drafts) => ({ ...drafts, [next.workoutExerciseId]: next }))} />)}
       {executionSummary ? (
         <>
           <View style={styles.checklistSummary} testID="session-feedback-checklist-summary">
@@ -1380,6 +1378,8 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
                   />
                 </View>
               </View>
+              {lastSetInputs.map((input) => <LastSetRirQuestion key={input.setId} input={input}
+                onChange={(next) => setLastSetDrafts((drafts) => ({ ...drafts, [next.workoutExerciseId]: next }))} />)}
             </>
           ) : null}
         </>

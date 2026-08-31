@@ -4,9 +4,9 @@ Owner: `weightcontrol`
 
 ## Current issue
 
-On the installed iPhone 16 Pro Max Release build at `6fee60e2`, tapping RDLs
-from 90 kg to 92.5 kg left the value correct but rendered it at an almost
-invisible size.
+On the installed iPhone 16 Pro Max Release build, the Estimated 1RM questions
+appear before the ordinary feedback, duplicate session-owned load and reps, add
+unrequested fields, and do not match the established popup.
 
 ## Evidence before the fix
 
@@ -150,3 +150,90 @@ selection, logging, swap/remove, or accepted-state persistence.
 - Fixed Release build on Sam's physical iPhone.
 - Physical Dynamic Type and VoiceOver sweep; no accessibility ownership or
   typography was changed by this placement fix.
+
+---
+
+## Issue 3 — Estimated 1RM feedback duplicated session data
+
+The physical Release form put tracked-lift questions before the ordinary
+feedback, then asked the athlete to re-enter load and reps and added an
+unrequested setup/technique field, Skip action, summary and caveat. Its bespoke
+form hierarchy also looked unlike the established popup.
+
+### Cause and options
+
+The first implementation treated missing per-set logging as permission to add a
+second data-entry form. But this session already has the accepted values Sam
+named: checking the exercise identifies it as completed, the weight control
+owns its load, and `displayReps` owns the one rep target the athlete sees.
+
+1. Pre-fill the existing fields and leave them editable. This would reduce
+   typing while retaining the duplicate owner and every unwanted surface.
+2. Derive the pair from the checked session row and reduce every tracked lift
+   to its name, the one RIR question and the shared 0–5+ picker, after minutes.
+
+Option 2 landed. It extends the existing session-value and prescription-display
+owners rather than adding a Back-Squat-only path.
+
+### Coverage
+
+- A checked row supplies its current date-specific weight override, falling
+  back to the row's prescribed load, and the same canonical rep target shown in
+  the session. A 3 × 3 row therefore supplies 3 reps; a Pull-Up displaying BW
+  supplies zero added kilograms plus the recorded session bodyweight. Per-set
+  logs cannot make an unticked row appear in the questions or replace that
+  session-owned pair.
+- All selected tracked lifts use the same minimal component. It contains only
+  the lift name, **How many more clean reps could you have done on your last
+  set?**, and the existing unanswered 0–5+ picker.
+- The questions render after `strength-feedback-minutes`. Both text lines use
+  the popup's shared `bodySmallEmphasis` typography; the picker is the same
+  `DiscreteSlider` owner used by the established effort control.
+- New feedback has no editable load/reps/bodyweight, setup/technique, Skip,
+  summary, separate readout or repeated approximation caveat.
+- Setup no longer gates Lat Pulldown or splits a new-method chart into multiple
+  histories. The optional legacy field remains accepted on old stored records
+  so existing athlete data is preserved, but it is ignored.
+- Test-first proof: the new contract was red against the installed-checkpoint
+  implementation — 158 passed / 17 failed in `test:estimated-1rm`, and 50
+  passed / 4 failed in `test:effort-scale`.
+- Fixed source: `test:estimated-1rm` — 175 passed, 0 failed, including Progress,
+  workout-log wiring and the effort-scale chain.
+- `test:effort-scale` — 54 passed, 0 failed.
+- Liveness mutation: re-enabling the picker's separate readout changed that
+  suite to 53 passed / 1 failed at **the minimal picker starts empty without
+  adding a separate readout line**. Restoring `showReadout={false}` returned it
+  to 54/54.
+- `test:session-logging-ui` chain — 46 passed, 0 failed.
+- Preservation matrix: `test:session-execution` — 206 passed, 0 failed;
+  `test:undo-reversal` — 28 passed, 0 failed; `test:modifier-lifecycle` — 241
+  lifecycle journeys plus its three companion suites green;
+  `test:injury-recomposition` — 186 passed, 0 failed.
+- `test:compile` reports 0 product errors and 0 devtool errors. Its overall
+  result remains red on the exact checkpoint's three inherited test-harness
+  type errors in `canonicalWeeklyCompilerSliceTests.ts` and
+  `fatiguePlumbingTests.ts`.
+- `test:session-equipment-owner` refused its old hand-built onboarding fixture
+  before reaching equipment because gender and season-finish answers are
+  missing. The maintained session-execution equipment cells remained green;
+  the obsolete fixture was not treated as a product requirement.
+- `test:law-registry` remains at its inherited 13 passed / 1 failed boundary:
+  21 of 217 registry rows are `UNENFORCED` and 196 are guarded.
+- `test:repo-law-guards` remains at its inherited 51 passed / 12 failed
+  shared-checkout boundary. None of the named report, inbox, flow, store or
+  source-anchor failures is introduced by these scoped files.
+- Preserved-data iPhone 17 Pro simulator: opened today's actual Strength +
+  Mobility session, selected its real checklist, and opened feedback without
+  saving. The visible order is minutes, Back Squat question/picker, then RDL
+  question/picker. Visual inspection and the accessibility tree found the two
+  exact questions and found none of the retired weight, rep, setup, Skip,
+  summary or approximation strings. No feedback outcome was published.
+
+### Not covered yet
+
+- Saving and reopening this simulator feedback outcome; the glass pass stopped
+  before Save to preserve the athlete's existing session data.
+- Fixed Release build on Sam's physical iPhone.
+- Physical Dynamic Type and VoiceOver order.
+- Individual predictive accuracy of the underlying Estimated 1RM method; this
+  change is input ownership and presentation, not a new calculation formula.

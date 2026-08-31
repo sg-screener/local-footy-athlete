@@ -6916,18 +6916,29 @@ Transaction reassessment, verification status and NOT COVERED: `docs/STATUS_INTA
 Owner: intake. Read the saved `FEATURE_BRIEF_ESTIMATED_1RM_RIR_2026-08-28.md`
 with Sam's final message: Bench/OHP, Pull-Up/Lat Pulldown, Back Squat/Bulgarian
 Split Squat, RDL/Trap-Bar Deadlift are four configurable charts, never program
-edits. Retain separate lift, technique/setup and calculation-method histories.
-Ask only for a selected completed lift's last completed working set: actual
-weight and reps, optional initially unanswered 0–4/5+ RIR slider with Skip.
-Skip/unanswered/open-ended 5+ create no estimate. Calculate only at RIR 0–4 and
+edits. Retain separate lift and calculation-method histories. Ask only for a
+selected checked lift's last-set RIR: an initially unanswered 0–4/5+ picker.
+Unanswered/open-ended 5+ create no estimate. Old persisted Skip observations
+remain readable and create no estimate. Calculate only at RIR 0–4 and
 completed reps plus RIR no greater than 15, using the verified Nuzzo curves
 (Bench-specific curve for Bench). Preserve raw inputs and version; no automatic
 load changes, confidence badges or new PB awards. Last-set fatigue remains.
 Pull-ups use recorded session bodyweight plus added load and display estimated
 added load. Assisted pull-ups remain out of scope. Bulgarians use one total
 external load, reps and RIR for the non-dominant leg; no side selector or second
-leg entry. New observations never fall back to the legacy best-set/prescribed
-rep method. Historical legacy lines remain clearly separate.
+leg entry. New observations never fall back to the legacy best-set calculation.
+Historical legacy lines remain clearly separate.
+**Corrected from physical-device feedback, 2026-08-31:** the first form took
+liberties Sam did not authorize. A checked tracked lift now asks only its lift
+name, **“How many more clean reps could you have done on your last set?”**, and
+the existing unanswered 0–5+ picker. These questions appear after the estimated
+training-minutes field and reuse the popup's typography and picker owners. The
+load comes from that session row's weight control; reps come from the canonical
+rep target the session displays (for example, 3 × 3 supplies 3). There is no
+editable weight, rep, bodyweight or setup/technique field, no Skip action, no
+last-set summary and no repeated approximation caveat in this popup. Setup no
+longer gates Lat Pulldown or partitions a lift's new history. Existing saved raw
+observations remain readable; no stored athlete data is deleted or rewritten.
 This explicitly authorizes the feature previously excluded from R-270's intake.
 Guard: `LAW-estimated-1rm-last-set-rir`, `test:estimated-1rm`.
 Research, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.

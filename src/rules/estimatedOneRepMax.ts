@@ -56,8 +56,8 @@ export interface LastSetEstimateInput {
   skipped: boolean;
   bodyWeightKg?: number | null;
   side?: 'non_dominant';
-  /** Machine/handle or technique context; different contexts get separate lines. */
-  setup: string;
+  /** Legacy ingress only. New feedback does not ask for or partition by setup. */
+  setup?: string;
 }
 
 // Nuzzo et al., doi:10.1007/s40279-023-01937-7, Figures 2 and 3.
@@ -82,8 +82,6 @@ export function estimateLastSetOneRepMaxKg(input: LastSetEstimateInput): number 
   if (typeof input.actualWeightKg !== 'number' || !Number.isFinite(input.actualWeightKg)
     || input.actualWeightKg < 0) return null;
   if (input.liftId === 'bulgarian_split_squat' && input.side !== 'non_dominant') return null;
-  if (typeof input.setup !== 'string') return null;
-  if (input.liftId === 'lat_pulldown' && !input.setup.trim()) return null;
   const bodyWeight = input.liftId === 'pull_up' ? input.bodyWeightKg : 0;
   if (typeof bodyWeight !== 'number' || !Number.isFinite(bodyWeight)
     || (input.liftId === 'pull_up' && bodyWeight <= 0)) return null;

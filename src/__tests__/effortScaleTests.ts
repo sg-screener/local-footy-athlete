@@ -153,14 +153,18 @@ for (const bad of [0, EFFORT_MAX + 1, -1, 2.5]) {
     /<DiscreteSlider\b[^>]*min=\{0\} max=\{5\}/.test(rir));
   ok('the RIR endpoint is stored open-ended, not numeric five',
     /rir: value === 5 \? '5\+'/.test(rir));
-  ok('the unanswered readout does not disguise null as zero',
-    /value === null \? 'Unanswered'/.test(rir));
-  ok('Skip clears the RIR answer and has a usable target',
-    /skipped: !input.skipped, rir: null/.test(rir)
-      && /minWidth: 44, minHeight: 44/.test(rir));
-  ok('last-set summary displays the actual input pair',
-    rir.includes('input.actualWeightKg') && rir.includes('input.actualReps')
-      && rir.includes('Last completed working set'));
+  ok('the minimal picker starts empty without adding a separate readout line',
+    /showReadout=\{false\}/.test(rir));
+  ok('the question uses the exact ruled words and the popup typography owner',
+    rir.includes('How many more clean reps could you have done on your last set?')
+      && (rir.match(/variant="bodySmallEmphasis"/g) ?? []).length === 2
+      && !/fontSize:|fontWeight:/.test(rir));
+  ok('the lift question contains no duplicate fields, setup, Skip or caveat',
+    !/NumberAnswer|AppTextInput|setup|technique|testID=\{`\$\{id\}-skip`\}|>Skip<|Undo skip|Estimated 1RM is approximate|Last completed working set/i.test(rir));
+  const panel = fs.readFileSync(path.join(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'), 'utf8');
+  ok('main-lift questions render after the existing estimated-minutes field',
+    /testID="strength-feedback-minutes"[\s\S]*lastSetInputs\.map\(\(input\)/.test(panel)
+      && (panel.match(/lastSetInputs\.map\(\(input\)/g) ?? []).length === 1);
 }
 
 console.log(`\nEffort scale totals: ${pass} passed, ${fail} failed`);

@@ -24,6 +24,7 @@ import { buildSessionExecutionPlan, buildSessionExecutionSummary } from '../util
 import type { LoggedSet } from '../types/domain';
 import { sourceMutation } from './support/sourceMutation';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { displayReps } from '../rules/prescriptionDisplay';
 armTotalsOrRed();
 let passed = 0, failed = 0;
 function check(label: string, value: unknown) {
@@ -41,7 +42,8 @@ check('effective reps 16 excluded', estimateLastSetOneRepMaxKg({ ...basis, actua
 check('unknown method excluded', estimateLastSetOneRepMaxKg({ ...basis, method: 'future' } as any) === null);
 for (const actualReps of [null, 0, 2.5, NaN]) check(`actual reps ${actualReps} excluded`, estimateLastSetOneRepMaxKg({ ...basis, actualReps }) === null);
 for (const actualWeightKg of [null, -10, NaN]) check(`actual load ${actualWeightKg} excluded`, estimateLastSetOneRepMaxKg({ ...basis, actualWeightKg }) === null);
-check('pulldown requires identified machine/setup', estimateLastSetOneRepMaxKg({ ...basis, liftId: 'lat_pulldown' }) === null);
+check('pulldown uses the session pair without a second setup answer',
+  estimateLastSetOneRepMaxKg({ ...basis, liftId: 'lat_pulldown' }) !== null);
 check('Bulgarians require non-dominant leg', estimateLastSetOneRepMaxKg({ ...basis, liftId: 'bulgarian_split_squat' }) === null);
 check('Bulgarians use one total load, not doubled reps or weight', estimateLastSetOneRepMaxKg({ ...basis, liftId: 'bulgarian_split_squat', side: 'non_dominant' }) === estimateLastSetOneRepMaxKg({ ...basis, liftId: 'rdl' }));
 check('pull-up requires session bodyweight', estimateLastSetOneRepMaxKg({ ...basis, liftId: 'pull_up' }) === null);
@@ -103,22 +105,41 @@ async function main() {
           side: 'non_dominant', bodyWeightKg: 80 }));
         byRow[row.id].forEach(set => useWorkoutLogStore.getState().logSet(row.id, set));
       }
+      const sessionLoads = Object.fromEntries(rows.map((row, index) => [row.exerciseId,
+        trackedLiftId(row.exercise?.name ?? '') === 'pull_up' ? null : 72.5 + index * 5]));
       const inputs = buildLastSetFeedbackInputs({ date: day, workout, choices: useProfileStore.getState().trackedLiftChoices,
-        executionItems: summary.items, completion: 'partial', loggedSets: byRow, bodyWeightKg: 80 });
+        executionItems: summary.items, completion: 'partial', loggedSets: byRow, bodyWeightKg: 80,
+        weightOverrides: sessionLoads });
       check(`${gender}/${day}: four selected completed lifts get questions`, inputs.length === 4);
       check(`${gender}/${day}: unanswered is not zero`, inputs.every(input => input.rir === null));
-      check(`${gender}/${day}: exact last set pair and identity`, inputs.every(input => input.actualWeightKg === 90
-        && input.actualReps === 7 && input.setId.endsWith(':last')));
+      check(`${gender}/${day}: checked row supplies its session load and visible reps`, inputs.every(input => {
+        const row = rows.find(candidate => candidate.id === input.workoutExerciseId)!;
+        const expectedWeight = input.liftId === 'pull_up' ? 0 : sessionLoads[row.exerciseId];
+        return input.actualWeightKg === expectedWeight
+          && input.actualReps === displayReps(row.prescribedRepsMin, row.prescribedRepsMax)
+          && input.setId === `${day}:${row.id}:last-working-set`;
+      }));
       const missing = buildLastSetFeedbackInputs({ date: day, workout, choices: useProfileStore.getState().trackedLiftChoices,
-        executionItems: summary.items, completion: 'partial' });
-      check(`${gender}/${day}: prescribed load and reps are never actual`, missing.every(input => input.actualWeightKg === null && input.actualReps === null));
+        executionItems: summary.items, completion: 'partial', weightOverrides: sessionLoads });
+      check(`${gender}/${day}: no per-set log is required to reuse the checked session values`,
+        missing.every(input => {
+          const row = rows.find(candidate => candidate.id === input.workoutExerciseId)!;
+          const expectedWeight = input.liftId === 'pull_up' ? 0 : sessionLoads[row.exerciseId];
+          return input.actualWeightKg === expectedWeight
+            && input.actualReps === displayReps(row.prescribedRepsMin, row.prescribedRepsMax);
+        }));
       check(`${gender}/${day}: unticked partial lifts have no question`, buildLastSetFeedbackInputs({ date: day, workout,
-        choices: useProfileStore.getState().trackedLiftChoices, completion: 'partial', executionItems: summary.items.map(i => ({ ...i, completed: false })) }).length === 0);
+        choices: useProfileStore.getState().trackedLiftChoices, completion: 'partial', loggedSets: byRow,
+        executionItems: summary.items.map(i => ({ ...i, completed: false })) }).length === 0);
       check(`${gender}/${day}: skipped session has no question`, buildLastSetFeedbackInputs({ date: day, workout, completion: 'skipped', loggedSets: byRow }).length === 0);
-      const answered = inputs.map((input, index) => ({ ...input, rir: dayOffset === 7 ? (index === 1 ? '5+' as const : null) : 2 as const, skipped: dayOffset === 7 && index === 2, setup: input.liftId === 'lat_pulldown' ? 'Gym A / wide handle' : '', actualWeightKg: 70, actualReps: 6 }));
+      const answered = inputs.map((input, index) => ({ ...input,
+        rir: dayOffset === 7 ? (index === 1 ? '5+' as const : null) : 2 as const,
+        skipped: dayOffset === 7 && index === 2 }));
       const strength = buildStrengthPerformanceLogs(workout, {}, 'partial', byRow, { lastSetInputs: answered, bodyWeightKg: 80 });
-      check(`${gender}/${day}: corrections stay with exact set`, strength.filter(log => log.lastSetEstimate)
-        .every(log => log.lastSetEstimate!.actualWeightKg === 70 && log.lastSetEstimate!.actualReps === 6));
+      check(`${gender}/${day}: session-owned pair stays with the exact checked row`, strength.filter(log => log.lastSetEstimate)
+        .every(log => answered.some(input => input.workoutExerciseId === log.workoutExerciseId
+          && input.actualWeightKg === log.lastSetEstimate!.actualWeightKg
+          && input.actualReps === log.lastSetEstimate!.actualReps)));
       check(`${gender}/${day}: no legacy basis written`, strength.every(log => !log.oneRepMaxBasis));
       const changedRir = buildStrengthPerformanceLogs(workout, {}, 'partial', byRow, { lastSetInputs: answered.map(input => ({ ...input, rir: 4 })) });
       const progressionInputs = (logs: typeof strength) => logs.map(({ lastSetEstimate, ...log }) => log);
@@ -178,7 +199,8 @@ async function main() {
     const mixed = buildProgressMainLiftHistories({ weekStart: date, sessions: [{ date, strength: [log,
       { ...log, estimateCaptureVersion: undefined, lastSetEstimate: undefined, oneRepMaxBasis: { externalLoadKg: 100, reps: 5 } },
       { ...log, lastSetEstimate: { ...raw, setup: 'paused variation' } }] }] });
-    check(`${gender}: legacy, new method and technique never share a line`, mixed[1].series.length === 3 && mixed[1].series.every(s => s.points.length === 1));
+    check(`${gender}: removed setup text cannot split one lift into extra histories`,
+      mixed[1].series.length === 2 && mixed[1].series.some(series => series.points.length === 1));
   }
   console.log(`Estimated 1RM: ${passed} passed, ${failed} failed`); totalsPrinted(failed);
   console.log('NOT COVERED: native pixels and touch gestures (separate simulator tape); individual prediction accuracy.');

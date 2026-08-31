@@ -7,6 +7,7 @@ import {
   type LastSetEstimateInput, type TrackedLiftChoices,
 } from '../rules/estimatedOneRepMax';
 import type { SessionExecutionItemResult } from './sessionExecutionChecklist';
+import { displayReps } from '../rules/prescriptionDisplay';
 
 export type StrengthLogCompletion = 'full' | 'partial' | 'skipped';
 
@@ -233,6 +234,7 @@ export function buildLastSetFeedbackInputs(args: {
   workout: Workout | null | undefined;
   choices?: TrackedLiftChoices;
   loggedSets?: Record<string, LoggedSet[]>;
+  weightOverrides?: Record<string, number | null>;
   executionItems?: readonly SessionExecutionItemResult[];
   completion: StrengthLogCompletion | null;
   bodyWeightKg?: number;
@@ -244,28 +246,29 @@ export function buildLastSetFeedbackInputs(args: {
     const liftId = trackedLiftId(row.exercise?.name ?? '');
     if (!liftId || !selected.has(liftId)) return [];
     const sets = args.loggedSets?.[row.id] ?? [];
-    const nonDominant = liftId === 'bulgarian_split_squat';
-    const last = lastCompletedWorkingSet(sets, nonDominant);
     const anyLast = lastCompletedWorkingSet(sets);
     const tick = args.executionItems?.find((item) => item.itemId === `exercise:${row.id}`);
     // A partial workout is not evidence that every prescribed lift was done.
-    const performed = anyLast !== null || tick?.completed === true
-      || (args.executionItems === undefined && args.completion === 'full');
+    const performed = args.executionItems !== undefined
+      ? tick?.completed === true
+      : anyLast !== null || args.completion === 'full';
     if (!performed) return [];
     const saved = args.existing?.find((entry) => entry.workoutExerciseId === row.id
       && entry.exerciseId === row.exerciseId)?.lastSetEstimate;
     if (saved && saved.liftId === liftId) return [{ ...saved }];
+    const prescribedSets = Math.max(1, Number(row.prescribedSets) || 1);
+    const sessionWeight = resolvedWeightKg(row, args.weightOverrides);
     return [{
       method: RIR_ESTIMATE_METHOD,
       liftId, exerciseId: row.exerciseId, workoutExerciseId: row.id,
-      setId: last?.id ?? `${args.date}:${row.id}:last-working-set`,
-      setNumber: last?.setNumber ?? null,
-      source: last ? 'logged_set' as const : 'athlete_confirmed_last_set' as const,
-      actualWeightKg: last?.actualWeightKg ?? null,
-      actualReps: last?.actualReps ?? null,
-      rir: null, skipped: false, setup: '',
-      ...(nonDominant ? { side: 'non_dominant' as const } : {}),
-      ...(liftId === 'pull_up' ? { bodyWeightKg: last?.bodyWeightKg ?? args.bodyWeightKg ?? null } : {}),
+      setId: `${args.date}:${row.id}:last-working-set`,
+      setNumber: prescribedSets,
+      source: 'athlete_confirmed_last_set' as const,
+      actualWeightKg: liftId === 'pull_up' && sessionWeight == null ? 0 : sessionWeight ?? null,
+      actualReps: displayReps(row.prescribedRepsMin, row.prescribedRepsMax),
+      rir: null, skipped: false,
+      ...(liftId === 'bulgarian_split_squat' ? { side: 'non_dominant' as const } : {}),
+      ...(liftId === 'pull_up' ? { bodyWeightKg: args.bodyWeightKg ?? null } : {}),
     }];
   });
 }
