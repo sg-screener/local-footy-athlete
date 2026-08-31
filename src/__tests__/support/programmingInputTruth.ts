@@ -116,7 +116,8 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
       !/\b\d+\s*:\s*\d+\b/.test(conditioningDisplayTitleForName(template.name))
       && lines.every(line => line.label !== 'Heart rate')
       && lines.filter(line => ['Work', 'Recovery', 'Rounds', 'Reps', 'Blocks'].includes(line.label ?? ''))
-        .every(line => !/\b(?:or|variant|alternative)\b/i.test(line.text)));
+        .every(line => !/\b(?:variant|alternative)\b/i.test(line.text)
+          && !/\b\d[^.;]*\bor\b[^.;]*\d/i.test(line.text)));
   }
   for (const gender of ['male', 'female'] as const) {
     const profile = { ...athleteAnswers({ ...ARCHETYPES[6], gender, initialPhase: 'Off-season', extraGame: false }),

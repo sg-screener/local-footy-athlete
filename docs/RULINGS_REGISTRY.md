@@ -7290,3 +7290,37 @@ Guards: `LAW-fully-replaced-strength-is-injury-adjusted-session` with
 `test:session-naming`, and `LAW-off-feet-selection-never-names-running` with
 `test:conditioning-templates`. Verification status and NOT COVERED:
 `docs/STATUS_SELECTIONREPAIR.md`.
+
+**R-290** · Complete, clock-readable conditioning copy, 2026-08-31.
+
+Owner: condnames. Every one of the 55 authored conditioning templates has one
+complete athlete-facing projection: plain title, work, recovery, count,
+intensity and one short coaching cue. Approximate sprint times are removed when
+distance is the actual prescription. Timing uses familiar intervals and simple
+departures—5, 10, 15, 20, 30 and 60 seconds or whole minutes—where doing so
+preserves the intended energy system, work-to-recovery relationship and total
+dose. The athlete should not have to repeatedly add awkward work and recovery
+figures to know when the next effort starts. Familiar clock points—including
+30, 45, 60 and 90 seconds and whole minutes—remain available where they fit the
+session.
+
+This is a presentation resolution over the signed conditioning source, not a
+replacement programming system. The signed template remains authoritative for
+quality, eligibility, placement, modality constraints, safety caps and authored
+dose bands. Internal selection and safety readers consume those signed fields;
+the athlete projection resolves the one concrete instruction shown in the
+session. One complete projection replaces the former partial title, cue and
+prescription maps so there cannot be two competing athlete versions.
+
+Every non-flush standalone conditioning session uses exactly:
+
+`Warm-up`
+
+`5–10 min build-up`
+
+`Start with an easy jog, then progress into run-throughs, increasing the intensity as you go.`
+
+Guard: `LAW-conditioning-athlete-copy-is-complete-and-clock-readable` and
+`test:conditioning-templates`. Supporting census and simulator verification:
+`test:conditioning-copy-census`, `.maestro/visible/conditioning-one-prescription.yaml`
+and `docs/STATUS_CONDNAMES.md`.

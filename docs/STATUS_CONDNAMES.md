@@ -1,5 +1,75 @@
 # STATUS — condnames
 
+## 2026-08-31 — all 55 conditioning templates use the approved athlete copy
+
+Owned by `condnames`.
+
+Sam rejected the existing conditioning catalogue as too long, repetitive and
+awkward to execute. Several sprint rows printed approximate seconds beside a
+distance prescription, and several work/recovery pairs forced the athlete to
+add odd figures repeatedly just to know when to start again. He approved a
+complete rewrite and then finalised the shared Warm-up wording.
+
+Two options compared:
+
+1. Rewrite the signed workbook and thereby alter the source that owns template
+   physiology, eligibility, selection and safety limits.
+2. Keep that signed source intact and replace the existing partial display maps
+   with one total, reviewed athlete-facing projection over all 55 templates.
+
+Option 2 landed. `conditioningAthleteCopy.ts` is the one complete display
+source. It gives every template an exact title, work, recovery, count,
+intensity and cue; the three older partial title/cue/prescription maps are gone.
+The first integration run caught a boundary error: internal cap and rest readers
+were consuming display text. Those readers now consume the signed template
+fields directly, so simplifying what the athlete reads cannot alter selection,
+eligibility, modality caps or stored recovery.
+
+The final Warm-up is:
+
+- `5–10 min build-up`
+- `Start with an easy jog, then progress into run-throughs, increasing the intensity as you go.`
+
+Test-first and liveness receipt:
+
+- Before the product source existed, two new C13 cells were red: all 55 exact
+  cards and the final Warm-up.
+- `test:conditioning-templates`: 161 / 161 green. This includes exact fixture
+  equality for all 55 cards, all 55 generated workout rows, the Warm-up source
+  and an emitted Warm-up row.
+- `test:conditioning-copy-census`: 35 / 35 green over all 55 rendered cards.
+- Mutation: replacing the 30-second hard cue with `MUTATION: wrong cue.` killed
+  both the exact all-55 cell and the universal-card cell (157 / 159). Restoring
+  the approved cue returned 161 / 161.
+- `test:conditioning-dose`: 12 / 12; `test:signed-copy-extraction`: 7 / 7;
+  `test:projection-ownership`: 13 / 13; product and devtools TypeScript: zero
+  errors.
+- The broader test TypeScript gate still reports four errors in three
+  concurrently edited test files; this unit adds no product/devtools error.
+  `test:session-template` and `test:session-execution` retain their existing
+  source-contract reds unrelated to this copy change.
+- `test:scenarios` completed 53 / 65 with its 12 existing game-proximity,
+  coaching-engine and stale-detection failures; none concerns conditioning
+  copy.
+- The full canonical compiler slice completed 10,381 / 10,387. All exhaustive
+  conditioning-copy, flush and equipment-matrix cells are green; the six
+  remaining reds are the four standing pre-season restart-selection failures
+  and two concurrent Primer heavy-option expectations.
+
+Simulator receipt: the real `conditioning-showcase` session displayed the new
+30-second card with `2 blocks × 5 rounds`, `30s hard / 30s easy`, `3 min between
+blocks`, `100–110% MAS` and the shorter cue. The flow completed the session,
+reloaded the app and reopened the completed Conditioning section successfully.
+Screenshot: `artifacts/visible/conditioning-one-prescription.png`.
+
+NOT COVERED:
+
+- Each of the other 54 templates individually rendered on the simulator; their
+  generated athlete copy is covered by the exhaustive in-chain projection
+  guard rather than 54 more screenshots.
+- Physical-iPhone Release acceptance.
+- VoiceOver reading order and Dynamic Type scaling.
+
 ## 2026-08-31 — Speed is a real session section in the athlete-specified order
 
 Owned by `condnames`.

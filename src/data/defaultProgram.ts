@@ -65,7 +65,6 @@ import {
 } from '../rules/conditioningSelection';
 import { selectPowerExerciseWithTrace } from '../rules/powerExercisePool';
 import { parseConditioningDose, doseMidpoint } from '../rules/conditioningDose';
-import { conditioningAthletePrescription } from '../rules/conditioningDisplay';
 import {
   deloadPowerDose,
   applyConditioningDeloadToExercises,
@@ -1200,7 +1199,10 @@ export function resolvedBlockModality(
       .filter((m) => m !== 'run')
       .filter((m) => availableMachines === undefined || availableMachines.includes(m as never));
   const machines = new Set(permittedMachines.map((m) => (m === 'air_bike' ? 'bike' : m)));
-  const rounds = parseConditioningDose(conditioningAthletePrescription(template).setsRounds);
+  // Delivery feasibility reads the signed count. Athlete copy may phrase that
+  // count as a complete block (`4 × 3-minute blocks`), which is display text
+  // rather than a new selection input.
+  const rounds = parseConditioningDose(template.setsRounds);
   if (requested === 'mixed' && template.quality === 'flush' && permittedMachines.length > 1
     && rounds.ok && doseMidpoint(rounds.quantity) > 1) return 'mixed';
   if ((requested === 'bike' || requested === 'row' || requested === 'ski') && machines.has(requested)) {

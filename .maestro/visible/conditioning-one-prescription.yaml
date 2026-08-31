@@ -36,14 +36,14 @@ tags:
     text: "Bike"
 - scrollUntilVisible:
     element:
-      text: ".*Repeat the same effort throughout each block; do not sprint.*"
+      text: ".*Repeat the same effort throughout. Do not sprint.*"
     direction: DOWN
     timeout: 10000
 - assertVisible: "2 blocks × 5 rounds"
 - assertVisible: "30s hard / 30s easy"
-- assertVisible: "2–3 min between blocks"
+- assertVisible: "3 min between blocks"
 - assertVisible: "100–110% MAS"
-- assertVisible: ".*Repeat the same effort throughout each block; do not sprint.*"
+- assertVisible: ".*Repeat the same effort throughout. Do not sprint.*"
 - assertNotVisible: ".*Work:.*"
 - assertNotVisible: ".*Recovery:.*"
 - assertNotVisible: ".*Rounds:.*"

@@ -286,7 +286,10 @@ export function templatesForTier(tier: ConditioningSelectionTier): ConditioningT
  */
 export function longestWorkIntervalMinutes(template: ConditioningTemplate): number | null {
   if (template.intervalPrescription) return template.intervalPrescription.workSeconds / 60;
-  const found = [...conditioningAthletePrescription(template).work.matchAll(/(\d+)\s*(?:[–-]\s*(\d+)\s*)?min/g)]
+  // Selection safety reads the signed dose, never the athlete-facing wording.
+  // The display may resolve an authored range to one clean instruction, but
+  // that must not relax the largest interval the template is capable of.
+  const found = [...String(template.workPeriod ?? '').matchAll(/(\d+)\s*(?:[–-]\s*(\d+)\s*)?min/g)]
     .flatMap((match) => [Number(match[1]), match[2] ? Number(match[2]) : Number.NaN])
     .filter((value) => Number.isFinite(value));
   return found.length > 0 ? Math.max(...found) : null;
@@ -531,7 +534,7 @@ export function codDecelPermitted(args: {
 
 /** Parsed low end of the authored total session time, or null. */
 function totalMinutesLow(template: ConditioningTemplate): number | null {
-  const parsed = parseConditioningDose(conditioningAthletePrescription(template).totalSessionTime);
+  const parsed = parseConditioningDose(template.totalSessionTime);
   if (!parsed.ok) return null;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? seconds.min / 60 : null;
@@ -879,7 +882,10 @@ function headlineSetsLow(template: ConditioningTemplate): number {
 
 /** Rest seconds for the headline row: the authored rest, when it is a time. */
 function headlineRest(template: ConditioningTemplate): number {
-  const parsed = parseConditioningDose(conditioningAthletePrescription(template).recovery);
+  // Stored execution timing remains owned by the signed prescription. A
+  // display phrase such as "Start every 2 min" is guidance, not 120 seconds
+  // of recovery to write into the workout row.
+  const parsed = parseConditioningDose(template.restPeriod);
   if (!parsed.ok) return 0;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? Math.round((seconds.min + seconds.max) / 2) : 0;
@@ -907,8 +913,8 @@ export const CONDITIONING_WARMUP_COPY_ID = 'part.row.conditioning.warmup';
 export const CONDITIONING_WARMUP_ROW_NAME = 'Warm-up';
 
 export const CONDITIONING_WARMUP_COPY =
-  'Warm-up — 5–10 min: start easy, raise the heart rate, then build into the '
-  + 'movements you\'re about to train.';
+  '5–10 min build-up\n'
+  + 'Start with an easy jog, then progress into run-throughs, increasing the intensity as you go.';
 
 export interface ComposeOptions {
   /** Reconstruction supplies the original timestamp; no fresh clock in replay. */
@@ -940,10 +946,10 @@ export interface ComposeOptions {
 }
 
 /**
- * The template as rows. One structural `Warm-up` row (no invented
- * prescription text — authoring warm-up copy is Sam's, parked), then the
- * headline row: authored name verbatim, parsed sets/rest, authored fields
- * as the notes. No cool-down row — recovery is the Flush tab's job.
+ * The template as rows. One structural `Warm-up` row with Sam's approved copy,
+ * then the headline row: authored identity, materialised count/rest and the
+ * approved athlete projection. No cool-down row — recovery is the Flush tab's
+ * job.
  */
 export function composeConditioningRows(
   template: ConditioningTemplate,
@@ -1073,7 +1079,7 @@ export function templateDurationMinutes(template: ConditioningTemplate): number 
     const { workSeconds, recoverySeconds, rounds } = template.intervalPrescription;
     return rounds * (workSeconds + recoverySeconds) / 60;
   }
-  const parsed = parseConditioningDose(conditioningAthletePrescription(template).totalSessionTime);
+  const parsed = parseConditioningDose(template.totalSessionTime);
   if (!parsed.ok) return 15;
   const seconds = doseSeconds(parsed.quantity);
   return seconds ? Math.max(1, Math.round((seconds.min + seconds.max) / 120)) : 15;

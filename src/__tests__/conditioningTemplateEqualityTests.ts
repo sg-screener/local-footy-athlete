@@ -58,11 +58,14 @@ import {
   codDecelPermitted,
 } from '../rules/conditioningSelection';
 import {
+  conditioningAthletePrescription,
   conditioningCardPresentation,
   conditioningCardPresentationFromText,
   conditioningDisplayLines,
   conditioningDisplayTitleForName,
 } from '../rules/conditioningDisplay';
+import { CONDITIONING_WARMUP_COPY } from '../rules/conditioningSelection';
+import { APPROVED_CONDITIONING_ATHLETE_COPY } from './fixtures/conditioning-athlete-copy-sam-2026-08-31';
 
 let passed = 0;
 const failures: string[] = [];
@@ -712,8 +715,7 @@ ok(
       capRule?.ergCapMinutes === 8 && capRule?.excludedModalities?.join(',') === 'ski,row,air_bike',
       JSON.stringify(capRule ?? null));
 
-    // The resolved Steady Blocks branch is six minutes now, not its unused
-    // eight-minute alternative. Mutate an actual hard template to the boundary.
+    // Mutate an actual hard template to the authored boundary.
     const eightMinuteErgRow = { ...CONDITIONING_TEMPLATES.find(t => t.name === 'Three-Minute Intervals')!, workPeriod: '8 min hard' };
     ok('an 8-minute boundary probe DOES offer an erg — the mutation below is not vacuous',
       longestWorkIntervalMinutes(eightMinuteErgRow) === 8 && renderableModalities(eightMinuteErgRow).includes('row'));
@@ -939,7 +941,10 @@ ok(
     lines
       .filter((line) => line.label === 'Work' || line.label === 'Recovery'
         || line.label === 'Rounds' || line.label === 'Reps' || line.label === 'Blocks')
-      .filter((line) => /\b(?:or|variant|alternative)\b/i.test(line.text))
+      // Reject dose menus, while allowing a movement description such as
+      // "jump-and-stick or run-and-stick" inside one prescribed rep.
+      .filter((line) => /\b(?:variant|alternative)\b/i.test(line.text)
+        || /\b\d[^.;]*\bor\b[^.;]*\d/i.test(line.text))
       .map((line) => `${template.name} :: ${line.label}: ${line.text}`));
   ok('[C13] Work, Recovery and count lines prescribe one answer, not a menu',
     prescriptionAlternatives.length === 0,
@@ -956,7 +961,7 @@ ok(
   const controlledThirty = projected.find(({ template }) =>
     template.name === '30:30 Controlled Tempo Blocks');
   ok('[C13] the controlled 30-second session still says exactly 30 s work / 30 s recovery',
-    controlledThirty?.lines.some((line) => line.label === 'Work' && line.text === '30 s on')
+    controlledThirty?.lines.some((line) => line.label === 'Work' && line.text === '30 s steady')
       && controlledThirty.lines.some((line) =>
         line.label === 'Recovery' && line.text === '30 s easy')
       && controlledThirty.lines.some((line) =>
@@ -973,23 +978,23 @@ ok(
 
   const fourByFour = projected.find(({ template }) => template.name === 'Classic 4×4');
   ok('[C13] the 4×4 VO₂ Max session uses its proper athlete title and complete rest',
-    fourByFour?.title === '4×4 VO₂ Max'
+    fourByFour?.title === '4 × 4 VO₂ Max'
       && fourByFour.lines.some((line) =>
-        line.label === 'Recovery' && line.text === '3 min complete rest')
+        line.label === 'Recovery' && line.text === '3 min complete recovery')
       && fourByFour.lines.some((line) =>
-        line.label === null && line.text === 'Choose a pace you can repeat across all 4 rounds.')
+        line.label === null && line.text === 'Choose a pace you can repeat for all four rounds.')
       && !fourByFour.lines.some((line) => /jog/i.test(line.text)),
     `${fourByFour?.title} :: ${JSON.stringify(fourByFour?.lines ?? [])}`);
 
   const oneMinuteFlush = projected.find(({ template }) =>
     template.name === 'Flush Intervals 1:1 (1 min / 1 min)');
   ok('[C13] the one-minute flush has one plain title and explicit one-minute work / recovery',
-    oneMinuteFlush?.title === 'One-Minute Flush Intervals'
+    oneMinuteFlush?.title === '1-Minute Flush Intervals'
       && oneMinuteFlush.lines.some((line) => line.label === 'Work' && line.text === '1 min easy')
       && oneMinuteFlush.lines.some((line) =>
-        line.label === 'Recovery' && line.text === '1 min complete rest, including transitions; after every round, including the last')
+        line.label === 'Recovery' && line.text === '1 min rest')
       && oneMinuteFlush.lines.some((line) =>
-        line.label === 'Rounds' && line.text === '6'),
+        line.label === 'Rounds' && line.text === '6 × 2-minute blocks'),
     `${oneMinuteFlush?.title} :: ${JSON.stringify(oneMinuteFlush?.lines ?? [])}`);
 
   const hardThirty = projected.find(({ template }) =>
@@ -1005,9 +1010,9 @@ ok(
       modality: 'Bike',
       structure: '2 blocks × 5 rounds',
       workRecovery: '30s hard / 30s easy',
-      recoveryDetail: '2–3 min between blocks',
+      recoveryDetail: '3 min between blocks',
       intensity: '100–110% MAS',
-      cue: 'Repeat the same effort throughout each block; do not sprint.',
+      cue: 'Repeat the same effort throughout. Do not sprint.',
       total: null,
       supportsPersonalTarget: false,
     }),
@@ -1029,7 +1034,7 @@ ok(
     ? conditioningCardPresentation(continuous.lines, 'Run')
     : null;
   ok('[C13] a continuous session promotes its duration instead of showing a fake one-block interval',
-    continuousCard?.structure === '30–50 min continuous'
+    continuousCard?.structure === '40 min continuous'
       && continuousCard.workRecovery === null
       && continuousCard.supportsPersonalTarget,
     JSON.stringify(continuousCard));
@@ -1041,6 +1046,53 @@ ok(
   ok('[C13] all 55 templates reach the same structure-intensity-cue hierarchy',
     incompleteCards.length === 0,
     incompleteCards.map(({ template }) => template.name).join(' | '));
+
+  const approvedByName = new Map(APPROVED_CONDITIONING_ATHLETE_COPY.map((copy) => [copy.name, copy]));
+  const approvedMismatches = CONDITIONING_TEMPLATES.flatMap((template) => {
+    const expected = approvedByName.get(template.name);
+    if (!expected) return [`${template.name} :: missing approved copy`];
+    const prescription = conditioningAthletePrescription(template);
+    const lines = conditioningDisplayLines({ template });
+    const actual = {
+      name: template.name,
+      title: prescription.title,
+      work: lines.find((line) => line.label === 'Work')?.text ?? '',
+      recovery: lines.find((line) => line.label === 'Recovery')?.text ?? '',
+      count: prescription.setsRounds,
+      intensity: lines.find((line) => line.label === 'Intensity')?.text ?? '',
+      cue: lines.find((line) => line.label === null)?.text ?? '',
+      ...(expected.total === undefined ? {} : {
+        total: lines.find((line) => line.label === 'Total')?.text ?? '',
+      }),
+    };
+    return JSON.stringify(actual) === JSON.stringify(expected)
+      ? [] : [`${template.name}\n        expected ${JSON.stringify(expected)}\n        actual   ${JSON.stringify(actual)}`];
+  });
+  ok('[C13] all 55 cards equal Sam\'s complete approved athlete wording',
+    approvedByName.size === 55 && approvedMismatches.length === 0,
+    approvedMismatches.slice(0, 8).join('\n      '));
+  const generatedCopyMismatches = CONDITIONING_TEMPLATES.flatMap((template) => {
+    const expectedText = conditioningDisplayLines({ template })
+      .map((line) => line.label ? `${line.label}: ${line.text}` : line.text)
+      .join('\n');
+    const row = composeConditioningRows(template, '2026-08-31', { omitWarmup: true })[0];
+    return row.notes === expectedText ? [] : [
+      `${template.name}\n        expected ${JSON.stringify(expectedText)}\n        actual   ${JSON.stringify(row.notes)}`,
+    ];
+  });
+  ok('[C13] all 55 generated workout rows carry the same approved copy',
+    generatedCopyMismatches.length === 0,
+    generatedCopyMismatches.slice(0, 8).join('\n      '));
+  ok('[C13] the structural warm-up uses Sam\'s final build-up wording',
+    CONDITIONING_WARMUP_COPY === '5–10 min build-up\nStart with an easy jog, then progress into run-throughs, increasing the intensity as you go.',
+    JSON.stringify(CONDITIONING_WARMUP_COPY));
+  const warmupWitness = composeConditioningRows(
+    CONDITIONING_TEMPLATES.find((template) => template.quality !== 'flush')!,
+    '2026-08-31',
+  )[0];
+  ok('[C13] a generated session carries that exact warm-up copy',
+    warmupWitness.exercise.name === 'Warm-up' && warmupWitness.notes === CONDITIONING_WARMUP_COPY,
+    JSON.stringify(warmupWitness));
 }
 
 // ── C14: ROTATE THE ELIGIBLE POOL — NEVER RESTART AT THE FIRST ROW ─────────

@@ -1,6 +1,7 @@
 import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
+import { CONDITIONING_ATHLETE_COPY } from '../../rules/conditioningAthleteCopy';
 import { composeConditioningRows, renderableModalities } from '../../rules/conditioningSelection';
-import { CONDITIONING_COACHING_COPY, conditioningDisplayLines, conditioningAthletePrescription, conditioningWordingForModality } from '../../rules/conditioningDisplay';
+import { conditioningDisplayLines, conditioningAthletePrescription, conditioningWordingForModality } from '../../rules/conditioningDisplay';
 import { conditioningModeLabel, conditioningModeLabelForRow } from '../../utils/conditioningVisibleIdentity';
 import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
@@ -17,8 +18,8 @@ const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/
 export async function conditioningClarity(storage: Map<string, string>, ok: Check) {
   const templates = CONDITIONING_TEMPLATES;
   ok('clarity: all 55 authored templates have individually reviewed coaching copy',
-    templates.length === 55 && Object.keys(CONDITIONING_COACHING_COPY).length === 55
-    && templates.every(t => !!CONDITIONING_COACHING_COPY[t.name]));
+    templates.length === 55 && Object.keys(CONDITIONING_ATHLETE_COPY).length === 55
+    && templates.every(t => !!CONDITIONING_ATHLETE_COPY[t.name]));
   for (const t of templates) for (const authoredMinimumDose of [false, true]) {
     const row = composeConditioningRows(t, '2026-09-28', { authoredMinimumDose }).at(-1)!;
     const lines = conditioningDisplayLines({ template: t, resolvedSetsRounds: row.prescribedSets });
@@ -35,8 +36,9 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
   ok('clarity: stale submaximal acceleration cue does not contradict the signed maximal target',
     !composeConditioningRows(templates.find(t => t.name === '10 m Acceleration Reps')!, '2026-09-28').at(-1)!.notes!.includes('not a max sprint'));
   const air = composeConditioningRows(templates.find(t => t.name === 'Air Bike Accelerations')!, '2026-09-28').at(-1)!.notes!;
-  ok('clarity: wattage-drop threshold and recovery-or-stop instruction survive shortening',
-    /5%/.test(air) && /extend recovery or stop/.test(air));
+  ok('clarity: the Air Bike cue gives one short power-drop stop rule',
+    /stop when your power begins to drop/i.test(air)
+      && !/5%|extend recovery/i.test(air));
   ok('clarity: an unspecified mixed mode is not presented as a complete prescription',
     !/Mixed modalities/.test(conditioningModeLabel('mixed') ?? ''));
   let mixed = 0;

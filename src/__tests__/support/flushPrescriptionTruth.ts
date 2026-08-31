@@ -50,9 +50,10 @@ export async function flushPrescriptionTruth(storage: Map<string, string>, ok: C
       && row.prescribedSets * ((workSeconds ?? Number.NaN) + row.restSeconds) === templateDurationMinutes(t) * 60
       && displayedSeconds(dose.totalSessionTime) === templateDurationMinutes(t) * 60
       && row.notes!.includes(`Total: ${dose.totalSessionTime}`), row.notes);
-    ok(`flush/${t.name}/${minimum}: easy throughout, transitions inside recovery and preparation inside total`,
-      /Intensity: Easy, 2–3\/10/.test(row.notes!) && /including transitions/.test(dose.recovery)
-      && /first round.*preparation/i.test(row.notes!) && !/MAS|hard|3–6/.test(row.notes!), row.notes);
+    ok(`flush/${t.name}/${minimum}: easy throughout, with the retired timer instructions removed`,
+      /Intensity: Very easy, 2–3\/10/.test(row.notes!)
+      && !/including transitions|first round|preparation|finish when the timer/i.test(row.notes!)
+      && !/MAS|hard|3–6/.test(row.notes!), row.notes);
     ok(`flush/${t.name}/${minimum}: recovery classification retained`, workoutTypeForTemplate(t) === 'Recovery');
     for (let mask = 1; mask < 16; mask++) {
       const kit = machines.filter((_, i) => mask & (1 << i));
@@ -80,8 +81,8 @@ export async function flushPrescriptionTruth(storage: Map<string, string>, ok: C
       JSON.stringify(renderableModalities(t)) === JSON.stringify(renderableModalities(changed)));
   }
   const steady = resolveTemplateByName('Steady Blocks (3×8 min or 4×6 min)')!;
-  ok('eligibility: resolved six-minute branch, not unused eight-minute alternative, owns duration',
-    longestWorkIntervalMinutes(steady) === 6);
+  ok('eligibility: the signed eight-minute upper branch still owns the safety cap',
+    longestWorkIntervalMinutes(steady) === 8);
   const hard = resolveTemplateByName('Classic 4×4')!;
   ok('eligibility: unrelated hard-conditioning eight-minute ceiling is unchanged',
     !renderableModalities({ ...hard, workPeriod: '9 min hard' }).some(m => ['row', 'ski', 'air_bike'].includes(m)));

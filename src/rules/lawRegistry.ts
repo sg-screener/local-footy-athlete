@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
+    law: 'R-290: every one of the 55 conditioning templates has one complete athlete-facing title, work, recovery, count, intensity and coaching cue. Sprint distance is shown as distance rather than an approximate duration, timing uses simple clock intervals or departures where that preserves the session intent, and every non-flush standalone session uses the approved Warm-up build-up copy. The signed template remains the owner of physiology, eligibility, modality limits and safety caps.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-290',
+    guard: {
+      state: 'guarded',
+      by: 'test:conditioning-templates',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-31 by seat `condnames`. TEST FIRST: replacing the former partial projection with Sam\'s complete fixture produced two named reds for all 55 cards and the structural Warm-up; both now pass, along with a second all-55 generated-workout-row comparison and an emitted Warm-up witness. Selection safety, total-duration role caps and stored recovery were moved back to the signed fields after the first run proved display wording could otherwise alter internal physiology readers. MUTATION/LIVENESS: replacing the 30-second hard cue with `MUTATION: wrong cue.` killed both the exact 55-card cell and the universal card cell; restoring it returned 161/161. The 55-row copy census is 35/35. The simulator flow rendered the revised card, completed it, reloaded and reopened it successfully. NOT COVERED: all 55 templates individually on glass, physical-iPhone Release, VoiceOver and Dynamic Type.',
+    },
+  },
+  {
     id: 'LAW-fully-replaced-strength-is-injury-adjusted-session',
     law: 'R-289: when injury compilation leaves none of a strength session\'s originally planned movement patterns, its typed session and visible strength-part identity are Injury-Adjusted Session; partial adjustments retain the surviving original-pattern identity.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-289',

@@ -140,7 +140,7 @@ ok('pace is `60 / kmh` rounded to the nearest second',
   `${paceMinPerKm(15)} | ${paceMinPerKm(13.5)} | ${paceMinPerKm(20)}`);
 
 // ── 3. LABELS ──────────────────────────────────────────────────────────────
-const APPROVED_LABELS = ['Work', 'Recovery', 'Rounds', 'Reps', 'Sets', 'Blocks', 'Intensity'];
+const APPROVED_LABELS = ['Work', 'Recovery', 'Rounds', 'Reps', 'Sets', 'Blocks', 'Intensity', 'Total'];
 sweep('every label is an approved athlete-facing word',
   (_text, label) => label !== null && !APPROVED_LABELS.includes(label));
 {
