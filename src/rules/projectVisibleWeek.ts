@@ -41,6 +41,7 @@ import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
 import {
   conditioningDoseValueCopyId,
+  CONDITIONING_DOSE_COPY_LINES,
   exerciseCueCopyId,
   exerciseNameCopyId,
   blockBoundaryExplanationSentences,
@@ -48,7 +49,6 @@ import {
   gapSlotCopyId,
   registerProjectionCopy,
   STRENGTH_HEADLINE_ID_BY_LABEL,
-  type ConditioningDoseField,
 } from './projectionCopy';
 import { conditioningVisibleDoseFor } from './conditioningSelection';
 import { displayReps } from './prescriptionDisplay';
@@ -551,13 +551,6 @@ export function isComposedPrescriptionRow(row: any): boolean {
  * cool-down never count"* — arriving at the display for free rather than as a
  * second rule about the same row.
  */
-const DOSE_LINES: readonly (readonly [ConditioningDoseField, string])[] = [
-  ['work', 'row.dose.work'],
-  ['rest', 'row.dose.rest'],
-  ['sets_rounds', 'row.dose.sets_rounds'],
-  ['total_time', 'row.dose.total_time'],
-];
-
 function doseCopy(row: any, workout?: Workout | null): readonly SignedCopy[] {
   const modality = workout?.conditioningBlock?.options.find(option => option.exerciseIds.includes(row.id))?.modality;
   const dose = conditioningVisibleDoseFor(String(row?.exercise?.name ?? row?.name ?? ''), modality);
@@ -566,7 +559,7 @@ function doseCopy(row: any, workout?: Workout | null): readonly SignedCopy[] {
   // carry a legacy name that Sam's legacy-format map resolves to a real
   // template; the copy sheet registers the AUTHORED name, so a row-name key
   // would find nothing and quietly drop a dose that had just resolved.
-  return DOSE_LINES.flatMap(([field, labelId]) => {
+  return CONDITIONING_DOSE_COPY_LINES.flatMap(([field, labelId]) => {
     const valueId = conditioningDoseValueCopyId(dose.templateName, field, modality);
     // No `catch` and no substitution — `signedCopy` raising `UnsignedCopyError`
     // is this module's declared behaviour for a copy gap (see the header).

@@ -893,8 +893,8 @@ function joinNotes(...lines: Array<string | false | null | undefined>): string {
  * The switchover shipped a bare `Warm-up` row with no copy, and said so: the
  * walker's `L-P2 SIGNED WORDS` red stood over exactly this row. Sam authored
  * the sentence; it lives HERE, at the emitter, and `rules/projectionCopy.ts`
- * imports it to register — the same shape `CONDITIONING_SUBSTITUTION_ROW_NAMES`
- * uses, so the words exist once and the sheet cannot drift from what ships.
+ * imports it to register, so the words exist once and the sheet cannot drift
+ * from what ships.
  */
 export const CONDITIONING_WARMUP_COPY_ID = 'part.row.conditioning.warmup';
 

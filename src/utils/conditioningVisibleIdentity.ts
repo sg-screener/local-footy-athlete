@@ -39,7 +39,23 @@ export function conditioningModeLabel(
 /** Only the typed option owning this row can label it; never parse a lift name. */
 export function conditioningModeLabelForRow(workout: Partial<Workout>, id: string): string | undefined {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(id));
-  return conditioningModeLabel(option?.modality, option?.modalitySequence);
+  if (!option) return undefined;
+  const selectedMode = conditioningModeLabel(option.modality, option.modalitySequence);
+  if (selectedMode) return selectedMode;
+  switch (workout.conditioningFeasibility?.resolvedSubstitutionFamily) {
+    case 'treadmill':
+    case 'outdoor_running':
+    case 'hill_running_or_walking':
+      return 'Run · running';
+    case 'brisk_walking':
+      return 'Walk · walking';
+    case 'bodyweight_circuit':
+      return 'Bodyweight · conditioning';
+    case 'safe_mixed_modal':
+      return 'Mixed · conditioning';
+    default:
+      return undefined;
+  }
 }
 
 /** Read-time wording follows the same typed option as the machine label.

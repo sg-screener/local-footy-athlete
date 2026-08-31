@@ -65,7 +65,6 @@ import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
 import { TEAM_ONLY_NAME } from '../utils/sessionNaming';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
-import { CONDITIONING_SUBSTITUTION_ROW_NAMES } from './conditioningFeasibility';
 import {
   CONDITIONING_WARMUP_COPY,
   CONDITIONING_WARMUP_COPY_ID,
@@ -154,6 +153,16 @@ export function exerciseCueCopyId(canonicalName: string): string | null {
 const DOSE_VALUE_PREFIX = 'row.dose.value.';
 
 export type ConditioningDoseField = 'work' | 'rest' | 'sets_rounds' | 'total_time';
+
+/** One ordered owner for the four athlete-visible dose labels. */
+export const CONDITIONING_DOSE_COPY_LINES: readonly (
+  readonly [ConditioningDoseField, string]
+)[] = [
+  ['work', 'row.dose.work'],
+  ['rest', 'row.dose.rest'],
+  ['sets_rounds', 'row.dose.sets_rounds'],
+  ['total_time', 'row.dose.total_time'],
+];
 
 /** `null` when the name is not the authored template vocabulary's. */
 export function conditioningDoseValueCopyId(
@@ -556,8 +565,7 @@ export function registerProjectionCopy(): void {
       text: 'Keep my current schedule',
     },
     // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
-    // Imported from the emitter rather than transcribed, the same shape
-    // `CONDITIONING_SUBSTITUTION_ROW_NAMES` uses below: the words exist once,
+    // Imported from the emitter rather than transcribed: the words exist once,
     // so what ships on the row and what the sheet registers cannot drift.
     {
       id: CONDITIONING_WARMUP_COPY_ID,
@@ -2086,20 +2094,6 @@ export function registerProjectionCopy(): void {
         + 'invented number.',
       text: 'See session',
     },
-    // ── Conditioning equipment-substitution row names. ──
-    //
-    // Imported from `conditioningFeasibility.ts`'s own exported list, not
-    // transcribed — see that module's `CONDITIONING_SUBSTITUTION_ROW_NAMES`
-    // header for why this is a derivation rather than a hand-copied set.
-    ...CONDITIONING_SUBSTITUTION_ROW_NAMES.map((name): SignedCopyEntry => ({
-      id: exerciseNameCopyId(name),
-      source: 'authored_sheet',
-      provenance: 'rules/conditioningFeasibility.ts applyResolvedConditioningSubstitution '
-        + '— authored equipment-substitution names, already shipping; not selectable '
-        + 'generator vocabulary (see module header).',
-      text: name,
-    })),
-
     // ── Template-registry row names. ──
     //
     // TASK 6. `project()` threw on the athlete's day-detail screen the moment he
@@ -2221,6 +2215,26 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(doseEntries);
+
+  /* A filled dose line contains authored WORDS, not only a numeric placeholder.
+   * Register every finite sheet-derived combination so runtime provenance can
+   * recognise the complete rendered line without widening SignedCopy's global
+   * placeholder rule back to arbitrary text. */
+  const renderedDoseEntries: SignedCopyEntry[] = [];
+  for (const template of CONDITIONING_TEMPLATES) for (const modality of [undefined, 'running', 'bike'] as const) {
+    const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+    for (const [field, labelId] of CONDITIONING_DOSE_COPY_LINES) {
+      const valueId = `${DOSE_VALUE_PREFIX}${field}.${template.name}${suffix}`;
+      renderedDoseEntries.push({
+        id: `row.dose.rendered.${field}.${template.name}${suffix}`,
+        source: 'authored_sheet',
+        provenance: 'Finite rendered conditioning dose: the registered label filled '
+          + 'with the registered authored template value; no open text placeholder.',
+        text: signedCopy(labelId, { value: signedCopy(valueId) }),
+      });
+    }
+  }
+  registerSignedCopy(renderedDoseEntries);
 
   // ── Gap slot and kit words. ──
   //

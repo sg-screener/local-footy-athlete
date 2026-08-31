@@ -411,54 +411,14 @@ export function resolveWeeklyConditioningFeasibility(
 }
 
 /**
- * The authored row name for each non-machine substitution family, by stress.
+ * Make a non-machine delivery substitution real without changing template
+ * identity.
  *
- * THE SINGLE SOURCE for these names — `applyResolvedConditioningSubstitution`
- * below looks its answer up here, and `rules/projectionCopy.ts` derives its
- * signed-copy registration from `CONDITIONING_SUBSTITUTION_ROW_NAMES`
- * (exported below) rather than transcribing the strings a second time. A
- * family added here is automatically both emittable AND signed; one that is
- * signed but never emitted, or emitted but never signed, cannot happen by
- * construction.
- *
- * A family with one string (not `{ hard, other }`) does not vary by stress.
+ * The selected template owns the session name and prescription. Equipment
+ * feasibility owns only HOW that prescription is delivered. The active-session
+ * projection reads the typed substitution family as a separate mode line, so
+ * this boundary must never turn a delivery method into a second template name.
  */
-export const CONDITIONING_SUBSTITUTION_LABELS: Readonly<
-  Partial<Record<ConditioningSubstitutionFamily, { hard: string; other: string } | string>>
-> = {
-  treadmill: { hard: 'Treadmill Intervals', other: 'Treadmill Aerobic Work' },
-  outdoor_running: { hard: 'Outdoor Running Intervals', other: 'Outdoor Aerobic Run' },
-  hill_running_or_walking: { hard: 'Hill Running Intervals', other: 'Brisk Hill Walk' },
-  brisk_walking: 'Brisk Walking',
-  bodyweight_circuit: 'Bodyweight Conditioning Circuit',
-};
-
-/** The label for any family not listed in `CONDITIONING_SUBSTITUTION_LABELS`. */
-export const CONDITIONING_SUBSTITUTION_DEFAULT_LABEL = 'Mixed-Modal Conditioning Circuit';
-
-function conditioningSubstitutionLabel(
-  family: ConditioningSubstitutionFamily,
-  stress: Section18ConditioningStress,
-): string {
-  const entry = CONDITIONING_SUBSTITUTION_LABELS[family];
-  if (!entry) return CONDITIONING_SUBSTITUTION_DEFAULT_LABEL;
-  if (typeof entry === 'string') return entry;
-  return stress === 'hard' ? entry.hard : entry.other;
-}
-
-/**
- * Every row name `applyResolvedConditioningSubstitution` can emit — the flat
- * form `projectionCopy.ts` registers as signed copy. Derived, not
- * transcribed: a new family or a re-worded label here changes this list for
- * free.
- */
-export const CONDITIONING_SUBSTITUTION_ROW_NAMES: readonly string[] = [
-  ...Object.values(CONDITIONING_SUBSTITUTION_LABELS).flatMap((entry) =>
-    (typeof entry === 'string' ? [entry] : [entry.hard, entry.other])),
-  CONDITIONING_SUBSTITUTION_DEFAULT_LABEL,
-];
-
-/** Make a non-machine substitution real in canonical content, not metadata-only. */
 export function applyResolvedConditioningSubstitution(workout: Workout): Workout {
   const family = workout.conditioningFeasibility?.resolvedSubstitutionFamily;
   if (!family || family === 'selected_modality' || family === 'bike' || family === 'row' ||
@@ -467,7 +427,6 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
   }
   const stress = workout.section18Evidence?.conditioningStress ??
     (workout.intensity === 'High' || workout.intensity === 'Maximal' ? 'hard' : 'moderate');
-  const label = conditioningSubstitutionLabel(family, stress);
   const description = stress === 'hard'
     ? 'Complete the prescribed hard work and recovery structure at the same intended session stress.'
     : stress === 'light'
@@ -477,38 +436,8 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
     workout.conditioningBlock?.options.flatMap((option) => option.exerciseIds) ??
       workout.exercises.filter((row) => row.section18Evidence?.role === 'conditioning').map((row) => row.id),
   );
-  /* ⚠ **THE WARM-UP KEEPS ITS OWN NAME, AND THAT IS THE WHOLE OF THE
-   * DUPLICATE-EXERCISE DEFECT SAM ORDERED FIXED (2026-08-20).**
-   *
-   * `conditioningIds` is every row in the block, and the block includes the
-   * structural warm-up row. So a substituted session renamed BOTH rows to the
-   * modality label and the athlete's screen read:
-   *
-   *     Conditioning
-   *       - Outdoor Running Intervals
-   *       - Outdoor Running Intervals
-   *
-   * **MEASURED across the 180-world corpus: 48 occurrences / 20 athletes / 40
-   * weeks / 48 sessions**, every one a low-kit world where running is the
-   * substituted modality. Verified on the athlete-visible projection, not just
-   * in the workout object — the two lines really are what they read.
-   *
-   * ⚠ **IT IS NOT THE SAME WORK TWICE. IT IS ONE ROW WEARING THE OTHER'S
-   * NAME.** The warm-up carries 1 set and Sam's signed warm-up sentence; the
-   * main carries the authored dose. Only the NAME was overwritten, which is why
-   * no count of sessions or exposures could see it.
-   *
-   * **IDENTIFIED BY NAME, NEVER BY ID SUFFIX.** `-warmup` is right there in the
-   * id and matching it would be the string-prefix-on-id shape this module's
-   * neighbours explicitly refuse (*"rows derive from the template by name —
-   * never from string-prefix matching on `id`"*). The warm-up's authored name
-   * IS its identity, and it is the one thing the substitution must not touch:
-   * a warm-up jog is a warm-up jog whichever modality replaced the main block.
-   *
-   * R-049 already says the warm-up is not the work — *"dose counts main work
-   * only; warm-up and cool-down never count"* — and the projection already
-   * gives it no dose. This makes the NAME agree with what the app already
-   * believes about that row. */
+  /* The warm-up is not substituted work. Identify it by its authored name,
+   * never by an id suffix, and remove it from the block option as before. */
   const isStructuralWarmup = (row: { exercise?: { name?: string } | null }): boolean =>
     row.exercise?.name === CONDITIONING_WARMUP_ROW_NAME;
   const exercises = workout.exercises.map((row) => conditioningIds.has(row.id) && !isStructuralWarmup(row)
@@ -516,7 +445,6 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
         ...row,
         exercise: row.exercise ? {
           ...row.exercise,
-          name: label,
           description,
           equipmentRequired: family === 'treadmill' ? ['Treadmill'] : [],
         } : row.exercise,
@@ -528,13 +456,16 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
   const allIds = workout.exercises
     .filter((row) => conditioningIds.has(row.id) && !isStructuralWarmup(row))
     .map((row) => row.id);
+  const authoredTitle = exercises.find((row) => allIds.includes(row.id))?.exercise?.name
+    ?? workout.conditioningBlock?.options[0]?.title
+    ?? workout.name;
   return {
     ...workout,
     exercises,
     ...(workout.conditioningBlock ? {
       conditioningBlock: {
         ...workout.conditioningBlock,
-        options: [{ title: label, description, exerciseIds: allIds }],
+        options: [{ title: authoredTitle, description, exerciseIds: allIds }],
       },
     } : {}),
   };

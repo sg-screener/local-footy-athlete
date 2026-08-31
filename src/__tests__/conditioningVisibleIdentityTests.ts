@@ -8,10 +8,12 @@ process.env.TZ = 'Australia/Melbourne';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import {
+  conditioningModeLabelForRow,
   LONG_AEROBIC_INTERVAL_MIN_SECONDS,
   projectConditioningVisibleIdentity,
 } from '../utils/conditioningVisibleIdentity';
 import { getConditioningLoggingConfig } from '../utils/conditioningLogging';
+import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramReadModel';
 import { deriveVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
 import { weeklyPlanContextLabel, weeklyPlanTitle } from '../utils/weeklyPlanDisplay';
@@ -301,21 +303,16 @@ for (const weekIndex of [2, 3]) {
     identities);
 }
 
-/* ═══ THE SUBSTITUTION MUST NOT RENAME THE WARM-UP (2026-08-20) ════════════
+/* ═══ EQUIPMENT CHANGES DELIVERY, NEVER TEMPLATE IDENTITY (2026-08-31) ═══
  *
- * Sam ordered the duplicate-exercise defect fixed. **48 of its 52 occurrences
- * were this one line**, and it was athlete-visible: a substituted conditioning
- * session renamed EVERY row in its block to the modality label, warm-up
- * included, so the projected day read
+ * The session screen showed the exact Continuous Aerobic Run prescription under
+ * the invented title "Outdoor Aerobic Run". The equipment fallback had replaced
+ * the authored template name with its delivery method after materialisation.
  *
- *     Conditioning
- *       - Outdoor Running Intervals
- *       - Outdoor Running Intervals
- *
- * ⚠ **IT WAS NEVER THE SAME WORK TWICE — one row was wearing the other's
- * name.** The warm-up still carried 1 set and Sam's signed warm-up sentence.
- * That is why no count of sessions, exposures or doses could see it, and why
- * the cell below asserts the NAME rather than the row count.
+ * Template identity and delivery method are different facts. The row keeps the
+ * selected authored name; the session's existing mode line tells the athlete
+ * that this instance is running. The warm-up remains outside the substituted
+ * work exactly as the 2026-08-20 duplicate-row correction required.
  */
 {
   const substituted: any = applyResolvedConditioningSubstitution({
@@ -323,22 +320,29 @@ for (const weekIndex of [2, 3]) {
     intensity: 'Moderate',
     conditioningFeasibility: { resolvedSubstitutionFamily: 'outdoor_running' },
     conditioningBlock: {
-      intent: 'tempo',
+      intent: 'aerobic',
       options: [{ title: 'x', description: 'x', exerciseIds: ['cond-w-test-warmup', 'cond-w-test-main'] }],
     },
     exercises: [
       { id: 'cond-w-test-warmup', role: 'conditioning', prescribedSets: 1,
         exercise: { id: 'a', name: CONDITIONING_WARMUP_ROW_NAME } },
-      { id: 'cond-w-test-main', role: 'conditioning', prescribedSets: 13,
-        exercise: { id: 'b', name: '30:30 Controlled Tempo Blocks' } },
+      { id: 'cond-w-test-main', role: 'conditioning', prescribedSets: 1,
+        exercise: { id: 'b', name: 'Continuous Aerobic Run' } },
     ],
   } as never) as any;
   const names = substituted.exercises.map((row: any) => row.exercise?.name);
 
-  // ⚠ CONTROL FIRST. Both cells below are satisfied by a substitution that did
-  // nothing at all, which is the failure mode this fix could easily become.
-  ok('CONTROL — the substitution really did rename the main row',
-    names[1] !== '30:30 Controlled Tempo Blocks', names);
+  ok('equipment substitution preserves the authored template name',
+    names[1] === 'Continuous Aerobic Run', names);
+  eq('the block title uses the same authored template identity',
+    substituted.conditioningBlock?.options?.[0]?.title, 'Continuous Aerobic Run');
+  const sessionItem = buildSessionTemplate(substituted).items.find((item) =>
+    item.kind === 'exercise' && item.row?.id === 'cond-w-test-main');
+  eq('the session view keeps the template title and shows delivery separately',
+    sessionItem?.kind === 'exercise'
+      ? { title: sessionItem.row?.exercise?.name, mode: sessionItem.modalityLabel }
+      : null,
+    { title: 'Continuous Aerobic Run', mode: 'Run · running' });
   ok('the structural warm-up keeps its own name',
     names[0] === CONDITIONING_WARMUP_ROW_NAME, names);
   ok('so no session names one exercise twice',
@@ -347,6 +351,24 @@ for (const weekIndex of [2, 3]) {
     !(substituted.conditioningBlock?.options?.[0]?.exerciseIds ?? [])
       .includes('cond-w-test-warmup'),
     substituted.conditioningBlock?.options?.[0]?.exerciseIds);
+}
+
+for (const family of [
+  'treadmill',
+  'outdoor_running',
+  'hill_running_or_walking',
+  'brisk_walking',
+  'bodyweight_circuit',
+  'safe_mixed_modal',
+] as const) {
+  const source = workout([row('delivery-main', 'Continuous Aerobic Run')], {
+          conditioningFeasibility: { resolvedSubstitutionFamily: family } as never,
+  });
+  const delivered = applyResolvedConditioningSubstitution(source);
+  eq(`${family} preserves the selected template identity`,
+    delivered.exercises[0]?.exercise?.name, 'Continuous Aerobic Run');
+  ok(`${family} has a separate delivery label`,
+    !!conditioningModeLabelForRow(delivered, 'delivery-main'));
 }
 
 console.log(`\nconditioningVisibleIdentityTests: ${pass} passed, ${fail} failed`);

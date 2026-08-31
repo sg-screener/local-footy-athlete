@@ -7139,3 +7139,21 @@ change future programming.
 Guard: `LAW-progress-load-owns-the-dashboard-hero`,
 `LAW-accepted-lived-history-integrity` and `test:coach-snapshot`.
 Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.
+
+**R-282** · Conditioning template identity survives equipment delivery, 2026-08-31.
+
+Owner: condnames. Sam approved the correction after the active-session screen
+showed the exact Continuous Aerobic Run prescription under the unlisted title
+“Outdoor Aerobic Run”. Equipment feasibility may change how a selected
+conditioning template is delivered, but it never renames that template.
+Running, walking, bodyweight or mixed delivery is shown separately as the mode;
+the title remains one of the authored conditioning template identities and the
+prescription still comes from that template.
+
+This extends R-238–R-240's one-title/one-prescription ruling. The former
+equipment-substitution row-name vocabulary is retired rather than retained as a
+second set of conditioning titles.
+
+Guard: `LAW-conditioning-shows-one-plain-title-and-one-prescription` and
+`test:conditioning-identity`. Verification status and NOT COVERED:
+`docs/STATUS_CONDNAMES.md`.
