@@ -1,0 +1,4516 @@
+{
+  "schemaVersion": 1,
+  "auditedRevision": "672d4c197ea5e45f41ed47d472ec0335ef639f71",
+  "units": {
+    "frequency": "displayed row placements, choices expanded; distinct athlete dates and weeks include gender in the key; not sets, minutes, completions or selector calls",
+    "trace": "distinct athlete + compiler decisionId pairs after rebuild/restart de-duplication",
+    "concentration": "trainable displayed row placements grouped by exercise movement or conditioning quality; withheld rows excluded"
+  },
+  "denominators": {
+    "athleteYears": 2,
+    "weeksPerAthlete": [
+      52,
+      52
+    ],
+    "athleteDays": 728,
+    "displayedRowPlacements": 3905,
+    "catalogueIdentities": 215,
+    "distinctCompilerDecisions": 3348
+  },
+  "exerciseFrequency": [
+    {
+      "name": "Trap Bar Deadlift",
+      "displayedRowPlacements": 86,
+      "distinctAthleteDates": 86,
+      "distinctAthleteWeeks": 77,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "RDLs",
+      "displayedRowPlacements": 78,
+      "distinctAthleteDates": 78,
+      "distinctAthleteWeeks": 78,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "High Box Squat",
+      "displayedRowPlacements": 70,
+      "distinctAthleteDates": 70,
+      "distinctAthleteWeeks": 68,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Warm-Up",
+      "displayedRowPlacements": 68,
+      "distinctAthleteDates": 68,
+      "distinctAthleteWeeks": 52,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Explosive Push-Up",
+      "displayedRowPlacements": 62,
+      "distinctAthleteDates": 62,
+      "distinctAthleteWeeks": 50,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hamstring Curl",
+      "displayedRowPlacements": 60,
+      "distinctAthleteDates": 60,
+      "distinctAthleteWeeks": 60,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Back Squat",
+      "displayedRowPlacements": 58,
+      "distinctAthleteDates": 58,
+      "distinctAthleteWeeks": 58,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Explosive Landmine Press",
+      "displayedRowPlacements": 58,
+      "distinctAthleteDates": 58,
+      "distinctAthleteWeeks": 46,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "World's Greatest Stretch",
+      "displayedRowPlacements": 57,
+      "distinctAthleteDates": 57,
+      "distinctAthleteWeeks": 49,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Deep Squat Hold",
+      "displayedRowPlacements": 56,
+      "distinctAthleteDates": 56,
+      "distinctAthleteWeeks": 51,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Elephant Walks",
+      "displayedRowPlacements": 55,
+      "distinctAthleteDates": 55,
+      "distinctAthleteWeeks": 49,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Front Squat",
+      "displayedRowPlacements": 54,
+      "distinctAthleteDates": 54,
+      "distinctAthleteWeeks": 54,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Toe Stretch",
+      "displayedRowPlacements": 50,
+      "distinctAthleteDates": 50,
+      "distinctAthleteWeeks": 47,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Chest-Supported DB Row",
+      "displayedRowPlacements": 48,
+      "distinctAthleteDates": 48,
+      "distinctAthleteWeeks": 48,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Ql Back Extension",
+      "displayedRowPlacements": 47,
+      "distinctAthleteDates": 47,
+      "distinctAthleteWeeks": 47,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Nordic Lower",
+      "displayedRowPlacements": 46,
+      "distinctAthleteDates": 46,
+      "distinctAthleteWeeks": 46,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Atg Split Squat",
+      "displayedRowPlacements": 45,
+      "distinctAthleteDates": 45,
+      "distinctAthleteWeeks": 41,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Doorway Pec Stretch",
+      "displayedRowPlacements": 45,
+      "distinctAthleteDates": 45,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Arm Pulldown",
+      "displayedRowPlacements": 45,
+      "distinctAthleteDates": 45,
+      "distinctAthleteWeeks": 45,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Calf Stretch",
+      "displayedRowPlacements": 44,
+      "distinctAthleteDates": 44,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Cat-Cow",
+      "displayedRowPlacements": 44,
+      "distinctAthleteDates": 44,
+      "distinctAthleteWeeks": 42,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Butterfly Stretch",
+      "displayedRowPlacements": 43,
+      "distinctAthleteDates": 43,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hip 90/90 Stretch",
+      "displayedRowPlacements": 43,
+      "distinctAthleteDates": 43,
+      "distinctAthleteWeeks": 38,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Lat Stretch",
+      "displayedRowPlacements": 42,
+      "distinctAthleteDates": 42,
+      "distinctAthleteWeeks": 38,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hanging Leg Raise",
+      "displayedRowPlacements": 41,
+      "distinctAthleteDates": 41,
+      "distinctAthleteWeeks": 41,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "1-Arm Lat Pulldown",
+      "displayedRowPlacements": 40,
+      "distinctAthleteDates": 40,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Bench Press",
+      "displayedRowPlacements": 40,
+      "distinctAthleteDates": 40,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Sl 45° Back Extension",
+      "displayedRowPlacements": 40,
+      "distinctAthleteDates": 40,
+      "distinctAthleteWeeks": 40,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Jefferson Curl",
+      "displayedRowPlacements": 39,
+      "distinctAthleteDates": 39,
+      "distinctAthleteWeeks": 36,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Adductor Rockback",
+      "displayedRowPlacements": 35,
+      "distinctAthleteDates": 35,
+      "distinctAthleteWeeks": 34,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "DB Shoulder Press",
+      "displayedRowPlacements": 35,
+      "distinctAthleteDates": 35,
+      "distinctAthleteWeeks": 35,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Seated Cable Row",
+      "displayedRowPlacements": 35,
+      "distinctAthleteDates": 35,
+      "distinctAthleteWeeks": 35,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Couch Stretch",
+      "displayedRowPlacements": 34,
+      "distinctAthleteDates": 34,
+      "distinctAthleteWeeks": 34,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Mcgill Sit Up",
+      "displayedRowPlacements": 34,
+      "distinctAthleteDates": 34,
+      "distinctAthleteWeeks": 34,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Leg RDL",
+      "displayedRowPlacements": 34,
+      "distinctAthleteDates": 34,
+      "distinctAthleteWeeks": 34,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Band Pallof Press",
+      "displayedRowPlacements": 33,
+      "distinctAthleteDates": 33,
+      "distinctAthleteWeeks": 28,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Lat Pulldown",
+      "displayedRowPlacements": 33,
+      "distinctAthleteDates": 33,
+      "distinctAthleteWeeks": 33,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Shrugs",
+      "displayedRowPlacements": 33,
+      "distinctAthleteDates": 33,
+      "distinctAthleteWeeks": 29,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Half-Kneeling Woodchop",
+      "displayedRowPlacements": 32,
+      "distinctAthleteDates": 32,
+      "distinctAthleteWeeks": 32,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Wall Hip Opener",
+      "displayedRowPlacements": 32,
+      "distinctAthleteDates": 32,
+      "distinctAthleteWeeks": 32,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Band Pull-Apart",
+      "displayedRowPlacements": 31,
+      "distinctAthleteDates": 31,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Box Squat",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Chest Supported Row",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Cossack Squat",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "DB Bench Press",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dragon Flag",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hip Thrusts",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Walking Lunges",
+      "displayedRowPlacements": 30,
+      "distinctAthleteDates": 30,
+      "distinctAthleteWeeks": 30,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "1-Arm DB Bench Press",
+      "displayedRowPlacements": 29,
+      "distinctAthleteDates": 29,
+      "distinctAthleteWeeks": 29,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Side Plank",
+      "displayedRowPlacements": 29,
+      "distinctAthleteDates": 29,
+      "distinctAthleteWeeks": 29,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Banded Dead Bug",
+      "displayedRowPlacements": 28,
+      "distinctAthleteDates": 28,
+      "distinctAthleteWeeks": 28,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Crab Hold",
+      "displayedRowPlacements": 28,
+      "distinctAthleteDates": 28,
+      "distinctAthleteWeeks": 26,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Horse Stance Hold",
+      "displayedRowPlacements": 28,
+      "distinctAthleteDates": 28,
+      "distinctAthleteWeeks": 28,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Neutral-Grip Pulldown",
+      "displayedRowPlacements": 28,
+      "distinctAthleteDates": 28,
+      "distinctAthleteWeeks": 28,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Weighted Dead Bug",
+      "displayedRowPlacements": 28,
+      "distinctAthleteDates": 28,
+      "distinctAthleteWeeks": 28,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hollow Hold",
+      "displayedRowPlacements": 26,
+      "distinctAthleteDates": 26,
+      "distinctAthleteWeeks": 26,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Lateral Jump",
+      "displayedRowPlacements": 26,
+      "distinctAthleteDates": 26,
+      "distinctAthleteWeeks": 20,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Seated DB Press",
+      "displayedRowPlacements": 26,
+      "distinctAthleteDates": 26,
+      "distinctAthleteWeeks": 26,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Slant Board Step-Down",
+      "displayedRowPlacements": 26,
+      "distinctAthleteDates": 26,
+      "distinctAthleteWeeks": 26,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Back Extension",
+      "displayedRowPlacements": 25,
+      "distinctAthleteDates": 25,
+      "distinctAthleteWeeks": 25,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "1-Arm DB Floor Press",
+      "displayedRowPlacements": 24,
+      "distinctAthleteDates": 24,
+      "distinctAthleteWeeks": 24,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Acceleration",
+      "displayedRowPlacements": 24,
+      "distinctAthleteDates": 24,
+      "distinctAthleteWeeks": 24,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Bulgarian Split Squats",
+      "displayedRowPlacements": 24,
+      "distinctAthleteDates": 24,
+      "distinctAthleteWeeks": 24,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Half-Kneeling 1-Arm Press",
+      "displayedRowPlacements": 24,
+      "distinctAthleteDates": 24,
+      "distinctAthleteWeeks": 24,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Spanish Squat Hold",
+      "displayedRowPlacements": 24,
+      "distinctAthleteDates": 24,
+      "distinctAthleteWeeks": 24,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Ab Wheel",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Broad Jumps",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Crab Walks",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Incline DB Bench",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Side Plank Row",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Stir The Pot",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Z-Press",
+      "displayedRowPlacements": 23,
+      "distinctAthleteDates": 23,
+      "distinctAthleteWeeks": 23,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Calf Raises",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 22,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dips",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 22,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Half Copenhagen",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 22,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Jump Squats",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Pogo Hops",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 22,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Single-Arm Shrug",
+      "displayedRowPlacements": 22,
+      "distinctAthleteDates": 22,
+      "distinctAthleteWeeks": 22,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Band External Rotation",
+      "displayedRowPlacements": 21,
+      "distinctAthleteDates": 21,
+      "distinctAthleteWeeks": 21,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Band Tricep Pushdown",
+      "displayedRowPlacements": 21,
+      "distinctAthleteDates": 21,
+      "distinctAthleteWeeks": 17,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Scap Pull Ups",
+      "displayedRowPlacements": 21,
+      "distinctAthleteDates": 21,
+      "distinctAthleteWeeks": 21,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Seated Single-Leg Pike Lift",
+      "displayedRowPlacements": 21,
+      "distinctAthleteDates": 21,
+      "distinctAthleteWeeks": 21,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Controlled 10–20 Min Blocks",
+      "displayedRowPlacements": 20,
+      "distinctAthleteDates": 20,
+      "distinctAthleteWeeks": 20,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Reverse Lunges",
+      "displayedRowPlacements": 20,
+      "distinctAthleteDates": 20,
+      "distinctAthleteWeeks": 20,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Barbell Bicep Curl",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Bosch Hold",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 19,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Dumbbell Kickback",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Lateral Raise",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 15,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Open Book Rotation",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Seated Calf Raise",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 19,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Woodchop (Standing)",
+      "displayedRowPlacements": 19,
+      "distinctAthleteDates": 19,
+      "distinctAthleteWeeks": 19,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Box Jumps",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 15,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Hammer Curl",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 15,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Incline Dumbbell Curl",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 17,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Landmine Press",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Leg Leg Press",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Tib Raises",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Tricep Circuit (Dirty 30)",
+      "displayedRowPlacements": 18,
+      "distinctAthleteDates": 18,
+      "distinctAthleteWeeks": 18,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Banded Tke",
+      "displayedRowPlacements": 17,
+      "distinctAthleteDates": 17,
+      "distinctAthleteWeeks": 17,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Chin-Ups",
+      "displayedRowPlacements": 17,
+      "distinctAthleteDates": 17,
+      "distinctAthleteWeeks": 17,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dumbbell Bicep Curl",
+      "displayedRowPlacements": 17,
+      "distinctAthleteDates": 17,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Sl 45° Back Extension Hold",
+      "displayedRowPlacements": 17,
+      "distinctAthleteDates": 17,
+      "distinctAthleteWeeks": 17,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Tricep Pushdown",
+      "displayedRowPlacements": 17,
+      "distinctAthleteDates": 17,
+      "distinctAthleteWeeks": 15,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Close Grip Bench",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Lateral Lunge",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Overhead Press",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Pigeon Stretch",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Arm DB Row",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Leg Calf Raise",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Steady 5 Min Blocks",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Scap Push-Up",
+      "displayedRowPlacements": 15,
+      "distinctAthleteDates": 15,
+      "distinctAthleteWeeks": 15,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Barbell Row",
+      "displayedRowPlacements": 14,
+      "distinctAthleteDates": 14,
+      "distinctAthleteWeeks": 14,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Bear Carry",
+      "displayedRowPlacements": 14,
+      "distinctAthleteDates": 14,
+      "distinctAthleteWeeks": 14,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Incline Y Raise",
+      "displayedRowPlacements": 14,
+      "distinctAthleteDates": 14,
+      "distinctAthleteWeeks": 12,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Single-Leg Box Squat",
+      "displayedRowPlacements": 14,
+      "distinctAthleteDates": 14,
+      "distinctAthleteWeeks": 14,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Step Ups",
+      "displayedRowPlacements": 14,
+      "distinctAthleteDates": 14,
+      "distinctAthleteWeeks": 14,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Bottoms-Up KB Press",
+      "displayedRowPlacements": 13,
+      "distinctAthleteDates": 13,
+      "distinctAthleteWeeks": 13,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Long-Lever Copenhagen",
+      "displayedRowPlacements": 13,
+      "distinctAthleteDates": 13,
+      "distinctAthleteWeeks": 13,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "1 Min On / 1 Min Easy Tempo",
+      "displayedRowPlacements": 12,
+      "distinctAthleteDates": 12,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Face Pull",
+      "displayedRowPlacements": 12,
+      "distinctAthleteDates": 12,
+      "distinctAthleteWeeks": 12,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Groin Squeeze",
+      "displayedRowPlacements": 12,
+      "distinctAthleteDates": 12,
+      "distinctAthleteWeeks": 12,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Leg Extension",
+      "displayedRowPlacements": 12,
+      "distinctAthleteDates": 12,
+      "distinctAthleteWeeks": 12,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Standing Knee Extension",
+      "displayedRowPlacements": 12,
+      "distinctAthleteDates": 12,
+      "distinctAthleteWeeks": 12,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Rear Delt Fly",
+      "displayedRowPlacements": 11,
+      "distinctAthleteDates": 11,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Swiss Ball Ham Curl",
+      "displayedRowPlacements": 11,
+      "distinctAthleteDates": 11,
+      "distinctAthleteWeeks": 11,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Vertical Jump",
+      "displayedRowPlacements": 11,
+      "distinctAthleteDates": 11,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "2 Min On / 1 Min Easy",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Pull-Ups",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Reverse Nordic Curl",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Skull Crushers",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 7,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "30 S Very Hard Repeats",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dead Hang",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Dumbbell Skull Crusher",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Kettlebell Swings",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Kneeling Jump",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Cable Face Pull",
+      "displayedRowPlacements": 7,
+      "distinctAthleteDates": 7,
+      "distinctAthleteWeeks": 7,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Concentration Curl",
+      "displayedRowPlacements": 7,
+      "distinctAthleteDates": 7,
+      "distinctAthleteWeeks": 7,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Lying Dumbbell Curl",
+      "displayedRowPlacements": 7,
+      "distinctAthleteDates": 7,
+      "distinctAthleteWeeks": 7,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Depth Jumps",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Extensive Tempo (100 M Repeats)",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Farmer Carry",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Incline Bench",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "400 M Repeats",
+      "displayedRowPlacements": 4,
+      "distinctAthleteDates": 4,
+      "distinctAthleteWeeks": 4,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Overhead Tricep Extension",
+      "displayedRowPlacements": 4,
+      "distinctAthleteDates": 4,
+      "distinctAthleteWeeks": 4,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "Slow Chin-Up Negative",
+      "displayedRowPlacements": 4,
+      "distinctAthleteDates": 4,
+      "distinctAthleteWeeks": 4,
+      "genders": [
+        "male"
+      ]
+    },
+    {
+      "name": "45 S Hard Repeats",
+      "displayedRowPlacements": 2,
+      "distinctAthleteDates": 2,
+      "distinctAthleteWeeks": 2,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dead Bug",
+      "displayedRowPlacements": 2,
+      "distinctAthleteDates": 2,
+      "distinctAthleteWeeks": 2,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Dumbbell Pullovers",
+      "displayedRowPlacements": 2,
+      "distinctAthleteDates": 2,
+      "distinctAthleteWeeks": 2,
+      "genders": [
+        "female"
+      ]
+    },
+    {
+      "name": "Plank",
+      "displayedRowPlacements": 2,
+      "distinctAthleteDates": 2,
+      "distinctAthleteWeeks": 2,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Bird Dog",
+      "displayedRowPlacements": 1,
+      "distinctAthleteDates": 1,
+      "distinctAthleteWeeks": 1,
+      "genders": [
+        "female"
+      ]
+    }
+  ],
+  "conditioningFrequency": [
+    {
+      "name": "Continuous Aerobic Run",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Steady Blocks",
+      "displayedRowPlacements": 16,
+      "distinctAthleteDates": 16,
+      "distinctAthleteWeeks": 16,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "30-Second Flush Intervals",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Easy Aerobic Flush",
+      "displayedRowPlacements": 10,
+      "distinctAthleteDates": 10,
+      "distinctAthleteWeeks": 10,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Air Bike Accelerations",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Fly 30 (30+30)",
+      "displayedRowPlacements": 8,
+      "distinctAthleteDates": 8,
+      "distinctAthleteWeeks": 8,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "15-Second MAS Blocks",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "30-Second Tempo Blocks",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Erg EMOM",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Footy Shuttles",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "One-Minute Flush Intervals",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Three-Minute Intervals",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Two-Minute Flush Intervals",
+      "displayedRowPlacements": 6,
+      "distinctAthleteDates": 6,
+      "distinctAthleteWeeks": 6,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Erg Flush Blocks",
+      "displayedRowPlacements": 4,
+      "distinctAthleteDates": 4,
+      "distinctAthleteWeeks": 4,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Nasal-Paced Easy",
+      "displayedRowPlacements": 4,
+      "distinctAthleteDates": 4,
+      "distinctAthleteWeeks": 4,
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    {
+      "name": "Aerobic Shuttles",
+      "displayedRowPlacements": 2,
+      "distinctAthleteDates": 2,
+      "distinctAthleteWeeks": 2,
+      "genders": [
+        "female",
+        "male"
+      ]
+    }
+  ],
+  "zeroPlacements": {
+    "count": 99,
+    "classificationCounts": {
+      "eligible_but_out_ranked": 26,
+      "incorrectly_tagged_or_classified": 29,
+      "intentionally_manual_or_special_use_only": 24,
+      "missing_automatic_programming_route": 2,
+      "not_eligible_for_audited_athletes": 18
+    },
+    "rows": [
+      {
+        "catalogue": "exercise_tags",
+        "name": "Seated Good Morning (Barbell)",
+        "classification": "missing_automatic_programming_route",
+        "reason": "The identity is advertised by the mobility pool, but no canonical compiler decision considers it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "mobility_pool_without_compiler_route",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Rotational Medicine-Ball Slam",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 292,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "equipment",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Medicine-Ball Slam",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 292,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "equipment",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Rotational Medicine-Ball Throw",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 292,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "equipment",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "SL 45° Back Extension Hold",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 568,
+        "eligibleDecisions": 495,
+        "selectedDecisions": 19,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "SL 45° Back Extension",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 228,
+        "selectedDecisions": 60,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Seated Good Morning",
+        "classification": "missing_automatic_programming_route",
+        "reason": "The identity is advertised by the mobility pool, but no canonical compiler decision considers it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "mobility_pool_without_compiler_route",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Goblet Squat",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Bodyweight Squat",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Single-Leg Squat (to Box)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 226,
+        "eligibleDecisions": 226,
+        "selectedDecisions": 16,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Leg Press",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 212,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Deadlift",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 226,
+        "eligibleDecisions": 208,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Glute Bridge",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 226,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Single-Leg Hip Thrust",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 568,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Banded TKE",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 568,
+        "eligibleDecisions": 505,
+        "selectedDecisions": 23,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Copenhagen Plank (Half)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 568,
+        "eligibleDecisions": 493,
+        "selectedDecisions": 24,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Swiss Ball Hamstring Curl",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 568,
+        "eligibleDecisions": 524,
+        "selectedDecisions": 11,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Lateral Bounds",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 292,
+        "eligibleDecisions": 62,
+        "selectedDecisions": 8,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "game_proximity",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "RFE Split Squat Jump",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "explicit_pending_power_placement",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Push-ups",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 250,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Single-Arm DB Floor Press",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 250,
+        "eligibleDecisions": 233,
+        "selectedDecisions": 27,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Single-Arm DB Bench Press",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 250,
+        "eligibleDecisions": 220,
+        "selectedDecisions": 35,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Half-Kneeling Single-Arm Overhead Press",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 246,
+        "eligibleDecisions": 223,
+        "selectedDecisions": 27,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Inverted Row (Bodyweight)",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Single-Arm Lat Pulldown",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 234,
+        "eligibleDecisions": 196,
+        "selectedDecisions": 47,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Speed Trap Bar Deadlift",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "explicit_pending_power_placement",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Speed Bench",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "explicit_pending_power_placement",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Explosive Push-up",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 292,
+        "eligibleDecisions": 146,
+        "selectedDecisions": 76,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Woodchop (Half Kneeling)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 556,
+        "eligibleDecisions": 459,
+        "selectedDecisions": 49,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Stir the Pot",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 556,
+        "eligibleDecisions": 503,
+        "selectedDecisions": 27,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "McGill Sit Up",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 556,
+        "eligibleDecisions": 471,
+        "selectedDecisions": 42,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "already_on_day",
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Suitcase Carry",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 230,
+        "selectedDecisions": 3,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Overhead Carry",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 230,
+        "eligibleDecisions": 230,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Banded External Rotation",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 104,
+        "eligibleDecisions": 90,
+        "selectedDecisions": 25,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Bicep Curl (Barbell)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 58,
+        "eligibleDecisions": 58,
+        "selectedDecisions": 7,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Bicep Curl (Dumbbell)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 58,
+        "eligibleDecisions": 55,
+        "selectedDecisions": 10,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "weekly_spacing"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Chin-Up Negative (Slow)",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 8,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Banded Bicep Curl",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 58,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": [
+          "experience"
+        ]
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Banded Tricep Pushdown",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 62,
+        "eligibleDecisions": 62,
+        "selectedDecisions": 10,
+        "route": "automatic_strength_or_power",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Sprint Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Hill Sprints",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Quality Sprints",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "MAS Training",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "MetCon",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "special_session_identity",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Long Run",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "6x1km",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Hard Row Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Hard SkiErg Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Hard Assault Bike Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Tempo Run",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Air Bike Sprints",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Row Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "SkiErg Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Assault Bike Intervals",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Flush Run",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Easy Bike",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Easy Row",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Easy Ski",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Easy Swim",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "exercise_tags",
+        "name": "Light Circuits",
+        "classification": "intentionally_manual_or_special_use_only",
+        "reason": "Catalogue metadata retains the identity for manual, fallback, injury, saved-session or special-session use; no automatic compiler route owns it.",
+        "candidateDecisions": 0,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "retired_or_legacy_manual_conditioning",
+        "rejectionReasons": []
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "10 m Acceleration Reps",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "20 m Acceleration Reps",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "30 m Acceleration Reps",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Hill Acceleration",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Team-Training Warm-Up Dose",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Return-to-Speed Ladder",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Fly 20 (20+20)",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Progressive Sprint Exposure",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Off-Season Speed Reintroduction",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "20 m Shuttle Repeats",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "30 m Repeats",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Sprint Sets (3×5×6 s)",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "10 s Max Sprint Repeats",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "10 s Repeat Efforts",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 16,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Up-Back Shuttle",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Low-Intensity Deceleration Drills",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Deceleration and Landing Work",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "45-Degree Cut Reps",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "20 s Max Sprint — Small Dose",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Erg Short-Burst Repeats (15–20 s)",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Tabata Finisher",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "role",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "30 s Very Hard Repeats",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 6,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "45 s Hard Repeats",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "60 s Max Sustained Effort",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "150–200 m Hard Repeats",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Hill Repeats — hard sustained",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 6,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Bodyweight Circuit (no-equipment fallback)",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "manual_or_special_use_only"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Classic 4×4",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Two-Minute Repeats",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 4,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "30:30 Hard Intermittent",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "1 km Repeats",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 2,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "400 m Repeats",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 6,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Long Aerobic Intervals",
+        "classification": "not_eligible_for_audited_athletes",
+        "reason": "The automatic route considered the candidate, but it was ineligible in every audited compiler decision.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 0,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "role",
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Controlled 10–20 min Blocks",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 68,
+        "selectedDecisions": 20,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Steady 5 min Blocks",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 68,
+        "selectedDecisions": 16,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Extensive Tempo (100 m repeats)",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 6,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "2 min On / 1 min Easy",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 10,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "1 min On / 1 min Easy Tempo",
+        "classification": "incorrectly_tagged_or_classified",
+        "reason": "The compiler selected this identity, but the final-program audit counted zero placements; selection and final identity/survival disagree.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 36,
+        "selectedDecisions": 12,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      },
+      {
+        "catalogue": "conditioning_templates",
+        "name": "Short Flush",
+        "classification": "eligible_but_out_ranked",
+        "reason": "The candidate was eligible in at least one distinct compiler decision but was never selected.",
+        "candidateDecisions": 210,
+        "eligibleDecisions": 48,
+        "selectedDecisions": 0,
+        "route": "automatic_conditioning_template",
+        "rejectionReasons": [
+          "wrong_movement_or_quality"
+        ]
+      }
+    ]
+  },
+  "concentration": {
+    "exerciseMovement": [
+      {
+        "family": "prehab",
+        "displayedRowPlacements": 813,
+        "distinctAthleteDates": 175,
+        "distinctDisplayNames": 23,
+        "leadingIdentity": "World's Greatest Stretch",
+        "leadingIdentityPlacements": 57,
+        "leadingIdentityShare": 7
+      },
+      {
+        "family": "isolation_lower",
+        "displayedRowPlacements": 414,
+        "distinctAthleteDates": 251,
+        "distinctDisplayNames": 19,
+        "leadingIdentity": "Hamstring Curl",
+        "leadingIdentityPlacements": 60,
+        "leadingIdentityShare": 14.5
+      },
+      {
+        "family": "core",
+        "displayedRowPlacements": 402,
+        "distinctAthleteDates": 296,
+        "distinctDisplayNames": 17,
+        "leadingIdentity": "Hanging Leg Raise",
+        "leadingIdentityPlacements": 41,
+        "leadingIdentityShare": 10.2
+      },
+      {
+        "family": "isolation_upper",
+        "displayedRowPlacements": 292,
+        "distinctAthleteDates": 132,
+        "distinctDisplayNames": 18,
+        "leadingIdentity": "Shrugs",
+        "leadingIdentityPlacements": 33,
+        "leadingIdentityShare": 11.3
+      },
+      {
+        "family": "hinge",
+        "displayedRowPlacements": 276,
+        "distinctAthleteDates": 206,
+        "distinctDisplayNames": 6,
+        "leadingIdentity": "Trap Bar Deadlift",
+        "leadingIdentityPlacements": 86,
+        "leadingIdentityShare": 31.2
+      },
+      {
+        "family": "squat",
+        "displayedRowPlacements": 230,
+        "distinctAthleteDates": 212,
+        "distinctDisplayNames": 5,
+        "leadingIdentity": "High Box Squat",
+        "leadingIdentityPlacements": 70,
+        "leadingIdentityShare": 30.4
+      },
+      {
+        "family": "horizontal_push",
+        "displayedRowPlacements": 214,
+        "distinctAthleteDates": 167,
+        "distinctDisplayNames": 8,
+        "leadingIdentity": "Explosive Push-Up",
+        "leadingIdentityPlacements": 62,
+        "leadingIdentityShare": 29
+      },
+      {
+        "family": "horizontal_pull",
+        "displayedRowPlacements": 204,
+        "distinctAthleteDates": 158,
+        "distinctDisplayNames": 9,
+        "leadingIdentity": "Chest-Supported DB Row",
+        "leadingIdentityPlacements": 48,
+        "leadingIdentityShare": 23.5
+      },
+      {
+        "family": "vertical_push",
+        "displayedRowPlacements": 189,
+        "distinctAthleteDates": 160,
+        "distinctDisplayNames": 7,
+        "leadingIdentity": "Explosive Landmine Press",
+        "leadingIdentityPlacements": 58,
+        "leadingIdentityShare": 30.7
+      },
+      {
+        "family": "lunge",
+        "displayedRowPlacements": 160,
+        "distinctAthleteDates": 160,
+        "distinctDisplayNames": 7,
+        "leadingIdentity": "Cossack Squat",
+        "leadingIdentityPlacements": 30,
+        "leadingIdentityShare": 18.8
+      },
+      {
+        "family": "vertical_pull",
+        "displayedRowPlacements": 158,
+        "distinctAthleteDates": 110,
+        "distinctDisplayNames": 7,
+        "leadingIdentity": "Single-Arm Pulldown",
+        "leadingIdentityPlacements": 45,
+        "leadingIdentityShare": 28.5
+      },
+      {
+        "family": "conditioning",
+        "displayedRowPlacements": 146,
+        "distinctAthleteDates": 122,
+        "distinctDisplayNames": 9,
+        "leadingIdentity": "Warm-Up",
+        "leadingIdentityPlacements": 68,
+        "leadingIdentityShare": 46.6
+      },
+      {
+        "family": "plyo",
+        "displayedRowPlacements": 136,
+        "distinctAthleteDates": 114,
+        "distinctDisplayNames": 8,
+        "leadingIdentity": "Lateral Jump",
+        "leadingIdentityPlacements": 26,
+        "leadingIdentityShare": 19.1
+      },
+      {
+        "family": "accessory",
+        "displayedRowPlacements": 131,
+        "distinctAthleteDates": 121,
+        "distinctDisplayNames": 5,
+        "leadingIdentity": "1-Arm Lat Pulldown",
+        "leadingIdentityPlacements": 40,
+        "leadingIdentityShare": 30.5
+      },
+      {
+        "family": "carry",
+        "displayedRowPlacements": 20,
+        "distinctAthleteDates": 20,
+        "distinctDisplayNames": 2,
+        "leadingIdentity": "Bear Carry",
+        "leadingIdentityPlacements": 14,
+        "leadingIdentityShare": 70
+      }
+    ],
+    "conditioningQuality": [
+      {
+        "family": "aerobic_capacity",
+        "displayedRowPlacements": 40,
+        "distinctAthleteDates": 40,
+        "distinctDisplayNames": 4,
+        "leadingIdentity": "Continuous Aerobic Run",
+        "leadingIdentityPlacements": 16,
+        "leadingIdentityShare": 40
+      },
+      {
+        "family": "flush",
+        "displayedRowPlacements": 40,
+        "distinctAthleteDates": 40,
+        "distinctDisplayNames": 6,
+        "leadingIdentity": "30-Second Flush Intervals",
+        "leadingIdentityPlacements": 10,
+        "leadingIdentityShare": 25
+      },
+      {
+        "family": "aerobic_power",
+        "displayedRowPlacements": 24,
+        "distinctAthleteDates": 24,
+        "distinctDisplayNames": 4,
+        "leadingIdentity": "15-Second MAS Blocks",
+        "leadingIdentityPlacements": 6,
+        "leadingIdentityShare": 25
+      },
+      {
+        "family": "acceleration",
+        "displayedRowPlacements": 8,
+        "distinctAthleteDates": 8,
+        "distinctDisplayNames": 1,
+        "leadingIdentity": "Air Bike Accelerations",
+        "leadingIdentityPlacements": 8,
+        "leadingIdentityShare": 100
+      },
+      {
+        "family": "top_end_speed",
+        "displayedRowPlacements": 8,
+        "distinctAthleteDates": 8,
+        "distinctDisplayNames": 1,
+        "leadingIdentity": "Fly 30 (30+30)",
+        "leadingIdentityPlacements": 8,
+        "leadingIdentityShare": 100
+      }
+    ]
+  },
+  "catalogueOrderMutation": {
+    "same": true,
+    "athleteYears": 2,
+    "weeksPerAthlete": [
+      52,
+      52
+    ],
+    "differingAthleteDays": 0,
+    "firstDifferences": []
+  },
+  "remainingStrangeFinalSessions": {
+    "projectionErrors": [],
+    "restartFailures": [],
+    "missingConditioningModalities": [],
+    "squatlessLowerSessions": [
+      {
+        "gender": "male",
+        "date": "2027-03-01",
+        "parts": [
+          {
+            "kind": "strength",
+            "name": "Lower Squat"
+          },
+          {
+            "kind": "conditioning",
+            "name": "Conditioning"
+          }
+        ],
+        "rows": [
+          "Continuous Aerobic Run",
+          "Weighted Dead Bug",
+          "Chest Supported Row",
+          "Hanging Leg Raise",
+          "Side Plank"
+        ],
+        "modifiers": [
+          {
+            "title": "Calf / Achilles issue active",
+            "body": "Your program is being adjusted around this injury. High 6/10. Limits: limit running.",
+            "effect": "exercises_swapped",
+            "source": "active_constraint"
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-01",
+        "parts": [
+          {
+            "kind": "strength",
+            "name": "Lower Squat"
+          },
+          {
+            "kind": "conditioning",
+            "name": "Conditioning"
+          }
+        ],
+        "rows": [
+          "Continuous Aerobic Run",
+          "Weighted Dead Bug",
+          "Chest Supported Row",
+          "Side Plank Row",
+          "Band Pallof Press"
+        ],
+        "modifiers": [
+          {
+            "title": "Calf / Achilles issue active",
+            "body": "Your program is being adjusted around this injury. High 6/10. Limits: limit running.",
+            "effect": "exercises_swapped",
+            "source": "active_constraint"
+          }
+        ]
+      }
+    ],
+    "silentTeamGymSessions": [],
+    "shoulderInjuryTrainableRows": 114,
+    "shoulderInjuryTricepsRows": 0,
+    "shoulderInjuryTricepsShare": 0,
+    "bottomsUpKbPressMaximum": {
+      "gender": "female",
+      "date": "2026-12-01",
+      "kg": 8,
+      "dose": "2 × 6"
+    },
+    "primers": [
+      {
+        "gender": "female",
+        "date": "2027-04-16",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dumbbell Pullovers",
+            "optional": false
+          },
+          {
+            "name": "Toe Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-04-23",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Lat Stretch",
+            "optional": false
+          },
+          {
+            "name": "Calf Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-04-30",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Ql Back Extension",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-05-07",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Cat-Cow",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-05-14",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Deep Squat Hold",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-05-21",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Doorway Pec Stretch",
+            "optional": false
+          },
+          {
+            "name": "Toe Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-05-28",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Cat-Cow",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-06-04",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Jefferson Curl",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-06-11",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Doorway Pec Stretch",
+            "optional": false
+          },
+          {
+            "name": "Sl 45° Back Extension Hold",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Vertical Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-06-18",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Elephant Walks",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Box Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-06-25",
+        "checkedRows": 5,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Doorway Pec Stretch",
+            "optional": false
+          },
+          {
+            "name": "Jefferson Curl",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-07-02",
+        "checkedRows": 5,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Lat Stretch",
+            "optional": false
+          },
+          {
+            "name": "Elephant Walks",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-07-09",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dumbbell Pullovers",
+            "optional": false
+          },
+          {
+            "name": "Ql Back Extension",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Box Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-07-16",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Lat Stretch",
+            "optional": false
+          },
+          {
+            "name": "Atg Split Squat",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Box Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-07-23",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Elephant Walks",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Box Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-07-30",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Butterfly Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Jefferson Curl",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Broad Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-08-06",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Lat Stretch",
+            "optional": false
+          },
+          {
+            "name": "Toe Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Broad Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-08-13",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Calf Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Broad Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-08-20",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Ql Back Extension",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Broad Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-08-27",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Hip 90/90 Stretch",
+            "optional": false
+          },
+          {
+            "name": "World's Greatest Stretch",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Toe Stretch",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Broad Jumps",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-09-03",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Pigeon Stretch",
+            "optional": false
+          },
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Cat-Cow",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-09-10",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Pigeon Stretch",
+            "optional": false
+          },
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Deep Squat Hold",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Landmine Press",
+            "optional": false
+          },
+          {
+            "name": "Lateral Jump",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "High Box Squat",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-09-17",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Pigeon Stretch",
+            "optional": false
+          },
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Open Book Rotation",
+            "optional": false
+          },
+          {
+            "name": "Sl 45° Back Extension Hold",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "gender": "female",
+        "date": "2027-09-24",
+        "checkedRows": 7,
+        "optionalRows": 3,
+        "rows": [
+          {
+            "name": "Pigeon Stretch",
+            "optional": false
+          },
+          {
+            "name": "Adductor Rockback",
+            "optional": false
+          },
+          {
+            "name": "Dead Hang",
+            "optional": false
+          },
+          {
+            "name": "Cat-Cow",
+            "optional": false
+          },
+          {
+            "name": "Pogo Hops",
+            "optional": false
+          },
+          {
+            "name": "Explosive Push-Up",
+            "optional": false
+          },
+          {
+            "name": "Jump Squats",
+            "optional": false
+          },
+          {
+            "name": "Acceleration",
+            "optional": true
+          },
+          {
+            "name": "Trap Bar Deadlift",
+            "optional": true
+          },
+          {
+            "name": "Bench Press",
+            "optional": true
+          }
+        ]
+      }
+    ],
+    "implausibleConditioningDoses": [
+      {
+        "gender": "male",
+        "date": "2026-11-23",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2026-11-26",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2026-11-30",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2026-12-03",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2026-12-07",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2026-12-10",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2026-12-14",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2026-12-17",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2027-02-15",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2027-02-22",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2027-03-01",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2027-03-08",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "male",
+        "date": "2027-03-15",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2027-03-22",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2027-03-29",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "male",
+        "date": "2027-04-05",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2026-11-23",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2026-11-26",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2026-11-30",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2026-12-03",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2026-12-07",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2026-12-10",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2026-12-14",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2026-12-17",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2027-02-15",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2027-02-22",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-01",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-08",
+        "doseLabel": "41 × 50 min",
+        "impliedMinutes": 2050
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-15",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-22",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2027-03-29",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      },
+      {
+        "gender": "female",
+        "date": "2027-04-05",
+        "doseLabel": "16 × 20 min",
+        "impliedMinutes": 320
+      }
+    ],
+    "duplicateQualityOwnershipWeeks": []
+  },
+  "notCovered": [
+    "Physical iPhone execution or acceptance",
+    "Native onboarding taps",
+    "Athlete profiles beyond the preserved male/female lived-year inputs",
+    "Clinical validation of injury programming",
+    "Step 5 Primer-length product decision still awaiting Sam"
+  ]
+}

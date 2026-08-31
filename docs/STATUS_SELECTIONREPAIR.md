@@ -512,3 +512,71 @@ all lower patterns and replaces them with upper/core work; Sam must choose
 whether that part should use its actual `Upper Pull` identity or a generic
 injury-adjusted identity. The full corrected audit is rerun in Step 9; no phone
 was touched.
+
+## Step 9 — corrected male/female lived-year audit
+
+Completed against exact compiler checkpoint
+`672d4c197ea5e45f41ed47d472ec0335ef639f71` in an isolated worktree. The
+preserved real-onboarding driver SHA-256 remained
+`bb1dd5729aa32e179c0c0d57ebc1d034f0bbb1ee152d628684be347f6fb13bd4`.
+The run contains two 52-week athlete-years, 728 athlete-days, 3,905 displayed
+row placements and 3,348 distinct athlete/compiler decision ids. All 104
+restart checks completed without a mismatch.
+
+Final evidence:
+
+- 150 exercise display names and 16 conditioning display names appeared.
+- 99 / 215 catalogue identities received zero displayed placements. Every one
+  has an exhaustive classified row in the report: 26 eligible but outranked,
+  29 selected/name-classification disagreements, 24 intentional manual or
+  special-use identities, 2 missing automatic routes, and 18 ineligible for
+  the two audited athletes.
+- Reversing every automatic strength, power and conditioning catalogue changed
+  0 / 728 final athlete-days.
+- No projection errors, restart failures, missing conditioning modalities,
+  silent Team-Training gym rows, or duplicate weekly quality-owner sentences.
+- The shoulder-injury window contains 0 triceps-named rows / 114 trainable rows.
+- Bottoms-Up KB Press tops out at 8 kg for 2 × 6. The initially reported 20 kg
+  was proved to be a two-athlete audit-harness contamination and disappeared
+  after the fresh-install owner began clearing logged sets.
+- Two `Lower Squat` identities remain on one injury-adjusted date (male and
+  female). Every lower pattern was correctly paused for a 6/10 calf/Achilles
+  constraint and coherent upper/core work was supplied; only the visible part
+  identity requires Sam's product-language decision.
+- 24 Primers each contain seven checked rows plus three optional rows. No signed
+  row was deleted; the length remains the previously recorded product decision.
+- 32 conditioning identity dose labels imply over 120 minutes (`41 × 50 min`,
+  `16 × 20 min`, and siblings). Their underlying row prescriptions are bounded;
+  this is a projection/display-owner defect in files being edited by another
+  active seat, not a programming-selection result.
+
+Release evidence at the same checkpoint:
+
+- `npm run test:programming-selection-release`: exit 0. It includes the 0 / 728
+  finished-year order mutation, trace 7 / 7, reachability classification 5 / 5,
+  power pool 94 / 94, modality persistence 3 / 3, deload owner 11 / 11,
+  block-two progression 41 / 41, final composition 6 / 6, and generated-week
+  assembly 30 / 30.
+- `npm run test:compile`: product 0, devtools 0; the same four inherited test
+  scope errors remain in `canonicalWeeklyCompilerSliceTests.ts`,
+  `fatiguePlumbingTests.ts` (2), and `fixtureMutationTransactionTests.ts`.
+
+Durable receipts:
+
+- `docs/PROGRAMMING_SELECTION_FINAL_AUDIT_2026-08-31.md`
+- `docs/PROGRAMMING_SELECTION_FINAL_AUDIT_2026-08-31.json`
+
+BLOCKED product decisions for Sam:
+
+1. Primer length: keep the seven checked rows and omit all three optional rows
+   everywhere, or omit the optional rows only from automatic female G-1 while
+   retaining them in the athlete-added full Primer?
+2. Injury-adjusted part identity: when every lower pattern is paused and the
+   replacement is upper/core work, should the part use its actual `Upper Pull`
+   identity or a generic injury-adjusted identity?
+
+NOT COVERED: physical-iPhone execution or acceptance, native onboarding taps,
+athlete profiles outside the preserved male/female inputs, clinical validation
+of injury programming, the two Sam decisions above, and the separately owned
+conditioning dose-label projection fix. The phone was not installed, wiped or
+otherwise touched.
