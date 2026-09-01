@@ -72,7 +72,7 @@ import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import {
   CALVES_POOL,
   GROIN_ADDUCTORS_POOL,
-  HAMSTRING_LIGHT_POOL,
+  HAMSTRING_PREHAB_SUBSET,
   LOWER_PREHAB_POOL,
   MOBILITY_POOL,
   SHOULDER_HEALTH_POOL,
@@ -1341,7 +1341,7 @@ const CONTRACT_DOMAINS = ['main_strength', 'conditioning', 'sprint_high_speed'] 
 
 const PREHAB_NAMES = new Set([
   ...GROIN_ADDUCTORS_POOL, ...CALVES_POOL, ...LOWER_PREHAB_POOL,
-  ...TRUNK_ANTI_ROTATION_POOL, ...SHOULDER_HEALTH_POOL, ...HAMSTRING_LIGHT_POOL,
+  ...TRUNK_ANTI_ROTATION_POOL, ...SHOULDER_HEALTH_POOL, ...HAMSTRING_PREHAB_SUBSET,
 ].map((entry) => canonicalExerciseName(entry.name)));
 const MOBILITY_NAMES = new Set(MOBILITY_POOL.map((entry) => canonicalExerciseName(entry.name)));
 

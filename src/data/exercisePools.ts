@@ -311,6 +311,8 @@ export const LOWER_PREHAB_POOL: PoolExercise[] = [
   authoredExercise("reverse-nordic-curl", "Reverse Nordic Curl", []),
   authoredExercise("standing-knee-extension", "Standing Knee Extension", []),
   authoredExercise("seated-single-leg-pike-lift", "Seated Single-Leg Pike Lift", []),
+  authoredExercise("sl-45-back-extension-hold", "SL 45° Back Extension Hold", ["back_extension_bench"]),
+  ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.', ['swiss_ball'], ['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
   ex('tib-raise',         'Tib Raises',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
   ex('banded-tke',        'Banded TKE',             2, 15, 20, 30, 'Band behind the knee. Straighten and squeeze the quad.', ['bands'], ['knee'], 'low', { prescriptionType: 'reps' }),
   ex('bosch-hold',        'Bosch Hold',             2, 20, 30, 30, 'Drive the heel down, hips high. Single or double leg.', ['bodyweight'], ['hamstring', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
@@ -358,10 +360,15 @@ export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
   ex('scap-pull-up',      'Scap Pull Ups',              2, 10, 10, 30, 'Pause 1 sec at top each rep', ['pullup_bar'], ['shoulder'], 'low', { prescriptionType: 'reps' }),
 ];
 
-export const HAMSTRING_LIGHT_POOL: PoolExercise[] = [
-  authoredExercise("sl-45-back-extension-hold", "SL 45° Back Extension Hold", ["back_extension_bench"]),
-  ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.',              ['swiss_ball'],['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
-];
+/**
+ * A hamstring-specific VIEW of Lower prehab for programming seats that ask for
+ * hamstring support. This is deliberately not another authored/display pool:
+ * both exercises live once in LOWER_PREHAB_POOL and therefore appear under one
+ * Lower prehab section in the catalogue.
+ */
+export const HAMSTRING_PREHAB_SUBSET: PoolExercise[] = LOWER_PREHAB_POOL.filter(
+  (entry) => entry.id === 'sl-45-back-extension-hold' || entry.id === 'swiss-ball-curl',
+);
 
 // ═══════════════════════════════════════════════════════════════
 // RECOVERY pools
@@ -449,7 +456,9 @@ export const POOL_REGISTRY: Record<ExerciseCategory, PoolExercise[]> = {
   lower_prehab: LOWER_PREHAB_POOL,
   trunk_anti_rotation: TRUNK_ANTI_ROTATION_POOL,
   shoulder_health: SHOULDER_HEALTH_POOL,
-  hamstring_light: HAMSTRING_LIGHT_POOL,
+  // Compatibility selection key for existing composed-session slots. The
+  // entries are a derived view of Lower prehab, not a second catalogue pool.
+  hamstring_light: HAMSTRING_PREHAB_SUBSET,
   // Recovery
   tissue_quality: TISSUE_QUALITY_POOL,
   mobility: MOBILITY_POOL,

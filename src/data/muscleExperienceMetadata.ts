@@ -2,7 +2,8 @@
  * Muscle + experience metadata — the D11 muscle-block build data.
  *
  * SOURCE OF TRUTH: `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx`
- * (Sam, AUTHORED FINAL, sign-off 2026-07-25). 193 exercises across 24 pools.
+ * (Sam, AUTHORED FINAL, sign-off 2026-07-25). The current sheet contains 208
+ * canonical exercises across 23 pools.
  *
  * A typed projection, held to the sheet by `muscleExperienceEqualityTests` in
  * both directions. Do not hand-edit a muscle tag or a gate here; change the
@@ -162,7 +163,7 @@ export interface ExerciseMuscleEntry {
   readonly flagged: boolean;
 }
 
-/** The 24 authored pools, in sheet order. */
+/** The authored pools, in sheet order. */
 export const MUSCLE_METADATA_POOLS: readonly string[] = [
   'Lower squat',
   'Lower hinge',
@@ -181,7 +182,6 @@ export const MUSCLE_METADATA_POOLS: readonly string[] = [
   'Lower prehab',
   'Midline',
   'Shoulder health',
-  'Hamstring (light)',
   'Tissue quality',
   'Mobility',
   'Easy cardio (zone 1)',
@@ -230,7 +230,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
   {"exercise": "Medicine-Ball Slam", "pool": "Power", "primary": ["Lats", "Midline", "Shoulders"], "secondary": ["Triceps", "Glutes", "Quads", "Hamstrings", "Calves"], "experienceGate": "everyone", "note": "Start around 3–6 kg; log total ball weight. Low-volume power only near games. Stop if speed drops.", "flagged": false},
   {"exercise": "Rotational Medicine-Ball Throw", "pool": "Power", "primary": ["Midline", "Glutes", "Hips"], "secondary": ["Chest", "Shoulders", "Triceps", "Calves"], "experienceGate": "one_plus_years", "note": "Use a wall-throw ball. Start around 2–4 kg; log total ball weight. Fast reps with complete recovery.", "flagged": false},
   {"exercise": "Reverse Nordic Curl", "pool": "Lower prehab", "primary": ["Quads"], "secondary": [], "experienceGate": "one_plus_years", "note": "Lower for 5 seconds. Bodyweight; beginners use shallow range or band assistance. External loading not yet specified.", "flagged": false},
-  {"exercise": "SL 45° Back Extension Hold", "pool": "Hamstring (light)", "primary": ["Hamstrings", "Glutes"], "secondary": ["Low back", "Midline"], "experienceGate": "one_plus_years", "note": "Short submaximal holds near games; never maximum duration. Start bodyweight; optional plate or dumbbell at chest, total external load.", "flagged": false},
+  {"exercise": "SL 45° Back Extension Hold", "pool": "Lower prehab", "primary": ["Hamstrings", "Glutes"], "secondary": ["Low back", "Midline"], "experienceGate": "one_plus_years", "note": "Short submaximal holds near games; never maximum duration. Start bodyweight; optional plate or dumbbell at chest, total external load.", "flagged": false},
   {"exercise": "SL 45° Back Extension", "pool": "Lower hinge", "primary": ["Glutes", "Hamstrings"], "secondary": ["Low back", "Midline"], "experienceGate": "one_plus_years", "note": "Start with bodyweight. Optional plate or dumbbell at chest; log total external load. Caution two days before a game.", "flagged": false},
   {"exercise": "Seated Good Morning", "pool": "Mobility", "primary": ["Low back", "Groin"], "secondary": ["Hamstrings", "Glutes", "Midline", "Upper back"], "experienceGate": "everyone", "note": "Lower for 5 seconds. Bodyweight for everyone; dumbbell and barbell variants require 1+ years. Log total external load. Mobility only; never a main lift.", "flagged": false},
   {"exercise": "Crab Hold", "pool": "Mobility", "primary": ["Shoulders", "Glutes", "Triceps"], "secondary": ["Hamstrings", "Chest", "Upper back", "Midline"], "experienceGate": "everyone", "note": "Hold with an open chest. Bodyweight. Familiar and pain-free near games.", "flagged": false},
@@ -1334,10 +1334,10 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     flagged: false,
   },
 
-  /* ── Hamstring (light) ── */
+  /* ── Lower prehab ── */
   {
     exercise: 'Swiss Ball Hamstring Curl',
-    pool: 'Hamstring (light)',
+    pool: 'Lower prehab',
     primary: ['Hamstrings'],
     secondary: ['Midline'],
     experienceGate: 'everyone',

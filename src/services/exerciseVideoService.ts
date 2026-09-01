@@ -195,7 +195,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Scap Pull Ups':                    'https://youtube.com/shorts/9M8ylnbriB0?si=8fsAN8Q8njOnH3a8',
   'Bottoms-Up KB Press':              'https://youtube.com/shorts/PDVTbKBXAl4?si=AynipcSYTa7P6Z3p',
 
-  // ═══ Prehab — Hamstring (light) ═══
+  // ═══ Lower prehab — hamstring ═══
   'Swiss Ball Hamstring Curl':        'https://youtube.com/shorts/xB1lGVzRwWk?si=S8i01b5vzUVFGiUu',
 
   // ═══ Foam Rolling / Tissue Quality ═══

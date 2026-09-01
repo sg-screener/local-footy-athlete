@@ -293,7 +293,6 @@ const REGISTRY_GROUP_LABELS: Record<string, string> = {
   lower_prehab: 'Lower prehab',
   trunk_anti_rotation: 'Midline',
   shoulder_health: 'Shoulder health',
-  hamstring_light: 'Hamstring (light)',
   tissue_quality: 'Tissue quality',
   mobility: 'Mobility',
   easy_cardio: 'Easy cardio (zone 1)',

@@ -60,7 +60,7 @@ import {
 import {
   CALVES_POOL,
   GROIN_ADDUCTORS_POOL,
-  HAMSTRING_LIGHT_POOL,
+  HAMSTRING_PREHAB_SUBSET,
   LOWER_PREHAB_POOL,
   MOBILITY_POOL,
   SHOULDER_HEALTH_POOL,
@@ -122,7 +122,7 @@ run('V1. every one of the six regions is recognised from its own pool', () => {
     lower_prehab: LOWER_PREHAB_POOL[0].name,
     midline: TRUNK_ANTI_ROTATION_POOL[0].name,
     shoulder_health: SHOULDER_HEALTH_POOL[0].name,
-    hamstring: HAMSTRING_LIGHT_POOL[0].name,
+    hamstring: HAMSTRING_PREHAB_SUBSET[0].name,
   };
   for (const region of PREHAB_REGIONS) {
     const covered = accessoryRegionsCovered([workoutWith(1, [oneEach[region]])]);
@@ -366,7 +366,7 @@ console.log('\n-- B. The top-up, APPLIED --');
 
 const PREHAB_POOL_NAMES = new Set([
   ...GROIN_ADDUCTORS_POOL, ...CALVES_POOL, ...LOWER_PREHAB_POOL,
-  ...TRUNK_ANTI_ROTATION_POOL, ...SHOULDER_HEALTH_POOL, ...HAMSTRING_LIGHT_POOL,
+  ...TRUNK_ANTI_ROTATION_POOL, ...SHOULDER_HEALTH_POOL, ...HAMSTRING_PREHAB_SUBSET,
 ].map((entry) => canonicalExerciseName(entry.name)));
 const MOBILITY_POOL_NAMES = new Set(
   MOBILITY_POOL.map((entry) => canonicalExerciseName(entry.name)));

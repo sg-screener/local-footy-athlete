@@ -351,7 +351,8 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
   },
 
   /**
-   * PREHAB — 36 authored exercises across 6 pools, confirmed by Sam exactly.
+   * PREHAB — 40 current authored exercises across 5 catalogue pools. The
+   * hamstring-specific selector is a view of Lower prehab, not a sixth pool.
    *
    * Shoulder HEALTH work (external rotation, scap work) stays here, with
    * Accessories — Sam's ruling of 2026-07-30, separating it from the pump delts
@@ -369,13 +370,15 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       kind: 'authored',
       source: 'data/exercisePools.ts GROIN_ADDUCTORS_POOL, CALVES_POOL, '
         + 'LOWER_PREHAB_POOL, TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL, '
-        + 'HAMSTRING_LIGHT_POOL, shaped one-per-region by '
+        + 'with a hamstring-specific Lower prehab view, shaped one-per-region by '
         + 'utils/sessionBuilder.ts SESSION_SLOTS.prehab_accessories',
-      count: 36,
+      count: 40,
       sessionVariants: null,
     },
-    ruling: 'Sam signed the census as delivered, 2026-07-30: 36 across exactly 6 '
-      + 'pools, and shoulder health stays with Accessories.',
+    ruling: 'Sam signed the original census as delivered, 2026-07-30; later '
+      + 'authored additions bring the current total to 40. Sam 2026-09-02 moved '
+      + 'both hamstring-prehab exercises into Lower prehab, leaving five catalogue '
+      + 'pools while shoulder health stays with Accessories.',
   },
 
   /**

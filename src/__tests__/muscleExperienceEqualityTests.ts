@@ -48,7 +48,10 @@ import {
   DAY_KINDS_WITHOUT_FLOW,
   type FlowDayType,
 } from '../data/sessionFlowMenus';
-import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
+import {
+  selectableExerciseNames,
+  selectableVocabularyGroups,
+} from '../data/selectableExerciseVocabulary';
 import { resolveTrainingAgePolicy, TRAINING_AGE_LEVELS } from '../rules/trainingAgePolicy';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { readSheetRecords, parseXlsxWorksheet } from './support/xlsxReader';
@@ -194,10 +197,12 @@ ok(
   invented.map((entry) => entry.exercise).join(', '),
 );
 
+const sheetPools = [...new Set(sheetRows.map((row) => row.Pool))];
 ok(
-  'all 24 authored pools are recorded',
-  MUSCLE_METADATA_POOLS.length === 24,
-  `found ${MUSCLE_METADATA_POOLS.length}`,
+  'every authored pool is recorded exactly once',
+  MUSCLE_METADATA_POOLS.length === sheetPools.length
+    && MUSCLE_METADATA_POOLS.every((pool) => sheetPools.includes(pool)),
+  `sheet [${sheetPools.join(', ')}] vs code [${MUSCLE_METADATA_POOLS.join(', ')}]`,
 );
 
 ok(
@@ -207,6 +212,20 @@ ok(
 
 ok('the lookup resolves an authored exercise', muscleMetadataFor('Back Squat')?.pool === 'Lower squat');
 ok('the lookup returns null for an unknown name', muscleMetadataFor('Sled Push') === null);
+ok(
+  'hamstring prehab uses the one Lower prehab pool',
+  ['SL 45° Back Extension Hold', 'Swiss Ball Hamstring Curl']
+    .every((name) => muscleMetadataFor(name)?.pool === 'Lower prehab')
+    && !MUSCLE_METADATA_POOLS.includes('Hamstring (light)'),
+);
+const vocabularyGroups = selectableVocabularyGroups();
+const lowerPrehabGroup = vocabularyGroups.find((group) => group.id === 'lower_prehab');
+ok(
+  'the selectable catalogue shows both exercises under Lower prehab only',
+  ['SL 45° Back Extension Hold', 'Swiss Ball Hamstring Curl']
+    .every((name) => lowerPrehabGroup?.names.includes(name))
+    && !vocabularyGroups.some((group) => group.label === 'Hamstring (light)'),
+);
 
 /* ── Muscle vocabulary ── */
 

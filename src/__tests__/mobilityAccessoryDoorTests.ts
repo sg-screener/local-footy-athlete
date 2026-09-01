@@ -98,7 +98,7 @@ import {
   LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL,
   SHOULDER_HEALTH_POOL,
-  HAMSTRING_LIGHT_POOL,
+  HAMSTRING_PREHAB_SUBSET,
 } from '../data/exercisePools';
 import {
   samExport8Profile,
@@ -369,7 +369,7 @@ const PREHAB_POOLS = {
   groin_adductors: canonical(GROIN_ADDUCTORS_POOL),
   shoulder_health: canonical(SHOULDER_HEALTH_POOL),
   calves: canonical(CALVES_POOL),
-  hamstring_light: canonical(HAMSTRING_LIGHT_POOL),
+  hamstring_light: canonical(HAMSTRING_PREHAB_SUBSET),
   lower_prehab: canonical(LOWER_PREHAB_POOL),
 };
 

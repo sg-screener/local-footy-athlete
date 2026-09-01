@@ -169,7 +169,8 @@ export interface FlowCategoryMapping {
 /**
  * How each category resolves against the muscle metadata, per Sam's D17
  * mapping: "hip prehab = groin/adductor + hip/glute entries; knee prehab = the
- * TKE/Spanish-squat/step-down crew; hamstring prehab = hamstring-light pool;
+ * TKE/Spanish-squat/step-down crew; hamstring prehab = hamstring-targeted
+ * entries from Lower prehab;
  * shoulder prehab = shoulder-health pool; upper mobility =
  * t-spine/lat/chest/dead-hang."
  *
@@ -210,9 +211,9 @@ export const FLOW_CATEGORY_MUSCLE_MAPPING: Readonly<
     authoredDescription: 'Knee prehab: the TKE / Spanish-squat / step-down crew.',
   },
   hamstring_prehab: {
-    pools: ['Hamstring (light)'],
+    pools: ['Lower prehab'],
     muscleGroups: ['Hamstrings'],
-    authoredDescription: 'Hamstring prehab: the hamstring-light pool.',
+    authoredDescription: 'Hamstring prehab: hamstring-targeted entries from Lower prehab.',
   },
   shoulder_prehab: {
     pools: ['Shoulder health'],

@@ -36,7 +36,7 @@ import {
 import {
   CALVES_POOL,
   GROIN_ADDUCTORS_POOL,
-  HAMSTRING_LIGHT_POOL,
+  HAMSTRING_PREHAB_SUBSET,
   LOWER_PREHAB_POOL,
   MOBILITY_POOL,
   SHOULDER_HEALTH_POOL,
@@ -60,7 +60,7 @@ const REGION_POOLS: Readonly<Record<PrehabRegion, readonly { name: string }[]>> 
   lower_prehab: LOWER_PREHAB_POOL,
   midline: TRUNK_ANTI_ROTATION_POOL,
   shoulder_health: SHOULDER_HEALTH_POOL,
-  hamstring: HAMSTRING_LIGHT_POOL,
+  hamstring: HAMSTRING_PREHAB_SUBSET,
 };
 
 const REGION_BY_EXERCISE: ReadonlyMap<string, PrehabRegion> = (() => {

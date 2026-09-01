@@ -112,7 +112,6 @@ import {
   LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL,
   SHOULDER_HEALTH_POOL,
-  HAMSTRING_LIGHT_POOL,
 } from '../data/exercisePools';
 import {
   samExport8Profile,
@@ -548,7 +547,7 @@ const PRIMER_AUTHORED_NAMES = [
 
 const PREHAB_POOLS = [
   GROIN_ADDUCTORS_POOL, CALVES_POOL, LOWER_PREHAB_POOL,
-  TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL, HAMSTRING_LIGHT_POOL,
+  TRUNK_ANTI_ROTATION_POOL, SHOULDER_HEALTH_POOL,
 ];
 
 /** The live population of each cited source, counted from the source itself. */
@@ -658,9 +657,9 @@ run('D2. Sam\'s two signed censuses are exactly as delivered', () => {
   assert(BICEPS_POOL.length === 8, `biceps ${BICEPS_POOL.length}, signed 8`);
   assert(TRICEPS_POOL.length === 7, `triceps ${TRICEPS_POOL.length}, signed 7`);
   assert(DELTS_POOL.length === 8, `shoulders ${DELTS_POOL.length}, signed 8`);
-  assert(PREHAB_POOLS.length === 6, `prehab draws on ${PREHAB_POOLS.length} pools, signed 6`);
+  assert(PREHAB_POOLS.length === 5, `prehab draws on ${PREHAB_POOLS.length} catalogue pools, expected 5`);
   const prehabTotal = PREHAB_POOLS.reduce((total, pool) => total + pool.length, 0);
-  assert(prehabTotal === 36, `prehab census ${prehabTotal}, signed 36`);
+  assert(prehabTotal === 40, `prehab census ${prehabTotal}, expected 40`);
 });
 
 run('D3. shoulder health remains available to prehab after the Gunshow pool expands', () => {

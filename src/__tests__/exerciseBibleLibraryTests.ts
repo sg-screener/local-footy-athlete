@@ -15,7 +15,6 @@ import {
   LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL,
   SHOULDER_HEALTH_POOL,
-  HAMSTRING_LIGHT_POOL,
   type PoolExercise,
 } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
@@ -178,7 +177,6 @@ const derivedPools: PoolExercise[][] = [
   LOWER_PREHAB_POOL,
   TRUNK_ANTI_ROTATION_POOL,
   SHOULDER_HEALTH_POOL,
-  HAMSTRING_LIGHT_POOL,
 ];
 
 for (const exercise of derivedPools.flat()) {
