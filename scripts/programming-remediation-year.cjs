@@ -18,13 +18,63 @@ const replace = (from, to) => {
 };
 replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
 if (fullKit) replace('const profile=athleteAnswers(archetype);',
-  "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
+  `const profile=athleteAnswers(archetype);
+  profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start);
+  const fullCapabilities=app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile);
+  const requiredTags=['rack','barbell','trap_bar','medicine_ball','back_extension_bench'];
+  const requiredModalities=['bike_erg','air_bike','row','ski','treadmill'];
+  const missingFullKit=[...requiredTags.filter(tag=>!fullCapabilities.tags.includes(tag)),...requiredModalities.filter(mode=>!fullCapabilities.conditioningModalities.includes(mode))];
+  if(missingFullKit.length)throw Error('Full onboarding equipment answer unresolved: '+missingFullKit.join(', '));`);
+replace("const {project} = app('src/rules/projectVisibleWeek');", `const {project} = app('src/rules/projectVisibleWeek');
+const {ownedEquipmentKit} = app('src/store/profileStore');
+const {normalizeTemporarySourceFacts} = app('src/rules/temporarySourceFact');
+const activeTemporaryFacts = () => normalizeTemporarySourceFacts({
+  value: normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts,
+});`);
 replace('const events = [];', `const programmingSelectionTraceBatches = [];
 let programmingSelectionTraceAthlete = 'not_started';
 app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionTraceObserver((traces) => {
   programmingSelectionTraceBatches.push({ athlete: programmingSelectionTraceAthlete, traces });
 });
 const events = [];`);
+replace("for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');",
+  `for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');
+event(35,0,'cooked');`);
+replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=await act(readinessActionForKind(e.kind==='tired'?'tired_today':'illness_moderate',{anchorDateISO:date,todayISO:date}),date,e.kind);\n          if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];\n          label=e.kind==='tired'?'Tired today':'Sick';",
+  `        if(e.kind==='tired'||e.kind==='cooked'||e.kind==='sick') {
+          const readinessKind=e.kind==='tired'?'tired_today':e.kind==='cooked'?'cooked_week':'illness_moderate';
+          const r=await act(readinessActionForKind(readinessKind,{anchorDateISO:date,todayISO:date}),date,e.kind);
+          if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];
+          label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Very tired - remaining week deload':'Sick';`);
+replace(
+  "    for(let d=0;d<7;d++) {",
+  `    if (phase==='Pre-season' && pw===7) {
+      const beforeTravel=visibleSignature(view(weekStart,weekStart));
+      const preTravelRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:weekStart}));
+      check(preTravelRestart.ok&&visibleSignature(view(weekStart,weekStart))===beforeTravel,'pre-travel accumulated restart',preTravelRestart);
+      const owned=ownedEquipmentKit();
+      const allowed=new Set(['dumbbells','bands','bench']);
+      const unavailable=owned.tags.filter(tag=>!allowed.has(String(tag).toLowerCase()));
+      const away=await quietAsync(()=>executeProgramControlActionDurably({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'away_this_week',initiatedBy:'tap'},scope:'current_week',payload:{date:weekStart,todayISO:weekStart,awaySpan:{from:weekStart,until:plusDays(weekStart,4)},awayEquipment:{tags:unavailable,conditioningModalities:owned.conditioningModalities}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},{visibleWeek:view(weekStart,weekStart),todayISO:weekStart}));
+      check(away.ok===true,'accumulated travel and equipment',away);
+      w.events.push({date:weekStart,label:'Going Away Monday-Friday - dumbbells, bands and bench only'});
+    }
+    for(let d=0;d<7;d++) {`,
+);
+replace(
+  "      const date=plusDays(weekStart,d);setJourneyClock(date);",
+  `      const date=plusDays(weekStart,d);setJourneyClock(date);
+      if(phase==='Pre-season'&&pw===7&&d===5){
+        const travel=activeTemporaryFacts().find(fact=>fact.factKind==='schedule'&&fact.status==='active');
+        check(!!travel,'active travel before Clear',activeTemporaryFacts());
+        const cleared=await act({type:'clear_fatigue_status',source:{screen:'program_tab',surface:'my_status',initiatedBy:'tap'},scope:'current_and_future',payload:{modifierId:travel.factId,date},requiresRebuild:false,createsActiveModifier:false,oneOffOnly:false},date,'Back home - clear travel');
+        check(cleared.ok===true&&!activeTemporaryFacts().some(fact=>fact.status==='active'&&(fact.factKind==='schedule'||fact.factKind==='equipment')),'travel and equipment clear atomically',activeTemporaryFacts());
+        const afterClear=visibleSignature(view(weekStart,date));
+        const clearRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:date}));
+        check(clearRestart.ok&&visibleSignature(view(weekStart,date))===afterClear,'travel Clear restart',clearRestart);
+        w.events.push({date,label:'Back home - normal equipment and availability'});
+      }`,
+);
 replace('async function run(gender) {', `async function run(gender) {
   programmingSelectionTraceAthlete = gender;`);
 replace("save('year-programs.json',data);", `save('year-programs.json',data);
@@ -51,7 +101,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported from existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
+  corrections: ['Full onboarding equipment capabilities asserted before generation', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away and atomic return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);
