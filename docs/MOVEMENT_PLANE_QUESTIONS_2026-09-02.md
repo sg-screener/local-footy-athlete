@@ -1,6 +1,6 @@
 # Movement-plane questions — 2026-09-02
 
-These 92 Exercise Master identities were not in Sam's supplied classification
+These 81 Exercise Master identities were not in Sam's supplied classification
 list. Their workbook plane cells and typed metadata stay blank. For each one,
 the open question is: **what is its `primaryPlane`, which `secondaryPlanes`
 apply, or is it `not_applicable`?** Nothing below is inferred from its name,
@@ -11,21 +11,15 @@ Those rows settle exercise identity, selection and existing metadata ownership;
 the only new unanswered fact here is each unlisted identity's movement-plane
 classification.
 
-- Single-Leg Hop and Stick
-- Rotational Medicine-Ball Slam
-- Medicine-Ball Slam
-- Rotational Medicine-Ball Throw
 - Seated Good Morning
 - Crab Hold
 - Horse Stance Hold
 - Bench Thoracic Extension
 - Sleeper Stretch
 - Foam Roller Thoracic Extension
-- Explosive Landmine Press
 - Banded External Rotation
 - Bottoms-Up KB Press
 - Scap Push-Up
-- Scap Pull Ups
 - Foam Roll — Hip Flexor, Quad, Adductors
 - Foam Roll — T-Spine
 - Foam Roll — IT Band
@@ -96,11 +90,6 @@ classification.
 - Easy Swim
 - 2km Time Trial
 - Light Circuits
-- Vertical Jump
-- Pogo Hops
-- Lateral Jump
-- Kneeling Jump
-- Explosive Push-up
 - Speed Bench
 - Speed Trap Bar Deadlift
 

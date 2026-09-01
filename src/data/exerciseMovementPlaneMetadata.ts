@@ -104,6 +104,14 @@ add(['Side Plank', 'Side Plank Row'], 'frontal', ['transverse']);
 add(['Band Pallof Press'], 'transverse');
 add(['Woodchop (Standing)', 'Woodchop (Half Kneeling)'], 'transverse', ['sagittal']);
 add(['Stir the Pot'], 'multiplanar');
+add(['Explosive Landmine Press'], 'sagittal', ['transverse']);
+add(['Medicine-Ball Slam', 'Pogo Hops', 'Vertical Jump', 'Kneeling Jump'], 'sagittal');
+add(['Explosive Push-up'], 'transverse', ['sagittal']);
+add(['Rotational Medicine-Ball Throw', 'Rotational Medicine-Ball Slam'],
+  'transverse', ['sagittal']);
+add(['Lateral Jump'], 'frontal', ['transverse']);
+add(['Single-Leg Hop and Stick'], 'sagittal', ['frontal', 'transverse']);
+add(['Scap Pull Ups'], 'frontal', ['sagittal']);
 
 export const EXERCISE_MOVEMENT_PLANES: readonly ExerciseMovementPlaneMetadata[] = rows;
 

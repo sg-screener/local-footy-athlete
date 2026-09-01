@@ -99,6 +99,28 @@ add(['Side Plank', 'Side Plank Row'], 'frontal', ['transverse']);
 add(['Band Pallof Press'], 'transverse');
 add(['Woodchop (Standing)', 'Woodchop (Half Kneeling)'], 'transverse', ['sagittal']);
 add(['Stir the Pot'], 'multiplanar');
+add(['Explosive Landmine Press'], 'sagittal', ['transverse']);
+add(['Medicine-Ball Slam', 'Pogo Hops', 'Vertical Jump', 'Kneeling Jump'], 'sagittal');
+add(['Explosive Push-up'], 'transverse', ['sagittal']);
+add(['Rotational Medicine-Ball Throw', 'Rotational Medicine-Ball Slam'],
+  'transverse', ['sagittal']);
+add(['Lateral Jump'], 'frontal', ['transverse']);
+add(['Single-Leg Hop and Stick'], 'sagittal', ['frontal', 'transverse']);
+add(['Scap Pull Ups'], 'frontal', ['sagittal']);
+
+const auditedAutomaticMeaningfulIdentities = [
+  'Explosive Landmine Press',
+  'Medicine-Ball Slam',
+  'Explosive Push-up',
+  'Pogo Hops',
+  'Vertical Jump',
+  'Rotational Medicine-Ball Throw',
+  'Rotational Medicine-Ball Slam',
+  'Lateral Jump',
+  'Single-Leg Hop and Stick',
+  'Scap Pull Ups',
+  'Kneeling Jump',
+] as const;
 
 run('the canonical metadata is exactly Sam\'s named classification set', () => {
   assert.equal(EXERCISE_MOVEMENT_PLANES.length, expected.size);
@@ -117,6 +139,12 @@ run('primary and secondary planes are valid, unique and non-conflicting', () => 
       assert.equal(row.secondaryPlanes.length, 0, row.exercise);
     }
   }
+});
+
+run('the 11 automatically programmed meaningful audit identities have zero metadata gaps', () => {
+  const missing = auditedAutomaticMeaningfulIdentities
+    .filter((identity) => !movementPlaneMetadataFor(identity));
+  assert.deepEqual(missing, []);
 });
 
 run('Exercise Master and typed metadata agree in both directions', () => {
