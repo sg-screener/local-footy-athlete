@@ -88,13 +88,32 @@ six distinct skeletons. The audit names occurrences, athlete-weeks and exact
 slot/signature keys rather than reporting one ambiguous total.
 
 The reusable annual acceptance instrument is
-`scripts/weekly-strength-budget-year-audit.cjs`; its first exact receipt is
-`output/full-year-audit-weeklybudget-e05491f7/weekly-strength-budget-audit.json`.
-PDF serialization and every-page visual review are next, now that both machine
-audits are clean.
+`scripts/weekly-strength-budget-year-audit.cjs`. The final exact-source artifact
+is `output/full-year-audit-weeklybudget-3846bd5e/`, generated at
+`3846bd5e55d9c7fb0950c5f856ecfc7e7e1dd949`. Its established acceptance is
+24/24 and its strength-budget acceptance has zero findings in every category.
+
+Only after both machine audits were clean, two review PDFs were serialized from
+that exact artifact:
+
+- `output/pdf/LFA_FULL_YEAR_MALE_3846bd5e.pdf`: 114 A4 pages, 417,657 bytes,
+  SHA-256 `940ebfc2c08f5f7ee2d56976a55a2a549b636f74949fc73e2fe08a17a8612aae`.
+- `output/pdf/LFA_FULL_YEAR_FEMALE_3846bd5e.pdf`: 114 A4 pages, 417,495 bytes,
+  SHA-256 `220a4b850fc5066dc793feba69ccb10cbf4a0e8603b93cce945579787bf71e0d`.
+
+Both retain searchable text, 52 week headings and factual appendices. All 228
+pages were rendered and inspected through sixteen contact sheets. Dense weekly
+pages, modifier timelines and final verification pages were also inspected at
+full resolution. No clipping, overlap, broken glyph, malformed break or
+unreadable appendix was found. This PDF render-and-verify workflow is the
+material result of applying the PDF skill to the final deliverables.
 
 ## NOT COVERED — current boundary
 
-- Final male/female PDFs and every-page visual review.
 - Simulator, Release build, physical-device acceptance, remote persistence and
   true OS process death. Neither phone was touched.
+- Clinical approval of injury substitutions or coaching-quality approval of
+  every unusual but valid generated session.
+- Every athlete profile, equipment subset and full cross-product of modifiers;
+  the annual artifact is the ruled comparable male/female full-equipment pair.
+- The next Off-season transition after this exact 52-week window.
