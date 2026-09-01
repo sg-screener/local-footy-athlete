@@ -295,6 +295,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-annual-row-report-preserves-intentional-gender-structure',
+    law: 'R-306: male and female programming retain separately authored coaching structures. Annual workload reporting partitions final main-session rows into main strength, power, core, prehab, mobility/recovery and conditioning, reports optional sessions as an orthogonal subtotal, and makes total athlete-visible rows equal main-session rows plus Movement Prep. Only canonical same-day duplicates or work contradicted by another coaching rule may be removed.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-306',
+    guard: {
+      state: 'guarded',
+      by: 'test:programming-hierarchy',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The fresh exact two-athlete year disproves the older 191-row premise at the current checkpoint: female has 1,946 final main-session row placements versus male 1,753 (+193), but 808 Movement Prep rows versus 824 (-16), so the athlete-visible totals are 2,754 versus 2,577 (+177). The content partition explains the +193 as main strength -337, power +42, core +109, prehab +379, mobility/recovery 0 and conditioning 0. Optional sessions are 92 dates each and female contributes only 18 more main-session rows; after Movement Prep the optional visible difference is 2. Both years contain zero same-day canonical duplicate rows. The shared summary owner feeds the annual report. A mutation omitting Movement Prep changed the focused gate from 5/5 to one named failure (6 reported versus 8 visible) and was restored. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

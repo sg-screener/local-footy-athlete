@@ -7682,3 +7682,23 @@ split tables remain separately authored.
 Guard: `LAW-male-upper-split-has-two-major-pulls-and-rotating-accessories`
 through chained `test:composer-b1 + test:estimated-1rm`. Verification status
 and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-306** · Annual workload reports preserve the intentional female structure, 2026-09-01.
+
+Owner: yearrepair. Male and female programs are not flattened into one session
+table. Female Primer, trunk, shoulder-prehab and low-fatigue lower-accessory
+seats remain intentional; male Gunshow and ordinary male strength/accessory
+seats remain separately authored. A difference is removable only when final
+canonical rows prove a duplicate or another coaching rule proves it unintended.
+
+The annual workload instrument partitions final main-session rows into main
+strength, power, core, prehab, mobility/recovery and conditioning. Optional
+session rows are reported as an orthogonal subtotal rather than hiding their
+content. Every headline states main-session rows, Movement Prep rows and their
+sum as total athlete-visible rows. Same-day duplication is decided by canonical
+row identity, never similar display text.
+
+Guard: `LAW-annual-row-report-preserves-intentional-gender-structure` through
+chained `test:programming-hierarchy` (which reaches `test:year-row-summary`
+through the programming-selection release boundary).
+Verification status and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

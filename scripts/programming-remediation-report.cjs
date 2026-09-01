@@ -6,6 +6,7 @@ const repo = path.resolve(__dirname, '..');
 require(path.join(repo, 'node_modules/sucrase/register'));
 const { consecutiveEnergySystemTriples, validateEnergySystemExposureEvidence,
   validateWeeklyEnergySystemDensity } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
+const { summarizeProgrammingYearRows } = require(path.join(repo, 'src/rules/programmingYearRowSummary'));
 const root = path.resolve(process.argv[2] ?? 'outputs/programming-remedy-2026-08-28');
 const baselineRoot = process.argv[3] ? path.resolve(process.argv[3]) : null;
 const baselinePath = '/Users/samgeurts/.codex/visualizations/2026/08/26/01a03b69-9022-7041-b909-ca28d5e0d275/year-programs.json';
@@ -50,6 +51,7 @@ for (const world of ['original-partial', 'corrected-commercial']) {
     const title = `${athlete.gender === 'male' ? 'Male' : 'Female'} year · ${world === 'original-partial' ? 'original partial kit' : 'corrected commercial gym'}`;
     const days = daysOf(athlete), rows = days.flatMap(d => flatten([...d.rows, ...(d.speedRows ?? [])]));
     const warmup = days.flatMap(d => d.warmup ?? []);
+    const rowSummary = summarizeProgrammingYearRows(days);
     const energySystemFindings = athlete.weeks.flatMap(week => week.days.flatMap(day =>
       validateEnergySystemExposureEvidence(day.energySystem).map(finding => ({
         week: week.number, date: day.date, finding,
@@ -72,6 +74,13 @@ for (const world of ['original-partial', 'corrected-commercial']) {
     ];
     const total = { world, gender: athlete.gender, revision: data.revision, weeks: athlete.weeks.length, athleteDays: days.length,
       displayedRowPlacements: rows.length, distinctExerciseDisplayNames: new Set(rows.map(r => r.name)).size,
+      mainSessionRowPlacements: rowSummary.mainSessionRows,
+      movementPrepRowPlacements: rowSummary.movementPrepRows,
+      totalAthleteVisibleRowPlacements: rowSummary.totalAthleteVisibleRows,
+      mainSessionRowsByContent: rowSummary.mainSessionRowsByContent,
+      optionalSessionDays: rowSummary.optionalSessionDays,
+      optionalSessionRowPlacements: rowSummary.optionalSessionRows,
+      duplicateCanonicalMainSessionRows: rowSummary.duplicateCanonicalRows,
       withheldRowPlacements: rows.filter(r => r.withheld).length,
       distinctWithheldAthleteDays: days.filter(d => flatten(d.rows).some(r => r.withheld)).length,
       trainableRowPlacements: rows.filter(r => !r.withheld).length,
@@ -96,7 +105,7 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       beforeFrequency: frequency(before), afterFrequency: frequency(athlete), beforeSpacing: spacing(before), afterSpacing: spacing(athlete),
       weeks3and4: [2, 3].map(i => ({ week: i + 1, before: before.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })),
         after: athlete.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })) })) });
-    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rows.length} displayed row placements across ${days.length} athlete-days (${total.withheldRowPlacements} unavailable/Skip; ${total.trainableRowPlacements} trainable); ${total.distinctExerciseDisplayNames} distinct displayed names. Warm-ups are separate. Optional work is labelled; power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => { const energy = weeklyEnergySystemCounts.find(row => row.week === w.number); return `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek} · ${energy.appProgrammedEnergySystemDays} app energy-system days (${energy.qualifyingSpeedDays} Speed)</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}${d.speedRows?.length ? `<h4>Speed</h4><ul>${d.speedRows.map(rowHTML).join('')}</ul>` : ''}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Warm-up</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`; }).join('')}`;
+    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rowSummary.totalAthleteVisibleRows} athlete-visible row placements: ${rowSummary.mainSessionRows} main-session rows + ${rowSummary.movementPrepRows} Movement Prep rows, across ${days.length} athlete-days. Optional sessions contribute ${rowSummary.optionalSessionRows} main-session rows across ${rowSummary.optionalSessionDays} days and remain included in their content categories. ${total.withheldRowPlacements} rows are unavailable/Skip; ${total.trainableRowPlacements} are trainable. Power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => { const energy = weeklyEnergySystemCounts.find(row => row.week === w.number); return `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek} · ${energy.appProgrammedEnergySystemDays} app energy-system days (${energy.qualifyingSpeedDays} Speed)</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}${d.speedRows?.length ? `<h4>Speed</h4><ul>${d.speedRows.map(rowHTML).join('')}</ul>` : ''}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Movement Prep</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`; }).join('')}`;
     const filename = `${world}-${athlete.gender}-year.html`;
     fs.writeFileSync(path.join(root, filename), page(title, body));
     links.push(`<li><a href="${filename}">${esc(title)}</a></li>`);

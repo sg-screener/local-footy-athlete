@@ -131,7 +131,7 @@ remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
 
 ## Current step
 
-Section 4 implementation and verification complete; Section 5 is next.
+Section 5 implementation and verification complete; Section 6 is next.
 
 ## Section 3 — selected tracked lifts are programming anchors
 
@@ -257,9 +257,68 @@ though the older composer continuation retains the four inherited reds already
 named above. The corrected shared slot oracle is 84/84; generated-week assembly
 is 30/30 and anchor survival is 12/12.
 
+## Section 5 — preserve and explain the female programming difference
+
+The older-PDF premise of 191 additional female rows does not reproduce at the
+current checkpoint. The fresh exact year has 1,946 female versus 1,753 male
+final main-session row placements, a difference of 193. Movement Prep reverses
+16 of those rows: female has 808 and male 824. The actual athlete-visible
+headline is therefore 2,754 female versus 2,577 male rows, a difference of 177.
+These are row placements across 364 athlete-dates per gender, not distinct
+exercise identities, sets, minutes or completed work.
+
+The new typed partition accounts for every main-session row exactly once:
+
+| Content bucket | Male rows | Female rows | Female minus male |
+| --- | ---: | ---: | ---: |
+| Main strength/accessory | 964 | 627 | -337 |
+| Power | 94 | 136 | +42 |
+| Core | 128 | 237 | +109 |
+| Prehab | 91 | 470 | +379 |
+| Mobility/recovery | 359 | 359 | 0 |
+| Conditioning | 117 | 117 | 0 |
+| Unclassified | 0 | 0 | 0 |
+
+This is the intended R-130/R-130b shape rather than 193 rows of generic extra
+work: female split sessions exchange arm/pump strength accessories for two trunk
+seats, shoulder prehab and low-fatigue lower accessories; Primer also supplies
+more power. The exact year contains zero same-day duplicate canonical rows for
+either athlete. Similar words are not used as a duplicate heuristic.
+
+Optionality is a separate axis so its content remains visible. Both athletes
+have 92 optional-session dates. Female optional sessions contain 561 final rows
+and male optional sessions 543 (+18), but male optional Movement Prep is 16 rows
+higher, leaving only +2 total visible optional rows. This distinguishes Primer
+from Gunshow without pretending either session's content disappeared because
+the session is optional.
+
+Two designs were compared. Equalising male/female slot tables would erase the
+signed coaching structure. Counting each session name ad hoc in the PDF would
+leave the audit and future exporters free to disagree. One pure typed summary
+owner now partitions final rows, detects same-day duplicates from canonical
+identity, reports optional work orthogonally and defines the headline as main
+session plus Movement Prep. The annual report consumes that owner.
+
+The focused gate is 5/5 and is chained through
+`test:programming-selection-release`. Mutating the headline to omit Movement
+Prep changes it from 5/5 to a named 6-versus-8 failure. TypeScript is green.
+R-306 is born guarded by `test:programming-hierarchy`, whose programming-
+selection boundary runs the focused `test:year-row-summary` link.
+
+The full programming-hierarchy chain reached and passed the new gate, the 23/23
+upper-split boundary, the 94/94 muscle/experience equality gate, the 170/170
+conditioning-template gate and the full 728-date catalogue-reversal year. It
+then stopped on an existing conditioning-modality-persistence assertion: the
+four-date control generated Run on all four dates, while that historical cell
+requires a machine modality to appear. Running that suite alone reproduces the
+same failure. Section 5 changes no conditioning selector or modality code and
+does not attribute that inherited red to R-306.
+
 ## NOT COVERED
 
-- Sections 5–7 and both addenda are not yet claimed.
+- Sections 6–7 and both addenda are not yet claimed.
+- Section 6 still owns the known duplicate Speed rendering in the legacy annual
+  HTML/PDF exporter; Section 5 counts the canonical final `day.rows` only.
 - Restricted-kit/injury/illness/fatigue annual scenario artifacts have not yet
   been regenerated; their typed legality paths are covered by focused gates and
   remain due in final acceptance.
