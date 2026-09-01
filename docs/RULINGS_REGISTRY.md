@@ -8101,3 +8101,23 @@ no new equipment answer is introduced.
 Guard: `LAW-foam-roller-thoracic-extension-intake` through chained
 `test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
 receipt: `docs/STATUS_FOAMTHORACIC.md`.
+
+**R-324** · Band-Assisted Pull-Up joins the existing vertical-pull catalogue,
+2026-09-02.
+
+Owner: bandassistpullup. Band-Assisted Pull-Up is a source-bound regression from
+Pull-Ups. It is automatically selected in place of Pull-Ups and manually
+offered only when swapping Pull-Ups for complete beginners of either gender and
+female athletes at 1–2 years. It is unavailable to 1–2-year male athletes and
+female athletes above that tier. It inherits the replaced Pull-Up row's role,
+sets and repetitions; assistance is increased enough to complete those reps.
+It requires a resistance band plus either a rack or pull-up bar and uses the
+existing band-strength/colour control. Support height is recorded in the
+existing session note. It is not offered by Add or from any other Swap source.
+Its supplied muscles, cues, injury ratings, restrictions and video are recorded
+in `docs/EXERCISE_INTAKE_BAND_ASSISTED_PULL_UP_2026-09-02.md`. No new equipment
+answer, loading unit, role or prescription owner is introduced.
+
+Guard: `LAW-band-assisted-pull-up-intake` through chained
+`test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
+receipt: `docs/STATUS_BANDASSISTPULLUP.md`.

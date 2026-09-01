@@ -3122,6 +3122,8 @@ Training age should change the dose, complexity and progression speed, not compl
 There is ONE experience ladder for the whole app: new -> developing -> consistent -> advanced. Every gated exercise, template or method declares its minimum on that ladder. Do not introduce a second beginner/experienced representation alongside it.
 Two gates that ride on that ladder: contrast training requires `consistent` or above (Section 4), and the harder power entries require `developing` or `consistent` (Section 5).
 Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Every other athlete reaches it through the injury door, an equipment constraint, or their own pick.
+
+R-324 is the one explicitly authored source-bound exception: Band-Assisted Pull-Up replaces Pull-Ups automatically and through Pull-Ups Swap only for complete beginners of either gender and female athletes at 1–2 years. This does not change the global crosswalk or expose any other regression to developing athletes.
 THE EXPERIENCE CROSSWALK (Sam, 2026-07-27) — the single authored bridge between the onboarding answer, the ladder and the authored exercise gates. Three vocabularies exist for good reasons: the athlete answers in years at onboarding, the app reasons on the ladder, and Sam's authored sheets gate in years-of-training. This table is the ONLY mapping between them. No other crosswalk may exist anywhere in the app.
 
 | Onboarding answer | Ladder level | Sees exercises marked |

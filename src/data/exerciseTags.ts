@@ -2266,6 +2266,28 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  'Band-Assisted Pull-Up': {
+    strengthClassification: 'compound',
+    movement: 'vertical_pull', region: 'upper', load: 'moderate', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'moderate', lateWeek: 'good',
+    injury: {
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'good',
+      'calf': 'good',
+      'ankle/foot': 'caution',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
+    },
+  },
+
   'Chin-Ups': {
     strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'high', fatigue: 'moderate',

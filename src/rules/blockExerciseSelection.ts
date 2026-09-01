@@ -46,6 +46,7 @@
 import type { SessionSlot } from './sessionSlotCoverage';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import { stableDecisionOrder } from './stableDecisionDiversity';
+import { sourceBoundSelectionIdentity } from './sourceBoundExerciseRegression';
 
 /** What part a slot plays — it decides which rotation rules apply. */
 export type SelectionRole = 'main_bilateral' | 'single_leg' | 'accessory';
@@ -186,7 +187,7 @@ function orderByPreference(
     const index = preference.indexOf(id);
     return index === -1 ? preference.length : index;
   };
-  const stable = stableDecisionOrder(candidates, decisionIdentity, String);
+  const stable = stableDecisionOrder(candidates, decisionIdentity, sourceBoundSelectionIdentity);
   return stable.sort((a, b) => rank(a) - rank(b));
 }
 
@@ -246,7 +247,7 @@ export function decideExerciseForBlock(
       phasePinsSlot(inputs) ? IN_SEASON_HINGE_ORDER : HINGE_PREFERENCE_ORDER,
       decisionIdentity,
     )
-    : stableDecisionOrder(automaticCandidates, decisionIdentity, String);
+    : stableDecisionOrder(automaticCandidates, decisionIdentity, sourceBoundSelectionIdentity);
 
   const decide = (
     identity: ComposedExerciseIdentity,
@@ -270,7 +271,7 @@ export function decideExerciseForBlock(
       decisionKind: 'retained',
       reason: 'restored_recorded_selection',
       previousIdentity,
-      consideredCandidates: stableDecisionOrder(inputs.legalCandidates, decisionIdentity, String),
+      consideredCandidates: stableDecisionOrder(inputs.legalCandidates, decisionIdentity, sourceBoundSelectionIdentity),
     };
   }
 
@@ -381,5 +382,5 @@ function leastRecentlyUsed(
 ): ComposedExerciseIdentity {
   const bestAge = Math.max(...candidates.map((candidate) => blocksSinceLastUse(candidate, recent)));
   const cohort = candidates.filter((candidate) => blocksSinceLastUse(candidate, recent) === bestAge);
-  return stableDecisionOrder(cohort, decisionIdentity, String)[0];
+  return stableDecisionOrder(cohort, decisionIdentity, sourceBoundSelectionIdentity)[0];
 }

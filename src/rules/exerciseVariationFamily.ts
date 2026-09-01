@@ -38,7 +38,7 @@ const FAMILY_MEMBERS: Readonly<Record<ExerciseVariationFamily, readonly string[]
     'Chest Supported Row',
     'Chest-Supported DB Row',
   ],
-  bodyweight_vertical_pull: ['Pull-Ups', 'Chin-Ups'],
+  bodyweight_vertical_pull: ['Pull-Ups', 'Band-Assisted Pull-Up', 'Chin-Ups'],
   lat_pulldown: [
     'Lat Pulldown',
     'Neutral-Grip Pulldown',

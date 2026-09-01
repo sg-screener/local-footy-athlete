@@ -673,7 +673,9 @@ function executeProgramControlActionWithinTrace(
        */
       const safety = ledgerReplayActive()
         ? { safe: true as const, reason: undefined }
-        : assessTapSwapCandidateSafety(action.payload.toExercise!.name, environment);
+        : assessTapSwapCandidateSafety(action.payload.toExercise!.name, environment, {
+            sourceExercise: action.payload.fromExercise,
+          });
       if (!safety.safe) {
         return {
           ok: false,

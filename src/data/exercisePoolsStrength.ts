@@ -529,6 +529,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
     anchor: {
       slot: 'vertical_pull', role: 'anchor', entries: [
         { name: 'Pull-Ups', loadRatio: 1.00 },
+        { name: 'Band-Assisted Pull-Up', loadRatio: 0 },
         { name: 'Chin-Ups', loadRatio: 1.00 },
       ],
     },

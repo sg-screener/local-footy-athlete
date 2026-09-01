@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-band-assisted-pull-up-intake',
+    law: 'R-324: Band-Assisted Pull-Up is a source-bound Pull-Ups regression. It inherits the replaced Pull-Up row role and dose, requires bands plus a rack or pull-up bar, uses the existing band control, and is automatic/manual-Swap eligible only for complete beginners of either gender and female athletes at 1-2 years. It is never a general Add choice or a Swap from another exercise.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-324',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `bandassistpullup`. The exercise-intake suite binds catalogue content, equipment, load control, source-only Swap, five eligibility coordinates, Add exclusion, inherited dose/role and automatic replacement. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_BANDASSISTPULLUP.md.',
+    },
+  },
+  {
     id: 'LAW-foam-roller-thoracic-extension-intake',
     law: 'R-323: Foam Roller Thoracic Extension uses the existing Mobility path, requires a foam roller, accepts a light dumbbell or weight plate through existing equipment answers, and retains the supplied unloaded beginner regression. It records athlete-chosen total load and remains eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including light comfortable G-1 use, but is excluded from automatic Primer selection.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-323',

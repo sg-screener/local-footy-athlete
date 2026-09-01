@@ -42,6 +42,11 @@ import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 import { getMondayISOForDate, selectMicrocycleForDate } from './programBlockState';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
+import {
+  sourceBoundRegressionAllows,
+  sourceBoundRegressionFor,
+  sourceBoundRegressionTarget,
+} from '../rules/sourceBoundExerciseRegression';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -64,6 +69,7 @@ export interface TapSwapEnvironment {
   /** Read from the accepted compiler output; never authored by a chooser. */
   weeklyContract?: WeeklyExposureContractV2 | null;
   experienceLevel?: OnboardingData['experienceLevel'];
+  gender?: OnboardingData['gender'];
   daysToGame?: number | null;
   /**
    * THE ONE INJURY FACT ON THIS ENVIRONMENT: what the athlete actually said,
@@ -104,6 +110,7 @@ export interface TapSwapChoice {
     | 'injury_hierarchy'
     | 'pattern_substitute_engine'
     | 'tag_registry_pattern_fallback'
+    | 'source_bound_regression'
     | 'add_hierarchy_fallback'
     | 'recovery_fallback'
     | 'rest_fallback';
@@ -277,6 +284,7 @@ export function resolveTapSwapEnvironment(args: {
     weeklyContract,
     injurySeverities,
     experienceLevel: args.profile?.experienceLevel,
+    gender: args.profile?.gender,
     daysToGame: args.gameDates === undefined ? undefined
       : buildFilterContext(args.date, [...args.gameDates], [], false).daysToGame,
     injuryTriggers,
@@ -458,12 +466,20 @@ function withoutUnjustifiedRegressions(
 export function assessTapSwapCandidateSafety(
   name: string,
   environment: TapSwapEnvironment,
+  context?: { readonly sourceExercise?: string | null },
 ): TapSwapSafetyDecision {
   if (environment.medicalStop) {
     return { safe: false, reason: 'A medical-stop constraint is active.' };
   }
 
   const canonical = resolveExerciseName(name);
+  if (sourceBoundRegressionTarget(canonical) && !sourceBoundRegressionAllows({
+    target: canonical,
+    source: context?.sourceExercise,
+    profile: environment,
+  })) {
+    return { safe: false, reason: 'This regression is available only from its approved source exercise and experience tier.' };
+  }
   const power = POWER_EXERCISE_POOL.find(entry => entry.name === canonical);
   if (power && (environment.weeklyContract?.power.eligible === false ||
       environment.weeklyContract?.safety.prohibitedPowerFamilies.includes(power.family))) {
@@ -863,6 +879,19 @@ export function getTapSwapChoices(args: {
      * of a name wins. So a name the registry also offers cannot demote itself.
      */
     trainingChoices = [
+      ...((): TapSwapChoice[] => {
+        const relation = sourceBoundRegressionFor(args.originalExercise, environment);
+        if (!relation || !assessTapSwapCandidateSafety(relation.target, environment, {
+          sourceExercise: args.originalExercise,
+        }).safe) return [];
+        return [{
+          kind: 'exercise',
+          name: relation.target,
+          hierarchyTier: 'same_movement_pattern',
+          source: 'source_bound_regression',
+          reason: `Approved regression from ${relation.source}.`,
+        }];
+      })(),
       ...patternChoices(args.originalExercise, args.reason, environment, avoidNames),
       ...registryPatternChoices(args.originalExercise, args.reason, environment, avoidNames),
     ];

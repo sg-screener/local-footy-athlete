@@ -894,6 +894,7 @@ export const BODYWEIGHT_LOADABLE_EXERCISES = new Set([
 
 /** Exercises whose resistance is described by band thickness, never kilos. */
 export const BAND_RESISTANCE_EXERCISES = new Set([
+  'Band-Assisted Pull-Up',
   'Band Pull-Apart',
   'Banded TKE',
   'Spanish Squat Hold',

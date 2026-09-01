@@ -24,7 +24,7 @@ import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityP
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './support/athleteJourney';
 import { ARCHETYPES, athleteAnswers, plusDays } from './compilerYear/catalog';
 import { useProgramStore } from '../store/programStore';
-import { ATHLETE_CHOSEN_LOAD_EXERCISES, resolveLoadAuthority, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
+import { ATHLETE_CHOSEN_LOAD_EXERCISES, BAND_RESISTANCE_EXERCISES, resolveLoadAuthority, resolveLoadControlMode, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { SECTION_LABELS } from '../utils/sessionExecutionChecklist';
 import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
@@ -46,6 +46,9 @@ import { coachRevisionExistingExerciseNames } from '../utils/coachRevisionTempla
 import { recordDay, setJourneyClock } from './support/athleteJourney';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { exerciseVariationFamily } from '../rules/exerciseVariationFamily';
+import { buildSwapSuggestionPayload } from '../utils/swapSuggestionPayload';
+import { compileCanonicalExerciseEditOnWorkout } from '../rules/canonicalWeeklyExerciseEditCompiler';
+import { BAND_ASSISTED_PULL_UP_ELIGIBILITY, SOURCE_BOUND_EXERCISE_REGRESSIONS } from '../rules/sourceBoundExerciseRegression';
 armTotalsOrRed();
 // Mutations run in isolated child processes: no shared checkout is edited.
 const mutation = process.env.LFA_INTAKE_MUTATION;
@@ -66,6 +69,10 @@ if (mutation === 'foam_dose') EXERCISE_TAGS['Foam Roller Thoracic Extension'].pr
 if (mutation === 'foam_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Foam Roller Thoracic Extension'] = ['foam_roller'];
 if (mutation === 'foam_load') ATHLETE_CHOSEN_LOAD_EXERCISES.delete('Foam Roller Thoracic Extension');
 if (mutation === 'foam_primer') EXERCISE_TAGS['Foam Roller Thoracic Extension'].programming!.primer = true;
+if (mutation === 'band_source') (SOURCE_BOUND_EXERCISE_REGRESSIONS as any)[0].source = 'Chin-Ups';
+if (mutation === 'band_eligibility') (BAND_ASSISTED_PULL_UP_ELIGIBILITY as any).developingFemale = false;
+if (mutation === 'band_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Band-Assisted Pull-Up'] = ['bands'];
+if (mutation === 'band_load') BAND_RESISTANCE_EXERCISES.delete('Band-Assisted Pull-Up');
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -114,6 +121,7 @@ const intake = [
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BENCH_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_SLEEPER_STRETCH_2026-09-02.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_FOAM_ROLLER_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BAND_ASSISTED_PULL_UP_2026-09-02.md'), 'utf8'),
 ].join('\n');
 for (const [name, video] of submitted) {
   check(`${name}: selectable`, vocabulary.has(name));
@@ -172,6 +180,105 @@ async function main() {
     && !inLeaf('lower_squat').includes('Bulgarian Split Squats')
     && !inLeaf('lower_hinge').includes('Single-Leg RDL'));
   const allNames = choices.map(c => c.name);
+  const bandAssistedPullUp = 'Band-Assisted Pull-Up';
+  const bandAssistedProfiles = [
+    ['beginner male', { ...profile, experienceLevel: 'Complete beginner' as const, gender: 'male' as const }, true],
+    ['beginner female', { ...profile, experienceLevel: 'Complete beginner' as const, gender: 'female' as const }, true],
+    ['1-2 years female', { ...profile, experienceLevel: '1-2 years' as const, gender: 'female' as const }, true],
+    ['1-2 years male', { ...profile, experienceLevel: '1-2 years' as const, gender: 'male' as const }, false],
+    ['2-5 years female', { ...profile, experienceLevel: '2-5 years' as const, gender: 'female' as const }, false],
+  ] as const;
+  for (const [label, bandProfile, eligible] of bandAssistedProfiles) {
+    const bandEnvironment = resolveTapSwapEnvironment({
+      date, profile: bandProfile, gameDates: [], activeConstraints: [], readinessSignal: null,
+    });
+    const fromPullUp = getTapSwapChoices({
+      originalExercise: 'Pull-Ups', reason: 'preference', environment: bandEnvironment,
+      existingExerciseNames: [],
+    });
+    check(`Band-Assisted Pull-Up: ${label} Pull-Up-only Swap eligibility`,
+      fromPullUp.some(choice => choice.name === bandAssistedPullUp) === eligible);
+    check(`Band-Assisted Pull-Up: ${label} write-time eligibility`,
+      assessTapSwapCandidateSafety(bandAssistedPullUp, bandEnvironment,
+        { sourceExercise: 'Pull-Ups' } as any).safe === eligible);
+    check(`Band-Assisted Pull-Up: ${label} never appears in Add`,
+      legalAddFamilies({ ...args, profile: bandProfile, environment: bandEnvironment })
+        .flatMap(f => f.groups.flatMap(g => g.leaves.flatMap(l =>
+          legalAddCandidates({ ...args, profile: bandProfile, environment: bandEnvironment, leaf: l.id }))))
+        .every(candidate => candidate.name !== bandAssistedPullUp));
+  }
+  const eligibleBandEnvironment = resolveTapSwapEnvironment({
+    date, profile: { ...profile, experienceLevel: 'Complete beginner', gender: 'female' },
+    gameDates: [], activeConstraints: [], readinessSignal: null,
+  });
+  check('Band-Assisted Pull-Up: only Pull-Ups may be the Swap source',
+    !getTapSwapChoices({ originalExercise: 'Chin-Ups', reason: 'preference',
+      environment: eligibleBandEnvironment, existingExerciseNames: [] })
+      .some(choice => choice.name === bandAssistedPullUp)
+    && !assessTapSwapCandidateSafety(bandAssistedPullUp, eligibleBandEnvironment,
+      { sourceExercise: 'Chin-Ups' } as any).safe
+    && !assessTapSwapCandidateSafety(bandAssistedPullUp, eligibleBandEnvironment).safe);
+  check('Band-Assisted Pull-Up: exact existing equipment rule',
+    exerciseIsAvailableWith(bandAssistedPullUp, ['bodyweight', 'bands', 'rack'])
+    && exerciseIsAvailableWith(bandAssistedPullUp, ['bodyweight', 'bands', 'pullup_bar'])
+    && !exerciseIsAvailableWith(bandAssistedPullUp, ['bodyweight', 'rack'])
+    && !exerciseIsAvailableWith(bandAssistedPullUp, ['bodyweight', 'bands']));
+  check('Band-Assisted Pull-Up: band strength/colour is the load control',
+    resolveLoadControlMode(bandAssistedPullUp) === 'band');
+  check('Band-Assisted Pull-Up: dose is inherited rather than separately authored',
+    EXERCISE_TAGS[bandAssistedPullUp]?.prescription === undefined);
+  const bandIntake = intake.split(/^## \d+\. /m)
+    .find(section => section.startsWith('Band-Assisted Pull-Up\n')) ?? '';
+  const bandMetadata = EXERCISE_MUSCLE_METADATA.find(row => row.exercise === bandAssistedPullUp);
+  check('Band-Assisted Pull-Up: vertical-pull catalogue and mapped muscles',
+    vocabulary.has(bandAssistedPullUp)
+    && bandMetadata?.pool === 'Upper pull vertical'
+    && JSON.stringify(bandMetadata.primary) === JSON.stringify(['Lats', 'Biceps', 'Upper back'])
+    && JSON.stringify(bandMetadata.secondary) === JSON.stringify(['Shoulders', 'Grip', 'Midline'])
+    && bandMetadata.experienceGate === 'everyone_regression');
+  check('Band-Assisted Pull-Up: exact supplied cues and video',
+    EXERCISE_CUES[bandAssistedPullUp]?.primaryCue
+      === 'Stand firmly on the band and pull your chest toward the bar.'
+    && EXERCISE_CUES[bandAssistedPullUp]?.secondaryCue
+      === 'Lower under control until your elbows fully straighten.'
+    && EXERCISE_DEMO_VIDEOS[bandAssistedPullUp]
+      === 'https://youtube.com/shorts/pZozI1iaW0k?si=khFTBdN6N3PVZMi3'
+    && bandIntake.includes(EXERCISE_CUES[bandAssistedPullUp].primaryCue));
+  const bandRatings = [...bandIntake.matchAll(/^\| ([^|]+) \| (Good|Caution|Avoid) \|$/gm)];
+  check('Band-Assisted Pull-Up: all thirteen supplied injury ratings',
+    bandRatings.length === 13 && bandRatings.every(([, region, rating]) => {
+      const key = region === 'Lower back' ? 'lowerBack' : region.toLowerCase();
+      return EXERCISE_TAGS[bandAssistedPullUp]?.injury[key] === rating.toLowerCase();
+    }));
+  check('Band-Assisted Pull-Up: same-session Pull-Up family prevents duplicates',
+    exerciseVariationFamily(bandAssistedPullUp) === exerciseVariationFamily('Pull-Ups'));
+  const outgoingPullUp = {
+    id: 'pull-up-row', exerciseId: 'pull-ups', prescribedSets: 4,
+    prescribedRepsMin: 5, prescribedRepsMax: 7, restSeconds: 90,
+    prescriptionType: 'reps', perSide: false, role: 'main_lift',
+    sessionSection: 'strength', prescribedWeightKg: 12,
+    exercise: { id: 'pull-ups', name: 'Pull-Ups' },
+  } as any;
+  const inheritedBandPayload = buildSwapSuggestionPayload(
+    bandAssistedPullUp, outgoingPullUp,
+  );
+  const swappedBandWorkout = compileCanonicalExerciseEditOnWorkout({
+    id: 'pull-day', exercises: [outgoingPullUp],
+  } as any, {
+    kind: 'swap', decisionId: 'band-regression', occurredAt: `${date}T09:00:00.000Z`,
+    dateISO: date, targetName: 'Pull-Ups', targetComponentId: 'pull-up-row',
+    replacement: inheritedBandPayload,
+  });
+  const swappedBandRow = swappedBandWorkout.exercises[0];
+  check('Band-Assisted Pull-Up: Pull-Up dose and role survive the real swap compiler',
+    swappedBandRow.exercise.name === bandAssistedPullUp
+    && swappedBandRow.prescribedSets === 4
+    && swappedBandRow.prescribedRepsMin === 5
+    && swappedBandRow.prescribedRepsMax === 7
+    && swappedBandRow.restSeconds === 90
+    && swappedBandRow.role === 'main_lift'
+    && swappedBandRow.sessionSection === 'strength'
+    && swappedBandRow.prescribedWeightKg === undefined);
   check('Horse Stance Hold: manual Add is filed only under Mobility & stretching',
     inLeaf('mobility_drills').includes('Horse Stance Hold')
     && leaves.filter(leaf => leaf.id !== 'mobility_drills').every(leaf =>
@@ -461,6 +568,28 @@ async function main() {
     !primerReached.has('Sleeper Stretch'));
   const context = getCoachRevisionTemplateContext(date);
   check('reachability crosses actual generated strength sessions', program.microcycles[0].workouts.some(w => !!w.strengthIntent));
+  const pullDays = program.microcycles[0].workouts.filter(w =>
+    w.strengthIntent?.plannedPatterns.includes('pull'));
+  check('Band-Assisted Pull-Up: fixture matrix has a real pull session', pullDays.length > 0);
+  for (const [label, bandProfile, eligible] of bandAssistedProfiles) {
+    const names = pullDays.flatMap((pullDay, index) => {
+      const buildBandDay = () => compileCanonicalStrengthTemplate({ composition: {
+        ...context.strengthComposition!, profile: bandProfile,
+        blockNumber: 40 + index, blockStartISO: plusDays(date, 280 + index * 28),
+        selectionHistory: [],
+      }, plannedDay: {
+        planEntryId: pullDay.planEntryId!, isTeamDay: false,
+        dayOfWeek: pullDay.dayOfWeek, name: pullDay.name,
+        workoutType: pullDay.workoutType, sessionTier: pullDay.sessionTier!,
+        strengthIntent: pullDay.strengthIntent, daysToGame: null,
+      } });
+      const built = quiet(buildBandDay);
+      return built?.exercises.map(row => row.exercise.name) ?? [];
+    });
+    check(`Band-Assisted Pull-Up: ${label} automatic Pull-Up regression`,
+      names.includes(bandAssistedPullUp) === eligible
+      && (!eligible || !names.includes('Pull-Ups')));
+  }
   const lowerDays = program.microcycles[0].workouts.filter(w => w.strengthIntent?.plannedPatterns.some(p => p === 'hinge' || p === 'squat'));
   check('fixture matrix has real generated lower sessions', lowerDays.length > 0);
   const firstLower = lowerDays[0];
@@ -601,6 +730,10 @@ async function main() {
     ['foam_equipment', /Foam Roller Thoracic Extension keeps the roller mandatory and accepts either loading implement/],
     ['foam_load', /Foam Roller Thoracic Extension: athlete chooses and records total held load/],
     ['foam_primer', /Foam Roller Thoracic Extension is allowed lightly at G-1 but never automatically selected for Primer/],
+    ['band_source', /Band-Assisted Pull-Up: (beginner male Pull-Up-only Swap eligibility|only Pull-Ups may be the Swap source)/],
+    ['band_eligibility', /Band-Assisted Pull-Up: 1-2 years female Pull-Up-only Swap eligibility/],
+    ['band_equipment', /Band-Assisted Pull-Up: exact existing equipment rule/],
+    ['band_load', /Band-Assisted Pull-Up: band strength\/colour is the load control/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

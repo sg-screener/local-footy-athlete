@@ -55,6 +55,12 @@ import {
   type ExperienceGate,
 } from './experienceCrosswalk';
 import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
+import {
+  applySourceBoundAutomaticRegression,
+  sourceBoundAutomaticIdentityFor,
+  sourceBoundRegressionIsEligible,
+  sourceBoundRegressionTarget,
+} from './sourceBoundExerciseRegression';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
@@ -546,17 +552,22 @@ function experiencePreferred(
   candidates: readonly ComposedExerciseIdentity[],
   profile: OnboardingData,
 ): readonly ComposedExerciseIdentity[] {
+  const sourceBound = applySourceBoundAutomaticRegression(candidates, profile)
+    .map(composedIdentityFor);
   const gates = visibleGatesForLadderLevel(
     ladderLevelForProfile(profile?.experienceLevel ?? null),
   );
-  const admitted = candidates.filter((id) => {
+  const admitted = sourceBound.filter((id) => {
+    if (sourceBoundRegressionTarget(id)) {
+      return sourceBoundRegressionIsEligible(id, profile);
+    }
     const gate = GATE_BY_IDENTITY.get(id);
     // An exercise with no authored gate is not silently demoted: absence is
     // "unrecorded", and the null hypothesis is that it stays available.
     if (!gate) return true;
     return gates.includes(gate);
   });
-  return preferAutomaticCurlCandidates(admitted.length > 0 ? admitted : candidates,
+  return preferAutomaticCurlCandidates(admitted.length > 0 ? admitted : sourceBound,
     profile?.experienceLevel, name => name);
 }
 
@@ -1738,10 +1749,15 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           pattern as TrackedLiftProgrammingPattern,
         )
         : null;
-      const trackedAnchor = isMainLift
+      const requestedTrackedAnchor = isMainLift
         && trackedSeat === slot
         && pattern && trackedAnchorByPattern.has(pattern as TrackedLiftProgrammingPattern)
         ? trackedAnchorByPattern.get(pattern as TrackedLiftProgrammingPattern) ?? null
+        : null;
+      const trackedAnchor = requestedTrackedAnchor
+        ? composedIdentityFor(sourceBoundAutomaticIdentityFor(
+            requestedTrackedAnchor, ordinaryPool, inputs.profile,
+          ))
         : null;
       const pool = trackedAnchor && !ordinaryPool.includes(trackedAnchor)
         ? [trackedAnchor, ...ordinaryPool]
