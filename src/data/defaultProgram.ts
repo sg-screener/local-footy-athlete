@@ -24,13 +24,11 @@ import {
   dayOfWeekForISODate,
   todayISOLocal,
 } from '../utils/appDate';
-import { EQUIPMENT, prescribableWeight } from './equipmentLattice';
 import {
   applyLoadEstimates,
-  equipmentClassFor,
   isTrueBodyweightExercise,
+  normaliseAutomaticExerciseLoadChange,
   resolveExerciseName,
-  roundToEquipment,
   startingWeightForAthlete,
 } from '../utils/loadEstimation';
 import {
@@ -693,10 +691,11 @@ function applySubphaseMainLiftLoadMultiplier(
     const weight = exercise.prescribedWeightKg ?? 0;
     if (multiplier >= 1 || weight <= 0) return exercise;
 
-    const equipment = equipmentClassFor(name);
-    const adjustedWeight = equipment
-      ? prescribableWeight(weight * multiplier, equipment)
-      : Math.round((weight * multiplier) / 2.5) * 2.5;
+    const adjustedWeight = normaliseAutomaticExerciseLoadChange({
+      exerciseName: name,
+      baseKg: weight,
+      targetKg: weight * multiplier,
+    }) ?? weight;
     return { ...exercise, prescribedWeightKg: adjustedWeight };
   });
 }

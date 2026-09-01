@@ -372,6 +372,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-automatic-loads-follow-the-typed-implement-lattice',
+    law: 'R-313: every app-authored load change uses one typed implement lattice. Barbell uses normal total-load rungs; dumbbell uses per-hand rungs; kettlebell uses real bell sizes; cable/machine uses its stack/plate rung; weighted bodyweight uses a separate suitable external-load rung without changing exercise feasibility. An automatic rise selects the next real rung even when the athlete-recorded base is off-lattice; a reduction rounds conservatively down. The athlete-entered base itself is never rewritten. Generation, weekly and block progression share the owner, and the stored visible prescription survives save and restart exactly.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-313',
+    guard: {
+      state: 'guarded',
+      by: 'test:load-ratio-rulings',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The existing annual artifact did not reproduce an impossible fixed-KB display (its selected Kettlebell Swings are 24kg), but the live weekly progression owner reproduced the mechanism: the first focused tape was 2/6, emitting 25kg from a 24kg bell and 27.5kg from an athlete-recorded 26.5kg base, holding a 10kg DB press and never advancing weighted Pull-Ups. One typed lattice now owns initial normalisation, increases and reductions; the exercise authority supplies implement kind and block progression delegates to the same door. The final boundary is 9/9 across barbell, dumbbell, kettlebell, machine, weighted bodyweight, off-lattice base, real cold-generated display and byte-identical restart. LIVENESS: misrouting kettlebells through the barbell lattice killed the two exact fixed-bell cells (7/9) and made the chained release script exit before its inherited workbook red. TypeScript and block-two progression are green. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

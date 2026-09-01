@@ -32,8 +32,10 @@ import {
 } from '../data/anchorMultipliers';
 import {
   EQUIPMENT,
+  normaliseAutomaticLoadChange,
   prescribableWeight,
   roundDownToLattice,
+  type AutomaticLoadKind,
   type EquipmentKind,
 } from '../data/equipmentLattice';
 
@@ -1039,6 +1041,38 @@ export function equipmentClassFor(exerciseName: string): EquipmentKind | null {
     case 'bodyweight': return 'bodyweight';
     default: return null;
   }
+}
+
+/**
+ * The implement class that owns an AUTOMATIC load change. This is deliberately
+ * narrower than equipment feasibility: weighted bodyweight needs an external
+ * plate rung without pretending Pull-Ups require a barbell to be selectable.
+ */
+export function automaticLoadKindForExercise(
+  exerciseName: string,
+): AutomaticLoadKind | null {
+  const resolved = resolveExerciseName(exerciseName);
+  if (BODYWEIGHT_LOADABLE_EXERCISES.has(resolved)) return 'weighted_bodyweight';
+  const equipment = equipmentClassFor(resolved);
+  return equipment === 'bodyweight' ? null : equipment;
+}
+
+/**
+ * One exercise-aware automatic load-normalisation door. The accepted/logged
+ * base stays exact; only the new app-authored target is snapped to the typed
+ * implement lattice.
+ */
+export function normaliseAutomaticExerciseLoadChange(args: {
+  readonly exerciseName: string;
+  readonly baseKg: number;
+  readonly targetKg: number;
+}): number | null {
+  const kind = automaticLoadKindForExercise(args.exerciseName);
+  return kind ? normaliseAutomaticLoadChange({
+    baseKg: args.baseKg,
+    targetKg: args.targetKg,
+    kind,
+  }) : null;
 }
 
 /**

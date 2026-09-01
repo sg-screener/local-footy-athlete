@@ -7844,3 +7844,31 @@ Guard: `LAW-automatic-nordic-prescriptions-are-typed-and-realistic` through
 chained `test:offseason-deload-conditioning`, which invokes the 12/12
 `test:nordic-prescriptions` final-week/action boundary. Verification status,
 mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-313** · Automatic loads follow the typed implement lattice, 2026-09-01.
+
+Owner: yearrepair. There is no caller-supplied generic load increment. Every
+app-authored load change resolves the exercise's implement and uses the one
+equipment lattice: barbell uses normal total-load rungs; dumbbell uses per-hand
+rungs; kettlebell uses real fixed-bell sizes; cable and machine use their
+authored stack/plate rungs. Weighted bodyweight has a separate 2.5 kg external-
+load class, which does not pretend that Pull-Ups require barbell equipment.
+
+An earned increase selects the first real rung above the accepted base. This is
+important when the athlete's own base is off-lattice: a 26.5 kg recorded
+kettlebell value remains their historical number, but the next automatic fixed-
+bell suggestion is 28 kg, never 30.5 kg or base-plus-four. An automatic
+reduction rounds conservatively down. A hold preserves the exact base.
+
+The rule scopes automatic authorship, not athlete truth. A manually entered or
+logged number is never rounded merely because the app displays, saves or reloads
+it; explicit adjustable equipment and athlete-entered loads therefore remain
+representable. Initial generation, weekly progression and block-boundary
+progression share the typed owner. The visible card renders the stored result,
+and durable save/restart must return that exact prescription.
+
+Guard: `LAW-automatic-loads-follow-the-typed-implement-lattice` through chained
+`test:load-ratio-rulings`, whose first command is the 9/9
+`test:equipment-load-increments` final progression and cold-restart boundary.
+Verification status, mutation receipt and NOT COVERED:
+`docs/STATUS_YEARREPAIR.md`.

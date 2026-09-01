@@ -569,51 +569,17 @@ assert(typeof squatResult.note === 'string', 'Progression result has note');
 // SECTION 17: Weight Rounding
 // ═══════════════════════════════════════════════════════════════
 
-section('17. Weight Rounding');
+section('17. Equipment-specific load normalisation');
 
-// Default increment is 2.5kg
 const roundingWorkout = makeStrengthWorkout(1, 'Lower', 'High', [
   makeExercise('Back Squat', 1, { sets: 3, repsMin: 5, repsMax: 5, weight: 97.5, rest: 180 }),
 ]);
 const roundingResult = applyStrengthProgression(roundingWorkout, DEFAULT_PROGRESSION_CONTEXT);
 const roundedSquat = roundingResult.exercises.find(e => e.exercise?.name === 'Back Squat');
-// 97.5 * 1.025 = 99.9375 → round to nearest 2.5 = 100
+// The multiplier asks to rise, so the typed barbell owner chooses the next
+// loadable total-weight rung. It never accepts a caller-supplied generic step.
 assert(roundedSquat.prescribedWeightKg === 100,
-  `Weight rounded to nearest 2.5: ${roundedSquat.prescribedWeightKg} (expect 100)`);
-
-// Custom increment: 1.0kg (dumbbell/machine scenario)
-const roundingWorkout1kg = makeStrengthWorkout(1, 'Lower', 'High', [
-  makeExercise('Back Squat', 1, { sets: 3, repsMin: 5, repsMax: 5, weight: 63, rest: 180 }),
-]);
-const rounding1kgResult = applyStrengthProgression(roundingWorkout1kg, {
-  ...DEFAULT_PROGRESSION_CONTEXT,
-  loadIncrementKg: 1.0,
-});
-const rounded1kgSquat = rounding1kgResult.exercises.find(e => e.exercise?.name === 'Back Squat');
-// 63 * 1.025 = 64.575 → round to nearest 1.0 = 65
-assert(rounded1kgSquat.prescribedWeightKg === 65,
-  `Weight rounded to 1.0kg: ${rounded1kgSquat.prescribedWeightKg} (expect 65)`);
-
-// Custom increment: 5.0kg (heavier plates)
-const roundingWorkout5kg = makeStrengthWorkout(1, 'Lower', 'High', [
-  makeExercise('Back Squat', 1, { sets: 3, repsMin: 5, repsMax: 5, weight: 110, rest: 180 }),
-]);
-const rounding5kgResult = applyStrengthProgression(roundingWorkout5kg, {
-  ...DEFAULT_PROGRESSION_CONTEXT,
-  loadIncrementKg: 5.0,
-});
-const rounded5kgSquat = rounding5kgResult.exercises.find(e => e.exercise?.name === 'Back Squat');
-// 110 * 1.025 = 112.75 → round to nearest 5.0 = 115
-assert(rounded5kgSquat.prescribedWeightKg === 115,
-  `Weight rounded to 5.0kg: ${rounded5kgSquat.prescribedWeightKg} (expect 115)`);
-
-// Verify roundToIncrement directly
-const { roundToIncrement } = require('../utils/strengthProgressionIntegration');
-assert(roundToIncrement(102.3, 2.5) === 102.5, `roundToIncrement(102.3, 2.5) → 102.5`);
-assert(roundToIncrement(101.2, 2.5) === 100, `roundToIncrement(101.2, 2.5) → 100`);
-assert(roundToIncrement(64.575, 1.0) === 65, `roundToIncrement(64.575, 1.0) → 65`);
-assert(roundToIncrement(112.75, 5.0) === 115, `roundToIncrement(112.75, 5.0) → 115`);
-assert(roundToIncrement(50, 0) === 50, `roundToIncrement with 0 increment → unchanged`);
+  `Barbell load uses the next typed rung: ${roundedSquat.prescribedWeightKg} (expect 100)`);
 
 // ═══════════════════════════════════════════════════════════════
 // SECTION 18: Minimum Floors

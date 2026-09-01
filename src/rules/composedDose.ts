@@ -33,7 +33,10 @@ import { mainLiftSchemeForSlot } from './phaseRepSchemes';
 import { composedIdentityFor } from './composedRowLegality';
 import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import type { OffseasonSubphase } from './offseasonSubphase';
-import { estimateStartingWeight } from '../utils/loadEstimation';
+import {
+  estimateStartingWeight,
+  normaliseAutomaticExerciseLoadChange,
+} from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { getExerciseTags } from '../data/exerciseTags';
 import { SHOULDER_HEALTH_POOL } from '../data/exercisePools';
@@ -284,7 +287,7 @@ export function applyOffseasonMainLiftLoad(args: {
   const scheme = mainLiftSchemeForSlot(args.poolSlot, args.seasonPhase, args.offseasonSubphase);
   const multiplier = scheme?.loadMultiplier ?? 1;
   if (multiplier >= 1) return args.load;
-  return Math.round((args.load * multiplier) / 2.5) * 2.5;
+  return args.load * multiplier;
 }
 
 /**
@@ -353,11 +356,16 @@ export function resolveComposedLoad(args: {
   if (!composedLoadIsReachable(args.identity, args.kit)) return 0;
   const base = estimateStartingWeight(composedIdentityFor(args.identity), args.profile);
   if (base === null || !(base > 0)) return 0;
-  return applyOffseasonMainLiftLoad({
+  const target = applyOffseasonMainLiftLoad({
     load: base,
     isMainLift: args.isMainLift,
     poolSlot: args.poolSlot,
     seasonPhase: args.seasonPhase,
     offseasonSubphase: args.offseasonSubphase,
   });
+  return normaliseAutomaticExerciseLoadChange({
+    exerciseName: args.identity,
+    baseKg: base,
+    targetKg: target,
+  }) ?? target;
 }

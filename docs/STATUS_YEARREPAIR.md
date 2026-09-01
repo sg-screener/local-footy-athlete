@@ -369,6 +369,67 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 6 — equipment-specific load increments
+
+The older-PDF symptom did not reproduce in the existing current-checkpoint
+annual artifact: its selected fixed `Kettlebell Swings` rows are 24 kg, and the
+other sampled kettlebell/carry identities are on their current lattice. The
+mechanism did reproduce in the live weekly progression owner. Its public
+context still accepted one generic `loadIncrementKg`, defaulted it to 2.5 kg and
+rounded every implement with the same function. The red-first final progression
+tape was 2/6: 24 kg Kettlebell Swings became 25 kg; an athlete-recorded 26.5 kg
+base became 27.5 kg; a 10 kg DB Bench Press stayed at 10 rather than taking the
+next per-hand rung; and a 12.5 kg weighted Pull-Up never advanced. Only the
+incidental barbell and machine examples passed.
+
+Two designs were compared. Passing different numeric increments from every
+selector would keep the generic API and scatter implement policy through its
+callers. Extending the existing authored equipment lattice removes the defect
+class. `AutomaticLoadKind` now adds only the distinction feasibility did not
+need—weighted-bodyweight external load. The exercise load authority maps an
+identity to that typed kind; the lattice owns next-rung, conservative reduction
+and rung validity. The old generic context property and rounding export are
+deleted.
+
+Initial generation already used the equipment lattice. Both subphase-load
+paths now send their automatic reduction through the same exercise-aware door
+and no longer contain a generic 2.5 kg fallback. Weekly strength progression
+and block-boundary progression consume the same owner. An automatic increase
+uses the first real rung strictly above the accepted base, so a fixed 24 kg bell
+becomes 28 kg and an off-lattice 26.5 kg athlete base also becomes 28 kg rather
+than base-plus-four. Holds and the saved athlete number remain exact. This
+preserves the existing manual-load law while ensuring the app's new claim is
+loadable.
+
+The focused boundary is 9/9: barbell total-load, dumbbell per-hand, fixed
+kettlebell, machine, weighted bodyweight, an off-lattice base, a real cold-
+generated visible week, every typed final load on a real rung, and byte-identical
+durable restart. Liveness was demonstrated and restored: deliberately routing
+kettlebells through the barbell lattice killed the two exact fixed-bell cells
+(7/9). `test:equipment-load-increments` runs first inside chained
+`test:load-ratio-rulings`, so its red cannot be hidden by that older suite's
+inherited workbook failure.
+
+Adjacent verification: TypeScript is green; block-two progression is 41/41.
+Strength progression is 97/98 with its inherited conditioning-on-empty-days
+red, unrelated to load. The load-ratio command reaches the new 9/9 boundary and
+then retains its inherited 46/47 workbook mismatch for `Seated Good Morning
+(Barbell)`. No inherited red was changed or used as this ruling's guard.
+
+R-313 is born guarded.
+
+### NOT COVERED
+
+- The current equipment answer does not distinguish fixed from adjustable
+  kettlebells. Automatic kettlebell authorship therefore uses the safe fixed-
+  bell lattice; athlete-entered adjustable values remain exact.
+- The full 52-week audit and every equipment/recovery progression coordinate
+  are deferred to the final acceptance run. The focused boundary covers the
+  final public progression path plus one real stored/restarted generated week.
+- Addendum Sections 7–8, Section 7's accumulated return-home spacing defect and
+  final PDFs remain open. No simulator, Release build or physical phone work
+  ran.
+
 ## Addendum Section 5 — realistic Nordic Curl prescriptions
 
 The exact two-athlete annual artifact reproduced the review defect in final

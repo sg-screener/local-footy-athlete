@@ -60,6 +60,7 @@ import type { ProgramBlockState } from './programBlockState';
 import { participatesInCounting } from '../rules/sessionRowCounting';
 import { mainLiftSchemeForSlot, type RepScheme } from '../rules/phaseRepSchemes';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
+import { normaliseAutomaticExerciseLoadChange } from './loadEstimation';
 
 // ─── Feedback → Domain Feeling Bridge ───
 
@@ -255,14 +256,6 @@ export interface StrengthProgressionContext {
   recentDeloadTrigger: 'overreach' | null;
   /** Workout history (newest first) for exposure/trend/completion analysis. */
   workoutHistory: LoggedWorkout[];
-  /**
-   * Minimum weight increment in kg for barbell/primary/secondary lifts.
-   * Adjusted weights snap to the nearest multiple of this value.
-   * Default: 2.5 (standard Olympic barbell plates).
-   * Typical values: 2.5 (barbell), 1.0 (machine/dumbbell), 0.5 (micro plates).
-   */
-  loadIncrementKg?: number;
-
   // ─── Explicit adaptation overrides (from feedbackAdapter) ───
 
   /**
@@ -297,7 +290,6 @@ export const DEFAULT_PROGRESSION_CONTEXT: StrengthProgressionContext = {
   weeksOffTraining: 0,
   recentDeloadTrigger: null,
   workoutHistory: [],
-  loadIncrementKg: 2.5,
 };
 
 export interface BuildProgressionContextOptions {
@@ -484,23 +476,6 @@ function authoredBandForRow(
   return mainLiftSchemeForSlot(classification.slot, seasonPhase, offseasonSubphase);
 }
 
-// ─── Load Rounding ───
-
-/** Default load increment (standard Olympic barbell plates: 1.25kg per side). */
-const DEFAULT_LOAD_INCREMENT_KG = 2.5;
-
-/**
- * Round a weight to the nearest multiple of the configured load increment.
- * Ensures results are deterministic and plate-realistic.
- *
- * Examples with 2.5kg increment: 101.25 → 102.5, 68.75 → 70.0
- * Examples with 1.0kg increment:  101.25 → 101.0, 68.75 → 69.0
- */
-export function roundToIncrement(weight: number, incrementKg: number): number {
-  if (incrementKg <= 0) return weight; // safety: avoid division by zero
-  return Math.round(weight / incrementKg) * incrementKg;
-}
-
 // ─── Prescription Adjustment ───
 
 /** How a prescription changes based on progression output. */
@@ -619,7 +594,7 @@ function outputToPrescriptionDelta(output: ProgressionOutput): PrescriptionDelta
 function applyDelta(
   exercise: WorkoutExercise,
   delta: PrescriptionDelta,
-  loadIncrementKg: number = DEFAULT_LOAD_INCREMENT_KG,
+  exerciseName: string,
   band?: RepScheme | null,
 ): WorkoutExercise {
   const setsCeiling = band
@@ -671,10 +646,15 @@ function applyDelta(
   );
   const newRest = Math.max(30, exercise.restSeconds + delta.restChange);
 
-  // Weight: apply multiplier if prescribed weight exists, round to load increment
+  // Weight: the athlete's logged/saved base stays exact. Only the new automatic
+  // target is normalised, through the exercise's typed implement lattice.
   let newWeight = exercise.prescribedWeightKg;
   if (newWeight !== undefined && newWeight !== null && newWeight > 0) {
-    newWeight = roundToIncrement(delta.weightMultiplier * newWeight, loadIncrementKg);
+    newWeight = normaliseAutomaticExerciseLoadChange({
+      exerciseName,
+      baseKg: newWeight,
+      targetKg: delta.weightMultiplier * newWeight,
+    }) ?? newWeight;
   }
 
   return {
@@ -839,9 +819,8 @@ export function applyStrengthProgression(
       }
     }
 
-    const increment = ctx.loadIncrementKg ?? DEFAULT_LOAD_INCREMENT_KG;
     const band = authoredBandForRow(name, ctx.seasonPhase, ctx.offseasonSubphase);
-    return applyDelta(baseEx, delta, increment, band);
+    return applyDelta(baseEx, delta, name, band);
   });
 
   return {

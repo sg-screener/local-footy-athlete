@@ -23,6 +23,14 @@ export type EquipmentKind =
   | 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'kettlebell' | 'bodyweight';
 
 /**
+ * Automatic external-load progression needs one extra implement class that
+ * equipment feasibility does not: a bodyweight movement with plates/belt load.
+ * It stays separate so Pull-Ups still require only a pull-up bar while their
+ * optional external kilograms advance on a real plate rung.
+ */
+export type AutomaticLoadKind = EquipmentKind | 'weighted_bodyweight';
+
+/**
  * How the available weights are spaced.
  *
  *   step  — a constant increment from zero (barbell 2.5, kettlebell 4 …)
@@ -76,6 +84,18 @@ export const EQUIPMENT: Record<EquipmentKind, EquipmentSpec> = {
   bodyweight: { lattice: { kind: 'none' }, minimumKg: 0, minimumRuled: true },
 };
 
+const WEIGHTED_BODYWEIGHT_EXTERNAL_LOAD: EquipmentSpec = {
+  lattice: { kind: 'step', stepKg: 2.5 },
+  minimumKg: 0,
+  minimumRuled: true,
+};
+
+function automaticLoadSpec(kind: AutomaticLoadKind): EquipmentSpec {
+  return kind === 'weighted_bodyweight'
+    ? WEIGHTED_BODYWEIGHT_EXTERNAL_LOAD
+    : EQUIPMENT[kind];
+}
+
 /**
  * Minimums Sam has not ruled. EMPTY as of 2026-07-28 — and empty for a reason
  * that is recorded rather than assumed.
@@ -94,7 +114,15 @@ export const MINIMUMS_PENDING: readonly EquipmentKind[] =
  * Never called on an athlete's own entry — see the scope note in the header.
  */
 export function roundDownToLattice(weightKg: number, equipment: EquipmentKind): number {
-  const { lattice } = EQUIPMENT[equipment];
+  return roundDownToAutomaticLoadLattice(weightKg, equipment);
+}
+
+/** Round an automatic target down to the implement's actual load lattice. */
+export function roundDownToAutomaticLoadLattice(
+  weightKg: number,
+  kind: AutomaticLoadKind,
+): number {
+  const { lattice } = automaticLoadSpec(kind);
   if (lattice.kind === 'none') return 0;
 
   if (lattice.kind === 'step') {
@@ -106,6 +134,53 @@ export function roundDownToLattice(weightKg: number, equipment: EquipmentKind): 
     if (rung <= weightKg && rung > best) best = rung;
   }
   return best;
+}
+
+/**
+ * The first real load strictly above a base. A manually entered off-lattice
+ * base remains untouched until progression is earned; the automatic next load
+ * is the next real rung, not `base + genericIncrement`.
+ */
+export function nextAutomaticLoadRung(
+  baseKg: number,
+  kind: AutomaticLoadKind,
+): number | null {
+  const { lattice } = automaticLoadSpec(kind);
+  if (lattice.kind === 'none') return null;
+  if (lattice.kind === 'step') {
+    const rungIndex = Math.floor((baseKg + 1e-9) / lattice.stepKg) + 1;
+    return rungIndex * lattice.stepKg;
+  }
+  return lattice.rungsKg.find(rung => rung > baseKg + 1e-9) ?? null;
+}
+
+/**
+ * Normalise an AUTOMATIC load change. Holds preserve the exact base, rises use
+ * the next available rung, and reductions round conservatively down. This is
+ * never called to rewrite the athlete's saved/logged number itself.
+ */
+export function normaliseAutomaticLoadChange(args: {
+  readonly baseKg: number;
+  readonly targetKg: number;
+  readonly kind: AutomaticLoadKind;
+}): number {
+  if (args.targetKg > args.baseKg + 1e-9) {
+    return nextAutomaticLoadRung(args.baseKg, args.kind) ?? args.baseKg;
+  }
+  if (args.targetKg < args.baseKg - 1e-9) {
+    const spec = automaticLoadSpec(args.kind);
+    if (spec.lattice.kind === 'none') return args.baseKg;
+    return Math.max(
+      roundDownToAutomaticLoadLattice(args.targetKg, args.kind),
+      spec.minimumKg,
+    );
+  }
+  return args.baseKg;
+}
+
+export function isAutomaticLoadRung(weightKg: number, kind: AutomaticLoadKind): boolean {
+  if (kind === 'bodyweight') return weightKg === 0;
+  return Math.abs(roundDownToAutomaticLoadLattice(weightKg, kind) - weightKg) < 1e-9;
 }
 
 /**

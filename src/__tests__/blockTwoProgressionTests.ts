@@ -584,8 +584,8 @@ ok(
   `got ${JSON.stringify(smallestPracticalIncrementKg('Totally Unmapped Movement XYZ', 100))} — a guessed default`,
 );
 ok(
-  'a bodyweight exercise yields NO automatic increment (the next step is the athlete\'s)',
-  smallestPracticalIncrementKg('Pull-Ups', 12.5) === null,
+  'weighted bodyweight uses the typed 2.5kg external-load rung',
+  smallestPracticalIncrementKg('Pull-Ups', 12.5) === 2.5,
   `got ${JSON.stringify(smallestPracticalIncrementKg('Pull-Ups', 12.5))}`,
 );
 

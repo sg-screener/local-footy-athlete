@@ -96,12 +96,11 @@ import type { OnboardingData, SeasonPhase, Workout, WorkoutExercise } from '../t
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
 import {
-  equipmentClassFor,
+  normaliseAutomaticExerciseLoadChange,
   resolveLoadAuthority,
   resolveExerciseName,
   startingWeightForAthlete,
 } from '../utils/loadEstimation';
-import { EQUIPMENT } from '../data/equipmentLattice';
 import { participatesInCounting } from './sessionRowCounting';
 import { carriesStrengthComponent } from '../utils/sessionComponents';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
@@ -132,9 +131,10 @@ import type { WeekKind } from '../types/domain';
  * ⚠ **THIS REPLACED A HARDCODED 2.5 kg PLUS A BARBELL NAME-CHECK.** That was
  * policy this module had no business authoring: it made 2.5 the answer for
  * every barbell and NO answer for anything else, so a dumbbell or kettlebell
- * lift silently held its load forever. `EQUIPMENT` already rules all of it —
+ * lift silently held its load forever. The typed load lattice rules all of it —
  * barbell/cable/machine 2.5 kg steps, kettlebell 4 kg, dumbbells 1 kg to 10
- * then 2.5 kg rungs.
+ * then 2.5 kg rungs. R-313 adds the explicit external-load class for weighted
+ * bodyweight work without changing the movement's equipment feasibility.
  *
  * `null` means **the lattice does not say**, which is a real answer and not a
  * zero: Sam's *"if the equipment required for an optional external load is
@@ -145,18 +145,12 @@ export function smallestPracticalIncrementKg(
   exerciseName: string,
   baseKg: number,
 ): number | null {
-  const equipment = equipmentClassFor(exerciseName);
-  if (!equipment) return null;
-  const { lattice } = EQUIPMENT[equipment];
-  if (lattice.kind === 'step') return lattice.stepKg;
-  if (lattice.kind === 'rungs') {
-    const next = lattice.rungsKg.find((rung) => rung > baseKg);
-    return next === undefined ? null : next - baseKg;
-  }
-  // 'none' — bodyweight. Added external load is legal and may be recorded, but
-  // NOTHING AUTHORED says what it is added in, so the next step is the
-  // athlete's to choose. Holding is the honest answer; guessing 2.5 is not.
-  return null;
+  const next = normaliseAutomaticExerciseLoadChange({
+    exerciseName,
+    baseKg,
+    targetKg: baseKg + 1,
+  });
+  return next === null || next <= baseKg ? null : next - baseKg;
 }
 
 /**
