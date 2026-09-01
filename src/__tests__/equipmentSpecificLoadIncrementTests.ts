@@ -43,19 +43,28 @@ function ok(name: string, value: unknown, detail?: unknown): void {
 }
 
 function row(name: string, weight: number, order: number): WorkoutExercise {
+  const timestamp = '2026-09-28T00:00:00.000Z';
   return {
     id: `row-${order}`, workoutId: 'load-week', exerciseId: `exercise-${order}`,
     exerciseOrder: order, prescribedSets: 3, prescribedRepsMin: 5,
     prescribedRepsMax: 5, prescribedWeightKg: weight, restSeconds: 120,
-    exercise: { id: `exercise-${order}`, name, category: 'strength' },
-  } as WorkoutExercise;
+    exercise: {
+      id: `exercise-${order}`, name, description: 'Typed load progression witness.',
+      muscleGroups: [], exerciseType: 'Compound', equipmentRequired: [],
+      difficultyLevel: 'Intermediate', createdAt: timestamp, updatedAt: timestamp,
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
 }
 
 const workout = (name: string, weight: number): Workout => ({
   id: `workout-${name}`, microcycleId: 'microcycle-load', dayOfWeek: 1,
-  name: 'Load increment witness', workoutType: 'Strength', intensity: 'High',
-  estimatedDuration: 45, exerciseCount: 1, exercises: [row(name, weight, 0)],
-} as Workout);
+  name: 'Load increment witness', description: 'Typed implement increment witness.',
+  workoutType: 'Strength', intensity: 'High', durationMinutes: 45,
+  exercises: [row(name, weight, 0)],
+  createdAt: '2026-09-28T00:00:00.000Z', updatedAt: '2026-09-28T00:00:00.000Z',
+});
 
 function progressed(name: string, weight: number): number | undefined {
   return applyStrengthProgression(
@@ -89,7 +98,7 @@ ok('an off-lattice fixed kettlebell base advances to the next real bell, not bas
 localStorageData.clear();
 const base = athleteAnswers(ARCHETYPES.find(entry =>
   entry.id === 'male-3-experienced-gym')!);
-const profile = {
+const profile: import('../types/domain').OnboardingData = {
   ...base,
   seasonPhase: 'Pre-season' as const,
   trainingDaysPerWeek: 5,

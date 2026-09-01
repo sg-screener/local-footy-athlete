@@ -25,7 +25,12 @@
  */
 
 import type { OnboardingData, SquatStrength, BenchStrength } from '../types/domain';
+import type { ExperienceLevel } from '../types/domain';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
+import {
+  isSeatedGoodMorningIdentity,
+  seatedGoodMorningVariantAllowsExperience,
+} from '../rules/seatedGoodMorningVariants';
 import {
   BENCH_ANCHOR_MULTIPLIERS,
   SQUAT_ANCHOR_MULTIPLIERS,
@@ -680,6 +685,9 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'pogo jump':                  'Pogo Hops',
   'pogo jumps':                 'Pogo Hops',
   'pogo hop':                   'Pogo Hops',
+  // Legacy saved-data ingress only. Current pools and writers contain only the
+  // canonical identity; the selected implement carries the old barbell fact.
+  'seated good morning (barbell)': 'Seated Good Morning',
   // ── Groin squeeze rename ──
 };
 
@@ -746,7 +754,6 @@ export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
  * arithmetic, and the ratio is gone rather than left dead in the map.
  */
 export const EQUIPMENT_MINIMUM_PRESCRIPTIONS: Record<string, EquipmentKind> = {
-  'Seated Good Morning (Barbell)': 'barbell',
   'Bicep Curl (Barbell)': 'barbell',
   'Bottoms-Up KB Press': 'kettlebell',
   'Explosive Landmine Press': 'barbell',
@@ -867,6 +874,7 @@ export function stepBandResistance(
  * changing the exercise's identity.
  */
 export const BODYWEIGHT_LOADABLE_EXERCISES = new Set([
+  'Seated Good Morning',
   'SL 45° Back Extension',
   'SL 45° Back Extension Hold',
   'Dips',
@@ -902,8 +910,16 @@ export const BAND_RESISTANCE_EXERCISES = new Set([
 export function resolveLoadControlMode(
   exerciseName: string,
   selectedImplement?: string | null,
+  experienceLevel?: ExperienceLevel | null,
 ): LoadControlMode {
   const resolved = resolveExerciseName(exerciseName);
+  if (isSeatedGoodMorningIdentity(resolved)) {
+    if (selectedImplement === 'barbell' || selectedImplement === 'dumbbells') {
+      return 'kilograms';
+    }
+    return seatedGoodMorningVariantAllowsExperience(
+      'dumbbells', experienceLevel) ? 'bodyweight_plus' : 'bodyweight';
+  }
   if (selectedImplement === 'bands' || BAND_RESISTANCE_EXERCISES.has(resolved)) {
     return 'band';
   }

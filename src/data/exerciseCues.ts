@@ -176,7 +176,6 @@ export function getExerciseCue(
 // ─── Part 3: Exercise Cue Library ───
 
 export const EXERCISE_CUES: Record<string, ExerciseCue> = {
-  "Seated Good Morning (Barbell)": {"primaryCue": "Sit wide, brace, and hinge forward from the hips.", "secondaryCue": "Don't round the spine."},
   "Rotational Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes, rotate hard, and slam outside the foot.", "secondaryCue": "Reset before each explosive repetition."},
   "Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes and slam the ball straight down.", "secondaryCue": "Finish athletically with the hips and knees softly bent."},
   "Rotational Medicine-Ball Throw": {"primaryCue": "Load the outside hip, rotate hard, and throw through the wall.", "secondaryCue": ""},

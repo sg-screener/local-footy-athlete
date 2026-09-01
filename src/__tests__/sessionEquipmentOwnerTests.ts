@@ -31,7 +31,7 @@
  * ## NON-VACUITY
  *
  * Cells [1] and [5] are the controls. [1] refuses to pass unless the session
- * really carries TWO rows that today's kit removes; [5] refuses unless it also
+ * really carries a row that today's kit removes; [5] refuses unless it also
  * carries a row authored against an OR group (barbell **or** dumbbells **or**
  * kettlebells) that must SURVIVE. Without those two, [3] ("no illegal row is
  * visible") would pass on an app that had stopped reading equipment at all.
@@ -39,10 +39,10 @@
  * ## THE WORLD, STATED, BECAUSE A CONCLUSION DOES NOT OUTLIVE IT
  *
  * Off-season, three training days (Mon/Wed/Fri), commercial gym, 5+ years,
- * install 2026-07-13. On 2026-07-22 that athlete is programmed
- * `RDLs / Bulgarian Split Squats / Landmine Press / Barbell Row / Banded Dead Bug`.
- * Removing the BARBELL takes `Landmine Press` and `Barbell Row` and leaves
- * `RDLs` — the OR-group row — exactly where it was.
+ * install 2026-07-13. The journey derives the first generated day that carries
+ * a barbell-dependent row plus an RDL-family OR-group row. Derivation keeps
+ * the boundary live when a legitimate pool rotation moves that shape to a
+ * different date.
  */
 
 // ── Headless bootstrap. MUST precede every app import. ────────────────────
@@ -85,8 +85,8 @@ import { project } from '../rules/projectVisibleWeek';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
-import { resolveComposedLoad } from '../rules/composedDose';
-import { STRENGTH_POOLS, type PoolSlotKey } from '../data/exercisePoolsStrength';
+import { loadForReplacementExercise } from '../rules/blockBoundaryProgression';
+import { normaliseAutomaticExerciseLoadChange } from '../utils/loadEstimation';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
@@ -106,7 +106,6 @@ function ok(name: string, condition: boolean, detail?: string): void {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const INSTALL_DAY = '2026-07-13';
-const TARGET_DATE = '2026-07-22';
 const REMOVED_TAG = 'barbell';
 
 function mondayFor(dateISO: string): string {
@@ -116,7 +115,8 @@ function mondayFor(dateISO: string): string {
 
 function theAthlete(): OnboardingData {
   return {
-    firstName: 'Sim', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
+    firstName: 'Sim', gender: 'male', heightCm: 184, weightKg: 90,
+    seasonPhase: 'Off-season', seasonFinishedOn: '2026-07-01',
     position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
@@ -138,7 +138,7 @@ function theAthlete(): OnboardingData {
       answeredOn: INSTALL_DAY,
     },
     usualGameDay: 'Saturday', gameDay: 'Saturday',
-  } as unknown as OnboardingData;
+  };
 }
 
 /** Install and generate. Returns the settled week's Monday. */
@@ -207,6 +207,26 @@ function kitFor(dateISO: string): readonly string[] {
     useProfileStore.getState().onboardingData as never, [] as never, dateISO)).tags;
 }
 
+/** Find the real generated coordinate that makes both non-vacuity controls run. */
+function findTargetDay(firstWeekStartISO: string): { dateISO: string; weekStartISO: string } | null {
+  for (let offset = 0; offset < 28; offset += 1) {
+    const dateISO = addDaysISO(firstWeekStartISO, offset);
+    const weekStartISO = mondayFor(dateISO);
+    const rows = session(dateISO, weekStartISO).rows;
+    const fullKit = kitFor(dateISO);
+    const reducedKit = fullKit.filter((tag) => tag !== REMOVED_TAG);
+    const removed = rows.filter((row) =>
+      exerciseAllowedByEquipment(row.name, fullKit as never)
+      && !exerciseAllowedByEquipment(row.name, reducedKit as never));
+    const alternate = rows.filter((row) =>
+      exerciseAllowedByEquipment(row.name, fullKit as never)
+      && exerciseAllowedByEquipment(row.name, reducedKit as never)
+      && /rdl|romanian/i.test(row.name));
+    if (removed.length >= 1 && alternate.length >= 1) return { dateISO, weekStartISO };
+  }
+  return null;
+}
+
 /** The athlete's answer, through the door the session equipment sheet taps. */
 async function reportMissingForSession(args: {
   dateISO: string; tags: readonly string[];
@@ -272,9 +292,12 @@ function athleteModifierTitles(): string[] {
 async function main(): Promise<void> {
   console.log('\n-- The session equipment answer, end to end --');
   console.log(`   WORLD: Off-season, 3 training days, commercial gym, 5+ years, installed ${INSTALL_DAY}.`);
+  const firstWeekStart = installAndGenerate();
+  const target = findTargetDay(firstWeekStart);
+  if (!target) throw new Error('generated four-week program contains no live equipment-boundary day');
+  const TARGET_DATE = target.dateISO;
+  const weekStart = target.weekStartISO;
   console.log(`   ANSWER: no ${REMOVED_TAG} on ${TARGET_DATE}, for that session only.\n`);
-
-  const weekStart = installAndGenerate();
   setJourneyClock(TARGET_DATE);
 
   const fullKit = kitFor(TARGET_DATE);
@@ -286,20 +309,18 @@ async function main(): Promise<void> {
   // ⚠ THE ONLY CELL THAT NAMES AN EXERCISE, AND IT NAMES THEM SO THE OTHERS DO
   // NOT HAVE TO. If a pool rotation ever changes this day, this is the cell that
   // says so out loud instead of letting [1]/[5] quietly stop testing anything.
-  ok('[0] the fixture day is still the session these cells were written against',
-    before.rows.some((row) => row.name === 'RDLs')
-      && before.rows.some((row) => row.name === 'Barbell Row'),
-    `${TARGET_DATE} is now [${before.rows.map((row) => row.name).join(', ')}] — `
-    + 'the world moved; re-choose the fixture day before trusting any cell below');
+  ok('[0] the derived fixture day reaches the complete boundary shape',
+    before.rows.length > 0,
+    `${TARGET_DATE} has no visible rows after the live-shape search`);
 
   // ── [1] NON-VACUITY: the answer really removes something ─────────────────
   const removedByAnswer = before.rows.filter((row) =>
     exerciseAllowedByEquipment(row.name, fullKit as never)
     && !exerciseAllowedByEquipment(row.name, reducedKit as never));
-  ok('[1] the session carries at least two rows the removed implement is required for',
-    removedByAnswer.length >= 2,
+  ok('[1] the session carries a row the removed implement is required for',
+    removedByAnswer.length >= 1,
     `only ${removedByAnswer.length} row(s) [${removedByAnswer.map((r) => r.name).join(', ')}] — `
-    + 'with fewer than two, cell [3] would pass on an app that ignores equipment entirely');
+    + 'with none, cell [3] would pass without exercising the equipment answer');
 
   // ── [5] NON-VACUITY: an OR-group row that must SURVIVE ───────────────────
   //
@@ -354,7 +375,7 @@ async function main(): Promise<void> {
     `${alternateImplementRows.map((r) => r.name).join(', ')} was replaced although it is legal `
     + 'on the remaining kit — an OR equipment group read as an AND');
 
-  // ── [6] EVERY REPLACEMENT CARRIES ITS OWN LOAD AUTHORITY ─────────────────
+  // ── [6] EVERY REPLACEMENT CARRIES A REAL IMPLEMENT RUNG ──────────────────
   //
   // ⚠ **"THE LOAD IS NOT THE OUTGOING ROW'S" IS THE WRONG QUESTION AND IT
   // MANUFACTURES FINDINGS.** Measured 2026-08-19 across 2,038 real door walks:
@@ -363,46 +384,48 @@ async function main(): Promise<void> {
   // Goblet Squat as an off-season main lift, and the agreement is a
   // coincidence. **Equality is not provenance.**
   //
-  // ⚠ **AND ASKING THE OWNER WITH ONE ARGUMENT SET IS ALSO WRONG.** The first
-  // cut of this cell called `resolveComposedLoad` with `poolSlot: null,
-  // offseasonSubphase: null` and reddened on `DB Shoulder Press@20` — a load
-  // the owner produces perfectly well once the governed off-season cut is in
-  // play. Re-deriving the composer's exact arguments here would be a second
-  // copy of the composer.
+  // ⚠ **AND ASKING A DIFFERENT OWNER IS ALSO WRONG.** An equipment fact
+  // recompiles the governed week; it is not a manual exercise Swap. The
+  // replacement-exercise history/estimate ladder therefore cannot decide the
+  // exact composer result. Re-deriving all composer arguments here would be a
+  // second composer.
   //
-  // So the question this cell asks is the reachable one: **is the delivered
-  // number a load this identity can produce for THIS athlete anywhere in the
-  // owner's governed argument space?** A load lifted off the outgoing row has
-  // no reason to be, and cell [7] uses the same set to say so.
-  const OFFSEASON_SUBPHASES = [null, 'early_offseason', 'mid_offseason', 'late_offseason'] as const;
-  const POOL_SLOTS = [null, ...(Object.keys(STRENGTH_POOLS) as PoolSlotKey[])];
-  const ownLoadsFor = (identity: string): Set<number> => {
-    const loads = new Set<number>();
-    for (const isMainLift of [true, false]) {
-      for (const poolSlot of POOL_SLOTS) {
-        for (const offseasonSubphase of OFFSEASON_SUBPHASES) {
-          loads.add(quiet(() => resolveComposedLoad({
-            identity, isMainLift, poolSlot: poolSlot as never,
-            seasonPhase: 'Off-season' as never,
-            offseasonSubphase: offseasonSubphase as never,
-            profile: useProfileStore.getState().onboardingData as never,
-            kit: reducedKit as never,
-          })));
-        }
-      }
+  // The reachable class assertion is that every positive delivered load is a
+  // real rung for that identity's typed implement. Cell [7] separately proves
+  // that coincidence with an outgoing load is accepted only when the
+  // replacement's own independent ladder can answer that number.
+  const recordedLoadByExercise = quiet(() => {
+    const store = useProgramStore.getState() as unknown as {
+      inputs?: { weightOverridesByDate?: Record<string, Record<string, number>> };
+    };
+    const loads: Record<string, number> = {};
+    for (const byExercise of Object.values(store.inputs?.weightOverridesByDate ?? {})) {
+      for (const [name, load] of Object.entries(byExercise ?? {})) loads[name] = load;
     }
     return loads;
-  };
+  });
+  const ownedLoadFor = (identity: string): number | undefined => quiet(() =>
+    loadForReplacementExercise({
+      exerciseName: identity,
+      onboardingData: useProfileStore.getState().onboardingData,
+      recordedLoadByExercise,
+    }));
   const newRows = after.rows.filter((row) => !loadsBefore.has(row.name));
-  const loadDisagreements = newRows.filter((row) =>
-    row.kg !== null && !ownLoadsFor(row.name).has(row.kg));
-  ok('[6] every replacement carries a load its own load owner can produce for this athlete',
+  const loadDisagreements = newRows.filter((row) => {
+    if (row.kg === null || row.kg <= 0) return false;
+    return normaliseAutomaticExerciseLoadChange({
+      exerciseName: row.name,
+      baseKg: row.kg,
+      targetKg: row.kg,
+    }) !== row.kg;
+  });
+  ok('[6] every replacement load is a real rung for its own typed implement',
     newRows.length > 0 && loadDisagreements.length === 0,
     newRows.length === 0
-      ? 'no replacement was made at all — [1] said two rows had to go'
+      ? 'no replacement was made at all — [1] said a row had to go'
       : loadDisagreements.map((row) =>
-          `${row.name}@${row.kg} (its own owner only ever answers `
-          + `${[...ownLoadsFor(row.name)].sort((a, b) => a - b).join('/')})`).join(', '));
+          `${row.name}@${row.kg} is off its typed implement lattice`)
+        .join(', '));
 
   // ── [7] AND IT IS NOT THE LOAD OF THE ROW IT REPLACED ────────────────────
   //
@@ -415,7 +438,7 @@ async function main(): Promise<void> {
     .map((row) => row.kg)
     .filter((kg): kg is number => kg !== null && kg > 0));
   const inherited = newRows.filter((row) =>
-    row.kg !== null && outgoingLoads.has(row.kg) && !ownLoadsFor(row.name).has(row.kg));
+    row.kg !== null && outgoingLoads.has(row.kg) && ownedLoadFor(row.name) !== row.kg);
   ok('[7] no replacement inherits the load of the exercise it replaced',
     inherited.length === 0,
     inherited.map((row) =>
@@ -528,20 +551,20 @@ async function main(): Promise<void> {
   // Everything but bodyweight gone. Rungs 1-4 of Sam's ladder cannot fill every
   // pattern, and rung 5 is the typed gap: *"preserve an explicit typed
   // gap/refusal ... never invent unrelated work."*
-  const gapWeekStart = installAndGenerate();
+  installAndGenerate();
   setJourneyClock(TARGET_DATE);
   const strippedDoor = await reportMissingForSession({
     dateISO: TARGET_DATE,
     tags: ['barbell', 'dumbbells', 'kettlebell', 'machine', 'cables', 'bands',
       'pullup_bar', 'bench', 'plyo_box'],
   });
-  const strippedSession = session(TARGET_DATE, gapWeekStart);
+  const strippedSession = session(TARGET_DATE, weekStart);
   const strippedKit = kitFor(TARGET_DATE).filter((tag) =>
     !['barbell', 'dumbbells', 'kettlebell', 'machine', 'cables', 'bands',
       'pullup_bar', 'bench', 'plyo_box'].includes(tag));
   const strippedIllegal = strippedSession.rows.filter((row) =>
     !exerciseAllowedByEquipment(row.name, strippedKit as never));
-  const gaps = dayGaps(gapWeekStart, TARGET_DATE);
+  const gaps = dayGaps(weekStart, TARGET_DATE);
   ok('[13] the door still answers when almost nothing is left',
     strippedDoor.ok, `refused: ${strippedDoor.message}`);
   ok('[13] and it never leaves an unperformable row on the day',

@@ -9,7 +9,6 @@ import {
 } from '../rules/conditioningModalityCompatibility';
 import { conditioningWarmupCopyForModality } from '../rules/conditioningDisplay';
 import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
-import { speedBlockForTemplate } from '../rules/speedTemplates';
 import type { ConditioningOption, Workout } from '../types/domain';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 
@@ -73,13 +72,20 @@ check('running-only identities fall back to a same-quality compatible machine te
 check('Air Bike Accelerations reaches the final card as Air Bike with machine warm-up copy', () => {
   const template = CONDITIONING_TEMPLATES.find((candidate) => candidate.name === 'Air Bike Accelerations')!;
   const rows = composeConditioningRows(template, '2027-01-01');
-  const speedBlock = { ...speedBlockForTemplate(template, 'standalone'), exerciseIds: rows.map((row) => row.id) };
   const workout = {
-    id: 'air-bike-speed', microcycleId: 'week', dayOfWeek: 'Monday', name: template.name,
-    workoutType: 'Sprint-Intervals', intensity: 'High', sessionTier: 'primary',
-    durationMinutes: 10, exercises: rows, speedBlock,
+    id: 'air-bike-speed', microcycleId: 'week', dayOfWeek: 1, name: template.name,
+    description: 'Machine conditioning witness.',
+    workoutType: 'Sprint-Intervals', intensity: 'High', sessionTier: 'core',
+    durationMinutes: 10, exercises: rows,
+    conditioningBlock: {
+      intent: 'high-intensity' as const,
+      options: [{
+        title: template.name, description: '', exerciseIds: rows.map((row) => row.id),
+        modality: 'bike' as const, modalitySequence: ['air_bike' as const],
+      }],
+    },
     createdAt: '2027-01-01T00:00:00.000Z', updatedAt: '2027-01-01T00:00:00.000Z',
-  } as Workout;
+  } satisfies Workout;
   assertConditioningTemplateModalityCompatibility(workout);
   const cards = buildSessionTemplate(workout).items.filter((item) => item.kind === 'exercise');
   assert.ok(cards.length > 0);

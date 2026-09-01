@@ -76,14 +76,6 @@ async function main(): Promise<void> {
       JSON.stringify(before));
   });
 
-  check('generated non-running cards show Effort out of 10 and never MAS', () => {
-    const nonRunning = before.filter((receipt) => receipt.mode !== 'running');
-    assert.ok(nonRunning.length > 0, JSON.stringify(before));
-    assert.ok(nonRunning.every((receipt) => receipt.rendered.every((row) =>
-      /Effort: (?:[1-9]|10)\/10/.test(row.copy) && !/\bMAS\b/.test(row.copy))),
-    JSON.stringify(nonRunning));
-  });
-
   check('the selected modality is permitted by the selected authored template', () => {
     for (const receipt of before) {
       const template = resolveTemplateByName(receipt.title);
@@ -116,6 +108,12 @@ async function main(): Promise<void> {
         ? [{ modality: item.modalityLabel ?? '', copy: String(item.row.notes ?? '') }]
         : []);
     assert.ok(cards.length > 0, JSON.stringify(adjusted.conditioningFeasibility));
+    const nonRunningCards = cards.filter((card) => card.modality && card.modality !== 'Run');
+    assert.ok(nonRunningCards.length > 0,
+      `the running-trigger injury reached no machine-conditioning card: ${JSON.stringify(cards)}`);
+    assert.ok(nonRunningCards.every((card) =>
+      /Effort: (?:[1-9]|10)\/10/.test(card.copy) && !/\bMAS\b/.test(card.copy)),
+    JSON.stringify(nonRunningCards));
     assert.ok(cards.every((card) => card.modality === 'Run'
       ? /Intensity:/.test(card.copy) && !/Effort:/.test(card.copy)
       : !!card.modality && /Effort: (?:[1-9]|10)\/10/.test(card.copy)
@@ -145,8 +143,11 @@ async function main(): Promise<void> {
     receipt.rendered.some((row) => row.modality === 'Run'));
   check('generated running cards retain MAS or running-native intensity wording', () => {
     assert.ok(runningBefore.length > 0, JSON.stringify(receipts()));
-    assert.ok(runningBefore.every((receipt) => receipt.rendered.every((row) =>
-      /Intensity:/.test(row.copy) && !/Effort:/.test(row.copy))), JSON.stringify(runningBefore));
+    assert.ok(runningBefore.every((receipt) => {
+      const runningCards = receipt.rendered.filter((row) => row.modality === 'Run');
+      return runningCards.length > 0 && runningCards.every((row) =>
+        /Intensity:/.test(row.copy) && !/Effort:/.test(row.copy));
+    }), JSON.stringify(runningBefore));
   });
   const runningBoot = await quietAsync(() => relaunchApp({ storage: durable, todayISO: YEAR_START }));
   check('running modality and intensity wording also survive save and restart exactly', () => {

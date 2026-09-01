@@ -211,7 +211,7 @@ function fixtureSafetyAcrossMaterialisedHorizon(athlete: OnboardingData): {
     });
     for (const finding of report.findings) {
       if (finding.severity !== 'strong' && finding.severity !== 'hard_stop') continue;
-      if (finding.ruleId === 'g1_not_light') strongG1.push(`${finding.dates.join(',')}:${finding.detail}`);
+      if (finding.ruleId === 'g1_not_light') strongG1.push(`${finding.dates.join(',')}:${finding.message}`);
       if (finding.ruleId.startsWith('g2_')) strongG2.push(`${finding.ruleId}:${finding.dates.join(',')}`);
     }
   }

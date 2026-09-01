@@ -233,27 +233,6 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
 // ─── Exercise Tag Registry ───
 
 export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
-  'Seated Good Morning (Barbell)': {
-    movement: 'hinge', region: 'lower', load: 'low',
-    fatigue: 'low', doms: 'low', stability: 'low',
-    unilateral: false, eccentric: 'moderate', lateWeek: 'caution',
-    injury: {
-      groin: 'caution', hip: 'caution', quad: 'good',
-      hamstring: 'caution', knee: 'caution', calf: 'good',
-      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
-      neck: 'caution', shoulder: 'caution', elbow: 'caution',
-      'wrist/hand': 'caution',
-    },
-    prescription: {
-      sets: 2, repsMin: 5, repsMax: 5,
-      restSeconds: 60, prescriptionType: 'reps', perSide: false,
-      notes: 'Lower for 5 seconds. Start with an empty bar; log total external load. Mobility only; excluded the day before a game.',
-    },
-    programming: {
-      strengthRole: 'none', automaticMinimum: 'developing', manualMinimum: 'developing',
-      warmup: true, primer: false, excludeWithinDaysOfGame: 1,
-    },
-  },
   'Rotational Medicine-Ball Slam': {
     movement: 'core', region: 'upper', load: 'moderate',
     fatigue: 'low', doms: 'low', stability: 'moderate',
@@ -397,7 +376,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     prescription: {
       sets: 2, repsMin: 5, repsMax: 5,
       restSeconds: 60, prescriptionType: 'reps', perSide: false,
-      notes: 'Lower for 5 seconds. Bodyweight mobility; never a main lift.',
+      notes: 'Lower for 5 seconds. Use bodyweight, dumbbells or a barbell; log total external load. Mobility only; never a main lift.',
     },
     programming: {
       strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',

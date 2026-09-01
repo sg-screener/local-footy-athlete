@@ -163,13 +163,11 @@ ok('fixture and anchor congestion may omit the app top-speed exposure',
 const allDelivered = [...offseason.map(sample => sample.detail), preseasonTeam, inSeasonTeam]
   .filter(detail => detail.workout !== null);
 ok('Bike/Air Bike acceleration never satisfies a running-Speed requirement',
-  allDelivered.every(detail => detail.block?.modality === 'run'
-    && detail.block?.templateName !== 'Air Bike Accelerations'));
+  allDelivered.every(detail => detail.block?.modality === 'run'));
 ok('incomplete-recovery repeat sprint remains conditioning, never pure Speed',
   allDelivered.every(detail => detail.template?.quality !== 'repeat_sprint'));
 
 for (const [name, label] of [
-  ['Air Bike Accelerations', 'off-feet acceleration'],
   ['20 m Shuttle Repeats', 'incomplete-recovery repeat sprint'],
 ] as const) {
   let refused = false;
@@ -180,6 +178,10 @@ for (const [name, label] of [
   }
   ok(`[factory] ${label} cannot be written as a true running-Speed block`, refused);
 }
+
+ok('Air Bike Accelerations stays in the machine-conditioning catalogue, outside the running-Speed builder',
+  byName.get('Air Bike Accelerations')?.permittedModalities.includes('air_bike') === true
+  && byName.get('Air Bike Accelerations')?.permittedModalities.includes('run') === false);
 
 const total = passed + failures.length;
 console.log(`\nReal running-speed development: passed=${passed}/${total} failures=${failures.length}`);

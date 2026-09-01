@@ -9,8 +9,9 @@
  * The investigation found two independent ruled producers, not one shared
  * progression defect:
  *   - Leg Press is U-2's pre-authored early -> mid Off-season cut change.
- *   - Kettlebell Swings starts from the athlete's exact recorded 22.5 kg and
- *     adds the authored 4 kg kettlebell increment without rewriting their base.
+ *   - Kettlebell Swings preserves the athlete's exact recorded 22.5 kg as
+ *     history, then advances to the next real bell (24 kg) without rewriting
+ *     that off-lattice base.
  */
 global.__DEV__ = false;
 require('../node_modules/sucrase/register');
@@ -25,6 +26,9 @@ const {
 const {
   mainLiftSchemeForSlot,
 } = require('../src/rules/phaseRepSchemes');
+const {
+  normaliseAutomaticExerciseLoadChange,
+} = require('../src/utils/loadEstimation');
 
 let passed = 0;
 function check(label, condition, detail) {
@@ -50,9 +54,18 @@ const midLegPress = applyOffseasonMainLiftLoad({
 const earlyScheme = mainLiftSchemeForSlot('squat', 'Off-season', 'early_offseason');
 const midScheme = mainLiftSchemeForSlot('squat', 'Off-season', 'mid_offseason');
 
-check('audited Leg Press values come from the ruled 75% and 90% subphase cuts',
-  earlyLegPress === 92.5 && midLegPress === 110,
+check('audited Leg Press targets come from the exact ruled 75% and 90% subphase cuts',
+  earlyLegPress === 91.875 && midLegPress === 110.25,
   JSON.stringify({ earlyLegPress, midLegPress }));
+const earlyLegPressFinal = normaliseAutomaticExerciseLoadChange({
+  exerciseName: 'Leg Press', baseKg: 122.5, targetKg: earlyLegPress,
+});
+const midLegPressFinal = normaliseAutomaticExerciseLoadChange({
+  exerciseName: 'Leg Press', baseKg: 122.5, targetKg: midLegPress,
+});
+check('the athlete-facing Leg Press values then round down on the machine lattice',
+  earlyLegPressFinal === 90 && midLegPressFinal === 110,
+  JSON.stringify({ earlyLegPressFinal, midLegPressFinal }));
 check('the same authored transition drops the main-lift target from 10 to 8 reps',
   earlyScheme?.base === '3x10' && midScheme?.base === '3x8',
   JSON.stringify({ earlyScheme, midScheme }));
@@ -97,14 +110,14 @@ const kettlebellDecision = decideBlockBoundaryLoads({
   nextBlockWorkouts: [kettlebellWorkout],
 }).find((decision) => decision.exerciseName === 'Kettlebell Swings');
 
-check('the authored kettlebell progression increment is exactly 4 kg',
-  smallestPracticalIncrementKg('Kettlebell Swings', 22.5) === 4,
+check('the off-lattice kettlebell history advances by 1.5 kg to the next real bell',
+  smallestPracticalIncrementKg('Kettlebell Swings', 22.5) === 1.5,
   String(smallestPracticalIncrementKg('Kettlebell Swings', 22.5)));
-check('the audited 26.5 kg is exact athlete history plus one ruled 4 kg increment',
+check('the audited 24 kg is the next real bell above exact 22.5 kg athlete history',
   kettlebellDecision?.kind === 'history_progressed'
     && kettlebellDecision.previousLoadKg === 22.5
-    && kettlebellDecision.incrementKg === 4
-    && kettlebellDecision.nextLoadKg === 26.5,
+    && kettlebellDecision.incrementKg === 1.5
+    && kettlebellDecision.nextLoadKg === 24,
   JSON.stringify(kettlebellDecision));
 
 console.log(`audited load concern tracing: ${passed} passed`);

@@ -41,11 +41,11 @@ check('the actual compiler emits strength, power, conditioning and mobility deci
   assert.ok(traces.some((trace) => trace.kind === 'mobility_exercise'));
 });
 
-check('automatic mobility traces consider both Seated Good Morning identities', () => {
+check('automatic mobility traces consider one canonical Seated Good Morning identity', () => {
   const mobilityNames = new Set(traces.filter((trace) => trace.kind === 'mobility_exercise')
     .flatMap((trace) => trace.candidates.map((candidate) => candidate.name)));
   assert.ok(mobilityNames.has('Seated Good Morning'));
-  assert.ok(mobilityNames.has('Seated Good Morning (Barbell)'));
+  assert.ok(!mobilityNames.has('Seated Good Morning (Barbell)'));
 });
 
 check('every selected candidate is eligible, ranked first and explained', () => {

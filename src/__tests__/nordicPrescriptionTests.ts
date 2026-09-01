@@ -175,7 +175,7 @@ async function main(): Promise<void> {
   localStorageData.clear();
   const base = athleteAnswers(ARCHETYPES.find(entry =>
     entry.id === 'male-3-experienced-gym')!) as OnboardingData;
-  const profile = {
+  const profile: OnboardingData = {
     ...base,
     seasonPhase: 'Pre-season' as const,
     trainingDaysPerWeek: 5,

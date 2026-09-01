@@ -48,10 +48,19 @@ import {
 } from '../utils/exerciseCanonicalisation';
 import { isExempt } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
+import { formatExerciseDisplayName } from '../utils/exerciseDisplay';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
+import { exerciseIsAvailableWith } from '../data/exerciseEquipmentRequirement';
+import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
+import { EXERCISE_DEMO_VIDEOS } from '../services/exerciseVideoService';
 import { findOrCreateExercise } from '../data/defaultProgram';
 import { loadForReplacementExercise, readBlockHistory } from '../rules/blockBoundaryProgression';
+import { resolveSelectedImplement } from '../rules/selectedImplement';
+import { exerciseProgrammingAllows } from '../utils/exerciseFilter';
+import { resolveLoadControlMode } from '../utils/loadEstimation';
+import { compileCanonicalExerciseEditOnWorkout } from '../rules/canonicalWeeklyExerciseEditCompiler';
+import type { Workout } from '../types/domain';
 import {
   cuelessSessionCards,
   cuelessStrengthCards,
@@ -177,7 +186,9 @@ console.log('\n[4] Ownership — the curated cue is the ONLY source of a row\'s 
   );
   ok(
     'one shared disclosure owns the behaviour — strength, recovery and add-on rows alike',
-    (screen.match(/<CueDisclosure/g) ?? []).length >= 3,
+    (screen.match(/<CueDisclosure\b/g) ?? []).length === 2
+      && /function AddonRow[\s\S]*?<CueDisclosure\b/.test(screen)
+      && (screen.match(/<StrengthExerciseCard\b/g) ?? []).length >= 2,
     'a per-row reimplementation is how the two layers drifted apart last time',
   );
   ok(
@@ -243,6 +254,101 @@ console.log('\n[legacy pulldown] one current identity, one read-only alias');
       exerciseName: canonical, recordedLoadByExercise: history.lastRecordedLoadByExercise,
     }) === 32.5,
     JSON.stringify(history.lastRecordedLoadByExercise));
+}
+
+console.log('\n[Seated Good Morning] one identity with three equipment variants');
+{
+  const legacy = 'Seated Good Morning (Barbell)';
+  const canonical = 'Seated Good Morning';
+  const fullKit = ['bodyweight', 'bench', 'barbell', 'dumbbells'] as const;
+  const dumbbellKit = ['bodyweight', 'bench', 'dumbbells'] as const;
+  const supportOnly = ['bodyweight', 'bench'] as const;
+
+  ok('the retired barbell identity is legacy ingress onto the canonical exercise',
+    canonicalExerciseName(legacy) === canonical && resolveExerciseName(legacy) === canonical,
+    `${canonicalExerciseName(legacy)} / ${resolveExerciseName(legacy)}`);
+  ok('current selection exposes one Seated Good Morning identity',
+    MOBILITY_POOL.filter((entry) => canonicalExerciseName(entry.name) === canonical).length === 1
+    && selectableExerciseNames().filter((name) => canonicalExerciseName(name) === canonical).length === 1);
+  ok('the retired spelling is absent from every current content registry',
+    !Object.prototype.hasOwnProperty.call(EXERCISE_CUES, legacy)
+    && !Object.prototype.hasOwnProperty.call(EXERCISE_TAGS, legacy)
+    && !Object.prototype.hasOwnProperty.call(EXERCISE_EQUIPMENT_REQUIREMENT, legacy)
+    && !Object.prototype.hasOwnProperty.call(EXERCISE_DEMO_VIDEOS, legacy)
+    && !EXERCISE_MUSCLE_METADATA.some((entry) => entry.exercise === legacy)
+    && !MOBILITY_POOL.some((entry) => entry.name === legacy));
+  ok('one current video and cue serve legacy and canonical reads',
+    hasCuratedCue(legacy)
+    && buildCueText(legacy) === buildCueText(canonical)
+    && Object.prototype.hasOwnProperty.call(EXERCISE_DEMO_VIDEOS, canonical));
+  ok('all current writers persist the canonical identity',
+    findOrCreateExercise(legacy).name === canonical);
+  ok('a legacy saved row reopens under the canonical athlete-facing title',
+    formatExerciseDisplayName(legacy) === canonical);
+
+  const timestamp = '2026-09-01T00:00:00.000Z';
+  const emptySession: Workout = {
+    id: 'sgm-canonical-write', microcycleId: 'sgm-canonical-week', dayOfWeek: 1,
+    name: 'Variant identity witness', description: 'Canonical write boundary.',
+    workoutType: 'Strength', intensity: 'Light', durationMinutes: 20, exercises: [],
+    createdAt: timestamp, updatedAt: timestamp,
+  };
+  const addLegacy = {
+    kind: 'add' as const, decisionId: 'add-legacy-sgm', occurredAt: timestamp,
+    dateISO: '2026-09-01',
+    exercise: { name: legacy, sets: 2, repsMin: 8, repsMax: 10, weight: 20 },
+  };
+  const canonicalWrite = compileCanonicalExerciseEditOnWorkout(emptySession, addLegacy);
+  const duplicateAttempt = compileCanonicalExerciseEditOnWorkout(canonicalWrite, {
+    ...addLegacy, decisionId: 'add-second-sgm',
+    exercise: { ...addLegacy.exercise, name: canonical, weight: 0 },
+  });
+  ok('the accepted edit writer canonicalises legacy input and refuses a second equipment variant',
+    canonicalWrite.exercises[0]?.exercise.name === canonical
+    && duplicateAttempt.exercises.length === 1
+    && duplicateAttempt.exercises[0]?.exercise.name === canonical);
+
+  const history = readBlockHistory({
+    feedbackByDate: {
+      '2026-08-10': {
+        dateStr: '2026-08-10', completion: 'full', feeling: 'good', soreness: 'none',
+        strength: [{
+          exerciseId: 'legacy-seated-good-morning', exerciseName: legacy, completion: 'full',
+          prescribedSets: 2, prescribedRepsMin: 5, prescribedRepsMax: 5, weightKg: 20,
+        }],
+      } as any,
+    },
+    blockStartISO: '2026-08-10', blockEndISO: '2026-08-10', requiredStrengthSessions: 1,
+  });
+  ok('legacy load history joins the canonical exercise history without a second key',
+    history.lastRecordedLoadByExercise[canonical] === 20
+    && history.lastRecordedLoadByExercise[legacy] === undefined);
+
+  ok('the bodyweight variant needs its seat support but no loading implement',
+    exerciseIsAvailableWith(canonical, supportOnly)
+    && !exerciseIsAvailableWith(canonical, ['bodyweight', 'barbell']));
+  ok('an unloaded canonical row resolves to the bodyweight variant',
+    resolveSelectedImplement({ exerciseName: canonical, availableTags: supportOnly })
+      .implement === 'bodyweight');
+  ok('a loaded canonical row resolves to the barbell variant when a bar is chosen',
+    resolveSelectedImplement({ exerciseName: canonical, availableTags: fullKit,
+      prescribedWeightKg: 20 }).implement === 'barbell');
+  ok('a loaded canonical row resolves to the dumbbell variant without a bar',
+    resolveSelectedImplement({ exerciseName: canonical, availableTags: dumbbellKit,
+      prescribedWeightKg: 10 }).implement === 'dumbbells');
+
+  ok('a complete beginner receives the bodyweight control without a loaded-variant door',
+    resolveLoadControlMode(canonical, 'bodyweight', 'Complete beginner') === 'bodyweight');
+  ok('an experienced athlete can progress the bodyweight variant into a loaded variant',
+    resolveLoadControlMode(canonical, 'bodyweight', '1-2 years') === 'bodyweight_plus');
+  ok('dumbbell and barbell variants use the kilogram control',
+    resolveLoadControlMode(canonical, 'dumbbells', '1-2 years') === 'kilograms'
+    && resolveLoadControlMode(canonical, 'barbell', '1-2 years') === 'kilograms');
+  ok('loaded variants retain the inherited one-plus-year experience gate',
+    !exerciseProgrammingAllows(canonical, { route: 'manual',
+      experienceLevel: 'Complete beginner', daysToGame: null, selectedImplement: 'dumbbells' })
+    && exerciseProgrammingAllows(canonical, { route: 'manual',
+      experienceLevel: '1-2 years', daysToGame: null, selectedImplement: 'barbell' }));
 }
 
 console.log('\n[6] Token-order & abbreviation variants resolve (run-3 cue coverage hole)');

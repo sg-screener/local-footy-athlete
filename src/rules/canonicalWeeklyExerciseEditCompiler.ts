@@ -110,7 +110,8 @@ export function compileCanonicalExerciseEditOnWorkout(
     const target = resolveCanonicalExerciseEditTarget(workout, edit);
     if (target.kind !== 'found') return workout;
     const { index, row: found } = target;
-    const replacementId = `ex-coach-${edit.replacement.name.toLowerCase()
+    const replacementName = canonicalExerciseName(edit.replacement.name);
+    const replacementId = `ex-coach-${replacementName.toLowerCase()
       .replace(/[^a-z0-9]/g, '-')}`;
     const prescribedSets = safeNumber(edit.replacement.sets, safeNumber(found.prescribedSets, 3));
     const prescribedRepsMin = safeNumber(
@@ -123,7 +124,7 @@ export function compileCanonicalExerciseEditOnWorkout(
     );
     const replacement: WorkoutExercise = {
       ...found,
-      ...powerFieldsFor(edit.replacement.name, found),
+      ...powerFieldsFor(replacementName, found),
       exerciseId: replacementId,
       prescribedSets,
       prescribedRepsMin,
@@ -139,8 +140,8 @@ export function compileCanonicalExerciseEditOnWorkout(
       unavailableForInjury: undefined,
       exercise: {
         id: replacementId,
-        name: edit.replacement.name,
-        description: edit.replacement.name,
+        name: replacementName,
+        description: replacementName,
         exerciseType: 'Compound' as never,
         muscleGroups: [], equipmentRequired: [],
         difficultyLevel: 'Intermediate' as never,
@@ -155,7 +156,7 @@ export function compileCanonicalExerciseEditOnWorkout(
         ? { exerciseEditedPlacementId: workout.athletePlacement.constraintId } : {}) };
   }
 
-  const name = edit.exercise.name.trim();
+  const name = canonicalExerciseName(edit.exercise.name.trim());
   if (!name || workout.exercises.some((row) =>
     canonicalExerciseName(rowName(row)) === canonicalExerciseName(name))) return workout;
   const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || 'exercise';

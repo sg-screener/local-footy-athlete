@@ -121,7 +121,6 @@ type SelectedImplementToday = SelectedImplement & {
   changedToday: boolean;
   normalImplement: EquipmentTag | null;
 };
-import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import {
   deriveSessionEquipmentRequirements,
   missingSessionEquipmentValues,
@@ -780,12 +779,11 @@ export default function DayWorkoutScreenV2() {
   );
   const implementFor = React.useCallback(
     (exerciseName: string, prescribedWeightKg?: number | null) => {
-      const canonical = canonicalExerciseName(exerciseName);
       const effective = resolveSelectedImplement({
-        exerciseName: canonical, availableTags: effectiveKitTags, prescribedWeightKg,
+        exerciseName, availableTags: effectiveKitTags, prescribedWeightKg,
       });
       const permanent = resolveSelectedImplement({
-        exerciseName: canonical, availableTags: permanentKitTags, prescribedWeightKg,
+        exerciseName, availableTags: permanentKitTags, prescribedWeightKg,
       });
       return {
         ...effective,

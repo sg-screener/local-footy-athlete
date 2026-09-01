@@ -50,6 +50,9 @@ import {
   exerciseIsAvailableWith,
 } from '../data/exerciseEquipmentRequirement';
 import { equipmentClassFor } from '../utils/loadEstimation';
+import {
+  LEGACY_BARBELL_SEATED_GOOD_MORNING,
+} from './seatedGoodMorningVariants';
 
 /**
  * The tags that answer *"what is the athlete performing the row with"*. A
@@ -138,6 +141,12 @@ export function resolveSelectedImplement(args: {
   if (!name) return UNKNOWN;
   const available = new Set(args.availableTags ?? []);
   const loaded = Number(args.prescribedWeightKg) > 0;
+
+  // The retired spelling is allowed to arrive only from saved rows. Preserve
+  // the fact it encoded before canonical current-state lookup erases it.
+  if (name === LEGACY_BARBELL_SEATED_GOOD_MORNING && loaded) {
+    return { implement: 'barbell', source: 'authored_only', alternatives: [] };
+  }
 
   const requirement = equipmentRequiredFor(name);
   if (requirement !== null) {

@@ -208,7 +208,7 @@ async function main() {
       originalExercise: name }).some(c => c.name === name));
     check(`${name}: explicit kit allows`, exerciseIsAvailableWith(name, kit));
   }
-  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning']) {
     check(`${name}: not a main strength seat`, slotsForExerciseName(name).length === 0);
   }
   check('Horse Stance Hold: bodyweight loading and no equipment gate',
@@ -219,7 +219,8 @@ async function main() {
   for (const name of ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']) {
     check(`${name}: athlete chooses total ball load`, resolveLoadAuthority(name).kind === 'athlete_chosen' && estimateStartingWeight(name, profile) === null);
   }
-  check('Barbell Seated Good Morning starts at an empty bar', estimateStartingWeight('Seated Good Morning (Barbell)', profile) === 20);
+  check('legacy barbell Seated Good Morning resolves without authoring a second automatic load',
+    estimateStartingWeight('Seated Good Morning (Barbell)', profile) === null);
   for (const [name, missing] of [
     ['Rotational Medicine-Ball Throw', 'medicine_ball'],
     ['Medicine-Ball Slam', 'medicine_ball'],
@@ -252,7 +253,7 @@ async function main() {
     && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
     && exerciseProgrammingAllows('Horse Stance Hold', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 2 })
     && !exerciseProgrammingAllows('Horse Stance Hold', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 2 }));
-  for (const name of ['Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+  for (const name of ['Seated Good Morning']) {
     check(`${name}: no-game automatic route is unrestricted when daysToGame is absent`,
       exerciseProgrammingAllows(name, {
         route: 'automatic', experienceLevel: '5+ years', daysToGame: undefined,
@@ -358,14 +359,15 @@ async function main() {
   for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
   }
-  for (const name of ['Seated Good Morning', 'Seated Good Morning (Barbell)']) {
+  for (const name of ['Seated Good Morning']) {
     check(`${name}: approved in-session mobility route actually selects it`, warmupsReached.has(name));
   }
   check('Horse Stance Hold: the actual lower warm-up removes its otherwise selected row at G-1',
     !!horseWarmupCase && !selectMobilityPrehabFlow({ workout: horseWarmupCase.workout,
       date: horseWarmupCase.date, athlete: { ...athlete, daysToGame: 1 }, performedMovementIds: [],
       seasonPhase: profile.seasonPhase!, isGameWeek: true })?.movements.some(row => row.exercise.name === 'Horse Stance Hold'));
-  check('barbell Seated Good Morning is selected by automatic mobility', reached.has('Seated Good Morning (Barbell)'));
+  check('the one canonical Seated Good Morning is selected by automatic mobility',
+    reached.has('Seated Good Morning') && !reached.has('Seated Good Morning (Barbell)'));
   const context = getCoachRevisionTemplateContext(date);
   check('reachability crosses actual generated strength sessions', program.microcycles[0].workouts.some(w => !!w.strengthIntent));
   const lowerDays = program.microcycles[0].workouts.filter(w => w.strengthIntent?.plannedPatterns.some(p => p === 'hinge' || p === 'squat'));

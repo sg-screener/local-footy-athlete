@@ -336,7 +336,7 @@ console.log('\n-- Calendar deload week generation --');
   ok('first Off-season phase block keeps all four weeks as build',
     firstOffseason.every((week) => week.weekKind === 'build'),
     JSON.stringify(firstOffseason.map((week) => ({
-      start: week.startDate, kind: week.weekKind, phaseWeek: week.phaseWeekNumber,
+      start: week.startDate, kind: week.weekKind, weekNumber: week.weekNumber,
     }))));
   ok('first Off-season phase week 4 receives no deload prescription notes',
     deloadNotes(firstOffseason[3]).length === 0);

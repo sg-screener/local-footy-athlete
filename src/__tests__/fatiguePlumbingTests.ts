@@ -41,7 +41,8 @@ const second = createTemporaryFatigueFact({
 console.log('\n[1] All three buttons store one dated fact');
 for (const kind of ['tired_today', 'flat_today', 'cooked_week'] as const) {
   const action = readinessActionForKind(kind, { anchorDateISO: monday, todayISO: tuesday });
-  ok(`${kind} is today-only`, action.scope === 'today_only' && action.payload.date === tuesday);
+  ok(`${kind} is today-only`, action.type === 'set_fatigue_status'
+    && action.scope === 'today_only' && action.payload.date === tuesday);
 }
 
 console.log('\n[2] Expired history completes the streak; Clear breaks it');
@@ -56,7 +57,8 @@ console.log('\n[2] Expired history completes the streak; Clear breaks it');
     sequence?.startDate === tuesday && sequence?.expiresAt === '2026-08-30');
   ok('constraint carries both factual reports',
     sequence?.temporarySourceFactIds?.length === 2);
-  ok('athlete receives the named reason', sequence?.reasonLabel === 'Two tired days in a row');
+  ok('athlete receives the named reason', sequence?.type === 'fatigue'
+    && sequence.reasonLabel === 'Two tired days in a row');
 
   const clearedFirst = { ...expiredFirst, status: 'resolved' as const };
   const afterClear = composeTemporarySourceFactCompatibility({

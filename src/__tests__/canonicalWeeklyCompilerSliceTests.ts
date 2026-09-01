@@ -1377,7 +1377,7 @@ async function main(): Promise<void> {
     (baselineSetsByDate.get(day.dateISO) ?? 0) > 0);
   ok('the second tired date creates the named Tuesday-through-Sunday constraint', secondTired.ok &&
     useProgramStore.getState().acceptedMaterialContext.activeConstraints.some((constraint) =>
-      constraint.reasonLabel === 'Two tired days in a row' &&
+      constraint.type === 'fatigue' && constraint.reasonLabel === 'Two tired days in a row' &&
       constraint.startDate === secondTiredDay && constraint.expiresAt === '2026-07-19'));
   ok('the real compiler deloads at least one authored day from day two onward',
     sequenceStrengthDays.length > 0 && sequenceStrengthDays.some((day) =>

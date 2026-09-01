@@ -41,6 +41,8 @@ const LOWERCASE_UNIT_SUFFIXES = new Set([
 ]);
 
 const EXERCISE_DISPLAY_ALIASES: Readonly<Record<string, string>> = {
+  // Legacy persisted identity only; current vocabulary writes the canonical row.
+  'seated good morning (barbell)': 'Seated Good Morning',
   'single-leg squat (to box)': 'Single-Leg Box Squat',
   'single-arm db bench press': '1-Arm DB Bench Press',
   'single-arm db floor press': '1-Arm DB Floor Press',

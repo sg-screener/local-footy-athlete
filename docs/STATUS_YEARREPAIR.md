@@ -370,6 +370,72 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Final exact-year acceptance — revision 30838f11
+
+The addendum sequence and the full-year repair are implemented through source
+revision `30838f1148b6cb1a51ca90574b8288e4af6ae70f`. The final checkpoint exposed
+one more class defect rather than merely confirming the prior artifact:
+automatic Gunshow/Primer survived In-season bye weeks and remained on stale
+Friday dates after a Saturday fixture moved to Sunday. The first strengthened
+artifact gate reported 22/24, with seven invalid option dates per athlete: three
+bye weeks and four stale Fridays.
+
+The repair gives generated fixture-relative options one typed ownership rule and
+rebases every later source-fact overlay against the accepted fixture state.
+Athlete-added options remain athlete-owned. Generated Gunshow/Primer is removed
+on byes, reconsidered after fixture moves, and cannot be resurrected by a later
+injury, illness or readiness source fact. The live canonical transaction cells
+cover male and female Remove, restart, exact Undo, move-away/move-back, a
+five-day non-vacuous profile, generated-versus-athlete ownership and the
+Remove-then-knee-injury accumulated path. The canonical compiler run reports
+10,571 passing cells and retains 36 separately named inherited failures;
+`test:temporary-source-facts` is 90/90 and the complete
+`test:weekly-scheduler` chain is 128/128 plus its green continuations. Product
+TypeScript and devtools TypeScript each report zero errors. Test TypeScript
+retains 11 unrelated current errors, including the pre-existing `reasonLabel`
+read and other agents' files; no baseline was added.
+
+The exact generated artifact is `output/full-year-audit-30838f11/`. Its
+acceptance instrument is 24/24 with zero findings. Each athlete has exactly 52
+weeks, 364 dated day records and 52/52 byte-equivalent visible-week restart
+signatures. Each athlete has 21 final fixture-relative optional sessions. Bye
+weeks 33, 39 and 45 have zero such sessions. Sunday-game weeks 31, 37, 43 and
+49 put the option on Saturday, exactly G-1. The male year contains 2,254
+displayed row occurrences (1,455 main-session rows plus 799 warm-up rows); the
+female year contains 2,270 (1,471 plus 799). Pull-Up, Bench Press, RDL and Back
+Squat appear on 61, 64, 60 and 58 distinct athlete-dates respectively for each
+sex.
+
+Two replacement PDFs were serialized only from that accepted artifact:
+
+- `output/pdf/LFA_FULL_YEAR_MALE_30838f11.pdf`: 114 pages, 423,186 bytes,
+  SHA-256 `58f8fab653001f1f72633fe3a67fbf8a09f96010b1797e3a6185114fc8891c60`.
+- `output/pdf/LFA_FULL_YEAR_FEMALE_30838f11.pdf`: 114 pages, 424,132 bytes,
+  SHA-256 `582d60ff21969c885c6467c9d6f8b009a21a8b1dc0be645cfebe26315d6337c4`.
+
+The PDF receipt checks selectable text, 52 week headings, appendix presence,
+all-zero output findings and 42 intentional rest days in each file. All 228 PDF
+pages were rendered to PNG and inspected through sixteen contact sheets. The
+dense Sunday-game, bye/injury and audit-appendix pages were also inspected at
+full resolution. No clipped tables, overlaps, broken glyphs or malformed pages
+were found. The old `7153ec70` PDFs are superseded and must not be delivered.
+
+The law registry remains honestly red on inherited debt: 248 rows, 227 guarded
+and 21 `UNENFORCED`. R-309's named guard now includes
+`test:canonical-weekly-compiler`.
+
+### NOT COVERED
+
+- Physical iPhone rendering, native onboarding taps, remote persistence and a
+  true OS process death; the athlete-facing result is gates green, awaiting Sam
+  device acceptance.
+- A clean Release installation on Sam's phone.
+- Clinical approval of the injury choices or coaching-quality approval of every
+  strange but valid compiler output.
+- Competition/team metadata beyond accepted fixture date and kind.
+- The next Off-season transition, because this exact 52-week window ends at the
+  end of In-season.
+
 ## Addendum Section 8 + final Section 7 — current-checkpoint audit repair
 
 The first current-checkpoint generation failed before week 1 could install:
@@ -987,3 +1053,95 @@ R-308 is born guarded by chained `test:fixture-mutation-transaction`.
   arm/foundation refinement are complete in the checkpoint above.
 - Section 7's accumulated return-home spacing defect and PDFs remain open.
 - No simulator, Release build or physical phone work has run.
+
+## Final handoff state
+
+The open-state lines above are historical checkpoint receipts. The current
+state is the measured **Final exact-year acceptance — revision 30838f11**
+section above: all requested implementation sections are checkpointed, the
+fresh exact artifact passes 24/24 with zero findings, both 114-page replacement
+PDFs passed every-page visual QA, and the old `7153ec70` PDFs are superseded.
+
+### NOT COVERED
+
+- Physical iPhone rendering, native onboarding taps, remote persistence, true
+  OS process death and the clean Release installation required for Sam's device
+  acceptance.
+- Clinical approval of injury choices or coaching-quality approval of every
+  strange but valid compiler output.
+- Competition/team metadata beyond accepted fixture date and kind.
+- The next Off-season transition after this exact 52-week window.
+
+## Seated Good Morning canonical identity and final targeted repair
+
+### What happened
+
+- `Seated Good Morning` now owns one selection/history/injury/cue/video identity
+  with Bodyweight, Dumbbell and Barbell implement variants. Variant data owns
+  support/loading equipment, load-control mode and training-age eligibility.
+- `Seated Good Morning (Barbell)` is read ingress only. Legacy rows display and
+  progress as the canonical exercise while preserving their barbell implement.
+  Current pools, registries, workbook rows and accepted Add/Swap writes cannot
+  emit the retired name; a second equipment variant is rejected as the same
+  canonical exercise.
+- The exercise master workbook now contains 208 distinct canonical exercise
+  rows and one Seated Good Morning row. Its Bodyweight variant is open to new
+  athletes; Dumbbell and Barbell remain one-plus-year variants.
+- `Air Bike Accelerations` is tested as machine conditioning. The running-Speed
+  test no longer passes it to the run-only Speed builder and instead proves its
+  machine-catalogue separation.
+- The 11 reported test TypeScript errors were fixed at their real shapes. The
+  raw test project now reports zero errors; no baseline, suppression or shape
+  cast was added.
+- Two stale targeted instruments were repaired after first execution: the
+  session-equipment journey now derives a live generated coordinate instead of
+  naming an expired date, and modality persistence judges only modality-bearing
+  cards. The release load tracer now distinguishes raw phase multipliers from
+  final equipment-lattice normalization.
+
+### Verification
+
+- `test:exercise-canonicalisation`: 79/79.
+- `test:muscle-experience`: 95/95; workbook 208 rows, one canonical Seated Good
+  Morning row, zero formula-error strings in the workbook inspection.
+- `test:equipment-vocabulary`: 95/95.
+- `test:equipment-answer`: 50/50.
+- `test:session-equipment-owner`: 27/27, including save/restart.
+- `test:load-ratio-rulings`: 9/9 equipment increments plus 47/47 load rulings.
+- `test:render-truth`: 29/29; `test:exercise-display`: 32/32.
+- `test:conditioning-template-modality`: 5/5.
+- `test:real-running-speed`: 12/12.
+- `test:conditioning-modality-persistence`: exit 0, including 2,728 route
+  combinations, save/restart and running-versus-machine copy.
+- `test:programming-selection-release`: exit 0 on a clean complete rerun. Its
+  catalogue-order gate remained 0 changed athlete-days across 728 athlete-days
+  and 0 identity/modality mismatches across 290 displayed conditioning/Speed
+  rows; final trace 10/10, block progression 41/41, audited-load tracing 5/5,
+  final composition 6/6 and generated-week assembly 30/30.
+- `test:compile`: product 0, devtools 0, tests 0. Direct
+  `tsc --noEmit -p tsconfig.tests.json`: zero errors.
+- Guard liveness: redirecting the legacy load alias back to the retired identity
+  made `test:exercise-canonicalisation` 76/79; restoration returned 79/79.
+
+### What remains
+
+- The long annual audit and year PDFs were deliberately not regenerated or run.
+- No simulator, clean Release build or physical-iPhone acceptance ran. This is
+  gates green, awaiting Sam device acceptance for the athlete-facing surface.
+- The repository-wide law gate remains at its existing 21 distinct UNENFORCED
+  laws (249 registry rows, 228 guarded); the new R-316 row is guarded and added
+  no debt.
+- An extra, non-requested `test:visible-surfaces` probe remains at 68 passing /
+  13 failing on its older removal/fallback fixture. It is outside this targeted
+  checkpoint and was not concealed or repaired here.
+
+### Product decision
+
+None required from Sam.
+
+### NOT COVERED
+
+- Annual audit/PDF regeneration, physical iPhone, native onboarding taps,
+  remote persistence and true OS process death.
+- Clinical review of the canonical exercise's injury ratings; this change keeps
+  the already-authored single injury profile.

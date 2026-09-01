@@ -94,7 +94,8 @@ console.log('\n[1] THE SHEET — still reads as Sam signed it');
    together with its pool entry, cue, tags, load list and vocabulary entry. The
    number moves with the sheet; that is what makes this cell a ratchet rather
    than a decoration. */
-ok('the sheet holds 209 canonical exercise rows after the pulldown identity merge', sheetRows.length === 209, `found ${sheetRows.length}`);
+ok('the sheet holds 208 canonical exercise rows after both legacy identity merges',
+  sheetRows.length === 208, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -316,10 +317,14 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // The eleven-exercise intake adds Horse Stance Hold as `everyone` (141 -> 142).
 // The 2026-09-01 identity merge removes the duplicate one-arm pulldown row
 // while preserving it as a read alias, so the canonical count returns to 141.
+// R-316 then merges the 1+ years barbell Seated Good Morning row into the
+// everyone canonical identity; the detailed variant gate lives beside the
+// selected implement, so one_plus_years loses one row without everyone gaining
+// a duplicate identity.
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
   everyone: 141,
   everyone_regression: 11,
-  one_plus_years: 38,
+  one_plus_years: 37,
   two_plus_years: 17,
   advanced_only: 2,
 };
@@ -407,6 +412,12 @@ ok('the retired spelling is absent from current sheet/code but resolves at legac
   !sheetRows.some((row) => row.Exercise === 'Single-Arm Pulldown')
     && !EXERCISE_MUSCLE_METADATA.some((entry) => entry.exercise === 'Single-Arm Pulldown')
     && resolveExerciseName('Single-Arm Pulldown') === 'Single-Arm Lat Pulldown');
+ok('Seated Good Morning owns one authored row and the retired barbell name is ingress only',
+  sheetRows.filter((row) => row.Exercise === 'Seated Good Morning').length === 1
+    && !sheetRows.some((row) => row.Exercise === 'Seated Good Morning (Barbell)')
+    && !EXERCISE_MUSCLE_METADATA.some((entry) =>
+      entry.exercise === 'Seated Good Morning (Barbell)')
+    && resolveExerciseName('Seated Good Morning (Barbell)') === 'Seated Good Morning');
 
 /* ── The experience crosswalk ── */
 

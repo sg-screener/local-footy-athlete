@@ -60,6 +60,10 @@ import {
   type InjuryRegion,
 } from '../data/injuryRegions';
 import { exerciseProgrammingAllows, type FilterContext } from './exerciseFilter';
+import {
+  equipmentRequiredFor,
+  exerciseIsAvailableWith,
+} from '../data/exerciseEquipmentRequirement';
 import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
 import { guidedInjuryBucketForArea } from './guidedInjuryControl';
 import { applyLoadEstimates } from './loadEstimation';
@@ -686,7 +690,9 @@ function filterPool(
     if (ex.contraindications.some(c => injuryTags.has(c))) return false;
     // Exclude if requires equipment the athlete doesn't have
     // (bodyweight exercises always pass — equipment array is empty or contains 'bodyweight')
-    if (ex.equipment.length > 0) {
+    if (equipmentRequiredFor(ex.name) !== null) {
+      if (!exerciseIsAvailableWith(ex.name, [...equipmentTags])) return false;
+    } else if (ex.equipment.length > 0) {
       const hasRequirement = (requirement: (typeof ex.equipment)[number]): boolean => {
         if (Array.isArray(requirement)) {
           return requirement.some((tag) => tag === 'bodyweight' || equipmentTags.has(tag));

@@ -44,14 +44,13 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
-  "Seated Good Morning (Barbell)": [["bench", "plyo_box"], "barbell"],
   "Rotational Medicine-Ball Slam": ["medicine_ball"],
   "Medicine-Ball Slam": ["medicine_ball"],
   "Rotational Medicine-Ball Throw": ["medicine_ball"],
   "Reverse Nordic Curl": [],
   "SL 45° Back Extension Hold": ["back_extension_bench"],
   "SL 45° Back Extension": ["back_extension_bench"],
-  "Seated Good Morning": [["bench", "plyo_box"]],
+  "Seated Good Morning": [["bench", "plyo_box"], ["barbell", "dumbbells"]],
   "Crab Hold": [],
   "Standing Knee Extension": [],
   "Seated Single-Leg Pike Lift": [],
@@ -293,16 +292,18 @@ export function equipmentRequirementLabel(name: string): string | null {
  * whether a movement survives losing its load; only the movement can, and only
  * Sam can say so.**
  *
- * **IT HOLDS EXACTLY THE TWO HE HAS RULED, AND R-086 CLOSED IT THERE.** Asked
+ * **R-086 CLOSED THE ORIGINAL LIST AT TWO; R-316 ADDS ONE NAMED VARIANT
+ * CONTRACT.** Asked
  * directly whether `Deadlift` and `Goblet Squat` should join, Sam said
  * **"leave it at two"** (2026-08-13). **THIS IS A CLOSURE, NOT A BACKLOG —
  * do not add a third by inference and do not "complete" the list.** Anything
  * not here follows the sheet verbatim: kit missing, exercise refused.
  *
- * A third entry needs a new ruling and a new registry row. The equality is
- * pinned in `test:edge-generation-equipment`, so a quiet addition reds on
- * arrival rather than shipping — the moment this grows by guess it becomes the
- * conflated field the unit exists to delete.
+ * `Seated Good Morning` is the only later addition: R-316 explicitly makes its
+ * loading implement optional while retaining a bench-or-box support
+ * requirement. Any further entry still needs a new ruling and registry row.
+ * The equality is pinned in `test:edge-generation-equipment`, so a quiet
+ * addition reds on arrival rather than shipping.
  */
 export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
   // Sam, 2026-08-13, setting this unit's acceptance test: *"Walking Lunges is
@@ -310,7 +311,15 @@ export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
   // Single Leg RDL must read legal"* on a bodyweight kit.
   'Walking Lunges',
   'Single-Leg RDL',
+  // R-316: the loading implement is optional, but a bench or box is not.
+  'Seated Good Morning',
 ]);
+
+/** Support requirements that remain mandatory for an unloaded regression. */
+const BODYWEIGHT_REGRESSION_REQUIREMENTS:
+Readonly<Partial<Record<string, readonly EquipmentRequirement[]>>> = {
+  'Seated Good Morning': [['bench', 'plyo_box']],
+};
 
 /**
  * CAN THIS ATHLETE PERFORM THIS MOVEMENT AT ALL?
@@ -334,5 +343,7 @@ export function exerciseIsAvailableWith(
     Array.isArray(entry) ? entry.some((tag) => kit.has(tag)) : kit.has(entry as string);
   if (required.every(satisfied)) return true;
   // Missing something — but the movement may survive losing its LOAD.
-  return BODYWEIGHT_CAPABLE.has(name);
+  if (!BODYWEIGHT_CAPABLE.has(name)) return false;
+  const retained = BODYWEIGHT_REGRESSION_REQUIREMENTS[name] ?? [];
+  return retained.every(satisfied);
 }

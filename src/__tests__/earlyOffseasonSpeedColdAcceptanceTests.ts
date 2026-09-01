@@ -48,7 +48,9 @@ async function main(): Promise<void> {
   profile.firstName = 'R311 cold acceptance';
   profile.seasonFinishedOn = '2026-09-27';
   profile.equipmentAnswer = presetEquipmentAnswer('commercial_gym', MONDAY);
-  if (profile.twoKmTimeTrial) profile.twoKmTimeTrial.recordedOn = MONDAY;
+  if (profile.twoKmTimeTrial) {
+    profile.twoKmTimeTrial = { ...profile.twoKmTimeTrial, recordedOn: MONDAY };
+  }
 
   let installed: Awaited<ReturnType<typeof coldStartThroughOnboarding>> | null = null;
   let thrown: unknown = null;

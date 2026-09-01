@@ -357,7 +357,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:offseason-deload-conditioning + test:weekly-scheduler',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The current 52-week artifact and first focused tape reproduced all three defects: weeks 1-4 had no Speed, weeks 5-8 could publish Air Bike Accelerations as Speed, and a Pre-season week could publish 30 m Repeats as Speed. The final generated-week gate is 12/12 across six Off-season phase steps, a Pre-season team week, an available In-season team week, congested fixture omission, final owned rows and two factory refusals. Phase authorship is 42/42, sprint-credit evidence is 14/14 and weekly scheduler is green. LIVENESS: before production changes the focused tape was 2/10; withholding phase-week provenance left it 8/10; removing the factory modality/quality refusals made it 10/12. The focused gate is nested in chained `test:offseason-deload-conditioning`. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The current 52-week artifact and first focused tape reproduced all three defects: weeks 1-4 had no Speed, weeks 5-8 could publish Air Bike Accelerations as Speed, and a Pre-season week could publish 30 m Repeats as Speed. The final generated-week gate is 12/12 across six Off-season phase steps, a Pre-season team week, an available In-season team week, congested fixture omission, final owned rows, one running-factory refusal and an Air Bike machine-catalogue separation cell. Phase authorship is 42/42, sprint-credit evidence is 14/14 and weekly scheduler is green. LIVENESS: before production changes the focused tape was 2/10; withholding phase-week provenance left it 8/10; removing the factory modality/quality refusals made it 10/12. The focused gate is nested in chained `test:offseason-deload-conditioning`. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
     },
   },
   {
@@ -402,6 +402,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:weekly-scheduler',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The exact male and female lived years both reproduced app conditioning on 2027-02-04/05/06 after a Monday-Friday travel fact and Saturday Clear. The compiler pinned Thursday/Friday only after the scheduler authored a fresh whole week, so Saturday was a fifth app day and the third consecutive day. A typed delivered-history snapshot now reaches the scheduler before placement and separates app, Speed and actual anchor credit. The exact remainder cell began red with Saturday present and is now green; ignoring the snapshot restores that red. A fresh two-athlete 52-week working artifact is 21/22 with both energy checks green; only its pre-commit revision pin remains intentionally red. Final exact-commit/PDF receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
+    id: 'LAW-seated-good-morning-is-one-variant-aware-identity',
+    law: 'R-316: Seated Good Morning is one canonical exercise identity with Bodyweight, Dumbbell and Barbell variants. The identity owns one video, cue set, injury profile, selection slot and history; the selected variant alone controls equipment, load UI and experience eligibility. Seated Good Morning (Barbell) is legacy saved-data ingress only: it reopens as the canonical identity, is never currently written or automatically selected, and cannot coexist or compete with another variant in one session.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-316',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-canonicalisation + test:programming-selection-release',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The focused identity gate began 67/77: nine Seated Good Morning contract cells were red and one older source-shape assertion was stale. One canonical identity plus typed implement variants now owns ingress, selection, equipment, load control, experience, display and accepted Add/Swap writes. The master workbook contains one canonical row. Final gate: 79/79. LIVENESS: redirecting the legacy load alias back to the retired identity made the same gate 76/79; restoration returned 79/79. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
     },
   },
   {

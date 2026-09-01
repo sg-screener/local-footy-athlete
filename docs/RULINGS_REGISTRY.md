@@ -7920,3 +7920,22 @@ Guard: `LAW-midweek-remainder-counts-delivered-energy-history` through chained
 including Thursday/Friday, two standing club-night answers that the travel week
 did not actually deliver, and Saturday as the first governable day. Verification,
 mutation receipt and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-316** · Seated Good Morning is one variant-aware exercise, 2026-09-01.
+
+Owner: yearrepair. `Seated Good Morning` is one canonical exercise identity.
+Bodyweight, Dumbbell and Barbell are variants of that identity, not separate
+exercises. They share one video, cue set, injury profile, selection slot and
+exercise history. The selected variant controls its equipment requirement,
+athlete-visible load control and experience eligibility.
+
+`Seated Good Morning (Barbell)` exists only as legacy saved-data ingress. An
+existing stored row with that name reopens as `Seated Good Morning` with its
+barbell variant preserved, but no current writer or automatic selector emits the
+legacy identity. Variant choices cannot coexist in one session or compete as
+separate catalogue entries.
+
+Guard: `LAW-seated-good-morning-is-one-variant-aware-identity` through chained
+`test:exercise-canonicalisation + test:programming-selection-release`.
+Verification status, mutation receipt and NOT COVERED:
+`docs/STATUS_YEARREPAIR.md`.

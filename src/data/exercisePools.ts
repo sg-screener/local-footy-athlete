@@ -377,8 +377,7 @@ export const TISSUE_QUALITY_POOL: PoolExercise[] = [
 ];
 
 export const MOBILITY_POOL: PoolExercise[] = [
-  authoredExercise("seated-good-morning-barbell", "Seated Good Morning (Barbell)", [["bench", "plyo_box"], "barbell"]),
-  authoredExercise("seated-good-morning", "Seated Good Morning", [["bench", "plyo_box"]]),
+  authoredExercise("seated-good-morning", "Seated Good Morning", [["bench", "plyo_box"], ["barbell", "dumbbells"]]),
   authoredExercise("crab-hold", "Crab Hold", []),
   authoredExercise("horse-stance-hold", "Horse Stance Hold", []),
   ex('hip-90-90',         'Hip 90/90 Stretch',           2, 30, 45, 30, 'Breathe into the stretch.',                    ['bodyweight'], ['hip', 'knee'],  'low', { prescriptionType: 'duration', perSide: true }),

@@ -211,18 +211,18 @@ console.log('\n[7] THE STEP — required, registered, and answered by the same p
 
   // Resume and the generator's required-set both derive from the registry, so
   // one assertion each proves the refusal owner sees the new answer.
-  const unansweredButOtherwiseDone = {
+  const unansweredButOtherwiseDone: OnboardingData = {
     // R-130: every OTHER step answered, gender included — the cell's whole
     // claim is that Equipment is the ONE unanswered step.
     firstName: 'A', gender: 'male', heightCm: 180, weightKg: 80, position: 'inside_mid',
-    goals: ['stay_consistent'], seasonPhase: 'Off-season',
+    goals: ['stay_consistent'], seasonPhase: 'Off-season', seasonFinishedOn: '2026-07-01',
     trainingDaysPerWeek: 3, preferredTrainingDays: ['Monday'],
     experienceLevel: '2-5 years', squatStrength: 'Around bodyweight',
     benchStrength: 'Around bodyweight',
     twoKmTimeTrial: { seconds: 480, recordedOn: '2026-07-31', source: 'onboarding' },
-    conditioningLevel: 'Good', sprintExposure: 'Weekly',
-    recentTrainingLoad: 'Somewhat consistent', injuries: [],
-  } as unknown as OnboardingData;
+    conditioningLevel: 'Good', sprintExposure: 'Occasionally',
+    recentTrainingLoad: 'Pretty consistent', injuries: [],
+  };
   ok('an interrupted flow resumes onto Equipment when it is the one unanswered step',
     resolveOnboardingResumeStep(unansweredButOtherwiseDone) === 'Equipment',
     resolveOnboardingResumeStep(unansweredButOtherwiseDone));

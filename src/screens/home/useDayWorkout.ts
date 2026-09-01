@@ -161,9 +161,10 @@ export function useDayWorkout() {
   const getLoadControlMode = useCallback(
     (exercise: any, selectedImplement?: string | null): LoadControlMode =>
       (sessionAsksForLoad(workout)
-        ? resolveLoadControlMode(exercise.exercise?.name || '', selectedImplement)
+        ? resolveLoadControlMode(exercise.exercise?.name || '', selectedImplement,
+          onboardingData?.experienceLevel)
         : 'none'),
-    [workout],
+    [onboardingData?.experienceLevel, workout],
   );
 
   /** Is this exercise able to return to an unloaded bodyweight state? */

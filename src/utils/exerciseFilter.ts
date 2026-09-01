@@ -23,13 +23,22 @@ import {
 } from '../rules/injurySeverityBands';
 import { ladderLevelForProfile, meetsTrainingAgeMinimum } from '../rules/experienceCrosswalk';
 import type { ExperienceLevel } from '../types/domain';
+import type { EquipmentTag } from '../data/exercisePools';
+import {
+  isSeatedGoodMorningIdentity,
+  seatedGoodMorningVariantAllowsExperience,
+} from '../rules/seatedGoodMorningVariants';
 
 /** Typed movement restrictions shared by composition, warm-up and manual doors. */
 export function exerciseProgrammingAllows(name: string, context: {
   experienceLevel?: ExperienceLevel | null;
   daysToGame?: number | null;
   route: 'automatic' | 'manual' | 'warmup' | 'primer';
+  selectedImplement?: EquipmentTag | null;
 }): boolean {
+  if (isSeatedGoodMorningIdentity(name)
+    && !seatedGoodMorningVariantAllowsExperience(
+      context.selectedImplement, context.experienceLevel)) return false;
   const policy = getExerciseTags(name)?.programming;
   if (!policy) return true;
   if (!meetsTrainingAgeMinimum(ladderLevelForProfile(context.experienceLevel),
