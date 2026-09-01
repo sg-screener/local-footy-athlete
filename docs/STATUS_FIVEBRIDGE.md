@@ -169,7 +169,19 @@ Red-first receipt: `test:programming-year-audit-rules` could not load because
 the shared audit rule source did not exist. Green receipt: 6/6 synthetic
 journey cells; all three audit scripts also pass Node syntax checks.
 
-Mutation receipt: pending the path-scoped implementation checkpoint.
+Mutation receipt after checkpoint `47055f39`:
+
+- restoring the old Pre-season Tuesday/Thursday assumption made three cells red
+  (3/6);
+- ending Christmas on 4 January made the anchor cell red (5/6);
+- delaying normal-equipment restoration to 3 January made the travel cell red
+  (5/6);
+- restoring a one-fixture-per-week ceiling made the exact-placement cell red
+  (5/6); and
+- restoring the optional session's one-fixture-only check made its multi-game
+  cell red (5/6).
+
+After each mutation the source was restored. The final focused result is 6/6.
 
 ## NOT COVERED
 
