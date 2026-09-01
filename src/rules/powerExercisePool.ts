@@ -421,6 +421,14 @@ function decidePowerExercise(context: PowerSelectionContext): PowerExerciseDecis
     orderedEligible: ordered };
 }
 
+/** Existing role-appropriate power order, exposed so the weekly selector may
+ * skip an identity already used elsewhere without inventing another ranking. */
+export function rankedPowerExerciseCandidates(
+  context: PowerSelectionContext,
+): readonly PowerPoolEntry[] {
+  return decidePowerExercise(context).orderedEligible;
+}
+
 /** The pool decision plus its candidate evidence; selection itself is unchanged. */
 export function selectPowerExerciseWithTrace(
   context: PowerSelectionContext,

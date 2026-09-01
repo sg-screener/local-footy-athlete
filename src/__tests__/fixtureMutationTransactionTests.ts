@@ -65,6 +65,12 @@ import {
   validateProgramWeek,
   validatorDaysFromResolvedWeek,
 } from '../rules/weekStructureValidator';
+import {
+  auditFinalAutomaticWeek,
+  automaticExerciseRouteForIdentity,
+  workoutExerciseWasAutomaticallySelected,
+} from '../rules/automaticWeeklyExerciseSelection';
+import { slotDayKindForPatterns } from '../rules/sessionSlotCoverage';
 
 const WEEK_START = '2026-03-23';
 const FRIDAY = '2026-03-27';
@@ -73,6 +79,19 @@ const SUNDAY = '2026-03-29';
 
 let passed = 0;
 const failures: string[] = [];
+
+function automaticWeeklyRepeats(): unknown[] {
+  return (useProgramStore.getState().currentProgram?.microcycles ?? []).flatMap((week) =>
+    auditFinalAutomaticWeek(week.workouts.map((workout) => ({
+      dayKind: slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []),
+      exercises: workout.exercises.filter(workoutExerciseWasAutomaticallySelected).map((row) => ({
+        identity: row.exercise?.name ?? '', authorship: 'automatic' as const,
+        route: row.role === 'power' ? 'power' as const
+          : automaticExerciseRouteForIdentity(row.exercise?.name ?? ''),
+        requestedAsMain: row.section18Evidence?.role === 'main_strength',
+      })),
+    }))).repeatedExact);
+}
 
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
@@ -416,6 +435,8 @@ async function main(): Promise<void> {
         moved.outcome !== 'impossible',
       JSON.stringify(moved),
     );
+    assert(automaticWeeklyRepeats().length === 0,
+      `fixture repair introduced automatic repeats: ${JSON.stringify(automaticWeeklyRepeats())}`);
     if (!('result' in moved)) throw new Error(JSON.stringify(moved));
     const adjustmentId = moved.result.reversibleAdjustmentId;
     assert(adjustmentId, 'move adjustment missing');
@@ -428,6 +449,8 @@ async function main(): Promise<void> {
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
     assert(restored.outcome === 'recomposed', JSON.stringify(restored));
+    assert(automaticWeeklyRepeats().length === 0,
+      `fixture restoration introduced automatic repeats: ${JSON.stringify(automaticWeeklyRepeats())}`);
     assert(restored.affectedWeeks.length === adjustment.rollingDependencyWeeks.length,
       'restoration did not validate the complete horizon');
     assert(visibleSemantic(athlete) === before,
@@ -437,6 +460,8 @@ async function main(): Promise<void> {
     const { relaunchApp } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
     const restart = await relaunchApp({ storage: localStorageData, todayISO: WEEK_START });
     assert(restart.ok, JSON.stringify(restart));
+    assert(automaticWeeklyRepeats().length === 0,
+      `fixture-repair restart introduced automatic repeats: ${JSON.stringify(automaticWeeklyRepeats())}`);
     assert(visibleSemantic(athlete) === before,
       'hydration changed the restored fixture state');
   });

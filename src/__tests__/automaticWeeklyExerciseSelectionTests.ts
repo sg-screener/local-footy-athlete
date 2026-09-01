@@ -16,6 +16,7 @@ import {
   automaticIsolationSupportCandidatesForSlot,
   automaticMainFamilyForExercise,
   createAutomaticWeeklyExerciseSelector,
+  workoutExerciseWasAutomaticallySelected,
   type FinalAutomaticSelectionDay,
 } from '../rules/automaticWeeklyExerciseSelection';
 import { strengthExerciseClassification } from '../data/exerciseTags';
@@ -199,6 +200,38 @@ function finalDays(program: TrainingProgram): FinalAutomaticSelectionDay[][] {
   })));
 }
 
+function allAutomaticGymDays(program: TrainingProgram): FinalAutomaticSelectionDay[][] {
+  return program.microcycles.map((week) => week.workouts.map((workout: Workout) => ({
+    dayKind: slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []),
+    exercises: (workout.exercises ?? []).flatMap((row) => {
+      const role = row.section18Evidence?.role;
+      if (!workoutExerciseWasAutomaticallySelected(row)) return [];
+      const identity = String(row.exercise?.name ?? '');
+      return [{
+        identity,
+        authorship: 'automatic' as const,
+        route: row.role === 'power' ? 'power' as const
+          : automaticExerciseRouteForIdentity(identity),
+        requestedAsMain: role === 'main_strength',
+      }];
+    }),
+  })));
+}
+
+function automaticRepeatsInWorkouts(workouts: readonly Workout[]) {
+  return audit(workouts.map((workout) => ({
+    dayKind: slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []),
+    exercises: workout.exercises.flatMap((row) => {
+      if (!workoutExerciseWasAutomaticallySelected(row)) return [];
+      const identity = row.exercise?.name ?? '';
+      return [{ identity, authorship: 'automatic' as const,
+        route: row.role === 'power' ? 'power' as const
+          : automaticExerciseRouteForIdentity(identity),
+        requestedAsMain: row.section18Evidence?.role === 'main_strength' }];
+    }),
+  }))).repeatedExact;
+}
+
 const worlds: { id: string; program: TrainingProgram }[] = [];
 for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
   for (const gymDays of [2, 3, 4, 5, 6]) {
@@ -221,6 +254,35 @@ run('50 real generated worlds have no non-prehab identity, family or ownership b
       || result.dedicatedDayOwnership.length) findings.push(`${world.id}/week${index + 1}: ${JSON.stringify(result)}`);
   }
   assert(findings.length === 0, `${findings.length} invalid athlete-weeks\n${findings.slice(0, 20).join('\n')}`);
+});
+
+run('male Gunshow accessories do not repeat an earlier automatic upper-session exercise', () => {
+  const program = worlds.find((world) => world.id === 'male/In-season/5d/noclub')?.program;
+  assert(program, 'male one-game world missing');
+  const failures = allAutomaticGymDays(program).flatMap((days, weekIndex) => {
+    const finding = audit(days).repeatedExact;
+    return finding.length ? [{ week: weekIndex + 1, finding }] : [];
+  });
+  assert(failures.length === 0, JSON.stringify(failures));
+});
+
+run('female Primer power does not repeat automatic power used earlier in the week', () => {
+  const program = worlds.find((world) => world.id === 'female/In-season/5d/noclub')?.program;
+  assert(program, 'female one-game world missing');
+  const failures = allAutomaticGymDays(program).flatMap((days, weekIndex) => {
+    const finding = audit(days).repeatedExact;
+    return finding.length ? [{ week: weekIndex + 1, finding }] : [];
+  });
+  assert(failures.length === 0, JSON.stringify(failures));
+});
+
+run('every automatic gym session family has zero exact weekly repeats across 50 generated worlds', () => {
+  const failures = worlds.flatMap((world) => allAutomaticGymDays(world.program)
+    .flatMap((days, weekIndex) => {
+      const finding = audit(days).repeatedExact;
+      return finding.length ? [{ world: world.id, week: weekIndex + 1, finding }] : [];
+    }));
+  assert(failures.length === 0, `${failures.length} repeated athlete-weeks\n${JSON.stringify(failures.slice(0, 20))}`);
 });
 
 run('an unshipped bodyweight support choice cannot block a later legal main push', () => {
@@ -304,6 +366,12 @@ async function durableProofs(): Promise<void> {
     const duplicateCount = read().flatMap((day) => day.workout?.exercises ?? [])
       .filter((row) => row.exercise?.name === source.name).length;
     assert(duplicateCount >= 2, `athlete duplicate was rejected: ${source.name}`);
+    assert(read().flatMap((day) => day.workout?.exercises ?? [])
+      .some((row) => row.exercise?.name === source.name
+        && !workoutExerciseWasAutomaticallySelected(row)),
+    'athlete-added duplicate was incorrectly entered into automatic history');
+    assert(automaticRepeatsInWorkouts(read().flatMap((day) => day.workout ? [day.workout] : [])).length === 0,
+      'automatic weekly history contains a repeat after the athlete addition');
     assert(JSON.stringify(automaticRows()) === JSON.stringify(beforeAutomatic),
       'athlete addition caused automatic rows to refill or move');
     const beforeRestart = visibleSignature(read());
@@ -312,6 +380,8 @@ async function durableProofs(): Promise<void> {
     }));
     assert(restarted.ok && visibleSignature(read()) === beforeRestart,
       JSON.stringify(restarted));
+    assert(automaticRepeatsInWorkouts(read().flatMap((day) => day.workout ? [day.workout] : [])).length === 0,
+      'automatic weekly history contains a repeat after restart');
   });
 
   console.log(`\nAutomatic weekly exercise selection: passed=${passed}/${passed + failures.length} failures=${failures.length}`);

@@ -153,6 +153,8 @@ export interface PoolDefinition {
 }
 
 export interface RotationContext {
+  /** One compiler-owned history shared by all automatic gym exercise families. */
+  automaticWeeklyExerciseSelector?: import('../rules/automaticWeeklyExerciseSelection').AutomaticWeeklyExerciseSelector;
   daysToGameByDay?: Readonly<Partial<Record<number, number | null>>>;
   /** Accepted prior power choices used by every compiler-owned power picker. */
   powerSelectionHistory?: readonly import('../rules/powerExercisePool').BlockPowerSelection[];

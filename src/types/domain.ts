@@ -1365,6 +1365,12 @@ export interface ConditioningBlock {
  */
 export interface WorkoutExercise {
   /**
+   * Selected by the automatic weekly exercise selector. This survives
+   * persistence so rebuilds can recover the same history; athlete-added rows
+   * deliberately leave it absent.
+   */
+  automaticSelection?: true;
+  /**
    * THIS ROW IS SKIPPABLE, AND THE ATHLETE CAN SEE THAT IT IS.
    *
    * Sam, 2026-08-23, reading his Primer: *"the strength work and the

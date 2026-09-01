@@ -99,7 +99,49 @@ conditioning-block ownership made all three conditioning-card cells red while
 the ordinary-Recovery control stayed green (1/4). Restoring the owner returned
 the focused suite to 4/4.
 
-## Sections 4–5
+## Section 4 — one weekly selector everywhere
+
+Two options were considered:
+
+1. Add duplicate filters inside Gunshow, Primer and Power or clean the finished
+   week after composition.
+2. Carry the existing canonical weekly selector through every automatic gym
+   composer and persist typed automatic authorship for rebuilds.
+
+Option 2 was used. Normal strength selects first; its real delivered identities
+seed the shared history. Power, Gunshow, Primer and optional automatic sessions
+then use their existing role-specific candidate order, skipping spent identities
+and leaving an exhausted seat empty. Mobility and Prehab remain exempt.
+Athlete-added rows never receive the automatic marker and remain unrestricted.
+
+Red-first receipt: the 50-world focused boundary was 13/15. Male one-game weeks
+repeated `Dumbbell Kickback` between an upper session and Gunshow in all four
+weeks (plus `Face Pull` in week 4). Female one-game weeks repeated
+`Rotational Medicine-Ball Slam` and `Box Jumps` between ordinary power and
+Primer in all four weeks.
+
+Green receipts:
+
+- `test:automatic-weekly-selection`: 16/16, including zero exact repeats over
+  50 real generated worlds × four weeks, the two named failures, unrestricted
+  athlete additions, and identical automatic history after restart.
+- `test:power-pool`: 104/104; `test:primer-session`: 25/25;
+  `test:optional-topup`: 30/30.
+- `test:fixture-mutation-transaction`: the new move, restore and restart
+  repeat checks all passed in cell 9. The wider suite remains inherited red at
+  17/20 on its three Practice Match onboarding cells.
+- `test:injury-recomposition`: all synchronous injury selection/recomposition
+  cells passed before its inherited real-onboarding journey refused the week
+  for `required_minimum_shortfall:main_strength:2`.
+- Product and dev-tool typechecking remain at 0 errors. The test-only typecheck
+  remains inherited red with seven `SessionTemplateItem.row` errors in
+  `sessionWorkOwnershipJourneyTests.ts`.
+- `test:pools` remains inherited red at 482/486 on four existing rotation/pin
+  expectations; no pool selection policy was changed by this section.
+
+Mutation receipt: pending the path-scoped implementation checkpoint.
+
+## Section 5
 
 Pending.
 

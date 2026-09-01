@@ -19,12 +19,13 @@ import {
   type DeloadWeekPolicy,
 } from './deloadWeekRules';
 import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
-import { composedIdentityFor } from './composedRowLegality';
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { isoDateForWeekday } from '../utils/appDate';
+import { createAutomaticWeeklyExerciseSelector } from './automaticWeeklyExerciseSelection';
 
 /** The specialist's decision for one day, plus what the row builder needs. */
 export interface ComposedPowerPlacement {
+  readonly automaticWeeklyExerciseSelector?: import('./automaticWeeklyExerciseSelection').AutomaticWeeklyExerciseSelector;
   /**
    * THE WEEK'S POWER ALLOWANCE, HONOURED BY NOT PLACING MORE THAN IT.
    *
@@ -182,6 +183,12 @@ export function materialiseComposedWeek(
   const allowance = context.power?.allowance;
   let primersPlaced = 0;
   const powerSeats = new Map<string, number>();
+  const automaticWeeklyExerciseSelector = context.power
+    ? context.power.automaticWeeklyExerciseSelector
+      ?? createAutomaticWeeklyExerciseSelector(
+        week.days.flatMap((day) => day.rows.map((row) => row.identity)),
+      )
+    : undefined;
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
@@ -250,6 +257,7 @@ export function materialiseComposedWeek(
             ...(context.power?.selectionsOut ?? []),
           ],
           selectionTracesOut: context.power?.selectionTracesOut,
+          automaticWeeklyExerciseSelector,
           traceContext: {
             dateISO: isoDateForWeekday(context.weekStartISO, day.dayOfWeek),
             weekStartISO: context.weekStartISO,
@@ -258,8 +266,9 @@ export function materialiseComposedWeek(
             injuries: context.power?.injuries ?? [],
             daysToGame: context.power?.daysToGameByDay?.[day.dayOfWeek] ?? null,
           },
-        }) as WorkoutExercise;
-        /* ── ONE EXERCISE, ONCE PER SESSION ──────────────────────────────────
+        });
+        if (built) {
+          /* ── HISTORICAL ROOT-CAUSE RECEIPT: ONE EXERCISE, ONCE ─────────────
          *
          * ⚠ **THE PRIMER YIELDS TO THE LIFT. IT NEVER APPEARS BESIDE ITS OWN
          * TWIN.** Measured 2026-08-19 across the 180-world corpus: making the
@@ -288,27 +297,22 @@ export function materialiseComposedWeek(
          * The athlete still does the movement explosively — it is simply
          * prescribed once, as their lift, instead of twice under two names.
          *
-         * ⚠ **THIS IS NOT A DEDUPLICATOR AND MUST NOT BECOME ONE.** It answers
-         * one question — "did the primer land on a movement this session
-         * already has?" — using the composer's own identity function, so it
-         * cannot disagree with the corpus census that found the defect. A
-         * general row-deduplication pass belongs to the composer, where the
-         * remaining 48 `strength_accessory + conditioning` collisions live;
-         * those are `main`'s and older than this line. */
-        const primerIdentity = composedIdentityFor(built.exercise?.name ?? '');
-        const alreadyInSession = day.rows.some(
-          (row) => composedIdentityFor(row.identity) === primerIdentity,
-        );
-        powerRow = alreadyInSession ? null : built;
-        if (powerRow && context.power?.blockStartISO && context.power.selectionsOut) {
-          if (!context.power.selectionsOut.some((row) => row.blockStartISO === context.power?.blockStartISO
-            && row.family === dosed.family && row.seatIndex === powerSeat)) {
-            context.power.selectionsOut.push({
-              blockStartISO: context.power.blockStartISO,
-              family: dosed.family,
-              seatIndex: powerSeat,
-              exerciseName: built.exercise?.name ?? '',
-            });
+         * The former local same-session check is now removed. The shared
+         * canonical weekly selector owns both this case and cross-session
+         * repeats, and leaves power empty when no unused legal candidate exists. */
+          // The canonical weekly selector already rejected any identity on this
+          // day or elsewhere in the week. Power has no private deduplicator.
+          powerRow = built;
+          if (powerRow && context.power?.blockStartISO && context.power.selectionsOut) {
+            if (!context.power.selectionsOut.some((row) => row.blockStartISO === context.power?.blockStartISO
+              && row.family === dosed.family && row.seatIndex === powerSeat)) {
+              context.power.selectionsOut.push({
+                blockStartISO: context.power.blockStartISO,
+                family: dosed.family,
+                seatIndex: powerSeat,
+                exerciseName: built.exercise?.name ?? '',
+              });
+            }
           }
         }
       }

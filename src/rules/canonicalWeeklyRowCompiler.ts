@@ -42,6 +42,7 @@ import { type SeasonPhaseClock } from '../rules/seasonPhaseClock';
 import type { FixtureConditionedAvailability } from '../rules/fixtureConditionedAvailability';
 import type { BlockExerciseSelection } from './blockExerciseSelection';
 import { energySystemExposureEvidenceForWorkout } from './energySystemExposureEvidence';
+import { createAutomaticWeeklyExerciseSelector } from './automaticWeeklyExerciseSelection';
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
 type AthletePoolPrefsArg = Parameters<typeof buildWorkoutsFromCoach>[5];
@@ -603,6 +604,12 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       selectionHistory: [...(args.selectionHistory ?? []), ...selections],
       trackedLiftChoices: args.trackedLiftChoices ?? {},
     });
+    // Normal strength chooses first. Every later automatic family consumes the
+    // same canonical weekly history, so optional and power rows can only select
+    // an unused legal identity.
+    const automaticWeeklyExerciseSelector = createAutomaticWeeklyExerciseSelector(
+      composedWeek.days.flatMap((day) => day.rows.map((row) => row.identity)),
+    );
     selectionTraces.push(...composedWeek.selectionTraces);
     /* What this block chose, carried out so the caller can RECORD it. The
      * composer decides; persistence is the caller's job. */
@@ -674,6 +681,43 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       // removal from §18-verified stored surfaces is its own unit (recorded in
       // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
       // as the pattern to follow).
+      // Materialise normal strength and its power first. Gunshow and Primer are
+      // later automatic sessions in the same week and therefore see these
+      // identities as already spent.
+      const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
+        return compiledDosePolicyByDay[dayOfWeek] ?? null;
+      };
+      const composerWorkouts = materialiseComposedWeek(composedWeek, {
+        microcycleId,
+        weekStartISO: blockState.weekStart,
+        deloadPolicyForDay,
+        power: {
+          primerByDay: Object.fromEntries(
+            weekPlan.weeklyPlan
+              .map((entry) => [
+                DAY_MAP[String(entry.dayOfWeek ?? '')],
+                (entry as { powerPrimer?: unknown }).powerPrimer ?? null,
+              ])
+              .filter(([day, primer]) => day !== undefined && primer !== null),
+          ),
+          allowance: exposureContractV2?.power?.eligible === true
+            ? exposureContractV2.power.plannerSelectedWeeklyBudget ?? 0
+            : 0,
+          phase: profile.seasonPhase,
+          experienceLevel: profile.experienceLevel,
+          availableEquipment: equipment.tags,
+          availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
+            .map(([day, capabilities]) => [day, capabilities.tags])),
+          blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
+          blockStartISO: args.blockStartISO,
+          selectionHistory: args.powerSelectionHistory ?? [],
+          selectionsOut: powerSelections,
+          selectionTracesOut: selectionTraces,
+          injuries: compiledActiveInjuryKeys,
+          daysToGameByDay: compiledDaysToGame,
+          automaticWeeklyExerciseSelector,
+        },
+      });
       // ⚠ THE ADAPTER GETS THE WHOLE WEEK, AND AUTHORS NO LIFTS ON COMPOSED DAYS.
       const adapterWorkouts = buildWorkoutsFromCoach(
           source,
@@ -695,6 +739,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             powerSelectionBlockStartISO: blockState.blockStart,
             powerSelectionsOut: powerSelections,
             selectionTracesOut: selectionTraces,
+            automaticWeeklyExerciseSelector,
             canonicalPlanDoseResolved: true as const,
           },
           {
@@ -712,46 +757,8 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       // the adapter's day, which keeps everything non-strength it built.
       // ── THE GOVERNED DOSE INSTRUCTION, RESOLVED ONCE BY THE EXISTING OWNER ──
       //
-      const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
-        return compiledDosePolicyByDay[dayOfWeek] ?? null;
-      };
       const authored = assembleAuthoredWeek({
-        composerWorkouts: materialiseComposedWeek(composedWeek, {
-          microcycleId,
-          weekStartISO: blockState.weekStart,
-          deloadPolicyForDay,
-          /* ── THE SPECIALIST'S PRIMER, HANDED TO THE DAY THAT CARRIES IT ────
-           * The plan already holds `powerPrimer` per day — `powerPrimerPolicy`
-           * decided it and `scheduleToCoachingPlan` carried it. Nothing placed
-           * it, because the only row builder lived in the adapter and the
-           * adapter authors no strength on composer-owned days. Power is part
-           * of a strength session, so the composer places it. */
-          power: {
-            primerByDay: Object.fromEntries(
-              weekPlan.weeklyPlan
-                .map((entry) => [
-                  DAY_MAP[String(entry.dayOfWeek ?? '')],
-                  (entry as { powerPrimer?: unknown }).powerPrimer ?? null,
-                ])
-                .filter(([day, primer]) => day !== undefined && primer !== null),
-            ),
-            allowance: exposureContractV2?.power?.eligible === true
-              ? exposureContractV2.power.plannerSelectedWeeklyBudget ?? 0
-              : 0,
-            phase: profile.seasonPhase,
-            experienceLevel: profile.experienceLevel,
-            availableEquipment: equipment.tags,
-            availableEquipmentByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
-              .map(([day, capabilities]) => [day, capabilities.tags])),
-            blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
-            blockStartISO: args.blockStartISO,
-            selectionHistory: args.powerSelectionHistory ?? [],
-            selectionsOut: powerSelections,
-            selectionTracesOut: selectionTraces,
-            injuries: compiledActiveInjuryKeys,
-            daysToGameByDay: compiledDaysToGame,
-          },
-        }),
+        composerWorkouts,
         adapterWorkouts,
       });
       const built = authored.workouts as Workout[];
@@ -949,6 +956,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         injuries: profile.injuries ?? [],
         equipmentTags: [...equipment.tags],
         onboardingData: profile,
+        automaticWeeklyExerciseSelector,
       },
       microcycleId,
       weekStartISO: blockState.weekStart,

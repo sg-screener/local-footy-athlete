@@ -62,7 +62,13 @@ import {
   codDecelPermitted,
   combinedConditioningMustBeOffFeet,
 } from '../rules/conditioningSelection';
-import { selectPowerExerciseWithTrace } from '../rules/powerExercisePool';
+import {
+  rankedPowerExerciseCandidates,
+  selectPowerExerciseWithTrace,
+} from '../rules/powerExercisePool';
+import type { AutomaticWeeklyExerciseSelector } from '../rules/automaticWeeklyExerciseSelection';
+import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
+import { rankSelectedFirst } from '../rules/programmingSelectionTrace';
 import { parseConditioningDose, doseMidpoint } from '../rules/conditioningDose';
 import {
   deloadPowerDose,
@@ -1281,7 +1287,7 @@ export function buildPowerRow(
   spec: NonNullable<SessionAllocation['powerPrimer']>,
   workoutId: string,
   selection: PowerBlockSelectionInput = {},
-): WorkoutExercise {
+): WorkoutExercise | null {
   // Identity comes from the pool. The policy owns placement and legacy dose;
   // R-270's authored per-exercise prescription supplies the new ball doses.
   // A reduced policy remains a ceiling on their set count.
@@ -1303,12 +1309,34 @@ export function buildPowerRow(
     dateISO: 'unknown', weekStartISO: 'unknown', dayOfWeek: -1,
     experience: selection.experienceLevel ?? null, injuries: [], daysToGame: null,
   });
-  selection.selectionTracesOut?.push(decision.trace);
-  const picked = decision.entry;
+  const picked = selection.automaticWeeklyExerciseSelector
+    ? rankedPowerExerciseCandidates(powerContext).find((candidate) =>
+        selection.automaticWeeklyExerciseSelector!.canUse({
+          identity: candidate.name,
+          requestedSlot: slotsForExerciseName(candidate.name)[0] ?? 'core',
+          dayKind: null,
+          route: 'power',
+          requestedAsMain: false,
+        })) ?? null
+    : decision.entry;
+  selection.selectionTracesOut?.push(picked === decision.entry ? decision.trace : {
+    ...decision.trace,
+    selected: picked?.name ?? null,
+    selectionReason: picked ? 'weekly_history_next_legal_power_candidate' : 'weekly_history_no_unused_power_candidate',
+    candidates: rankSelectedFirst(decision.trace.candidates, picked?.name ?? null),
+  });
   // The selector covers every real (family, phase, experience) cell, so null is
   // unreachable in practice; falling back to the family's bodyweight default
   // keeps a missing power row from being worse than a plain one.
+  if (selection.automaticWeeklyExerciseSelector && !picked) return null;
   const name = picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up');
+  selection.automaticWeeklyExerciseSelector?.accept({
+    identity: name,
+    requestedSlot: slotsForExerciseName(name)[0] ?? 'core',
+    dayKind: null,
+    route: 'power',
+    requestedAsMain: false,
+  });
   const authored = getExerciseTags(name)?.prescription;
 
   // PLACEMENT and CONTRAST guidance only. Per-exercise coaching text is NOT
@@ -1321,6 +1349,7 @@ export function buildPowerRow(
     : 'Do this fresh, early in the session — before the main lifts.';
 
   return {
+    ...(selection.automaticWeeklyExerciseSelector ? { automaticSelection: true as const } : {}),
     id: `power-${workoutId}`,
     workoutId,
     exerciseId: `power-${workoutId}-exercise`,
@@ -1355,6 +1384,7 @@ export function buildPowerRow(
 
 /** Context the power selector needs that the policy's dose spec does not carry. */
 interface PowerBlockSelectionInput {
+  automaticWeeklyExerciseSelector?: AutomaticWeeklyExerciseSelector;
   phase?: SeasonPhase;
   experienceLevel?: ExperienceLevel | null;
   availableEquipment?: readonly string[];
@@ -2208,6 +2238,7 @@ export function buildWorkoutsFromCoach(
           powerSelectionsOut: rotationContext?.powerSelectionsOut,
           powerSelectionTracesOut: rotationContext?.selectionTracesOut,
           powerSelectionBlockStartISO: rotationContext?.powerSelectionBlockStartISO,
+          automaticWeeklyExerciseSelector: rotationContext?.automaticWeeklyExerciseSelector,
           ...(onboardingData ? { onboardingData } : {}),
         },
       );
@@ -2569,7 +2600,8 @@ export function buildWorkoutsFromCoach(
         availableEquipment,
         // Mini-cycle = the 3-4 week block. Stable all block, rotates at rollover.
         blockId: `mini-${rotationContext?.miniCycleNumber ?? 1}`,
-      });
+        automaticWeeklyExerciseSelector: rotationContext?.automaticWeeklyExerciseSelector,
+      }) ?? undefined;
     }
 
     // Deterministic plan intent always wins. Edge-authored typed intent is

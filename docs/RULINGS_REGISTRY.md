@@ -7997,6 +7997,14 @@ that contradict that boundary. Guard:
 mutation, annual audit and NOT COVERED evidence:
 `docs/STATUS_WEEKLYSELECTOR.md`.
 
+Amended 2026-09-02 by owner fivebridge: the one weekly selector and its typed
+history also govern strength accessories, Gunshow, Primer, power and automatic
+optional sessions. A used preferred identity falls through the existing
+role-appropriate order; an exhausted shelf leaves the row empty. Typed
+automatic authorship survives injury rebuild, fixture repair and restart, while
+athlete-added rows remain outside the history. Focused red-first, mutation and
+updated persistence evidence: `docs/STATUS_FIVEBRIDGE.md`.
+
 **R-319** · Automatic strength sessions contain at most four compound exercises,
 2026-09-02.
 

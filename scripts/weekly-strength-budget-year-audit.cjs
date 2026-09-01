@@ -21,6 +21,7 @@ const revision = childProcess.execFileSync('git', ['rev-parse', 'HEAD'], {
 const {
   auditFinalAutomaticWeek,
   automaticExerciseRouteForIdentity,
+  workoutExerciseWasAutomaticallySelected,
 } = require(path.join(repo, 'src/rules/automaticWeeklyExerciseSelection'));
 const {
   auditMovementPlaneCoverage,
@@ -31,9 +32,9 @@ const { resolveTemplateByName } = require(path.join(repo, 'src/rules/conditionin
 const { athleticPlaneExposureForPowerExercise } = require(path.join(repo, 'src/rules/powerExercisePool'));
 
 const evidence = (row) => row.section18Evidence ?? {};
-const isAutomaticStrengthRow = (row) =>
-  evidence(row).provenance === 'composer_declaration'
-  && (evidence(row).role === 'main_strength' || evidence(row).role === 'strength_accessory');
+const isAutomaticStrengthRow = (row) => workoutExerciseWasAutomaticallySelected(row)
+  && (evidence(row).role === 'main_strength' || evidence(row).role === 'strength_accessory'
+    || row.role === 'power');
 const identity = (row) => String(row.catalogueIdentity ?? row.name ?? '');
 
 const repeatedExactExerciseBreaches = [];
@@ -54,7 +55,7 @@ for (const athlete of year.athletes ?? []) {
       exercises: (day.rows ?? []).filter(isAutomaticStrengthRow).map((row) => ({
         identity: identity(row),
         authorship: 'automatic',
-        route: automaticExerciseRouteForIdentity(identity(row)),
+        route: row.role === 'power' ? 'power' : automaticExerciseRouteForIdentity(identity(row)),
         requestedAsMain: false,
       })),
     })));

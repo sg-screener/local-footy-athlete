@@ -63,6 +63,7 @@ import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import {
   automaticExerciseRouteForIdentity,
   createAutomaticWeeklyExerciseSelector,
+  workoutExerciseWasAutomaticallySelected,
   realMovementSlotsForAutomaticExercise,
 } from '../rules/automaticWeeklyExerciseSelection';
 import { slotDayKindForPatterns, type SessionSlot } from '../rules/sessionSlotCoverage';
@@ -227,7 +228,7 @@ export function planInjuryRecomposition(args: {
   const substitutions: InjurySubstitution[] = [];
   const pausedRows: string[] = [];
   const automaticOnDay = (args.workout?.exercises ?? [])
-    .filter((row) => row.section18Evidence?.provenance === 'composer_declaration')
+    .filter(workoutExerciseWasAutomaticallySelected)
     .map((row) => row.exercise?.name ?? '').filter(Boolean);
   const automaticElsewhere = [...(args.existingAutomaticExerciseNames ?? [])];
   for (const name of automaticOnDay) {
@@ -250,8 +251,8 @@ export function planInjuryRecomposition(args: {
     const requestedSlot = (originalRow?.section18Evidence?.slot
       ?? realOriginalSlot ?? 'lower_accessory') as SessionSlot;
     const requestedAsMain = originalRow?.section18Evidence?.role === 'main_strength';
-    const automaticOriginal = originalRow?.section18Evidence?.provenance
-      === 'composer_declaration';
+    const automaticOriginal = !!originalRow
+      && workoutExerciseWasAutomaticallySelected(originalRow);
     const weeklyCandidate = (identity: string) => ({
       identity,
       requestedSlot,

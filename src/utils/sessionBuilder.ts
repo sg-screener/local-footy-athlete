@@ -82,6 +82,8 @@ import {
 } from '../rules/mobilitySessionComposition';
 import {
   eligiblePowerExercises,
+  isPowerPoolExercise,
+  rankedPowerExerciseCandidates,
   selectPowerExerciseWithTrace,
   type BlockPowerSelection,
   type PowerPoolEntry,
@@ -93,6 +95,16 @@ import {
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { PowerFamily } from '../rules/powerPrimerPolicy';
+import {
+  automaticExerciseRouteForIdentity,
+  type AutomaticExerciseRoute,
+  type AutomaticWeeklyExerciseSelector,
+  type AutomaticWeeklySelectionCandidate,
+} from '../rules/automaticWeeklyExerciseSelection';
+import {
+  slotsForExerciseName,
+  type SessionSlot as WeeklySessionSlot,
+} from '../rules/sessionSlotCoverage';
 
 // ─── Athlete Context ───
 
@@ -116,6 +128,8 @@ export interface AthleteContext {
   /** Compiler evidence sink for automatically composed Mobility sessions. */
   selectionTracesOut?: AutomaticProgrammingSelectionTrace[];
   selectionWeekStartISO?: string;
+  /** One compiler-owned selector shared by every automatic gym session this week. */
+  automaticWeeklyExerciseSelector?: AutomaticWeeklyExerciseSelector;
 }
 
 /** Default context when no profile data is available. */
@@ -716,21 +730,19 @@ function pickFromPool(
   count: number,
   seed: number,
   canPair?: (left: PoolExercise, right: PoolExercise) => boolean,
+  canUse?: (candidate: PoolExercise) => boolean,
 ): PoolExercise[] {
   if (pool.length === 0) return [];
   const start = seed % pool.length;
+  const rotated = pool.map((_, index) => pool[(start + index) % pool.length])
+    .filter((candidate) => canUse?.(candidate) ?? true);
 
   // Preserve the established picker for every session without pair rules.
   if (!canPair) {
-    if (pool.length <= count) return pool;
-    const picks: PoolExercise[] = [];
-    for (let index = 0; index < count; index++) {
-      picks.push(pool[(start + index) % pool.length]);
-    }
-    return picks;
+    if (!canUse && pool.length <= count) return pool;
+    return rotated.slice(0, count);
   }
 
-  const rotated = pool.map((_, index) => pool[(start + index) % pool.length]);
   let best: PoolExercise[] = [];
 
   const search = (from: number, picks: PoolExercise[]): boolean => {
@@ -997,9 +1009,18 @@ function pickPowerEntries(
         daysToGame: athlete.daysToGame ?? null,
       },
     );
-    const selected = decision.entry && eligible.some((entry) => entry.name === decision.entry?.name)
-      ? decision.entry
-      : [...eligible].sort((left, right) => left.name.localeCompare(right.name))[index % eligible.length];
+    const ranked = rankedPowerExerciseCandidates({ ...context, seatIndex: index })
+      .filter((entry) => eligible.some((candidate) => candidate.name === entry.name));
+    const selected = ranked.find((entry) => !athlete.automaticWeeklyExerciseSelector
+      || athlete.automaticWeeklyExerciseSelector.canUse({
+        identity: entry.name, requestedSlot: slotsForExerciseName(entry.name)[0] ?? 'core',
+        dayKind: null, route: 'power', requestedAsMain: false,
+      }));
+    if (!selected) continue;
+    athlete.automaticWeeklyExerciseSelector?.accept({
+      identity: selected.name, requestedSlot: slotsForExerciseName(selected.name)[0] ?? 'core',
+      dayKind: null, route: 'power', requestedAsMain: false,
+    });
     picks.push(selected);
     if (athlete.powerSelectionBlockStartISO && athlete.powerSelectionsOut &&
         !athlete.powerSelectionsOut.some((row) =>
@@ -1138,6 +1159,37 @@ export function buildDerivedSession(
   const equipmentSet = new Set(athlete.equipmentTags);
   const alreadyProgrammed = new Set(existingExerciseNames.map(canonicalExerciseName));
   const notAlreadyProgrammed = (row: PoolExercise) => !alreadyProgrammed.has(canonicalExerciseName(row.name));
+  const weeklySelector = athlete.automaticWeeklyExerciseSelector;
+  const fallbackSlotForCategory = (category?: ExerciseCategory): WeeklySessionSlot => {
+    if (category === 'biceps') return 'biceps';
+    if (category === 'triceps') return 'triceps';
+    if (category === 'delts' || category === 'shoulder_health') return 'shoulders';
+    if (category === 'trunk_anti_rotation') return 'core';
+    return 'football_robustness';
+  };
+  const weeklyCandidate = (
+    identity: string,
+    route: AutomaticExerciseRoute = automaticExerciseRouteForIdentity(identity),
+    category?: ExerciseCategory,
+  ): AutomaticWeeklySelectionCandidate => ({
+    identity,
+    requestedSlot: slotsForExerciseName(identity)[0] ?? fallbackSlotForCategory(category),
+    dayKind: null,
+    route,
+    requestedAsMain: false,
+  });
+  const weeklyCanUse = (
+    identity: string,
+    route?: AutomaticExerciseRoute,
+    category?: ExerciseCategory,
+  ): boolean => !weeklySelector || weeklySelector.canUse(weeklyCandidate(identity, route, category));
+  const acceptWeekly = (
+    identity: string,
+    route?: AutomaticExerciseRoute,
+    category?: ExerciseCategory,
+  ): void => {
+    if (weeklySelector) weeklySelector.accept(weeklyCandidate(identity, route, category));
+  };
 
   // Assemble exercises from slots
   const exercises: WorkoutExercise[] = [];
@@ -1223,9 +1275,18 @@ export function buildDerivedSession(
       for (const row of slot.authored) {
         const names = row.names.filter(name => composedRowIsLegal(name, athlete.equipmentTags));
         if (names.length === 0) continue;
-        exercises.push(authoredSlotRowToWorkoutExercise(
-          { ...row, names }, workoutId, order, slotSeedForSource + order,
+        const start = Math.abs(slotSeedForSource + order) % names.length;
+        const orderedNames = names.map((_, index) => names[(start + index) % names.length]);
+        const name = orderedNames.find((candidate) => weeklyCanUse(
+          candidate,
+          isPowerPoolExercise(candidate) ? 'power' : automaticExerciseRouteForIdentity(candidate),
         ));
+        if (!name) continue;
+        const route = isPowerPoolExercise(name) ? 'power' : automaticExerciseRouteForIdentity(name);
+        exercises.push(authoredSlotRowToWorkoutExercise(
+          { ...row, names: [name] }, workoutId, order, 0,
+        ));
+        acceptWeekly(name, route);
         order += 1;
       }
       slotIndex += 1;
@@ -1272,7 +1333,8 @@ export function buildDerivedSession(
       : slot.count;
     const picks = slot.spread
       ? pickAcrossRegions(filtered, requestedCount, slot.spread, slotSeed)
-      : pickFromPool(filtered, requestedCount, slotSeed, pairRuleFor(type));
+      : pickFromPool(filtered, requestedCount, slotSeed, pairRuleFor(type),
+          weeklySelector ? (candidate) => weeklyCanUse(candidate.name, undefined, slot.category) : undefined);
 
     for (const pe of picks) {
       // Recovery sessions already carry their identity in `workoutType`; the
@@ -1287,6 +1349,7 @@ export function buildDerivedSession(
           ? MOBILITY_ROW_EVIDENCE
           : undefined;
       exercises.push(poolExerciseToWorkoutExercise(pe, workoutId, order, evidence));
+      acceptWeekly(pe.name, undefined, slot.category);
       order++;
     }
 
@@ -1299,7 +1362,18 @@ export function buildDerivedSession(
     slotIndex++;
   }
 
-  return finaliseDerivedSession({ type, meta, workoutId, microcycleId, dateStr, reason, athlete, exercises });
+  const finalExercises = weeklySelector ? exercises.map((row) => {
+    const route = row.role === 'power'
+      ? 'power'
+      : automaticExerciseRouteForIdentity(row.exercise?.name ?? '');
+    return route === 'mobility' || route === 'prehab'
+      ? row
+      : { ...row, automaticSelection: true as const };
+  }) : exercises;
+  return finaliseDerivedSession({
+    type, meta, workoutId, microcycleId, dateStr, reason, athlete,
+    exercises: finalExercises,
+  });
 }
 
 /**

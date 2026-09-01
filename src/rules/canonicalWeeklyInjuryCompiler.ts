@@ -15,6 +15,7 @@ import {
   INJURY_ADJUSTED_SESSION_NAME,
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
+import { workoutExerciseWasAutomaticallySelected } from './automaticWeeklyExerciseSelection';
 
 interface InjurySessionInput {
   workout: Workout; dateISO: string; profile: OnboardingData;
@@ -76,13 +77,12 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
   }
   substitutedWeekNames.push(...substitutedVisible.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
   const substitutedWeekAutomaticNames = [...args.weekAutomaticExerciseNames];
-  for (const row of visible.exercises.filter(item =>
-    item.section18Evidence?.provenance === 'composer_declaration')) {
+  for (const row of visible.exercises.filter(workoutExerciseWasAutomaticallySelected)) {
     const index = substitutedWeekAutomaticNames.indexOf(row.exercise?.name ?? '');
     if (index >= 0) substitutedWeekAutomaticNames.splice(index, 1);
   }
   substitutedWeekAutomaticNames.push(...substitutedVisible.exercises
-    .filter(row => row.section18Evidence?.provenance === 'composer_declaration')
+    .filter(workoutExerciseWasAutomaticallySelected)
     .map(row => row.exercise?.name ?? '').filter(Boolean));
   const adjustment = deriveInjurySessionAdjustment({ workout: substitutedVisible, environment,
     profile: args.profile, bodyPart: stage.bodyPart,
@@ -148,8 +148,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
       const weekExerciseNames = Object.values(workoutsByDate).flatMap(day =>
         day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
       const weekAutomaticExerciseNames = Object.values(workoutsByDate).flatMap(day =>
-        day.exercises.filter(row =>
-          row.section18Evidence?.provenance === 'composer_declaration')
+        day.exercises.filter(workoutExerciseWasAutomaticallySelected)
           .map(row => row.exercise?.name ?? '').filter(Boolean));
       const otherMainStrengthPatterns = Object.entries(workoutsByDate).flatMap(([date, day]) =>
         date === dateISO ? [] : day.exercises.flatMap(row =>

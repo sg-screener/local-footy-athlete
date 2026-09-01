@@ -22,6 +22,7 @@ import {
   type SlotDayKind,
 } from './sessionSlotCoverage';
 import type { WeeklyMainStrengthSlot } from './weeklyStrengthBudget';
+import type { WorkoutExercise } from '../types/domain';
 import {
   exerciseSuppliesGymTransverseOrMultiplanar,
   exerciseSuppliesLowerBodyFrontal,
@@ -29,7 +30,7 @@ import {
   type MovementPlaneTieBreakContext,
 } from './movementPlaneProgramming';
 
-export type AutomaticExerciseRoute = 'strength' | 'mobility' | 'prehab';
+export type AutomaticExerciseRoute = 'strength' | 'power' | 'mobility' | 'prehab';
 export type AutomaticFallbackTier =
   | 'same_category'
   | 'accessory'
@@ -106,6 +107,12 @@ export function automaticExerciseRouteForIdentity(identity: string): AutomaticEx
   if (GENUINE_MOBILITY_IDENTITIES.has(canonical)) return 'mobility';
   if (GENUINE_PREHAB_IDENTITIES.has(canonical)) return 'prehab';
   return 'strength';
+}
+
+/** Typed authorship shared by generation, audit and rebuild paths. */
+export function workoutExerciseWasAutomaticallySelected(row: WorkoutExercise): boolean {
+  return row.automaticSelection === true
+    || row.section18Evidence?.provenance === 'composer_declaration';
 }
 
 const MAIN_FAMILIES: ReadonlySet<SessionSlot> = new Set([
@@ -226,6 +233,7 @@ export function createAutomaticWeeklyExerciseSelector(
     }
     const identity = canonicalExerciseName(candidate.identity);
     if (used.has(identity) || violatesDedicatedDayOwnership(candidate)) return false;
+    if (candidate.route === 'power') return !candidate.requestedAsMain;
     const strengthClassification = strengthExerciseClassification(identity);
     if (strengthClassification === 'compound') {
       if (!COMPOUND_DIRECTION_SLOTS.has(candidate.requestedSlot)
@@ -251,6 +259,7 @@ export function createAutomaticWeeklyExerciseSelector(
     if (candidate.route !== 'mobility') planeDelivered.add(identity);
     if (candidate.route === 'mobility' || candidate.route === 'prehab') return;
     used.add(identity);
+    if (candidate.route === 'power') return;
     if (strengthExerciseClassification(identity) === 'compound') {
       sessionCompounds.add(identity);
       coveredCompoundSlots.add(candidate.requestedSlot);
@@ -414,7 +423,7 @@ export function auditFinalAutomaticWeek(
       if (row.authorship !== 'automatic') continue;
       const identity = canonicalExerciseName(row.identity);
       const route = automaticExerciseRouteForIdentity(identity);
-      if (route === 'strength') {
+      if (route === 'strength' || route === 'power') {
         identities.set(identity, (identities.get(identity) ?? 0) + 1);
       }
       // The audit counts real authored anchors regardless of whatever role the
