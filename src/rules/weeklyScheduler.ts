@@ -55,6 +55,11 @@ import {
   type RequestedSpeedQuality,
 } from './sprintExposureGate';
 import { BIBLE_WEEKLY_CAPS } from './weeklyExposureCounts';
+import {
+  athleticTransverseExposureRule,
+  type AthleticTransverseSafetyConstraint,
+  type TypedAthleticPlaneExposure,
+} from './movementPlaneProgramming';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
 
@@ -433,18 +438,24 @@ function hasScheduledGame(inputs: WeeklySchedulerInputs): boolean {
  * unknown week number never guesses that this is the due week.
  */
 export function fortnightlyCodDoseDue(inputs: WeeklySchedulerInputs): boolean {
-  if (inputs.clubNights.length > 0 || hasScheduledGame(inputs)) return false;
-  if (inputs.appRunningPermitted === false || inputs.appSprintPermitted === false) return false;
-  if (inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
-  if (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'normal_build') {
-    const phaseWeek = inputs.phaseWeekNumber ?? 0;
-    return phaseWeek >= 5 && (phaseWeek - 5) % 2 === 0;
+  const safetyConstraints: AthleticTransverseSafetyConstraint[] = [];
+  if (hasScheduledGame(inputs)) safetyConstraints.push('game_proximity');
+  if (inputs.appRunningPermitted === false || inputs.appSprintPermitted === false) {
+    safetyConstraints.push('running_restricted');
   }
-  if (inputs.phase === 'Pre-season') {
-    const breakWeek = inputs.christmasBreakWeekNumber ?? 0;
-    return breakWeek >= 1 && (breakWeek - 1) % 2 === 0;
-  }
-  return false;
+  if (inputs.readiness.lowReadiness) safetyConstraints.push('low_readiness');
+  if (inputs.weekKind === 'deload') safetyConstraints.push('deload');
+  const athleticExposures: TypedAthleticPlaneExposure[] = inputs.clubNights.length > 0
+    ? ['team_training'] : [];
+  return athleticTransverseExposureRule({
+    phase: inputs.phase,
+    offseasonBlock: inputs.offseasonBlock,
+    phaseWeekNumber: inputs.phaseWeekNumber ?? null,
+    christmasBreakWeekNumber: inputs.christmasBreakWeekNumber ?? null,
+    rollingWindowComplete: false,
+    athleticExposures,
+    safetyConstraints,
+  }).automaticCodDue;
 }
 
 function isScheduledGameDay(day: number, inputs: WeeklySchedulerInputs): boolean {

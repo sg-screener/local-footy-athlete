@@ -44,8 +44,11 @@ const athleteSummaries = [];
 
 for (const athlete of year.athletes ?? []) {
   let lastTrunkTransverseDate = null;
+  const athleticExposureHistory = [];
+  const athleticSafetyHistory = [];
   for (const week of athlete.weeks ?? []) {
-    const finalAudit = auditFinalAutomaticWeek((week.days ?? []).map((day) => ({
+    const weekDays = week.days ?? [];
+    const finalAudit = auditFinalAutomaticWeek(weekDays.map((day) => ({
       dayKind: day.name === 'lower_squat' || day.name === 'lower_hinge'
         ? day.name : null,
       exercises: (day.rows ?? []).filter(isAutomaticStrengthRow).map((row) => ({
@@ -65,7 +68,7 @@ for (const athlete of year.athletes ?? []) {
       gender: athlete.gender, week: week.number, ...finding,
     })));
 
-    const finalRows = (week.days ?? []).flatMap((day) => day.rows ?? []);
+    const finalRows = weekDays.flatMap((day) => day.rows ?? []);
     const exerciseRows = finalRows.flatMap((row) => {
       const catalogueIdentity = identity(row);
       if (!catalogueIdentity) return [];
@@ -79,16 +82,43 @@ for (const athlete of year.athletes ?? []) {
         : 'strength';
       return [{ identity: catalogueIdentity, contribution }];
     });
-    const athleticExposures = [];
-    for (const row of finalRows) {
-      if (row.role === 'team_training') athleticExposures.push('team_training');
-      const catalogueIdentity = identity(row);
-      const template = resolveTemplateByName(catalogueIdentity);
-      if (template?.quality === 'cod_decel') athleticExposures.push('cod_decel');
-      const powerExposure = athleticPlaneExposureForPowerExercise(catalogueIdentity);
-      if (powerExposure) athleticExposures.push(powerExposure);
+    for (const day of weekDays) {
+      for (const row of day.rows ?? []) {
+        if (row.role === 'team_training') {
+          athleticExposureHistory.push({ date: day.date, exposure: 'team_training' });
+        }
+        const catalogueIdentity = identity(row);
+        const template = resolveTemplateByName(catalogueIdentity);
+        if (template?.quality === 'cod_decel') {
+          athleticExposureHistory.push({ date: day.date, exposure: 'cod_decel' });
+        }
+        const powerExposure = athleticPlaneExposureForPowerExercise(catalogueIdentity);
+        if (powerExposure) athleticExposureHistory.push({ date: day.date, exposure: powerExposure });
+      }
     }
-    const firstDate = week.days?.[0]?.date;
+    for (const event of week.events ?? []) {
+      const label = String(event.label ?? '');
+      if (/injury/i.test(label)) athleticSafetyHistory.push({ date: event.date, reason: 'injury' });
+      if (/^Sick$/i.test(label)) athleticSafetyHistory.push({ date: event.date, reason: 'illness' });
+      if (/^Going Away/i.test(label)) athleticSafetyHistory.push({ date: event.date, reason: 'travel' });
+      if (/^Very tired/i.test(label)) athleticSafetyHistory.push({ date: event.date, reason: 'deload' });
+    }
+    for (const day of weekDays) {
+      if (day.kind === 'game') {
+        athleticSafetyHistory.push({ date: day.date, reason: 'game_proximity' });
+      }
+    }
+    const firstDate = weekDays[0]?.date;
+    const lastDate = weekDays[weekDays.length - 1]?.date;
+    const rollingWindowStart = lastDate
+      ? new Date(Date.parse(`${lastDate}T12:00:00Z`) - 13 * 86_400_000).toISOString().slice(0, 10)
+      : null;
+    const athleticExposures = rollingWindowStart === null ? []
+      : athleticExposureHistory.filter((entry) => entry.date >= rollingWindowStart
+        && entry.date <= lastDate).map((entry) => entry.exposure);
+    const safetyConstraints = rollingWindowStart === null ? []
+      : Array.from(new Set(athleticSafetyHistory.filter((entry) => entry.date >= rollingWindowStart
+        && entry.date <= lastDate).map((entry) => entry.reason)));
     const daysSinceLastTrunkTransverse = firstDate && lastTrunkTransverseDate
       ? Math.floor((Date.parse(firstDate) - Date.parse(lastTrunkTransverseDate)) / 86_400_000)
       : null;
@@ -96,11 +126,20 @@ for (const athlete of year.athletes ?? []) {
       exerciseRows,
       athleticExposures,
       daysSinceLastTrunkTransverse,
+      athleticTransverseRuleContext: {
+        phase: week.phase,
+        offseasonBlock: week.phase === 'Off-season' && week.phaseWeek >= 5
+          ? 'normal_build' : null,
+        phaseWeekNumber: week.phaseWeek ?? null,
+        christmasBreakWeekNumber: null,
+        rollingWindowComplete: week.phase !== 'Off-season' || week.phaseWeek >= 6,
+        safetyConstraints,
+      },
     });
     movementPlaneFindings.push(...planeAudit.findings.map((finding) => ({
       gender: athlete.gender, week: week.number, ...finding,
     })));
-    for (const day of week.days ?? []) {
+    for (const day of weekDays) {
       if ((day.rows ?? []).some((row) => exerciseSuppliesTrunkTransverse(identity(row)))) {
         lastTrunkTransverseDate = day.date;
       }

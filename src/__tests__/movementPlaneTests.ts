@@ -13,6 +13,7 @@ import {
 import { decideExerciseForBlock } from '../rules/blockExerciseSelection';
 import { createAutomaticWeeklyExerciseSelector } from '../rules/automaticWeeklyExerciseSelection';
 import {
+  athleticTransverseExposureRule,
   auditMovementPlaneCoverage,
   preferredMovementPlaneCohort,
 } from '../rules/movementPlaneProgramming';
@@ -122,6 +123,21 @@ const auditedAutomaticMeaningfulIdentities = [
   'Kneeling Jump',
 ] as const;
 
+const matureAthleticTransverseContext = {
+  phase: 'Off-season' as const,
+  offseasonBlock: 'normal_build' as const,
+  phaseWeekNumber: 6,
+  christmasBreakWeekNumber: null,
+  rollingWindowComplete: true,
+  safetyConstraints: [] as const,
+};
+const coverageAudit = (
+  input: Omit<Parameters<typeof auditMovementPlaneCoverage>[0], 'athleticTransverseRuleContext'>,
+) => auditMovementPlaneCoverage({
+  ...input,
+  athleticTransverseRuleContext: matureAthleticTransverseContext,
+});
+
 run('the canonical metadata is exactly Sam\'s named classification set', () => {
   assert.equal(EXERCISE_MOVEMENT_PLANES.length, expected.size);
   assert.deepEqual(new Set(EXERCISE_MOVEMENT_PLANES.map((row) => row.exercise)),
@@ -216,14 +232,14 @@ run('an accepted current-block choice is restored before plane tie-breaking', ()
 });
 
 run('lower frontal coverage counts meaningful lower work, not upper or mobility rows', () => {
-  const missing = auditMovementPlaneCoverage({
+  const missing = coverageAudit({
     exerciseRows: [
       { identity: 'Lateral Raise', contribution: 'strength' },
       { identity: 'Horse Stance Hold', contribution: 'mobility' },
     ], athleticExposures: [], daysSinceLastTrunkTransverse: 15,
   });
   assert(missing.findings.some((finding) => finding.kind === 'missing_lower_body_frontal'));
-  const filled = auditMovementPlaneCoverage({
+  const filled = coverageAudit({
     exerciseRows: [{ identity: 'Cossack Squat', contribution: 'strength' }],
     athleticExposures: [], daysSinceLastTrunkTransverse: 15,
   });
@@ -231,7 +247,7 @@ run('lower frontal coverage counts meaningful lower work, not upper or mobility 
 });
 
 run('gym transverse or multiplanar work is required separately from Team Training', () => {
-  const teamOnly = auditMovementPlaneCoverage({
+  const teamOnly = coverageAudit({
     exerciseRows: [{ identity: 'Back Squat', contribution: 'strength' }],
     athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
   });
@@ -240,7 +256,7 @@ run('gym transverse or multiplanar work is required separately from Team Trainin
   assert(teamOnly.findings.some((finding) =>
     finding.kind === 'missing_gym_transverse_or_multiplanar'));
 
-  const secondaryCounts = auditMovementPlaneCoverage({
+  const secondaryCounts = coverageAudit({
     exerciseRows: [{ identity: 'Single-Leg RDL', contribution: 'strength' }],
     athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
   });
@@ -248,7 +264,7 @@ run('gym transverse or multiplanar work is required separately from Team Trainin
   assert(!secondaryCounts.findings.some((finding) =>
     finding.kind === 'missing_gym_transverse_or_multiplanar'));
 
-  const mobilityDoesNotCount = auditMovementPlaneCoverage({
+  const mobilityDoesNotCount = coverageAudit({
     exerciseRows: [{ identity: 'Banded 90/90 External Rotation', contribution: 'mobility' }],
     athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
   });
@@ -256,11 +272,11 @@ run('gym transverse or multiplanar work is required separately from Team Trainin
 });
 
 run('athletic transverse coverage uses typed exposure, never conditioning names', () => {
-  const straight = auditMovementPlaneCoverage({ exerciseRows: [],
+  const straight = coverageAudit({ exerciseRows: [],
     athleticExposures: ['straight_line_acceleration'], daysSinceLastTrunkTransverse: 4 });
   assert(straight.findings.some((finding) => finding.kind === 'missing_athletic_transverse'));
   for (const exposure of ['team_training', 'cod_decel', 'rotational_med_ball'] as const) {
-    const result = auditMovementPlaneCoverage({ exerciseRows: [],
+    const result = coverageAudit({ exerciseRows: [],
       athleticExposures: [exposure], daysSinceLastTrunkTransverse: 4 });
     assert(!result.findings.some((finding) => finding.kind === 'missing_athletic_transverse'), exposure);
   }
@@ -269,12 +285,68 @@ run('athletic transverse coverage uses typed exposure, never conditioning names'
   assert.equal(athleticPlaneExposureForPowerExercise('Medicine-Ball Slam'), undefined);
 });
 
+run('athletic transverse starts after off-season week 4 and is assessed over 14 days', () => {
+  const base = {
+    phase: 'Off-season' as const,
+    offseasonBlock: 'normal_build' as const,
+    christmasBreakWeekNumber: null,
+    safetyConstraints: [] as const,
+  };
+  const opening = athleticTransverseExposureRule({ ...base, phaseWeekNumber: 4,
+    rollingWindowComplete: true, athleticExposures: [] });
+  assert.equal(opening.targetActive, false);
+  assert.equal(opening.missingRequiredExposure, false);
+
+  const firstPartialWindow = athleticTransverseExposureRule({ ...base, phaseWeekNumber: 5,
+    rollingWindowComplete: false, athleticExposures: [] });
+  assert.equal(firstPartialWindow.targetActive, true);
+  assert.equal(firstPartialWindow.missingRequiredExposure, false);
+  assert.equal(firstPartialWindow.automaticCodDue, true);
+
+  const completeWindow = athleticTransverseExposureRule({ ...base, phaseWeekNumber: 6,
+    rollingWindowComplete: true, athleticExposures: [] });
+  assert.equal(completeWindow.missingRequiredExposure, true);
+  assert.equal(completeWindow.automaticCodDue, false);
+
+  const openingAudit = auditMovementPlaneCoverage({
+    exerciseRows: [], athleticExposures: [], daysSinceLastTrunkTransverse: 4,
+    athleticTransverseRuleContext: { ...base, phaseWeekNumber: 4,
+      rollingWindowComplete: true },
+  });
+  assert(!openingAudit.findings.some((row) => row.kind === 'missing_athletic_transverse'));
+  const completeWindowAudit = auditMovementPlaneCoverage({
+    exerciseRows: [], athleticExposures: [], daysSinceLastTrunkTransverse: 4,
+    athleticTransverseRuleContext: { ...base, phaseWeekNumber: 6,
+      rollingWindowComplete: true },
+  });
+  assert(completeWindowAudit.findings.some((row) => row.kind === 'missing_athletic_transverse'));
+
+  for (const exposure of ['team_training', 'cod_decel', 'rotational_med_ball'] as const) {
+    const credited = athleticTransverseExposureRule({ ...base, phaseWeekNumber: 6,
+      rollingWindowComplete: true, athleticExposures: [exposure] });
+    assert.equal(credited.missingRequiredExposure, false, exposure);
+  }
+});
+
+run('injury, illness, travel, deload, game proximity and running safety outrank the target', () => {
+  for (const safetyConstraint of ['injury', 'illness', 'travel', 'deload',
+    'game_proximity', 'low_readiness', 'running_restricted'] as const) {
+    const result = athleticTransverseExposureRule({
+      phase: 'Off-season', offseasonBlock: 'normal_build', phaseWeekNumber: 6,
+      christmasBreakWeekNumber: null, rollingWindowComplete: true,
+      athleticExposures: [], safetyConstraints: [safetyConstraint],
+    });
+    assert.equal(result.missingRequiredExposure, false, safetyConstraint);
+    assert.equal(result.automaticCodDue, false, safetyConstraint);
+  }
+});
+
 run('trunk transverse is a soft 7–14 day finding and named trunk work clears it', () => {
-  assert(!auditMovementPlaneCoverage({ exerciseRows: [], athleticExposures: [],
+  assert(!coverageAudit({ exerciseRows: [], athleticExposures: [],
     daysSinceLastTrunkTransverse: 6 }).findings.some((row) => row.kind === 'trunk_transverse_due'));
-  assert(auditMovementPlaneCoverage({ exerciseRows: [], athleticExposures: [],
+  assert(coverageAudit({ exerciseRows: [], athleticExposures: [],
     daysSinceLastTrunkTransverse: 14 }).findings.some((row) => row.kind === 'trunk_transverse_due'));
-  assert(!auditMovementPlaneCoverage({
+  assert(!coverageAudit({
     exerciseRows: [{ identity: 'Side Plank Row', contribution: 'trunk' }],
     athleticExposures: [], daysSinceLastTrunkTransverse: 14,
   }).findings.some((row) => row.kind === 'trunk_transverse_due'));

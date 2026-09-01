@@ -40,7 +40,36 @@ Press from sagittal to frontal made both the exact typed-classification guard
 and the workbook/code equality guard red. Restoring the row returned the suite
 to 11/11 green.
 
-## Sections 2–5
+## Section 2 — athletic transverse timing
+
+Two options were considered:
+
+1. Teach the annual audit to ignore particular weeks while leaving the
+   scheduler's fortnightly calculation separate.
+2. Put phase, 14-day window, typed credit and safety precedence in one pure
+   rule, then have generation read its `automaticCodDue` answer and audit read
+   its `missingRequiredExposure` answer.
+
+Option 2 was used. It prevents the generator and audit from carrying different
+definitions of the same target.
+
+Red-first receipt: the two new phase/window/safety cells failed because the
+shared rule did not exist. Green receipts:
+
+- `test:movement-planes`: 13/13.
+- `fortnightlyCodDoseTests`: 19/19; work-day and conditioning counts remain
+  unchanged.
+- `weeklySchedulerTests`: 128/128, Fresh Speed 14/14, persistence 2/2, COD
+  19/19 and generated fixture ownership 11/11 before the broader command
+  reached an inherited unrelated mutation failure in
+  `generatedTravelZeroEquipmentTests` cell 7.
+- `test:law-registry`: the edited R-327 row and guard wiring pass; the command
+  remains inherited red because the starting checkpoint already carries 21
+  unrelated `UNENFORCED` registry rows.
+
+Mutation receipt: pending until the section implementation checkpoint is saved.
+
+## Sections 3–5
 
 Pending.
 

@@ -8185,11 +8185,18 @@ strength/prehab/power contribution. They separately require at least one
 meaningful gym strength/prehab/power/trunk exercise whose primary plane is
 transverse or multiplanar, or whose secondary plane includes transverse. Team
 Training never earns this gym credit. Athletic transverse/COD exposure remains
-typed separately: Team Training counts, as do rotational medicine-ball work,
-COD, cutting, curved running and angled deceleration; straight-line acceleration
-does not count, and conditioning names or descriptions are never inferred.
-Trunk rotation/anti-rotation is a softer 7–14 day check using Band Pallof Press,
-both Woodchops or Side Plank Row rather than a weekly quota.
+typed separately. Off-season Weeks 1–4 have no athletic-transverse target; after
+Week 4, each complete rolling 14-day window requires one qualifying exposure
+when the athlete is healthy and running-eligible. Team Training counts, as do
+rotational medicine-ball work, COD, cutting, curved running and angled
+deceleration; straight-line acceleration does not count, and conditioning names
+or descriptions are never inferred. The existing fortnightly late-off-season or
+Christmas COD exchange may satisfy the window without adding a day or exposure
+credit. Injury, illness, travel, deload, low-readiness, running restriction and
+game-proximity safety outrank the target. Generation and annual audit consume
+the same typed rule. Trunk rotation/anti-rotation is a softer 7–14 day check
+using Band Pallof Press, both Woodchops or Side Plank Row rather than a weekly
+quota.
 
 Guard: `LAW-typed-exercise-movement-planes` through chained
 `test:full-body-balance`, which invokes `test:movement-planes`. Red-first,
