@@ -1,5 +1,8 @@
 import { resolveTemplateByName } from './conditioningSelection';
-import { programmingAuditCatalogueIdentity } from './programmingAuditIdentity';
+import {
+  programmingAuditCatalogueIdentity,
+  programmingAuditRowRequiresCatalogueIdentity,
+} from './programmingAuditIdentity';
 
 export type ConditioningAuditCategory =
   | 'Continuous Aerobic'
@@ -65,7 +68,7 @@ export function programmingAuditProjectionFindings(
 ): ProgrammingAuditProjectionFinding[] {
   const finalRows = finalAthleteFacingAuditRows(day);
   const finalByIdentity = new Map<string, ProgrammingAuditExportRow[]>();
-  for (const row of finalRows) {
+  for (const row of finalRows.filter(programmingAuditRowRequiresCatalogueIdentity)) {
     const identity = programmingAuditCatalogueIdentity(row);
     finalByIdentity.set(identity, [...(finalByIdentity.get(identity) ?? []), row]);
   }
@@ -123,7 +126,8 @@ export function summarizeProgrammingAuditConditioningVocabulary(
   for (const day of days) {
     const category = CATEGORY_BY_STRUCTURE[day.conditioningIdentity?.structureFamily ?? ''];
     if (category) categoryDayCounts[category] += 1;
-    for (const row of finalAthleteFacingAuditRows(day)) {
+    for (const row of finalAthleteFacingAuditRows(day)
+      .filter(programmingAuditRowRequiresCatalogueIdentity)) {
       const identity = programmingAuditCatalogueIdentity(row);
       const template = resolveTemplateByName(identity);
       if (!template) continue;

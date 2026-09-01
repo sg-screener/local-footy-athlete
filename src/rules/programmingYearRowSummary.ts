@@ -1,4 +1,7 @@
-import { programmingAuditCatalogueIdentity } from './programmingAuditIdentity';
+import {
+  programmingAuditCatalogueIdentity,
+  programmingAuditRowRequiresCatalogueIdentity,
+} from './programmingAuditIdentity';
 
 export type ProgrammingYearContentBucket =
   | 'mainStrength'
@@ -80,8 +83,10 @@ export function summarizeProgrammingYearRows(
 
     const canonicalCounts = new Map<string, number>();
     for (const row of rows) {
-      const identity = programmingAuditCatalogueIdentity(row);
-      canonicalCounts.set(identity, (canonicalCounts.get(identity) ?? 0) + 1);
+      if (programmingAuditRowRequiresCatalogueIdentity(row)) {
+        const identity = programmingAuditCatalogueIdentity(row);
+        canonicalCounts.set(identity, (canonicalCounts.get(identity) ?? 0) + 1);
+      }
 
       const bucket: ProgrammingYearContentBucket = day.type === 'Mobility' || day.tier === 'recovery'
         ? 'mobilityRecovery'

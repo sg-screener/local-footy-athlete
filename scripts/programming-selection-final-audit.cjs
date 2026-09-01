@@ -27,6 +27,7 @@ const { resolveTemplateByName } = require('../src/rules/conditioningSelection');
 const {
   programmingAuditCatalogueIdentity,
   programmingAuditRowIsConditioning,
+  programmingAuditRowRequiresCatalogueIdentity,
 } = require('../src/rules/programmingAuditIdentity');
 const {
   consecutiveEnergySystemTriples,
@@ -110,7 +111,9 @@ for (const athlete of year.athletes) {
       ];
       const record = { athlete, gender: athlete.gender, week, weekStart: week.start, day, rows };
       dayRecords.push(record);
-      for (const row of rows) occurrences.push({ ...record, row });
+      for (const row of rows.filter(programmingAuditRowRequiresCatalogueIdentity)) {
+        occurrences.push({ ...record, row });
+      }
     }
   }
 }
@@ -298,6 +301,7 @@ const missingConditioningModalities = occurrences.filter(({ row }) =>
 const squatlessLowerSessions = dayRecords.filter(({ day, rows }) =>
   (day.parts ?? []).some((part) => part.kind === 'strength' && /lower squat/i.test(part.name)) &&
   !rows.some((row) => !row.withheld
+    && programmingAuditRowRequiresCatalogueIdentity(row)
     && getExerciseTags(programmingAuditCatalogueIdentity(row))?.movement === 'squat' &&
     ['main_lift', 'main_strength'].includes(row.domainRole ?? row.role)))
   .map(({ gender, day, rows }) => ({

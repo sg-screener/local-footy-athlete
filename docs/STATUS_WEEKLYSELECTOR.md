@@ -133,3 +133,79 @@ instrument. Final exact-commit regeneration is still pending.
 - The focused generated matrix does not enumerate every injury, illness,
   fatigue, temporary-equipment, fixture and availability combination.
 - Unrelated inherited suite debt listed above was measured and not repaired.
+
+## 2026-09-02 — saved-year audit diagnosis only
+
+Boundary: read the already-generated `3e6ac18b` male/female year; do not change
+programming, regenerate a year or make PDFs. The only implementation change is
+inside the audit instrument that incorrectly demanded exercise identity from a
+typed Team Training anchor.
+
+### Lower-hinge variety findings
+
+The six excessive-skeleton findings are three aggregate signatures repeated for
+each gender. Male and female outputs are identical:
+
+- `RDLs > Nordic Lower`, session `lower_hinge`, 11 athlete-weeks per gender:
+  3, 4, 12, 13, 24, 25, 35, 38, 47, 49, 50.
+- `RDLs > Hamstring Curl`, session `lower_hinge`, 15 athlete-weeks per gender:
+  5, 6, 7, 16, 17, 18, 27, 28, 29, 37, 39, 40, 41, 51, 52.
+- `RDLs > SL 45° Back Extension`, session `lower_hinge`, 13 athlete-weeks per
+  gender: 8, 9, 10, 20, 21, 31, 32, 33, 34, 43, 44, 45, 46.
+
+The fourth lower-hinge signature is `RDLs > Seated Calf Raise` in week 14 for
+each gender. That makes the two recurring-purpose findings: male `lower_hinge`,
+40 sessions / 4 distinct skeletons; female `lower_hinge`, 40 sessions / 4
+distinct skeletons.
+
+Verdict: all eight are obsolete audit expectations, not measured programming
+breaches. The `>5` annual-occurrence ceiling and `>=6` distinct-skeleton floor
+exist only as literals in `weekly-strength-budget-year-audit.cjs`; neither is
+authored in the Bible nor Rulings. They also ignore distribution: the saved
+year changes support rows across blocks while retaining the tracked RDL anchor,
+and its actual weekly selection audit is zero exact repeats, zero repeated main
+families and zero dedicated-day ownership breaches. The obsolete thresholds
+were diagnosed but not edited in this unit.
+
+### Team Training identity failure
+
+Cause: the exporter correctly writes club attendance as
+`role: team_training`, `catalogueIdentity: null`. It is a visible schedule/load
+anchor, not an exercise. The audit projection, conditioning census and year-row
+duplicate summary iterated every visible row and called the strict exercise
+identity resolver before checking the typed role. The final-year runner
+therefore stopped on the first club row.
+
+Fix: one audit-only predicate now says whether a visible row requires catalogue
+identity. Every audit consumer excludes the typed `team_training` anchor from
+exercise/template identity and duplicate checks. The row remains visible and
+continues to count in the visible-workload summary. Missing identity still
+throws for a real exercise. No display-name comparison and no program change
+were added.
+
+Focused receipts:
+
+- Red first: both new anchor cells threw `missing catalogueIdentity: Club
+  session` before the audit predicate changed.
+- `test:programming-audit-projection`: 7/7.
+- `test:year-row-summary`: 6/6.
+- `npx tsc --noEmit`: exit 0.
+- Existing `3e6ac18b` artifact through `programming-final-year-acceptance.cjs`:
+  completes 24 checks instead of crashing; 16 pass and 8 unrelated checks are
+  red (accepted schedule inputs, travel-equipment restoration, team weekday
+  expectations and fixture counts, each for male and female). Those findings
+  were not investigated or changed.
+
+One broader `test:programming-selection-trace` diagnostic was started after the
+two focused suites. It reached its existing generated-selection assertion and
+failed at `strength:2026-10-07:push_accessory_1:0`; the audit-only change is not
+read by generation. It was not investigated or used as evidence for this unit.
+
+### NOT COVERED
+
+- No new program generation, full-year generation or PDF output.
+- No programming selector, composer, schedule, exercise or athlete-facing app
+  code changed.
+- The eight unrelated final-year findings were not diagnosed.
+- The obsolete lower-hinge variety thresholds were not removed or rewritten.
+- No simulator, restart, remote persistence or physical-phone run.

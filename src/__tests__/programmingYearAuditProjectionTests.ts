@@ -68,4 +68,24 @@ check('conditioning categories and selected templates are different audit terms'
   assert.ok(summary.distinctTemplates.includes('Air Bike Accelerations'));
 });
 
-console.log(`Programming year audit projection: ${passed}/5 passed`);
+check('a typed club-training anchor stays visible but is not treated as an exercise', () => {
+  const clubDay: ProgrammingAuditExportDay = {
+    date: '2026-10-06',
+    rows: [
+      { name: 'Club session', role: 'team_training' },
+      { name: 'Bench Press', catalogueIdentity: 'Bench Press', role: 'main_lift' },
+    ],
+  };
+  assert.equal(finalAthleteFacingAuditRows(clubDay).length, 2);
+  assert.deepEqual(programmingAuditProjectionFindings(clubDay), []);
+  assert.deepEqual(summarizeProgrammingAuditConditioningVocabulary([clubDay]).distinctTemplates, []);
+});
+
+check('a real exercise without catalogue identity still fails the audit', () => {
+  assert.throws(() => programmingAuditProjectionFindings({
+    date: '2026-10-07',
+    rows: [{ name: 'Club session', role: 'main_lift' }],
+  }), /missing catalogueIdentity/);
+});
+
+console.log(`Programming year audit projection: ${passed}/7 passed`);

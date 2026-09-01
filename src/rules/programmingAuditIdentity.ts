@@ -6,6 +6,21 @@ export interface ProgrammingAuditRowIdentity {
   readonly name: string;
   /** Raw exercise/template identity before athlete-facing formatting. */
   readonly catalogueIdentity?: string;
+  /** Typed content role. Team training is a calendar/load anchor, not catalogue work. */
+  readonly role?: string;
+}
+
+/**
+ * Whether a visible audit row represents catalogue-owned exercise/template work.
+ *
+ * Team training deliberately has no exercise identity: the club session is an
+ * external schedule/load anchor. Keep this role-based so changing its display
+ * copy cannot make it enter or leave the exercise audit.
+ */
+export function programmingAuditRowRequiresCatalogueIdentity(
+  row: ProgrammingAuditRowIdentity,
+): boolean {
+  return row.role !== 'team_training';
 }
 
 /**
@@ -30,5 +45,6 @@ export function programmingAuditCatalogueIdentity(
 export function programmingAuditRowIsConditioning(
   row: ProgrammingAuditRowIdentity,
 ): boolean {
-  return !!resolveTemplateByName(programmingAuditCatalogueIdentity(row));
+  return programmingAuditRowRequiresCatalogueIdentity(row)
+    && !!resolveTemplateByName(programmingAuditCatalogueIdentity(row));
 }

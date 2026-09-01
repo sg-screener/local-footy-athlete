@@ -77,4 +77,17 @@ check('different canonical rows are not collapsed because their copy looks relat
   assert.equal(summary.duplicateCanonicalRows.length, 0);
 });
 
-console.log(`Programming year row summary: ${passed}/5 passed`);
+check('team-training anchors count as visible workload without entering exercise identity checks', () => {
+  const summary = summarizeProgrammingYearRows([{
+    date: '2026-10-03', type: 'Team Training', tier: 'required', rows: [
+      { name: 'Club session', role: 'team_training' },
+      { name: 'Bench Press', catalogueIdentity: 'Bench Press', role: 'main_lift' },
+    ],
+  }]);
+  assert.equal(summary.mainSessionRows, 2);
+  assert.equal(summary.mainSessionRowsByContent.unclassified, 1);
+  assert.equal(summary.mainSessionRowsByContent.mainStrength, 1);
+  assert.deepEqual(summary.duplicateCanonicalRows, []);
+});
+
+console.log(`Programming year row summary: ${passed}/6 passed`);
