@@ -92,7 +92,7 @@ run('canonical classification keeps the approved boundary and distinct face-pull
     'prehab was classified');
 });
 
-run('Lower Accessories — Isolation is the corrected 13-name grouping without a new pool', () => {
+run('Lower Accessories — Isolation is the corrected 14-name grouping without a new pool', () => {
   const fromExistingPools = [...new Set([
     'SL 45° Back Extension',
     ...strengthPoolNames('isolation_lower'),
@@ -108,6 +108,7 @@ run('Lower Accessories — Isolation is the corrected 13-name grouping without a
     'Leg Extension',
     'Calf Raises',
     'Tib Raises',
+    'T-Bar Tib Raises',
     'Single-Leg Hip Thrust',
     'Back Extension',
     'Copenhagen Plank (Half)',
@@ -127,9 +128,9 @@ run('every selectable governed strength/accessory identity has one classificatio
   const missing = missingRequiredStrengthClassifications();
   const compounds = required.filter((name) => strengthExerciseClassification(name) === 'compound');
   const isolations = required.filter((name) => strengthExerciseClassification(name) === 'isolation');
-  assert(required.length === 84,
+  assert(required.length === 87,
     `classification scope changed: ${required.length} identities`);
-  assert(compounds.length === 49 && isolations.length === 35,
+  assert(compounds.length === 51 && isolations.length === 36,
     `classification split changed: compound=${compounds.length} isolation=${isolations.length}`);
   assert(missing.length === 0, `missing classifications: ${missing.join(', ')}`);
 });

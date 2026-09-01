@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-t-bar-tib-raises-intake',
+    law: 'R-332: T-Bar Tib Raises is the tib-bar-loaded progression of Tib Raises for everyone. It uses the same 2 x 15-20 total reps and 30 seconds rest, is preferred automatically when a tib bar is available, remains a direct Swap and manual Add/Swap option, records total external kilograms in 2.5 kg steps, permits a familiar light G-1 dose and is not automatic in Primer.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-332',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `tibbar`. The dedicated intake suite binds both automatic pool owners, the direct Swap ladder, manual Add/Swap, shared variation family, exact dose, equipment answer and T glyph, athlete-chosen kilogram control, cues, video, muscle mapping, sagittal plane, demand and all thirteen injury ratings. Red-first, mutation, final and NOT COVERED receipt: docs/STATUS_TIBBAR.md.',
+    },
+  },
+  {
     id: 'LAW-single-leg-hop-and-stick-intake',
     law: 'R-326: Single-Leg Hop and Stick is a bodyweight lower-power option for 2+ years only. It is automatic and manual Add/Swap eligible in all phases including low-volume in-season work, remains excluded from G-1 by the existing power policy, and uses 2 sets of 5 reps per side with 120 seconds rest.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-326',
@@ -505,7 +516,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-automatic-strength-session-compound-limit',
-    law: 'R-319: governed strength and accessory identities carry one canonical compound/isolation metadata answer. Lower Accessories — Isolation is the ruled 13-name grouping derived from the existing hinge, lower-isolation, groin and calf pools without moving exercises or changing their other tags. Every automatically programmed strength session contains at most four compounds, used only for uncovered genuine strength directions. Support falls through legal direction-matched isolation, genuine prehab, core/robustness and empty; it never adds fifth or sixth compound volume. Equipment, injury, weekly identity/family, accepted block selection and restart rules remain in force, while athlete-added work is unrestricted.',
+    law: 'R-319: governed strength and accessory identities carry one canonical compound/isolation metadata answer. Lower Accessories — Isolation is the ruled 14-name grouping derived from the existing hinge, lower-isolation, groin and calf pools without moving exercises or changing their other tags; R-332 adds T-Bar Tib Raises as the loaded tib-raise isolation. Every automatically programmed strength session contains at most four compounds, used only for uncovered genuine strength directions. Support falls through legal direction-matched isolation, genuine prehab, core/robustness and empty; it never adds fifth or sixth compound volume. Equipment, injury, weekly identity/family, accepted block selection and restart rules remain in force, while athlete-added work is unrestricted.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-319',
     guard: {
       state: 'guarded',

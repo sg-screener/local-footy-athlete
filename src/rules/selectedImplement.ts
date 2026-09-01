@@ -69,6 +69,7 @@ export const LOAD_BEARING_TAGS: readonly EquipmentTag[] = [
   'machine',
   'bands',
   'trap_bar',
+  'tib_bar',
   'rings_trx',
 ];
 
@@ -220,6 +221,7 @@ export function selectedImplementLabel(
     case 'cables': return 'Cable';
     case 'machine': return 'Machine';
     case 'bands': return 'Band';
+    case 'tib_bar': return 'Tib bar';
     case 'bodyweight': return 'Bodyweight';
     default: return null;
   }
