@@ -209,3 +209,67 @@ read by generation. It was not investigated or used as evidence for this unit.
 - The eight unrelated final-year findings were not diagnosed.
 - The obsolete lower-hinge variety thresholds were not removed or rewritten.
 - No simulator, restart, remote persistence or physical-phone run.
+
+## 2026-09-02 — obsolete variety audit removal and eight-finding classification
+
+Boundary: reuse the saved `3e6ac18b` year only. No generation, PDF or production
+programming change.
+
+The annual session-shape ceiling of five and recurring-purpose floor of six
+were deleted from `weekly-strength-budget-year-audit.cjs`, including their
+maps, verdict arm, receipt keys and top-skeleton list. A source scan over
+`scripts` and `src/__tests__` finds none of the old constants or receipt terms.
+There were no separate obsolete test cells: both expectations existed only as
+executable literals in that script. No replacement threshold was added.
+
+The saved-year selector audit still reads 104 athlete-weeks, 104/104 successful
+restart receipts, zero exact-exercise breaches, zero main-family breaches and
+zero dedicated-day ownership breaches. Its command exits 1 solely because the
+saved program source is `3e6ac18b` and the current audit-tool checkpoint is
+`0e038eeb`; the receipt states both revisions. This is expected when re-auditing
+an explicitly preserved older year and is not a new program finding.
+
+The exact `3e6ac18b` final-year receipt contains eight failing checks, four per
+athlete. Male and female delivered programs are identical at these coordinates:
+
+1. `accepted_programming_inputs`: Pre-season weeks 8-26 save Monday/Wednesday
+   team training, while the audit still expects Tuesday/Thursday. This checks
+   saved input metadata, so there is no single session/exercise row. AUDIT
+   MISTAKE: the annual-driver correction and Sam's audit instruction explicitly
+   require Monday/Wednesday in Pre-season and Tuesday/Thursday In-season.
+2. `full_equipment_travel_restore`: the audit inspects week 19,
+   2027-02-01..05, and demands dumbbells/bands/bench-only kit. Those dates carry
+   Team Training; Lower Squat (Box Jumps, Back Squat, Bulgarian Split Squats);
+   Team Training + Upper Pull (Rotational Medicine-Ball Slam, Pull-Ups, Seated
+   Cable Row, Incline DB Bench); Mobility (Deep Squat Hold, Adductor Rockback,
+   Jefferson Curl, Open Book Rotation, Toe Stretch, Pigeon Stretch); and Lower
+   Hinge (RDLs, Steady Aerobic Intervals). AUDIT MISTAKE: no travel fact exists
+   in week 19. The journey's travel is Pre-season phase week 7 / annual week 14,
+   2026-12-28..2027-01-01, and those five days correctly expose only
+   bodyweight/dumbbells/bands/bench with no conditioning modality; full kit is
+   restored on 2027-01-02.
+3. `team_training_anchors`: the audit calls the 36 Pre-season Monday/Wednesday
+   club dates invalid and demands 39 Tuesday plus 39 Thursday dates. Affected
+   weeks are 8-13 and 15-26; week 14 is the Christmas break. Monday is Team
+   Training-only. Wednesday is Team Training + Upper Body Pull. AUDIT MISTAKE:
+   the weekday expectation duplicates the stale input check above. In-season
+   weeks 27-52 are correctly Tuesday/Thursday.
+4. `fixture_journey`: the audit demands 21 games (17 Saturday, four Sunday).
+   The saved year has 23: weeks 27-30, 32-36, 38-42 and 44-52; exact dates are
+   2027-04-03, 04-10, 04-18, 04-24, 05-08, 05-15, 05-22, 05-30, 06-05,
+   06-19, 06-26, 07-03, 07-11, 07-17, 07-31, 08-07, 08-14, 08-22, 08-28,
+   09-04, 09-11, 09-18 and 09-25. These are Game Day anchors with no exercise
+   rows. AUDIT MISTAKE: the fixed 21 belongs to the retired 24-week In-season
+   assumption. The canonical year has 26 In-season weeks; three byes leave 23
+   fixtures, and four scripted moves produce 19 Saturday plus four Sunday.
+
+Classification totals across the exact eight check findings: zero real
+programming problems, eight audit mistakes, zero needing a new coaching
+decision. The Wednesday upper-pull exercise lists vary by stable block, but no
+exercise is the subject of either weekday finding; the alleged breach is only
+the date.
+
+Focused checks: programming audit projection 7/7, year row summary 6/6, audit
+script syntax green, obsolete-term scan empty. NOT COVERED: the eight stale
+expectations were classified but not removed from final-year acceptance in this
+unit; no broader suite, generation, PDF, simulator or phone run.

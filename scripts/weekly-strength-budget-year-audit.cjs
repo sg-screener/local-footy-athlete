@@ -22,8 +22,6 @@ const {
   auditFinalAutomaticWeek,
   automaticExerciseRouteForIdentity,
 } = require(path.join(repo, 'src/rules/automaticWeeklyExerciseSelection'));
-const EXACT_SKELETON_REPEAT_CEILING = 5;
-const RECURRING_PURPOSE_MINIMUM_DISTINCT_SKELETONS = 6;
 
 const evidence = (row) => row.section18Evidence ?? {};
 const isAutomaticStrengthRow = (row) =>
@@ -34,29 +32,10 @@ const identity = (row) => String(row.catalogueIdentity ?? row.name ?? '');
 const repeatedExactExerciseBreaches = [];
 const repeatedMainFamilyBreaches = [];
 const dedicatedDayOwnershipBreaches = [];
-const skeletonCounts = new Map();
-const purposeTotals = new Map();
-const purposeSkeletons = new Map();
 const athleteSummaries = [];
 
 for (const athlete of year.athletes ?? []) {
   for (const week of athlete.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      const automaticRows = (day.rows ?? []).filter(isAutomaticStrengthRow);
-
-      // One-row primers are not strength-session skeletons. A skeleton is the
-      // ordered automatic strength prescription the athlete actually sees.
-      if (automaticRows.length >= 2) {
-        const purposeKey = `${athlete.gender}\t${day.name}`;
-        const signature = automaticRows.map(identity).join(' > ');
-        const skeletonKey = `${purposeKey}\t${signature}`;
-        skeletonCounts.set(skeletonKey, (skeletonCounts.get(skeletonKey) ?? 0) + 1);
-        purposeTotals.set(purposeKey, (purposeTotals.get(purposeKey) ?? 0) + 1);
-        const signatures = purposeSkeletons.get(purposeKey) ?? new Set();
-        signatures.add(signature);
-        purposeSkeletons.set(purposeKey, signatures);
-      }
-    }
     const finalAudit = auditFinalAutomaticWeek((week.days ?? []).map((day) => ({
       dayKind: day.name === 'lower_squat' || day.name === 'lower_hinge'
         ? day.name : null,
@@ -87,28 +66,6 @@ for (const athlete of year.athletes ?? []) {
   });
 }
 
-const excessiveSkeletons = [...skeletonCounts.entries()]
-  .filter(([, count]) => count > EXACT_SKELETON_REPEAT_CEILING)
-  .map(([key, count]) => {
-    const [gender, purpose, signature] = key.split('\t');
-    return { gender, purpose, signature, count };
-  });
-const recurringPurposeVarietyBreaches = [...purposeTotals.entries()]
-  .filter(([, sessions]) => sessions >= 10)
-  .flatMap(([key, sessions]) => {
-    const distinctSkeletons = purposeSkeletons.get(key)?.size ?? 0;
-    if (distinctSkeletons >= RECURRING_PURPOSE_MINIMUM_DISTINCT_SKELETONS) return [];
-    const [gender, purpose] = key.split('\t');
-    return [{ gender, purpose, sessions, distinctSkeletons }];
-  });
-const topRepeatedSkeletons = [...skeletonCounts.entries()]
-  .sort((left, right) => right[1] - left[1])
-  .slice(0, 20)
-  .map(([key, count]) => {
-    const [gender, purpose, signature] = key.split('\t');
-    return { gender, purpose, signature, count };
-  });
-
 const exactSource = year.revision === revision;
 const completeAthletes = athleteSummaries.length === 2 && athleteSummaries.every((summary) =>
   summary.weeks === 52 && summary.athleteDays === 364
@@ -117,29 +74,21 @@ const selectionVerdict = exactSource && completeAthletes
   && repeatedExactExerciseBreaches.length === 0
   && repeatedMainFamilyBreaches.length === 0
   && dedicatedDayOwnershipBreaches.length === 0 ? 'PASS' : 'FAIL';
-const legacyVarietyVerdict = excessiveSkeletons.length === 0
-  && recurringPurposeVarietyBreaches.length === 0 ? 'PASS' : 'FAIL';
-const verdict = selectionVerdict === 'PASS' && legacyVarietyVerdict === 'PASS'
-  ? 'PASS' : 'FAIL';
+const verdict = selectionVerdict;
 
 const receipt = {
   revision,
   sourceRevision: year.revision,
   verdict,
   selectionVerdict,
-  legacyVarietyVerdict,
   units: {
     repeatedExactExerciseBreaches: 'distinct canonical non-Mobility/non-Prehab automatic exercise identities occurring more than once per athlete-week; each finding includes delivered occurrence count',
     repeatedMainFamilyBreaches: 'distinct real catalogue-owned anchor families occurring more than once per athlete-week; each finding includes delivered identities',
     dedicatedDayOwnershipBreaches: 'automatic exercise occurrences whose real catalogue classification crosses dedicated lower_squat/lower_hinge ownership',
-    skeletons: 'ordered automatic composer-declared strength-row identity signatures per athlete session purpose',
   },
   thresholds: {
     automaticExerciseIdentityMaximumPerWeek: 1,
     automaticRealMainFamilyMaximumPerWeek: 1,
-    exactSkeletonRepeatCeiling: EXACT_SKELETON_REPEAT_CEILING,
-    recurringPurposeSessionMinimum: 10,
-    recurringPurposeMinimumDistinctSkeletons: RECURRING_PURPOSE_MINIMUM_DISTINCT_SKELETONS,
   },
   athleteSummaries,
   counts: {
@@ -150,15 +99,10 @@ const receipt = {
     repeatedMainFamilyOccurrences: repeatedMainFamilyBreaches
       .reduce((total, finding) => total + finding.identities.length, 0),
     dedicatedDayOwnershipBreaches: dedicatedDayOwnershipBreaches.length,
-    excessiveSkeletons: excessiveSkeletons.length,
-    recurringPurposeVarietyBreaches: recurringPurposeVarietyBreaches.length,
   },
   repeatedExactExerciseBreaches,
   repeatedMainFamilyBreaches,
   dedicatedDayOwnershipBreaches,
-  excessiveSkeletons,
-  recurringPurposeVarietyBreaches,
-  topRepeatedSkeletons,
   notCovered: [
     'Physical iPhone acceptance',
     'Native onboarding taps',
