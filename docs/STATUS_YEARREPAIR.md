@@ -368,3 +368,52 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   been regenerated; their typed legality paths are covered by focused gates and
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
+
+## Section 7 — fresh exact-year acceptance, first red run
+
+The exact `038f07ed` full-commercial journey completed for both athletes and
+the acceptance instrument reads final athlete-facing state rather than the
+exporter's intermediate evidence. Twenty of twenty-two gender-scoped invariant
+groups are green. Each athlete has 52 weeks, 364 final dates, 52 successful
+cold reconstruction comparisons, no compiler refusal, no duplicated final row,
+all required equipment and modalities, 21 final fixtures (17 Saturday, four
+Sunday), 39 Tuesday and 39 Thursday club nights after the five-day trip, and
+eligible/delivered tracked-lift dates of Pull-Up 61/61, Bench Press 64/64, RDL
+60/60 and Back Squat 58/58.
+
+The first run also proved why the acceptance instrument could not be replaced
+by the older green annual audit:
+
+- INSTRUMENT CORRECTION: the first conditioning-copy predicate classified the
+  literal modality `Run` as non-running and falsely rejected legal MAS copy.
+  The predicate now treats Run/Running/on-leg as the running family. All 186
+  selected conditioning-template row placements are green after that correction.
+- LIVE FINDING: clearing the Monday–Friday Going Away fact on Saturday correctly
+  preserves the five delivered restricted-kit dates and restores home equipment
+  for Saturday onward. The resulting accumulated week has app energy-system
+  work on Thursday, Friday and Saturday. This is one three-date sequence per
+  athlete. It is not a duplicate row and it is not a weekly-scheduler world:
+  it is the join between immutable delivered history and the newly recompiled
+  remaining week. The plain six-day/no-club Pre-season scheduler produces only
+  Monday, Tuesday, Thursday and Friday exposures and has no triple; the Saturday
+  hard row enters when Clear restores the accepted home-week future.
+
+The open architectural question is now exact: **which canonical accepted-state
+compiler owner should consume already-delivered energy-system dates when a
+mid-week source-fact Clear recompiles only the future of the same week?** A
+display filter or audit exception would lie; clearing earlier dates would rewrite
+history; changing the scripted trip would evade the required Monday–Friday
+journey. Section 7 remains open until that join is owned and mutation-proven, so
+PDF generation has not started.
+
+The receipt is
+`output/full-year-audit-038f07ed/final-year-acceptance.json`. Its units are named:
+rows are final `day.rows` placements, dates are distinct athlete-dates, and
+fixture/team/speed/conditioning totals are separate semantic day counts.
+
+### NOT COVERED
+
+- The Saturday return-home accumulated-spacing defect above is not fixed.
+- PDFs are deliberately not generated from a red acceptance artifact.
+- Addendum Sections 1–8 and the in-season arm/foundation addendum remain open.
+- No simulator, Release build or physical phone work has run.
