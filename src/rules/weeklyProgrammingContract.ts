@@ -486,19 +486,18 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
   normal_build: {
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,
     runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
-    // ⚠ FIVE, NOT THREE — §7's approved off-season reference week IS five
-    // exposures (Mon off-leg, Tue running, Thu off-leg, Fri running/top-end,
-    // Sat long slow), and §8 says conditioning *builds toward* 3-5 by week 5.
-    // A late off-season athlete with the availability to hold the reference
-    // gets the reference; the cap and the legality passes still bound it.
-    conditioningTarget: { min: 5, max: 5 },
+    // R-303 supersedes the old five-exposure reference. A proper authored Speed
+    // day is one of the app's energy-system days, so late Off-season builds to
+    // four total app-programmed days: Speed, one hard/aerobic-power exposure,
+    // one tempo/capacity exposure and at most one easy-aerobic exposure.
+    conditioningTarget: { min: 4, max: 4 },
     // §8 week 5 onward, and Sam's framework: *"Capacity earlier in preseason;
     // aerobic power intervals + footy shuttles as the season approaches."* The
     // one block with neither club training nor matches, so the one block that
     // may author glycolytic work — alternated with aerobic power by mini-cycle.
     hardConditioning: { count: 1, qualities: ['vo2', 'glycolytic'], requiresNoGameWeek: false },
     statement: 'Off-season week 5 onward: normal loading, 2-4 required strength '
-      + 'sessions by availability, conditioning builds to 3-5, at least one '
+      + 'sessions by availability, conditioning builds to 3-4, at least one '
       + 'genuine sprint/high-speed exposure.',
   },
 };

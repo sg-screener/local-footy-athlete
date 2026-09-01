@@ -30,6 +30,15 @@ export type EnergySystemEvidenceFinding =
   | 'one_session_received_duplicate_conditioning_credit'
   | 'negative_energy_system_credit';
 
+export type EnergySystemDensityFinding =
+  | 'offseason_app_programmed_energy_system_days_above_four'
+  | 'three_consecutive_app_programmed_energy_system_days';
+
+export interface DatedEnergySystemExposureEvidence {
+  readonly date: string;
+  readonly energySystem: EnergySystemExposureEvidence | null | undefined;
+}
+
 export function energySystemExposureEvidenceForWorkout(
   workout: Workout | null | undefined,
 ): EnergySystemExposureEvidence {
@@ -71,3 +80,44 @@ export function validateEnergySystemExposureEvidence(
   return findings;
 }
 
+export function isAppProgrammedEnergySystemDay(
+  evidence: EnergySystemExposureEvidence | null | undefined,
+): boolean {
+  return (evidence?.appProgrammedConditioningCredits ?? 0) > 0;
+}
+
+/** R-303 weekly cap. Team/game anchors remain separate and do not enter this count. */
+export function validateWeeklyEnergySystemDensity(args: {
+  readonly phase: string;
+  readonly phaseWeek: number;
+  readonly days: readonly DatedEnergySystemExposureEvidence[];
+}): EnergySystemDensityFinding[] {
+  const appDays = args.days.filter((day) =>
+    isAppProgrammedEnergySystemDay(day.energySystem));
+  return args.phase === 'Off-season' && args.phaseWeek >= 5 && appDays.length > 4
+    ? ['offseason_app_programmed_energy_system_days_above_four'] : [];
+}
+
+/**
+ * R-303 spacing over a complete dated run, not a seven-slot display. Sorting
+ * ISO dates and walking actual UTC day numbers also catches Sat/Sun/Mon across
+ * a week boundary. One date appears at most once in compiler evidence.
+ */
+export function consecutiveEnergySystemTriples(
+  days: readonly DatedEnergySystemExposureEvidence[],
+): string[][] {
+  const millisPerDay = 86_400_000;
+  const appDates = [...new Set(days
+    .filter((day) => isAppProgrammedEnergySystemDay(day.energySystem))
+    .map((day) => day.date))].sort();
+  const triples: string[][] = [];
+  for (let index = 2; index < appDates.length; index += 1) {
+    const first = Date.parse(`${appDates[index - 2]}T00:00:00.000Z`) / millisPerDay;
+    const middle = Date.parse(`${appDates[index - 1]}T00:00:00.000Z`) / millisPerDay;
+    const last = Date.parse(`${appDates[index]}T00:00:00.000Z`) / millisPerDay;
+    if (middle - first === 1 && last - middle === 1) {
+      triples.push(appDates.slice(index - 2, index + 1));
+    }
+  }
+  return triples;
+}

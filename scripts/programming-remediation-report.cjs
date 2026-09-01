@@ -4,7 +4,8 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const repo = path.resolve(__dirname, '..');
 require(path.join(repo, 'node_modules/sucrase/register'));
-const { validateEnergySystemExposureEvidence } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
+const { consecutiveEnergySystemTriples, validateEnergySystemExposureEvidence,
+  validateWeeklyEnergySystemDensity } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
 const root = path.resolve(process.argv[2] ?? 'outputs/programming-remedy-2026-08-28');
 const baselineRoot = process.argv[3] ? path.resolve(process.argv[3]) : null;
 const baselinePath = '/Users/samgeurts/.codex/visualizations/2026/08/26/01a03b69-9022-7041-b909-ca28d5e0d275/year-programs.json';
@@ -60,6 +61,15 @@ for (const world of ['original-partial', 'corrected-commercial']) {
         (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
       qualifyingSpeedDays: week.days.filter(day => day.energySystem?.qualifyingSpeed).length,
     }));
+    const energySystemDensityFindings = [
+      ...athlete.weeks.flatMap(week => validateWeeklyEnergySystemDensity({
+        phase: week.phase, phaseWeek: week.phaseWeek,
+        days: week.days.map(day => ({ date: day.date, energySystem: day.energySystem })),
+      }).map(finding => ({ week: week.number, weekStart: week.start, finding }))),
+      ...consecutiveEnergySystemTriples(days.map(day => ({
+        date: day.date, energySystem: day.energySystem,
+      }))).map(dates => ({ finding: 'three_consecutive_app_programmed_energy_system_days', dates })),
+    ];
     const total = { world, gender: athlete.gender, revision: data.revision, weeks: athlete.weeks.length, athleteDays: days.length,
       displayedRowPlacements: rows.length, distinctExerciseDisplayNames: new Set(rows.map(r => r.name)).size,
       withheldRowPlacements: rows.filter(r => r.withheld).length,
@@ -71,6 +81,7 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       restartChecks: athlete.restarts.length,
       weeklyEnergySystemCounts,
       energySystemFindings,
+      energySystemDensityFindings,
       projectionErrors: days.filter(d => d.projectionError).map(d => ({ date: d.date, error: d.projectionError })) };
     totals.push(total);
     const before = baseline.athletes.find(a => a.gender === athlete.gender);
@@ -100,4 +111,5 @@ const count = f => Object.values(f).reduce((n, v) => n + v.displayedRowPlacement
 const lines = comparisons.map(c => `| ${c.world} | ${c.gender} | ${count(c.beforeFrequency)} → ${count(c.afterFrequency)} | ${Object.keys(c.beforeFrequency).length} → ${Object.keys(c.afterFrequency).length} | ${c.beforeSpacing.adjacentCalendarDayPairs} → ${c.afterSpacing.adjacentCalendarDayPairs} |`);
 fs.writeFileSync(path.join(root, 'before-after-summary.md'), `# Before/after programming evidence\n\nBaseline ${comparisons[0].beforeRevision}; revised ${totals[0].revision}. Earlier evidence is unchanged.\n\n${units}\n\n| World | Athlete | Displayed rows (incl. Skip) | Distinct names | Adjacent same-part pairs |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n\nEach world contains 364 athlete-days. Full per-name placements and distinct athlete-days, every adjacency pair and week 3/4 layouts are in before-after-frequency-spacing.json. ${baselineRoot?'Each before/after pair has identical profile, dated action and phase inputs; partial and commercial worlds remain separate.':'Corrected commercial kit is a separate input world, not a source-only comparison.'}\n\n## NOT COVERED\n\nPhysical-device acceptance; original Speed frequency; clinical validation; proof that every adjacent pair is avoidable; onboarding 2 km skip-tap consistency.\n`);
 console.log(JSON.stringify(totals, null, 2));
-if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length || t.energySystemFindings.length)) process.exitCode = 1;
+if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length ||
+  t.energySystemFindings.length || t.energySystemDensityFindings.length)) process.exitCode = 1;

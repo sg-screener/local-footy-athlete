@@ -262,6 +262,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-normal-offseason-app-energy-density',
+    law: 'R-303: normal Off-season week 5 onward has at most four app-programmed energy-system days including proper Speed, never three consecutively. A normal healthy advanced week contains Speed, one hard/aerobic-power exposure, one tempo/capacity exposure and at most one easy-aerobic exposure. Team Training remains a separate anchor and reduces the app shortfall; earlier transition, other phases, fixtures, flush and deload rules retain their own authority.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-303',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler + test:session-classification',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The exact stamped full-kit two-athlete year reproduced 5 distinct app-programmed energy-system days in Off-season weeks 5-10 and 12 for both genders, 4 in week 11, and the repeated Thu/Fri/Sat triple. The normal overlay still required exactly five and the receiver selector could let upper-day Speed become additive after spending the metabolic budget. R-303 changes the one phase target to four, makes the exhaustive receiver selector include the Speed seat and all legal equipment-free days, keeps hard away from the replaced Speed seat, assigns the required tempo seat, and scores any three-day energy streak red. The guard walks 476 accepted schedules from all 119 exact two-through-six-day availability sets crossed with build/deload and zero/one/two club nights; these are distinct input coordinates, not rows. A target-restoration mutation fell from 118/118 to 110/118 and named 196 distinct violating coordinates. Annual evidence rejects a fifth day, missing evidence and exact dated triples across week boundaries. Team Training remains one anchor with zero app-programmed credit. Final source mutation and regenerated-year receipts: docs/STATUS_YEARREPAIR.md. NOT COVERED: physical iPhone, Sections 3-7 and addendum work.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

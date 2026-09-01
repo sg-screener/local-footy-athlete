@@ -348,6 +348,78 @@ console.log('\n[spacing] Lower spacing, planes, hard days and rest');
     }));
 }
 
+// R-303: every exact two-through-six-day availability answer, crossed with
+// ordinary/deload weeks and representative zero/one/two club-night facts. The
+// instrument counts accepted schedules, app-programmed energy-system DAYS and
+// distinct violating schedule-input coordinates; it does not count rows.
+{
+  const order = [MON, TUE, WED, THU, FRI, SAT, SUN];
+  const availabilityPatterns = Array.from({ length: 1 << order.length }, (_, mask) =>
+    order.filter((_, index) => (mask & (1 << index)) !== 0))
+    .filter((days) => days.length >= 2 && days.length <= 6);
+  const coordinates = availabilityPatterns.flatMap((gymAccessDays) =>
+    ([
+      { clubNights: [] as number[], weekKind: 'build' as const },
+      { clubNights: [TUE] as number[], weekKind: 'build' as const },
+      { clubNights: [TUE, THU] as number[], weekKind: 'build' as const },
+      { clubNights: [] as number[], weekKind: 'deload' as const },
+    ]).map((variant) => inputs({
+      phase: 'Off-season', offseasonBlock: 'normal_build', gymAccessDays,
+      clubNights: variant.clubNights, gameDay: null, weekKind: variant.weekKind,
+    })));
+  const accepted = coordinates.map((coordinate) => ({
+    coordinate, result: scheduleWeek(coordinate),
+  })).filter((entry): entry is { coordinate: WeeklySchedulerInputs; result: WeeklySchedule } =>
+    !scheduleRefused(entry.result));
+  const appDays = (week: WeeklySchedule) => week.days.filter((day) =>
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush')
+    || day.sprintComponent);
+  const threeConsecutive = (week: WeeklySchedule): boolean => {
+    const present = new Set(appDays(week).map((day) => day.dayOfWeek));
+    return order.some((day) => present.has(day)
+      && present.has((day + 1) % 7) && present.has((day + 2) % 7));
+  };
+  const buildNoClub = accepted.filter(({ coordinate }) =>
+    coordinate.weekKind === 'build' && coordinate.clubNights.length === 0);
+  const wrongNormalShape = buildNoClub.filter(({ result }) => {
+    const energy = appDays(result);
+    const categories = energy.map((day) => day.conditioningCategory);
+    return energy.length !== 4
+      || energy.filter((day) => day.conditioning === 'sprint_high_speed'
+        || day.sprintComponent).length !== 1
+      || categories.filter((category) => category === 'vo2' || category === 'glycolytic').length !== 1
+      || categories.filter((category) => category === 'tempo').length < 1
+      || categories.filter((category) => category === 'aerobic_base').length > 1;
+  });
+  console.log(`  R-303 matrix: ${accepted.length} accepted schedules / ${coordinates.length} distinct input coordinates across ${availabilityPatterns.length} exact availability sets`);
+  ok('[R-303 matrix non-vacuity] exact availability sweep reaches hundreds of accepted schedules',
+    ['WC-132'], accepted.length >= 300,
+    `${accepted.length} accepted of ${coordinates.length} coordinates across ${availabilityPatterns.length} exact availability sets`);
+  ok('[R-303 matrix] no accepted Off-season coordinate exceeds four app energy-system days',
+    ['WC-132'], accepted.every(({ result }) => appDays(result).length <= 4),
+    `${accepted.filter(({ result }) => appDays(result).length > 4).length} distinct violating coordinates`);
+  ok('[R-303 matrix] no accepted Off-season coordinate contains three consecutive app energy-system days',
+    ['WC-040', 'WC-132'], accepted.every(({ result }) => !threeConsecutive(result)),
+    JSON.stringify(accepted.filter(({ result }) => threeConsecutive(result)).slice(0, 5)
+      .map(({ coordinate, result }) => ({ gym: coordinate.gymAccessDays,
+        club: coordinate.clubNights, weekKind: coordinate.weekKind,
+        energy: appDays(result).map((day) => [day.dayOfWeek, day.conditioningCategory]) }))));
+  ok('[R-303 matrix] every accepted normal no-club build has Speed + hard + tempo + at most one easy aerobic',
+    ['WC-132', 'WC-136', 'WC-138'], wrongNormalShape.length === 0,
+    JSON.stringify(wrongNormalShape.slice(0, 5).map(({ coordinate, result }) => ({
+      gym: coordinate.gymAccessDays,
+      energy: appDays(result).map((day) => [day.dayOfWeek, day.conditioningCategory]),
+    }))));
+  ok('[R-303 matrix] club anchors remain separate and reduce rather than inflate app-programmed work',
+    ['WC-045', 'WC-062'], accepted.filter(({ coordinate }) => coordinate.clubNights.length > 0)
+      .every(({ coordinate, result }) =>
+        result.demand.anchorConditioning === new Set(coordinate.clubNights).size
+        && appDays(result).length + result.demand.anchorConditioning <= 4),
+    `${accepted.filter(({ coordinate, result }) => coordinate.clubNights.length > 0
+      && (result.demand.anchorConditioning !== new Set(coordinate.clubNights).size
+        || appDays(result).length + result.demand.anchorConditioning > 4)).length} distinct violating coordinates`);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n[anchors] Real club nights and real game days — never assumed');
 // ═══════════════════════════════════════════════════════════════════════════
@@ -454,7 +526,7 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
     ['WC-132'],
     OFFSEASON_OVERLAYS.normal_build.loadAdjustment === null
     && OFFSEASON_OVERLAYS.normal_build.sprintExposureRequired
-    && OFFSEASON_OVERLAYS.normal_build.conditioningTarget.max === 5);
+    && OFFSEASON_OVERLAYS.normal_build.conditioningTarget.max === 4);
 
   ok('[WC-133] pre-season targets four conditioning exposures', ['WC-133'],
     PRESEASON_OVERLAY.conditioningTarget.min === 4
@@ -571,13 +643,31 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
     + 'exposures sit apart', ['WC-138'],
     offSprint[0]?.dayOfWeek === FRI,
     JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.conditioning])));
-  ok('[WC-138] the approved off-season reference: 4 strength, 5 conditioning, '
-    + '3 running days', ['WC-138'],
+  ok('[R-303/WC-138] the revised off-season reference: 4 strength and 4 app energy-system days', ['WC-138'],
     offRef.demand.mainStrength === 4
-    && offRef.demand.coreConditioning === 5
-    && offRef.days.filter((d) => d.conditioning === 'running'
-      || d.conditioning === 'sprint_high_speed').length === 3,
+    && offRef.demand.coreConditioning === 4,
     JSON.stringify(offRef.demand));
+  const offEnergyDays = offRef.days.filter((day) =>
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush')
+    || day.sprintComponent);
+  const offCategories = offEnergyDays.map((day) => day.conditioningCategory);
+  ok('[R-303] normal build contains Speed, one hard exposure, tempo and at most one easy aerobic',
+    ['WC-132', 'WC-136', 'WC-138'],
+    offEnergyDays.length === 4
+    && offEnergyDays.filter((day) => day.conditioning === 'sprint_high_speed'
+      || day.sprintComponent).length === 1
+    && offCategories.filter((category) => category === 'vo2' || category === 'glycolytic').length === 1
+    && offCategories.filter((category) => category === 'tempo').length >= 1
+    && offCategories.filter((category) => category === 'aerobic_base').length <= 1,
+    JSON.stringify(offEnergyDays.map((day) => [day.dayOfWeek, day.conditioningCategory])));
+  const offEnergySet = new Set(offEnergyDays.map((day) => day.dayOfWeek));
+  ok('[R-303] normal build has no three consecutive app-programmed energy-system days',
+    ['WC-040', 'WC-132'],
+    ![MON, TUE, WED, THU, FRI, SAT, SUN].some((day) =>
+      offEnergySet.has(day)
+      && offEnergySet.has((day + 1) % 7)
+      && offEnergySet.has((day + 2) % 7)),
+    JSON.stringify([...offEnergySet]));
   ok('[WC-138] ...Wednesday stays a rest day — no standalone breaks the '
     + 'mid-week rest', ['WC-138'],
     offRef.days.find((d) => d.dayOfWeek === WED)?.owner === 'rest_or_recovery',

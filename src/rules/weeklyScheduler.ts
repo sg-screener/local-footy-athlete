@@ -1012,6 +1012,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         })
       : WEEK_ORDER.filter((day) => purposeByDay.has(day))),
     ...inputs.gymAccessDays.filter(day => !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs)),
+    // R-303: a normal Off-season conditioning receiver is not required to be a
+    // gym day. Considering every legal day here lets the exhaustive selector
+    // leave a packed strength day as strength/mobility only when that avoids a
+    // three-day energy-system streak.
+    ...(inputs.phase === 'Off-season' && inputs.offseasonBlock === 'normal_build'
+      ? WEEK_ORDER : []),
   ]));
   const legalConditioningCandidates = conditioningCandidates.filter((day) =>
     !inputs.unavailableDays.includes(day)
@@ -1041,6 +1047,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
       return [
+        // A Speed component on an upper-strength day replaces one selected
+        // conditioning receiver. If selection omits that day, Speed becomes an
+        // additive fifth day after this budget has already been spent.
+        plannedSprintDay !== null && sprintUpperDay !== null
+          && !days.includes(plannedSprintDay) ? 1 : 0,
+        Math.max(0, cyclicStreak([
+          ...days,
+          ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
+        ]) - 2),
         clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
           && sprintDayIsLegal(day, inputs)) ? 1 : 0,
         clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
@@ -1050,6 +1065,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         inputs.appRunningPermitted === false || inputs.offseasonBlock === 'early_optional' ? 0
           : Math.max(0, GLOBAL_RULES.running.min - new Set(running).size),
         Math.max(0, cyclicStreak([...training, ...days]) - GLOBAL_RULES.consecutiveHardDays.preferred),
+        // Preserve the cross-week Off-season boundary: Sunday conditioning is
+        // not the price of spacing this week when Monday already owns lower
+        // strength. The selector can attach the easy seat to Monday instead.
+        days.includes(0) && PURPOSE_IS_LOWER[purposeByDay.get(1)!] ? 1 : 0,
         gaps.reduce((sum, gap) => sum + gap * gap, 0),
         days.filter(day => !purposeByDay.has(day)).length,
       ];
@@ -1135,6 +1154,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // the job — it is one arm of the single question *"is this a week we may add
   // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
   const hardEligible = conditioningDays.filter((day) => {
+    // In normal Off-season the authored Speed day replaces this receiver's
+    // metabolic category. It cannot also be chosen as the week's hard seat.
+    if (inputs.phase === 'Off-season' && day === plannedSprintDay) return false;
     if (!hasScheduledGame(inputs)) return true;
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
     return !isGamePlusOne(day, inputs);
@@ -1146,6 +1168,19 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     })
     ?? hardEligible[0] ?? null);
   const hardDay = hardDayForSprint;
+  const normalOffseasonTempoDay = inputs.phase === 'Off-season'
+    && inputs.offseasonBlock === 'normal_build'
+    ? [...conditioningDays].reverse().find((day) =>
+      day !== hardDay && day !== plannedSprintDay) ?? null
+    : null;
+  const metabolicCategoryForDay = (
+    day: number,
+    defaultCategory: ContractConditioningCategory,
+  ): ContractConditioningCategory => {
+    if (day === hardDay && hardQuality !== null) return hardQuality;
+    if (day === normalOffseasonTempoDay) return 'tempo';
+    return defaultCategory;
+  };
   // WC-139 — the sprint joins the hard day when the phase asks for that shape,
   // and only when that day is legal for a sprint (never inside G-3, never a
   // club night; `hardEligible` has already excluded G-2, G-1 and G+1).
@@ -1230,9 +1265,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // the capacity default with the phase's authored quality; the modality
         // (`off_leg` above) is untouched, so a hard lower day is still off-leg.
         conditioningCategory: conditioningDaySet.has(day)
-          ? (day === hardDay && hardQuality !== null
-            ? hardQuality
-            : CATEGORY_FOR_CONDITIONING[PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'])
+          ? metabolicCategoryForDay(
+            day,
+            CATEGORY_FOR_CONDITIONING[PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'],
+          )
           : null,
         // Riding on a strength session, never a session of its own — and null
         // when no conditioning was owed, so the day carries no empty component.
@@ -1283,9 +1319,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'conditioning',
         movementIntention: [], setBudget: null, conditioning: 'running',
-        conditioningCategory: day === hardDay && hardQuality !== null
-          ? hardQuality
-          : CATEGORY_FOR_CONDITIONING.running,
+        conditioningCategory: metabolicCategoryForDay(
+          day, CATEGORY_FOR_CONDITIONING.running,
+        ),
         conditioningRole: 'standalone', powerEligible: false,
         sprintComponent: false, optional: false, clauseId: 'WC-136',
         clubTraining: false, game: false,

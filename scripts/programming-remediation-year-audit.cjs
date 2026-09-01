@@ -6,7 +6,8 @@ const revision = require('node:child_process').execFileSync('git', ['rev-parse',
 require(path.join(repo, 'node_modules/sucrase/register'));
 const { getExerciseTags } = require(path.join(repo, 'src/data/exerciseTags'));
 const { resolveTemplateByName, templateDurationMinutes } = require(path.join(repo, 'src/rules/conditioningSelection'));
-const { validateEnergySystemExposureEvidence } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
+const { consecutiveEnergySystemTriples, validateEnergySystemExposureEvidence,
+  validateWeeklyEnergySystemDensity } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
 const checks = [], findings = [];
 const flat = rows => rows.flatMap(row => row.choices ? row.choices.flatMap(choice =>
   flat(choice.rows).map(r => ({ ...r, modalityLabel: r.modalityLabel ?? choice.modalityLabel }))) : [row]);
@@ -29,6 +30,15 @@ for (const world of ['original-partial', 'corrected-commercial']) {
         (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
       qualifyingSpeedDays: week.days.filter(day => day.energySystem?.qualifyingSpeed).length,
     }));
+    const energySystemDensityFindings = [
+      ...athlete.weeks.flatMap(week => validateWeeklyEnergySystemDensity({
+        phase: week.phase, phaseWeek: week.phaseWeek,
+        days: week.days.map(day => ({ date: day.date, energySystem: day.energySystem })),
+      }).map(finding => ({ week: week.number, weekStart: week.start, finding }))),
+      ...consecutiveEnergySystemTriples(days.map(day => ({
+        date: day.date, energySystem: day.energySystem,
+      }))).map(dates => ({ finding: 'three_consecutive_app_programmed_energy_system_days', dates })),
+    ];
     const painful = rows.filter(({ date, row }) => date >= '2026-11-17' && date <= '2026-11-26' &&
       ['horizontal_push', 'vertical_push'].includes(getExerciseTags(row.name)?.movement) && !row.withheld);
     const corrupt = rows.filter(({ row }) => /Barbell Bike|Chest-Supported DB Bike|Continuous Aerobic Bike/.test(row.name));
@@ -64,13 +74,14 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       invalidLandmineRows: invalidLandmine.length,
       retiredAutomaticRows: retired.length,
       weeklyEnergySystemCounts,
-      energySystemEvidenceFindings };
+      energySystemEvidenceFindings,
+      energySystemDensityFindings };
     result.ok = result.weeks === 52 && result.athleteDays === 364 && result.restartChecks === 52 &&
       result.successfulRestarts === 52 && !errors.length && !painful.length && !corrupt.length &&
       !emptyLifts.length && !missingMode.length && !wrongMachineRecovery.length && power.length > 0 && !result.displayedPowerRestRows
       && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length &&
-      result.optionalFlushRows === flush.length && !energySystemEvidenceFindings.length;
-    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine, energySystemEvidenceFindings });
+      result.optionalFlushRows === flush.length && !energySystemEvidenceFindings.length && !energySystemDensityFindings.length;
+    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine, energySystemEvidenceFindings, energySystemDensityFindings });
   }
 }
 const receipt = { revision,

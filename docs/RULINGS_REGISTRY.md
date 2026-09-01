@@ -7611,3 +7611,30 @@ the compact day/week headline changes.
 Guard: `LAW-strength-day-headline-priority` through chained
 `test:day-first-timeline`. Verification and NOT COVERED:
 `docs/STATUS_DAYTITLEPRIORITY.md`.
+
+**R-303** · Normal Off-season app energy-system density is four days, 2026-09-01.
+
+Owner: yearrepair. From normal Off-season week 5 onward, proper authored Speed
+counts inside a maximum of four app-programmed energy-system days. A normal
+healthy advanced week contains one Speed day, one hard/aerobic-power exposure,
+one tempo/capacity exposure and at most one easy-aerobic exposure. One delivered
+day receives one credit even when Speed and metabolic conditioning are combined.
+The app does not author three app-programmed energy-system days consecutively,
+including across Sunday/Monday. Where availability permits, hard, tempo and
+Speed remain on distinct days; a packed strength day may remain strength plus
+Movement Prep/Mobility while equipment-free conditioning uses a cleaner free
+day. Weeks 1–2 retain the lower transition and optional rules. Team Training,
+games, Pre-season, In-season, flush, game-proximity and deload rules are not
+reclassified by this ruling.
+
+This supersedes the earlier normal-Off-season five-app-exposure reference in
+WC-132, not the general three-to-five total-conditioning statement across all
+phases and real anchors.
+
+Guard: `LAW-normal-offseason-app-energy-density` through chained
+`test:weekly-scheduler + test:session-classification`. The scheduler gate walks
+every exact two-through-six-day availability set across normal, scheduled-deload
+and representative club-night coordinates. The annual evidence validator is
+date-based, so it catches both a fifth day and a consecutive triple spanning a
+week boundary. Verification status and NOT COVERED:
+`docs/STATUS_YEARREPAIR.md`.

@@ -77,13 +77,64 @@ The exact 52-week evidence consumer will run again after the section-2 density
 repair and again in final acceptance, so a generated year is never mistaken
 for authoritative while known spacing defects remain.
 
+## Section 2 — Off-season density and spacing
+
+The exact section-1 checkpoint generated two full-kit athlete years: 52 weeks,
+364 dated athlete-days and 52 successful restart comparisons per gender. In
+both years, Off-season weeks 5–10 and 12 contained five distinct
+app-programmed energy-system days, week 11 contained four, and the normal build
+repeated a Thursday/Friday/Saturday three-day run. These are counts of distinct
+delivered dates from the annual evidence projection, not row or component
+occurrences.
+
+Two repairs were compared. Removing one named conditioning day from the current
+reference week would repair only that availability shape and would preserve the
+selector defect that let an upper-day Speed component become additive after the
+conditioning budget had already been spent. Instead, the canonical scheduler
+now selects the four receivers and the planned Speed seat together, considers
+all legal equipment-free days, and scores a three-day app-energy streak as a
+placement defect. The phase contract owns four—not five—normal Off-season app
+energy-system days. The selected metabolic seats are one hard/aerobic-power,
+one tempo/capacity and at most one easy-aerobic exposure; Speed owns the fourth
+day and cannot silently double as the hard seat.
+
+The focused scheduler gate walks 476 accepted schedules from 476 distinct
+input coordinates: all 119 exact two-through-six-day availability sets crossed
+with ordinary build, scheduled deload, one-club-night and two-club-night facts.
+It is green at 118/118 cells. The complete `test:weekly-scheduler` chain is
+green, including 11/11 generated fixtures, 10/10 travel/zero-equipment, 9/9
+Off-season continuity and 20/20 spare-day options. Team nights remain separate
+anchors and reduce app work rather than becoming app credits.
+
+A fresh two-athlete 52-week generation now reports zero weekly-density
+findings, zero dated consecutive triples and zero restart failures for both
+genders. Normal healthy weeks deliver Monday easy aerobic, Tuesday hard,
+Thursday tempo and Saturday Speed, leaving Wednesday, Friday and Sunday free
+of app-programmed energy-system work; the exact dates may differ with athlete
+availability. Weeks 5–10 and 12 are four days, and the scheduled-deload week 11
+is three. The annual validator is wired into all three remediation/final audit
+scripts, so reports cannot silently accept a fifth day or a cross-week triple.
+
+Gate liveness was proved by temporarily restoring the normal target from four
+to five. The focused scheduler gate fell from 118/118 to 110/118 and reported
+196 distinct violating schedule coordinates, plus the exact reference-week
+quality and spacing failures. Restoring four returned the full chain to green.
+The evidence adapter's direct fifth-day and dated-triple mutations also die.
+Its suite is 48/50: the two inherited reds are the already-recorded disagreement
+over whether a workout literally titled `Light Team Training` may downshift a
+team night below high stress; every R-261/R-303 cell is green.
+
+TypeScript compilation, changed-script syntax checks and whitespace checks are
+green. The new R-303 law row is born guarded by chained
+`test:weekly-scheduler + test:session-classification`; the law-registry suite
+remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
+
 ## Current step
 
-Section 2: reproduce the Off-season W5–W12 exposure density and consecutive-
-day placement against the stamped section-1 source, then repair at the
-canonical compiler owner.
+Section 3: reproduce default and alternative main-lift identity across
+generation, athlete choice, save and restart before changing selection.
 
 ## NOT COVERED
 
-- Sections 2–7 and both addenda are not yet claimed.
+- Sections 3–7 and both addenda are not yet claimed.
 - No simulator, Release build or physical phone work has run.

@@ -14,8 +14,10 @@ import {
   type VisibleSessionClassification,
 } from '../rules';
 import {
+  consecutiveEnergySystemTriples,
   energySystemExposureEvidenceForWorkout,
   validateEnergySystemExposureEvidence,
+  validateWeeklyEnergySystemDensity,
 } from '../rules/energySystemExposureEvidence';
 import type {
   RecoveryAddonBlock,
@@ -320,6 +322,17 @@ console.log('\n[4] speed, conditioning component, and finisher ownership');
   }, { conditioning: 0, appProgrammed: 0, sprintHighSpeed: 0, qualifyingSpeed: false });
   eq('missing annual evidence is a red audit finding',
     validateEnergySystemExposureEvidence(undefined), ['missing_energy_system_evidence']);
+  const dated = Array.from({ length: 5 }, (_, index) => ({
+    date: `2026-10-${String(26 + index).padStart(2, '0')}`,
+    energySystem: evidence,
+  }));
+  eq('[MUTATION] annual audit rejects a fifth Off-season app energy-system day',
+    validateWeeklyEnergySystemDensity({
+      phase: 'Off-season', phaseWeek: 5, days: dated,
+    }), ['offseason_app_programmed_energy_system_days_above_four']);
+  eq('[MUTATION] annual audit names the exact consecutive-date triple',
+    consecutiveEnergySystemTriples(dated.slice(0, 3)),
+    [['2026-10-26', '2026-10-27', '2026-10-28']]);
   const warmup = energySystemExposureEvidenceForWorkout({
     ...speed,
     speedBlock: {

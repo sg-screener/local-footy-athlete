@@ -29,7 +29,9 @@ const {
   programmingAuditRowIsConditioning,
 } = require('../src/rules/programmingAuditIdentity');
 const {
+  consecutiveEnergySystemTriples,
   validateEnergySystemExposureEvidence,
+  validateWeeklyEnergySystemDensity,
 } = require('../src/rules/energySystemExposureEvidence');
 
 function parseCsvLine(line) {
@@ -261,6 +263,19 @@ const weeklyEnergySystemCounts = year.athletes.flatMap((athlete) => athlete.week
     (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
   qualifyingSpeedDays: week.days.filter((day) => day.energySystem?.qualifyingSpeed).length,
 })));
+const energySystemDensityFindings = year.athletes.flatMap((athlete) => [
+  ...athlete.weeks.flatMap((week) => validateWeeklyEnergySystemDensity({
+    phase: week.phase, phaseWeek: week.phaseWeek,
+    days: week.days.map((day) => ({ date: day.date, energySystem: day.energySystem })),
+  }).map((finding) => ({
+    gender: athlete.gender, week: week.number, weekStart: week.start, finding,
+  }))),
+  ...consecutiveEnergySystemTriples(athlete.weeks.flatMap((week) =>
+    week.days.map((day) => ({ date: day.date, energySystem: day.energySystem }))))
+    .map((dates) => ({
+      gender: athlete.gender, finding: 'three_consecutive_app_programmed_energy_system_days', dates,
+    })),
+]);
 const missingConditioningModalities = occurrences.filter(({ row }) =>
   row.auditSurface === 'session_template' && programmingAuditRowIsConditioning(row) && !row.modalityLabel)
   .map(({ gender, day, row }) => ({
@@ -331,7 +346,9 @@ const report = {
   conditioningFrequency: serialiseTallies(conditioningTallies),
   zeroPlacements: { count: zeroPlacements.length, classificationCounts: zeroClassificationCounts, rows: zeroPlacements },
   concentration: { exerciseMovement: exerciseConcentration, conditioningQuality: conditioningConcentration },
-  energySystem: { weeklyCounts: weeklyEnergySystemCounts, findings: energySystemEvidenceFindings },
+  energySystem: { weeklyCounts: weeklyEnergySystemCounts,
+    evidenceFindings: energySystemEvidenceFindings,
+    densityFindings: energySystemDensityFindings },
   catalogueOrderMutation: orderComparison,
   remainingStrangeFinalSessions: {
     projectionErrors,
@@ -402,7 +419,7 @@ const markdown = [
   '| Athlete | Week | Start | Phase | Total conditioning credits | App-programmed exposure days | Qualifying Speed days |',
   '|---|---:|---|---|---:|---:|---:|',
   ...weeklyEnergySystemCounts.map((row) => `| ${row.gender} | ${row.week} | ${row.weekStart} | ${row.phase} | ${row.totalConditioningCredits} | ${row.appProgrammedEnergySystemDays} | ${row.qualifyingSpeedDays} |`), '',
-  `Energy-system evidence findings: ${energySystemEvidenceFindings.length}.`, '',
+  `Energy-system evidence findings: ${energySystemEvidenceFindings.length}; density/spacing findings: ${energySystemDensityFindings.length}.`, '',
   'Full dated rows for every non-zero finding are in `programming-selection-final-audit.json`.', '',
   '## Exact commands', '', '```sh',
   'node scripts/programming-remediation-year.cjs --kit=full --output=<audit>/authored',
@@ -430,4 +447,4 @@ console.log(JSON.stringify({
 if (!orderComparison.same || orderComparison.differingAthleteDays !== 0 || projectionErrors.length ||
     restartFailures.length || missingConditioningModalities.length || squatlessLowerSessions.length ||
     silentTeamGymSessions.length || duplicateQualityOwnershipWeeks.length ||
-    energySystemEvidenceFindings.length) process.exitCode = 1;
+    energySystemEvidenceFindings.length || energySystemDensityFindings.length) process.exitCode = 1;
