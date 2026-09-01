@@ -44,6 +44,7 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
+  "Foam Roller Thoracic Extension": ["foam_roller", ["dumbbells", "barbell"]],
   "Sleeper Stretch": [],
   "Bench Thoracic Extension": [["bench", "plyo_box"]],
   "Rotational Medicine-Ball Slam": ["medicine_ball"],
@@ -301,11 +302,12 @@ export function equipmentRequirementLabel(name: string): string | null {
  * do not add a third by inference and do not "complete" the list.** Anything
  * not here follows the sheet verbatim: kit missing, exercise refused.
  *
- * `Seated Good Morning` is the only later addition: R-316 explicitly makes its
- * loading implement optional while retaining a bench-or-box support
- * requirement. Any further entry still needs a new ruling and registry row.
- * The equality is pinned in `test:edge-generation-equipment`, so a quiet
- * addition reds on arrival rather than shipping.
+ * `Seated Good Morning` and `Foam Roller Thoracic Extension` are the later
+ * additions: R-316 and R-323 explicitly make their loading implements optional
+ * while retaining their support requirements. Any further entry still needs a
+ * new ruling and registry row.
+ * The current additions are pinned in `test:exercise-intake`, so a quiet
+ * change to either support/regression contract reds on arrival.
  */
 export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
   // Sam, 2026-08-13, setting this unit's acceptance test: *"Walking Lunges is
@@ -315,12 +317,15 @@ export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
   'Single-Leg RDL',
   // R-316: the loading implement is optional, but a bench or box is not.
   'Seated Good Morning',
+  // R-323: beginners can omit the held weight, but the roller is still required.
+  'Foam Roller Thoracic Extension',
 ]);
 
 /** Support requirements that remain mandatory for an unloaded regression. */
 const BODYWEIGHT_REGRESSION_REQUIREMENTS:
 Readonly<Partial<Record<string, readonly EquipmentRequirement[]>>> = {
   'Seated Good Morning': [['bench', 'plyo_box']],
+  'Foam Roller Thoracic Extension': ['foam_roller'],
 };
 
 /**

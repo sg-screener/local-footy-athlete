@@ -62,6 +62,7 @@ export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
   'seated-good-morning': 'midline',
   'bench-thoracic-extension': 'upper',
   'sleeper-stretch': 'upper',
+  'foam-roller-thoracic-extension': 'upper',
   // ── lower (knee, ankle, calf, hamstring) ──
   'deep-squat-hold': 'lower',
   'toe-stretch': 'lower',

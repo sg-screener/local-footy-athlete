@@ -517,6 +517,27 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       warmup: true, primer: false,
     },
   },
+  'Foam Roller Thoracic Extension': {
+    movement: 'core', region: 'upper', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'good', hip: 'good', quad: 'good',
+      hamstring: 'good', knee: 'good', calf: 'good',
+      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
+      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 30, prescriptionType: 'reps', perSide: false,
+      notes: 'Slow reps. Pause 5 seconds overhead. Hold one light dumbbell or weight plate in both hands and record total load; beginners may use no weight. Keep the range comfortable near games.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // LOWER BODY — SQUAT / LUNGE

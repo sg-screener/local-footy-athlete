@@ -24,7 +24,7 @@ import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityP
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './support/athleteJourney';
 import { ARCHETYPES, athleteAnswers, plusDays } from './compilerYear/catalog';
 import { useProgramStore } from '../store/programStore';
-import { resolveLoadAuthority, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
+import { ATHLETE_CHOSEN_LOAD_EXERCISES, resolveLoadAuthority, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { SECTION_LABELS } from '../utils/sessionExecutionChecklist';
 import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
@@ -62,6 +62,10 @@ if (mutation === 'bench_route') EXERCISE_TAGS['Bench Thoracic Extension'].progra
 if (mutation === 'sleeper_dose') EXERCISE_TAGS['Sleeper Stretch'].prescription!.repsMax = 45;
 if (mutation === 'sleeper_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Sleeper Stretch'] = ['bands'];
 if (mutation === 'sleeper_primer') EXERCISE_TAGS['Sleeper Stretch'].programming!.primer = true;
+if (mutation === 'foam_dose') EXERCISE_TAGS['Foam Roller Thoracic Extension'].prescription!.repsMax = 6;
+if (mutation === 'foam_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Foam Roller Thoracic Extension'] = ['foam_roller'];
+if (mutation === 'foam_load') ATHLETE_CHOSEN_LOAD_EXERCISES.delete('Foam Roller Thoracic Extension');
+if (mutation === 'foam_primer') EXERCISE_TAGS['Foam Roller Thoracic Extension'].programming!.primer = true;
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -82,6 +86,7 @@ const submitted = [
   ['Horse Stance Hold', '4P9w2Kvgl0A'],
   ['Bench Thoracic Extension', 'xE5ZaEKAx1g'],
   ['Sleeper Stretch', 'clqjaMIRWfM'],
+  ['Foam Roller Thoracic Extension', '9Hfy7ojEt18'],
 ];
 const vocabulary = new Set(selectableVocabularyGroups().flatMap(group => group.names));
 // Independent dose expectations transcribed from the signed intake, including
@@ -95,6 +100,7 @@ const doses = [
   [2, 60, 60, 30, 'duration', false],
   [2, 5, 5, 30, 'reps', false],
   [2, 30, 30, 15, 'duration', true],
+  [2, 5, 5, 30, 'reps', false],
 ];
 const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name]?.power);
 submitted.forEach(([name], index) => {
@@ -107,6 +113,7 @@ const intake = [
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_2026-08-28.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BENCH_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_SLEEPER_STRETCH_2026-09-02.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_FOAM_ROLLER_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
 ].join('\n');
 for (const [name, video] of submitted) {
   check(`${name}: selectable`, vocabulary.has(name));
@@ -222,7 +229,7 @@ async function main() {
       originalExercise: name }).some(c => c.name === name));
     check(`${name}: explicit kit allows`, exerciseIsAvailableWith(name, kit));
   }
-  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Bench Thoracic Extension', 'Sleeper Stretch']) {
+  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Bench Thoracic Extension', 'Sleeper Stretch', 'Foam Roller Thoracic Extension']) {
     check(`${name}: not a main strength seat`, slotsForExerciseName(name).length === 0);
   }
   check('Horse Stance Hold: bodyweight loading and no equipment gate',
@@ -234,6 +241,10 @@ async function main() {
     resolveLoadAuthority('Bench Thoracic Extension').kind === 'unloaded');
   check('Sleeper Stretch: bodyweight-only loading has no load control',
     resolveLoadAuthority('Sleeper Stretch').kind === 'unloaded');
+  check('Foam Roller Thoracic Extension: athlete chooses and records total held load',
+    resolveLoadAuthority('Foam Roller Thoracic Extension').kind === 'athlete_chosen'
+    && estimateStartingWeight('Foam Roller Thoracic Extension', profile) === null
+    && formatLoadLabel(resolveLoadAuthority('Foam Roller Thoracic Extension'), 4) === '4kg');
   for (const name of ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']) {
     check(`${name}: athlete chooses total ball load`, resolveLoadAuthority(name).kind === 'athlete_chosen' && estimateStartingWeight(name, profile) === null);
   }
@@ -273,12 +284,30 @@ async function main() {
     && assessTapSwapCandidateSafety('Sleeper Stretch', {
       ...environment, availableEquipmentTags: ['bodyweight'],
     }).safe);
+  check('Foam Roller Thoracic Extension keeps the roller mandatory and accepts either loading implement',
+    JSON.stringify(equipmentRequiredFor('Foam Roller Thoracic Extension'))
+      === JSON.stringify(['foam_roller', ['dumbbells', 'barbell']])
+    && exerciseIsAvailableWith('Foam Roller Thoracic Extension', ['bodyweight', 'foam_roller', 'dumbbells'])
+    && exerciseIsAvailableWith('Foam Roller Thoracic Extension', ['bodyweight', 'foam_roller', 'barbell'])
+    && exerciseIsAvailableWith('Foam Roller Thoracic Extension', ['bodyweight', 'foam_roller'])
+    && !exerciseIsAvailableWith('Foam Roller Thoracic Extension', ['bodyweight', 'dumbbells']));
+  check('Foam Roller Thoracic Extension manual Add/Swap uses the same support and regression rule',
+    assessTapSwapCandidateSafety('Foam Roller Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight', 'foam_roller', 'dumbbells'],
+    }).safe
+    && assessTapSwapCandidateSafety('Foam Roller Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight', 'foam_roller'],
+    }).safe
+    && !assessTapSwapCandidateSafety('Foam Roller Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight', 'dumbbells'],
+    }).safe);
   for (const [name] of submitted) {
     const policy = EXERCISE_TAGS[name]?.programming;
     const novice = { ...athlete, onboardingData: { ...profile, experienceLevel: 'Complete beginner' as const } };
     check(`${name}: automatic novice boundary`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: novice.onboardingData.experienceLevel, daysToGame: null }) === [
       'Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Seated Good Morning', 'Medicine-Ball Slam',
       'Horse Stance Hold', 'Bench Thoracic Extension', 'Sleeper Stretch',
+      'Foam Roller Thoracic Extension',
     ].includes(name));
     for (const daysToGame of [1, 2, 3, null]) {
       if (!policy) {
@@ -309,7 +338,11 @@ async function main() {
     exerciseProgrammingAllows('Sleeper Stretch', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
     && exerciseProgrammingAllows('Sleeper Stretch', { route: 'warmup', experienceLevel: 'Complete beginner', daysToGame: 1 })
     && !exerciseProgrammingAllows('Sleeper Stretch', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 1 }));
-  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Bench Thoracic Extension', 'Shoulder', 6], ['Sleeper Stretch', 'Shoulder', 6], ['Reverse Nordic Curl', 'Knee'],
+  check('Foam Roller Thoracic Extension is allowed lightly at G-1 but never automatically selected for Primer',
+    exerciseProgrammingAllows('Foam Roller Thoracic Extension', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && exerciseProgrammingAllows('Foam Roller Thoracic Extension', { route: 'warmup', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && !exerciseProgrammingAllows('Foam Roller Thoracic Extension', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 1 }));
+  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Bench Thoracic Extension', 'Shoulder', 6], ['Sleeper Stretch', 'Shoulder', 6], ['Foam Roller Thoracic Extension', 'Shoulder', 6], ['Reverse Nordic Curl', 'Knee'],
     ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']] as const) {
     const severity = suppliedSeverity ?? 5;
     const constraint = buildGuidedInjuryConstraint({ area: bodyArea, region: 'upper_body', severity,
@@ -322,7 +355,7 @@ async function main() {
       check(`${name}: injury excludes it from the actual lower-prehab pool`, !filterPoolForAthlete('lower_prehab', injuredAthlete).some(row => row.name === name));
       continue;
     }
-    const type = ['Crab Hold', 'Horse Stance Hold', 'Bench Thoracic Extension', 'Sleeper Stretch'].includes(name) ? 'mobility' : 'primer';
+    const type = ['Crab Hold', 'Horse Stance Hold', 'Bench Thoracic Extension', 'Sleeper Stretch', 'Foam Roller Thoracic Extension'].includes(name) ? 'mobility' : 'primer';
     let healthySeed: string | undefined;
     for (let seed = 0; seed < 120 && !healthySeed; seed++) {
       const seedDate = plusDays(date, seed);
@@ -404,7 +437,7 @@ async function main() {
       }
     }
   }
-  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold', 'Bench Thoracic Extension', 'Sleeper Stretch']) {
+  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold', 'Bench Thoracic Extension', 'Sleeper Stretch', 'Foam Roller Thoracic Extension']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
   }
   for (const name of ['Seated Good Morning']) {
@@ -420,6 +453,10 @@ async function main() {
     mobilityReached.has('Bench Thoracic Extension') && recoveryReached.has('Bench Thoracic Extension'));
   check('Sleeper Stretch reaches both automatic Mobility and Recovery sessions',
     mobilityReached.has('Sleeper Stretch') && recoveryReached.has('Sleeper Stretch'));
+  check('Foam Roller Thoracic Extension reaches both automatic Mobility and Recovery sessions',
+    mobilityReached.has('Foam Roller Thoracic Extension') && recoveryReached.has('Foam Roller Thoracic Extension'));
+  check('Foam Roller Thoracic Extension never enters an automatically composed Primer',
+    !primerReached.has('Foam Roller Thoracic Extension'));
   check('Sleeper Stretch never enters an automatically composed Primer',
     !primerReached.has('Sleeper Stretch'));
   const context = getCoachRevisionTemplateContext(date);
@@ -535,6 +572,7 @@ async function main() {
     const loadable = workout.exercises.filter(row => [
       'Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam',
       'SL 45° Back Extension', 'SL 45° Back Extension Hold', 'Horse Stance Hold',
+      'Foam Roller Thoracic Extension',
     ].includes(row.exercise.name));
     for (const row of loadable) useProgramStore.getState().setWeightOverride(day, row.exerciseId, 4);
     const logged = await quietAsync(() => recordDay(day, { record: true, completion: 'full', feeling: 'good', soreness: 'none', difficulty: 6, logWeights: true }));
@@ -559,6 +597,10 @@ async function main() {
     ['sleeper_dose', /Sleeper Stretch: signed dose, rest, unit and side/],
     ['sleeper_equipment', /Sleeper Stretch needs no equipment and manual Add\/Swap agrees/],
     ['sleeper_primer', /Sleeper Stretch is allowed at G-1 but never automatically selected for Primer/],
+    ['foam_dose', /Foam Roller Thoracic Extension: signed dose, rest, unit and side/],
+    ['foam_equipment', /Foam Roller Thoracic Extension keeps the roller mandatory and accepts either loading implement/],
+    ['foam_load', /Foam Roller Thoracic Extension: athlete chooses and records total held load/],
+    ['foam_primer', /Foam Roller Thoracic Extension is allowed lightly at G-1 but never automatically selected for Primer/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

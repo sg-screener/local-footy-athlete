@@ -731,6 +731,7 @@ export function resolveExerciseName(name: string): string {
 // the card shows "—" until the athlete enters their own number, which then
 // renders verbatim as "12kg". Sam, 2026-07-28.
 export const ATHLETE_CHOSEN_LOAD_EXERCISES = new Set([
+  'Foam Roller Thoracic Extension',
   'Rotational Medicine-Ball Throw',
   'Medicine-Ball Slam',
   'Rotational Medicine-Ball Slam',

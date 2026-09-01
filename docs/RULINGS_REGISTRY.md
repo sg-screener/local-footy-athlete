@@ -8079,3 +8079,25 @@ equipment answer or special selection system is introduced.
 Guard: `LAW-sleeper-stretch-intake` through chained `test:exercise-intake`.
 Red-first, mutation, final execution and NOT COVERED receipt:
 `docs/STATUS_SLEEPERSTRETCH.md`.
+
+**R-323** · Foam Roller Thoracic Extension joins the existing mobility
+catalogue, 2026-09-02.
+
+Owner: foamthoracic. Foam Roller Thoracic Extension is a Mobility exercise for
+everyone, prescribed as 2 × 5 slow total repetitions with a 5-second overhead
+pause and 30 seconds rest. A foam roller is mandatory. One light dumbbell or
+one weight plate is the normal loading choice, with no weight as the supplied
+beginner regression; the app records total held load and never estimates it.
+It is eligible for automatic upper-body Movement Prep, Mobility and Recovery
+plus manual Add/Swap, but not automatic Primer selection, in every phase and at
+G-1 when light and comfortable.
+Its supplied muscles, cues, injury ratings, restrictions and video are recorded
+in `docs/EXERCISE_INTAKE_FOAM_ROLLER_THORACIC_EXTENSION_2026-09-02.md`.
+Existing terminology maps latissimus dorsi to Lats, thoracic spinal extensors
+to Upper back, serratus anterior to Shoulders and abdominals to Midline. The
+existing Dumbbells and Barbell and plates answers cover the loading choice, so
+no new equipment answer is introduced.
+
+Guard: `LAW-foam-roller-thoracic-extension-intake` through chained
+`test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
+receipt: `docs/STATUS_FOAMTHORACIC.md`.

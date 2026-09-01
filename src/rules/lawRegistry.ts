@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-foam-roller-thoracic-extension-intake',
+    law: 'R-323: Foam Roller Thoracic Extension uses the existing Mobility path, requires a foam roller, accepts a light dumbbell or weight plate through existing equipment answers, and retains the supplied unloaded beginner regression. It records athlete-chosen total load and remains eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including light comfortable G-1 use, but is excluded from automatic Primer selection.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-323',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `foamthoracic`. The exercise-intake suite binds the source intake to catalogue metadata, dose, cues, video, mandatory roller, dumbbell-or-plate loading choice, unloaded regression, athlete-chosen total load, injury ratings, upper Movement Prep, Mobility, Recovery, manual Add/Swap and G-1 eligibility. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_FOAMTHORACIC.md.',
+    },
+  },
+  {
     id: 'LAW-sleeper-stretch-intake',
     law: 'R-322: Sleeper Stretch uses the existing no-equipment Mobility path, supplied per-side duration, cues, muscles, injury ratings and video. It is eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including gentle G-1 use, but is excluded from automatic Primer selection.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-322',
