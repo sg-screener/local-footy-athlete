@@ -274,12 +274,16 @@ const WEEKDAY_INDEX: Readonly<Record<string, number>> = {
 
 function planEntryHasConditioning(entry: SessionAllocation): boolean {
   return entry.hasCombinedConditioning === true ||
+    entry.speedWorkKind === 'true_speed' ||
+    entry.speedBlock !== undefined ||
     entry.conditioningCategory !== undefined ||
     entry.conditioningFlavour !== undefined;
 }
 
 function planEntryHasQualityConditioning(entry: SessionAllocation): boolean {
-  return entry.conditioningFlavour === 'high-intensity' ||
+  return entry.speedWorkKind === 'true_speed' ||
+    entry.speedBlock !== undefined ||
+    entry.conditioningFlavour === 'high-intensity' ||
     entry.conditioningCategory === 'tempo' ||
     entry.conditioningCategory === 'sprint' ||
     entry.conditioningCategory === 'vo2' ||
@@ -314,11 +318,18 @@ export function applyDeloadPoliciesToWeeklySessionAllocations(
     };
   });
   const chronological = [1, 2, 3, 4, 5, 6, 0];
-  const ownerIndex = chronological.flatMap((day) => transformed
+  const candidates = chronological.flatMap((day) => transformed
     .map((candidate, index) => ({ candidate, index }))
     .filter(({ candidate }) => candidate.day === day && candidate.governed &&
-      planEntryHasQualityConditioning(candidate.entry)))
-    .at(0)?.index ?? null;
+      planEntryHasQualityConditioning(candidate.entry)));
+  // R-034 requires BOTH halves: Speed stays a small sharp dose, and the week
+  // carries at most one quality exposure. Therefore typed Speed must own that
+  // one exposure when present; electing an earlier interval instead forces the
+  // Speed row to wear an "easy aerobic only" instruction while still saying
+  // 10/10. Chronology remains the tie-break within the same quality class.
+  const ownerIndex = (candidates.find(({ candidate }) =>
+    candidate.entry.speedWorkKind === 'true_speed' ||
+    candidate.entry.speedBlock !== undefined) ?? candidates[0])?.index ?? null;
 
   return transformed.map(({ entry, governed }, index) => {
     if (!governed || !planEntryHasConditioning(entry)) return entry;
@@ -610,6 +621,7 @@ export function applyConditioningDeloadToExercises(
   exercises: WorkoutExercise[],
   policy: DeloadWeekPolicy,
   role?: SessionAllocation['deloadConditioningRole'],
+  componentKind?: 'speed' | 'conditioning',
 ): WorkoutExercise[] {
   let qualityKept = 0;
 
@@ -618,7 +630,23 @@ export function applyConditioningDeloadToExercises(
       return { ...exercise, exerciseOrder: index + 1 };
     }
 
-    const isQuality = isQualityConditioningRow(exercise);
+    // A Speed block owns its preparation row too, but preparation is not the
+    // quality exposure. Counting it spent the one weekly quality allowance on
+    // "Warm-up" and demoted the following 10/10 Fly to easy aerobic work.
+    const speedPreparation = componentKind === 'speed' &&
+      /\b(?:warm[-\s]?up|cool[-\s]?down|cooldown)\b/i.test(exercise.exercise?.name ?? '');
+    if (speedPreparation) {
+      return { ...exercise, exerciseOrder: index + 1 };
+    }
+
+    // The component owner already knows whether this is Speed. Do not demote a
+    // typed 10/10 Fly because its catalogue name happens not to contain one of
+    // the conditioning fallback words. The row-text check remains only for
+    // old untyped conditioning content.
+    const isQuality = componentKind === 'speed' ||
+      (exercise as WorkoutExercise & { deloadQualityExposure?: boolean })
+        .deloadQualityExposure === true ||
+      isQualityConditioningRow(exercise);
     const keepAsQuality = role !== 'easy_aerobic' && isQuality
       && qualityKept < DELOAD_LAW.maxQualityConditioningExposures;
     if (keepAsQuality) qualityKept += 1;

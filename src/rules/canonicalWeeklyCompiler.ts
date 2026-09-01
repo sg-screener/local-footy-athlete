@@ -317,20 +317,15 @@ export function compileCanonicalWeek(
     illness: input.illness,
     scheduledDeload: input.scheduledDeload,
   });
-  const doseResolvedPlan = doseDoor
+  // Feasibility can choose or relocate a typed Speed component. Finish that
+  // selection first, then elect the week's one quality owner, still before any
+  // visible row is materialised. Doing these in the opposite order let a newly
+  // selected 10/10 Fly inherit the earlier slot's `easy_aerobic` role.
+  const feasibilityResolvedPlan = input.conditioningFeasibility
     ? {
         ...injuryResolvedPlan,
-        weeklyPlan: applyDeloadPoliciesToWeeklySessionAllocations(
-          injuryResolvedPlan.weeklyPlan,
-          dosePolicyByDay,
-        ),
-      }
-    : injuryResolvedPlan;
-  const plan = input.conditioningFeasibility
-    ? {
-        ...doseResolvedPlan,
         weeklyPlan: resolveWeeklyConditioningFeasibility(
-          doseResolvedPlan.weeklyPlan,
+          injuryResolvedPlan.weeklyPlan,
           {
             ...input.conditioningFeasibility,
             injury: input.injury ?? undefined,
@@ -342,7 +337,16 @@ export function compileCanonicalWeek(
           },
         ),
       }
-    : doseResolvedPlan;
+    : injuryResolvedPlan;
+  const plan = doseDoor
+    ? {
+        ...feasibilityResolvedPlan,
+        weeklyPlan: applyDeloadPoliciesToWeeklySessionAllocations(
+          feasibilityResolvedPlan.weeklyPlan,
+          dosePolicyByDay,
+        ),
+      }
+    : feasibilityResolvedPlan;
 
   return {
     ok: true,

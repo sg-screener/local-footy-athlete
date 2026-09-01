@@ -111,7 +111,36 @@ ok('reversing plan storage order keeps Tuesday as the owner',
   reversed.find((entry) => entry.deloadConditioningRole === 'weekly_quality_owner')
     ?.dayOfWeek === 'Tuesday', reversed);
 
-console.log('\n[4] the guard demonstrates the old per-session reset failure');
+console.log('\n[4] typed Speed owns quality without spending it on preparation');
+
+const speedEntry: SessionAllocation = {
+  ...allocation('Sunday', 'aerobic_base'),
+  conditioningCategory: undefined,
+  conditioningFlavour: undefined,
+  speedWorkKind: 'true_speed',
+  speedPlacement: 'standalone',
+  speedBlock: { kind: 'true_speed', title: 'Fly 20', exerciseIds: [] } as any,
+};
+const speedCompiled = applyDeloadPoliciesToWeeklySessionAllocations(
+  [...source, speedEntry],
+  { ...doseByDay, 0: scheduled },
+);
+ok('typed Speed owns the one sharp exposure ahead of a metabolic interval',
+  speedCompiled.find((entry) => entry.deloadConditioningRole === 'weekly_quality_owner')
+    ?.dayOfWeek === 'Sunday', speedCompiled);
+const speedRows = applyConditioningDeloadToExercises(
+  [row('Warm-up'), row('Fly 20 Sprint')],
+  scheduled,
+  'weekly_quality_owner',
+  'speed',
+) as DeloadRow[];
+ok('Speed preparation does not spend the quality exposure before the Fly row',
+  speedRows[0]?.deloadQualityExposure === undefined
+    && speedRows[1]?.deloadQualityExposure === true
+    && (speedRows[1]?.notes ?? '').includes("week's one quality exposure"),
+  speedRows);
+
+console.log('\n[5] the guard demonstrates the old per-session reset failure');
 
 const resetMutation = [row('Tempo Intervals'), row('VO2 Intervals')].map((entry) =>
   applyConditioningDeloadToExercises([entry], scheduled)[0] as DeloadRow);
@@ -119,7 +148,7 @@ ok('[MUTATION] removing the weekly roles recreates multiple self-elected owners'
   resetMutation.filter((entry) => entry.deloadQualityExposure === true).length === 2,
   resetMutation);
 
-console.log('\n[5] the canonical compiler is the only weekly ownership author');
+console.log('\n[6] the canonical compiler is the only weekly ownership author');
 
 const compilerSource = readFileSync(
   join(__dirname, '../rules/canonicalWeeklyCompiler.ts'),

@@ -449,6 +449,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-canonical-session-work-has-one-visible-owner',
+    law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-320',
+    guard: {
+      state: 'guarded',
+      by: 'test:programming-hierarchy',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `flyowner`. The exact advanced-male accumulated journey saves the 17 December-31 January Christmas team-training break and separate Going Away input through production doors, restarts each week, and reaches Sunday 10 January 2027. Red-first was 164/170: one Warm-up/Fly pair was claimed by both Speed and Conditioning, the audit evidence reported duplicates, the 10/10 Fly carried easy-aerobic wording, the title said Aerobic Conditioning and the PDF appended speedRows. Final is 173/173 plus the typed deload unit 13/13. Re-appending speedRows kills two projection cells; restoring the fallback dual claim kills five ownership/title/evidence cells; removing typed Speed from the deload transform kills both contradiction cells. Full root-cause, comparison and NOT COVERED receipt: docs/STATUS_FLYOWNER.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

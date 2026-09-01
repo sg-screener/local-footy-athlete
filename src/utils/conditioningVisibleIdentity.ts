@@ -385,7 +385,20 @@ function diagnoseCanonicalFallback(
 export function projectConditioningVisibleIdentity(
   workout: ConditioningIdentityWorkout | null | undefined,
 ): ConditioningVisibleIdentity | null {
-  if (!workout || !hasCanonicalConditioning(workout)) return null;
+  if (!workout) return null;
+
+  // A typed Speed block is itself canonical content. Read the final component
+  // ownership before the legacy conditioning-domain fallback: a speed-only
+  // recovery-tier day used to fall through with zero conditioning-owned rows
+  // and inherit the label "Recovery Conditioning" even though every final
+  // work row belonged to Speed.
+  const components = getSessionComponentRows(workout);
+  const speedWorkRows = components.speedRows.filter(isMeaningfulWorkRow);
+  if (speedWorkRows.length > 0 && components.conditioningRows.length === 0) {
+    return identity('speed_conditioning', mainStructure(speedWorkRows, workout));
+  }
+
+  if (!hasCanonicalConditioning(workout)) return null;
 
   const rows = getMeaningfulConditioningWorkRows(workout);
   const structure = mainStructure(rows, workout);

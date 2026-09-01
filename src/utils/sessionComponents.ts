@@ -776,8 +776,6 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const supportRows: any[] = [];
   const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
 
-  const conditioningRows = renderableRows.filter(row => !lowLoadIds.has(row?.id) && !supportIds.has(row?.id)
-    && (conditioningIds.has(row?.id) || (isStandaloneConditioningWorkout(workout) && !row.sessionSection)));
   // SPEED IS ITS OWN BUCKET (Sam, 2026-08-17). Scoped to rows the conditioning
   // block has NOT already claimed, so a block that names the same id twice
   // cannot duplicate a row across two components — conditioning keeps it,
@@ -787,6 +785,18 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
       .filter((id) => !conditioningIds.has(id) && !supportIds.has(id)),
   );
   const speedRows = renderableRows.filter((row) => speedIds.has(row?.id));
+  // A TYPED BLOCK OUTRANKS THE STANDALONE-TYPE FALLBACK. A standalone Speed
+  // workout also has a conditioning-family workout type, so the old fallback
+  // claimed every unsectioned Speed row a second time after `speedIds` had
+  // already claimed it. That gave one physical Fly prescription two visible
+  // roles. The final component owner decides membership once: explicit
+  // Conditioning ids first, then typed Speed ids, then the legacy fallback.
+  const conditioningRows = renderableRows.filter(row =>
+    !lowLoadIds.has(row?.id)
+    && !supportIds.has(row?.id)
+    && !speedIds.has(row?.id)
+    && (conditioningIds.has(row?.id)
+      || (isStandaloneConditioningWorkout(workout) && !row.sessionSection)));
   const strengthRows = renderableRows.filter((row) =>
       (row.sessionSection || !(isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)))
       && !conditioningIds.has(row?.id)
@@ -914,7 +924,9 @@ export function getSessionComponents(
 
   if (
     conditioningRows.length > 0 ||
-    (isStandaloneConditioningWorkout(workout) && !teamState.isTeamTrainingOnly)
+    (isStandaloneConditioningWorkout(workout)
+      && !hasSpeedBlock(workout)
+      && !teamState.isTeamTrainingOnly)
   ) {
     const isFinisher = workout.attachedConditioningKind === 'finisher';
     components.push(isFinisher

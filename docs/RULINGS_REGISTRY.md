@@ -8026,3 +8026,24 @@ Guard: `LAW-automatic-strength-session-compound-limit` through chained
 `test:compound-session-selection`. Red-first, classification-removal, deliberate
 fifth-compound and representative generated-world receipts plus NOT COVERED:
 `docs/STATUS_COMPOUNDCAP.md`.
+
+**R-320** · Canonical session work has one visible owner, 2026-09-02.
+
+Owner: flyowner. One logical prescription belongs to one canonical session
+component and appears once in `buildSessionTemplate(...)`. Typed component
+membership outranks a fallback inferred from the workout container. The final
+`day.rows` projection is the whole athlete-facing export; `speedRows` is typed
+evidence only and annual audit, HTML and PDF readers never append it.
+
+The weekly deload decision is made after feasible components are known and
+before their rows are transformed. A typed Speed warm-up does not spend the
+week's one sharp exposure, and a 10/10 Fly prescription cannot carry “easy
+aerobic only.” The visible session title derives from the final canonical
+components. Durable save/restart reconstructs the same final content, including
+when a saved no-Team-Training span and a separate Going Away fact overlap.
+
+Guard: `LAW-canonical-session-work-has-one-visible-owner` through chained
+`test:programming-hierarchy`, whose programming-release child invokes both
+`test:session-work-ownership` and `test:deload-quality-owner`. The exact
+accumulated Christmas-break journey, three deliberate mutations, final results
+and NOT COVERED receipt live in `docs/STATUS_FLYOWNER.md`.

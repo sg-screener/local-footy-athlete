@@ -2067,6 +2067,7 @@ export function buildWorkoutsFromCoach(
           condExercises,
           standaloneDeloadPolicy,
           planEntry.deloadConditioningRole,
+          isStandaloneSpeed ? 'speed' : 'conditioning',
         );
       }
 
@@ -2498,6 +2499,7 @@ export function buildWorkoutsFromCoach(
         finalExercises,
         dayConditioningDeload,
         planEntry?.deloadConditioningRole,
+        isStandaloneSpeed ? 'speed' : 'conditioning',
       );
     }
 
@@ -2511,6 +2513,7 @@ export function buildWorkoutsFromCoach(
           authoredSpeedExercises,
           speedDeloadPolicy,
           planEntry.deloadConditioningRole,
+          'speed',
         )
         : authoredSpeedExercises;
       for (let i = 0; i < speedExercises.length; i++) {

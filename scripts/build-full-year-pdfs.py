@@ -67,14 +67,10 @@ STYLES.add(ParagraphStyle(name='Body', fontName='AuditSans', fontSize=8, leading
 
 
 def flatten_rows(day):
-    rows = [dict(row) for row in day.get('rows') or []]
-    seen = {(text(row.get('name')), text(row.get('dose')), text(row.get('notes'))) for row in rows}
-    for row in day.get('speedRows') or []:
-        key = (text(row.get('name')), text(row.get('dose')), text(row.get('notes')))
-        if key not in seen:
-            rows.append({**row, 'role': row.get('role') or 'speed'})
-            seen.add(key)
-    return rows
+    # `rows` is the final canonical athlete-facing projection. `speedRows` is
+    # evidence about typed membership and is deliberately not another display
+    # source; appending it here was how the PDF invented a fifth visible row.
+    return [dict(row) for row in day.get('rows') or []]
 
 
 def row_cells(row):
