@@ -7661,3 +7661,24 @@ arbitrary injury-blind annual quota—are the graph-usefulness contract.
 Guard: `LAW-selected-tracked-lift-is-program-anchor` through chained
 `test:estimated-1rm + test:compiler-year`. Verification status and NOT COVERED:
 `docs/STATUS_YEARREPAIR.md`.
+
+**R-305** · Male Upper Pull owns two major pulls, not three, 2026-09-01.
+
+Owner: yearrepair. A normal male Upper Pull contains exactly one horizontal and
+one vertical major pull. Once those planes are covered, its four remaining
+strength seats are shoulder/prehab, biceps, traps and core; a spare accessory
+seat may not add another row or pulldown. The athlete's selected tracked lift
+occupies its real authored plane, so Pull-Up and Lat Pulldown anchor vertical
+pull rather than wearing a horizontal seat label.
+
+Male Upper Push keeps one distinct push-accessory seat. Dips remains a common
+option, but the seat also admits the authored Push-ups accessory for an advanced
+athlete and uses recorded block history to rotate between legal options. This
+does not admit Push-ups as a main press and does not use exercise-name guessing.
+The existing canonical Single-Arm Lat Pulldown identity, typed variation-family
+rules, progression, injury and equipment priorities remain unchanged. Female
+split tables remain separately authored.
+
+Guard: `LAW-male-upper-split-has-two-major-pulls-and-rotating-accessories`
+through chained `test:composer-b1 + test:estimated-1rm`. Verification status
+and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

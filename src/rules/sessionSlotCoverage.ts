@@ -166,7 +166,9 @@ export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'pull_accessory_1',
+  // R-305: the third seat is shoulder/prehab work, not a third row/pulldown.
+  // Horizontal + vertical already own the two major pulling exercises.
+  'shoulders',
   'biceps', 'traps', 'core',
 ];
 

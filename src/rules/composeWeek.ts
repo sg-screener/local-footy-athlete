@@ -81,6 +81,7 @@ import {
   TRACKED_LIFTS,
   displacedTrackedLiftDefaults,
   selectedTrackedLiftForPattern,
+  selectedTrackedLiftProgrammingSeat,
   type TrackedLiftChoices,
   type TrackedLiftProgrammingPattern,
 } from './estimatedOneRepMax';
@@ -1487,7 +1488,20 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           : null;
       if (!planes) return null;
       const exposure = mainExposureCountByPattern.get(pattern) ?? 0;
-      const preferred = exposure % 2 === 0 ? planes[0] : planes[1];
+      // A tracked anchor owns its real movement plane. Before R-305, Pull-Ups
+      // could be injected into the horizontal seat simply because horizontal
+      // happened to lead the alternation; the vertical seat then added a
+      // pulldown and the spare pull accessory added a row — three major pulls,
+      // while the row labelled horizontal was actually vertical. The anchor's
+      // typed seat resolves the plane first; the alternation remains only a
+      // defensive fallback for a future pattern with no tracked seat.
+      const trackedSeat = selectedTrackedLiftProgrammingSeat(
+        inputs.trackedLiftChoices,
+        pattern as TrackedLiftProgrammingPattern,
+      );
+      const preferred = trackedSeat === planes[0] || trackedSeat === planes[1]
+        ? trackedSeat as typeof planes[0]
+        : exposure % 2 === 0 ? planes[0] : planes[1];
       const other = preferred === planes[0] ? planes[1] : planes[0];
       const canLead = (candidate: SessionSlot): boolean =>
         shapeSlots.includes(candidate)
@@ -1606,16 +1620,20 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
        * equipment and experience legality outrank pins."* Experience is applied
        * last and never empties the slot (ruling 6). */
-      const legalUnder = (out: ReadonlySet<string>, kit: readonly string[]) =>
-        hingePriorityFirst(
-          slot,
-          experiencePreferred(
-            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)
-              && exerciseProgrammingAllows(id, { experienceLevel: inputs.profile.experienceLevel,
-                daysToGame: planned.daysToGame, route: 'automatic' })),
-            inputs.profile,
-          ),
-        );
+      const legalUnder = (out: ReadonlySet<string>, kit: readonly string[]) => {
+        const hardLegal = pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)
+          && exerciseProgrammingAllows(id, { experienceLevel: inputs.profile.experienceLevel,
+            daysToGame: planned.daysToGame, route: 'automatic' }));
+        /* R-305: advanced athletes may rotate Push-ups with Dips in the explicit
+         * push-ACCESSORY seat. The experience table calls Push-ups a regression
+         * for choosing a main press; applying that preference again after two
+         * major presses left Dips as the only legal-looking accessory in every
+         * block (13/13 in the founding tape). This exception changes no main
+         * seat and admits no exercise outside the authored accessory pool. */
+        const experienceLegal = slot === 'push_accessory_1'
+          ? hardLegal : experiencePreferred(hardLegal, inputs.profile);
+        return hingePriorityFirst(slot, experienceLegal);
+      };
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────
        *
        * Sam, 2026-08-17: *"A today-only exclusion changes only the affected

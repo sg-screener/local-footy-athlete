@@ -11,7 +11,7 @@ import { findOrCreateExercise } from '../data/defaultProgram';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
 import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
-import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
+import { STRENGTH_POOLS, findPoolEntry } from '../data/exercisePoolsStrength';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
 import { readBlockHistory, loadForReplacementExercise } from '../rules/blockBoundaryProgression';
 import { composeWeek, type ComposerInputs, type ComposerPlannedDay } from '../rules/composeWeek';
@@ -84,7 +84,7 @@ const expectedPush = [
   'horizontal_push', 'vertical_push', 'push_accessory_1', 'triceps', 'shoulders', 'core',
 ];
 const expectedPull = [
-  'horizontal_pull', 'vertical_pull', 'pull_accessory_1', 'biceps', 'traps', 'core',
+  'horizontal_pull', 'vertical_pull', 'shoulders', 'biceps', 'traps', 'core',
 ];
 check('the male push table contains one accessory and exactly six rows',
   JSON.stringify(UPPER_SPLIT_PUSH_SLOTS) === JSON.stringify(expectedPush));
@@ -127,6 +127,17 @@ check('normal male composition emits both exact six-row structures',
 check('normal male composition has no variation-family collision',
   normal.days.every((day) => !sessionHasExerciseVariationCollision(
     day.rows.map((row) => row.identity))));
+const normalPull = normal.days.find((day) => day.kind === 'upper_split_pull')!;
+const majorPullSlots = normalPull.rows.flatMap((row) => {
+  const membership = findPoolEntry(row.identity);
+  return membership && (membership.slot === 'horizontal_pull' || membership.slot === 'vertical_pull')
+    ? [membership.slot] : [];
+});
+check('male Upper Pull has exactly one horizontal and one vertical major pull',
+  majorPullSlots.length === 2
+  && majorPullSlots.filter((slot) => slot === 'horizontal_pull').length === 1
+  && majorPullSlots.filter((slot) => slot === 'vertical_pull').length === 1,
+  JSON.stringify(normalPull.rows.map((row) => `${row.slot}:${row.identity}`)));
 const injuryAdjusted = composeWeek({
   ...baseInputs,
   injuries: {
@@ -137,6 +148,56 @@ const injuryAdjusted = composeWeek({
 check('injury-adjusted composition obeys the same ceiling and family rule',
   injuryAdjusted.days.every((day) => day.rows.length <= 6
     && !sessionHasExerciseVariationCollision(day.rows.map((row) => row.identity))));
+
+console.log('\n[annual selection] typed block history rotates legal non-anchor work');
+{
+  const history: import('../rules/blockExerciseSelection').BlockExerciseSelection[] = [];
+  const pushAccessories: string[] = [];
+  const pullMajorCounts: number[] = [];
+  for (let block = 1; block <= 13; block += 1) {
+    const blockStart = new Date('2026-09-07T12:00:00Z');
+    blockStart.setUTCDate(blockStart.getUTCDate() + (block - 1) * 28);
+    const blockStartISO = blockStart.toISOString().slice(0, 10);
+    const composed = composeWeek({
+      ...baseInputs,
+      todayISO: blockStartISO,
+      blockNumber: block,
+      blockStartISO,
+      selectionHistory: history,
+    });
+    history.push(...composed.selections);
+    const push = composed.days.find((day) => day.kind === 'upper_split_push')!;
+    const pull = composed.days.find((day) => day.kind === 'upper_split_pull')!;
+    pushAccessories.push(...push.rows
+      .filter((row) => row.slot === 'push_accessory_1').map((row) => row.identity));
+    pullMajorCounts.push(pull.rows.filter((row) => {
+      const membership = findPoolEntry(row.identity);
+      return membership?.slot === 'horizontal_pull' || membership?.slot === 'vertical_pull';
+    }).length);
+  }
+  const counts = new Map<string, number>();
+  pushAccessories.forEach((identity) => counts.set(identity, (counts.get(identity) ?? 0) + 1));
+  check('thirteen blocks use at least two legal push-accessory identities',
+    counts.size >= 2, JSON.stringify([...counts]));
+  check('no one legal push accessory owns more than three quarters of the blocks',
+    Math.max(...counts.values()) <= Math.ceil(13 * 0.75), JSON.stringify([...counts]));
+  check('every annual Upper Pull has two major pulls, never three',
+    pullMajorCounts.every((count) => count === 2), JSON.stringify(pullMajorCounts));
+}
+
+const limitedKit = resolveEquipmentCapabilities({
+  equipment: ['Dumbbells', 'Resistance Bands'], equipmentSelectionCompleteness: 'complete',
+} as never).tags as string[];
+const limited = composeWeek({
+  ...baseInputs,
+  kit: limitedKit,
+  injuries: { prohibitedPatterns: [], excludedIdentities: ['Dips', 'Seated Cable Row'] },
+});
+check('limited kit and exclusions still produce valid bounded split sessions',
+  limited.days.length === 2
+  && limited.days.every((day) => day.rows.length > 0 && day.rows.length <= 6
+    && !sessionHasExerciseVariationCollision(day.rows.map((row) => row.identity))),
+  JSON.stringify(limited.days.map((day) => day.rows.map((row) => row.identity))));
 
 console.log('\n[family doors] Add and Swap read the same explicit families');
 check('the three pulldown identities share one typed family',

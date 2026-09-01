@@ -131,7 +131,7 @@ remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
 
 ## Current step
 
-Section 3 implementation and verification complete; checkpoint pending commit.
+Section 4 implementation and verification complete; Section 5 is next.
 
 ## Section 3 — selected tracked lifts are programming anchors
 
@@ -210,9 +210,56 @@ opposite token ordering from the existing guard; and a retired `phaseClock`
 rotation assertion expects an input the block selector deliberately stopped
 reading. Their denominator is 54 cells and none is attributed to R-304.
 
+## Section 4 — male Upper Pull redundancy and accessory concentration
+
+The exact Section-3 year reproduced the reported shape. Twenty-three visible
+male rows were `1-Arm Lat Pulldown`, 26 were `Seated Cable Row`, 24 were
+`Chest-Supported DB Row`, and 50 distinct male Upper Pull sessions carried three
+major pulls. The structural cause was not an alias: the selected Pull-Up anchor
+was injected into whichever push/pull plane happened to lead the old alternation,
+so it occupied the horizontal seat; a pulldown then filled vertical, and the
+declared `pull_accessory_1` seat added a row. Separately, the advanced-experience
+preference narrowed the authored push-accessory pool to Dips, which therefore
+appeared 51 times while legal Push-ups never entered that accessory seat.
+
+Two options were compared. Filtering the three reported exercise names from
+male sessions would encode the symptom, lose the horizontal plane, and repeat
+the same defect on the next row/pulldown identity. The ownership repair instead
+makes each tracked lift declare its actual programming plane, changes the male
+pull table's third strength seat from another pull to shoulder/prehab, and keeps
+the push accessory inside its authored pool while applying the beginner/main-
+press experience preference only where it belongs. Selection continues to read
+typed block history and explicit variation families; no athlete-facing name is
+parsed to make the decision.
+
+The red-first upper-split boundary was 17 passing / 6 failing cells. It is now
+23/23. Thirteen consecutive typed-history blocks all contain exactly two major
+pulls; the push-accessory seat uses at least two identities and no identity owns
+more than three quarters of those blocks. Normal, injury-adjusted and restricted-
+equipment compositions are bounded, collision-free and non-empty. The existing
+legacy-ingress/current-write identity cells continue to prove that
+`Single-Arm Lat Pulldown` is the only canonical stored identity.
+
+A fresh exact full-kit artifact contains 52 weeks, 364 athlete-dates and 52/52
+successful restart comparisons per gender. All 50 distinct male Upper Pull
+sessions contain one horizontal and one vertical major pull and zero third
+compound pull. Male Dips falls from 51 visible row occurrences to 25 and
+Push-Ups supplies 26. Shrugs/Single-Arm Shrug distribute 33/22; Seated Cable Row
+and Chest-Supported DB Row now appear 9/12 as legitimate horizontal work rather
+than a third pull. The retired `Single-Arm Pulldown` identity occurs zero times.
+The four tracked-anchor annual counts remain Pull-Ups 54, Bench 53, RDLs 77 and
+Back Squat 55 per athlete, so the redundancy repair did not trade away Section
+3's graph foundation.
+
+R-305 is born guarded by `test:composer-b1 + test:estimated-1rm`. The upper-split
+boundary runs first inside `test:composer-b1`, so its 23 cells execute even
+though the older composer continuation retains the four inherited reds already
+named above. The corrected shared slot oracle is 84/84; generated-week assembly
+is 30/30 and anchor survival is 12/12.
+
 ## NOT COVERED
 
-- Sections 4–7 and both addenda are not yet claimed.
+- Sections 5–7 and both addenda are not yet claimed.
 - Restricted-kit/injury/illness/fatigue annual scenario artifacts have not yet
   been regenerated; their typed legality paths are covered by focused gates and
   remain due in final acceptance.

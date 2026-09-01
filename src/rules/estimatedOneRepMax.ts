@@ -10,6 +10,9 @@ export type TrackedLiftId = 'pull_up' | 'bench_press' | 'rdl' | 'back_squat'
 export type TrackedLiftSlot = 'pull_up' | 'bench_press' | 'rdl' | 'back_squat';
 export type TrackedLiftChoices = Partial<Record<TrackedLiftSlot, TrackedLiftId>>;
 export type TrackedLiftProgrammingPattern = 'push' | 'pull' | 'squat' | 'hinge';
+export type TrackedLiftProgrammingSeat =
+  | 'horizontal_push' | 'vertical_push' | 'horizontal_pull' | 'vertical_pull'
+  | 'squat' | 'hinge';
 export const TRACKED_LIFT_PAIRS: Readonly<Record<TrackedLiftSlot, readonly TrackedLiftId[]>> = {
   pull_up: ['pull_up', 'lat_pulldown'],
   bench_press: ['bench_press', 'overhead_press'],
@@ -46,6 +49,15 @@ const TRACKED_LIFT_SLOT_FOR_PATTERN: Readonly<Record<
   push: 'bench_press', pull: 'pull_up', squat: 'back_squat', hinge: 'rdl',
 };
 
+const TRACKED_LIFT_PROGRAMMING_SEAT: Readonly<Record<
+  TrackedLiftId, TrackedLiftProgrammingSeat
+>> = {
+  bench_press: 'horizontal_push', overhead_press: 'vertical_push',
+  pull_up: 'vertical_pull', lat_pulldown: 'vertical_pull',
+  back_squat: 'squat', bulgarian_split_squat: 'squat',
+  rdl: 'hinge', trap_bar_deadlift: 'hinge',
+};
+
 /**
  * One validated owner of the lift that anchors each programming pattern. The
  * Progress selector stores a partial answer; absent or invalid values retain
@@ -58,6 +70,14 @@ export function selectedTrackedLiftForPattern(
   const slot = TRACKED_LIFT_SLOT_FOR_PATTERN[pattern];
   const selected = choices?.[slot];
   return selected && TRACKED_LIFT_PAIRS[slot].includes(selected) ? selected : slot;
+}
+
+/** The movement plane the selected anchor actually occupies. */
+export function selectedTrackedLiftProgrammingSeat(
+  choices: TrackedLiftChoices | null | undefined,
+  pattern: TrackedLiftProgrammingPattern,
+): TrackedLiftProgrammingSeat {
+  return TRACKED_LIFT_PROGRAMMING_SEAT[selectedTrackedLiftForPattern(choices, pattern)];
 }
 
 /** When an athlete chooses the alternative, its default leaves automatic work. */

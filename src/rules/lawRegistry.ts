@@ -284,6 +284,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-male-upper-split-has-two-major-pulls-and-rotating-accessories',
+    law: 'R-305: a normal male Upper Pull has exactly one horizontal and one vertical major pull; its remaining four strength seats are shoulder/prehab, biceps, traps and core, never a third row or pulldown. The selected tracked anchor occupies its authored movement plane. A male Upper Push may rotate Dips with other legal authored push accessories, using typed block history rather than a fixed catalogue seat. The canonical Single-Arm Lat Pulldown identity and variation-family collision rules remain unchanged; injury and equipment legality still outrank composition.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-305',
+    guard: {
+      state: 'guarded',
+      by: 'test:composer-b1 + test:estimated-1rm',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The exact pre-fix boundary was 17 passing / 6 failing cells: the pull table still declared a third compound-pull accessory, every one of 13 typed-history blocks contained three major pulls, and Dips occupied 13/13 push-accessory blocks. The tracked Pull-Up was being injected into the horizontal seat, after which a pulldown occupied vertical and a row occupied the spare accessory. R-305 makes each tracked lift own its real typed plane, replaces the male pull accessory seat with shoulder/prehab, and lets the explicit push-accessory seat choose both authored Dips and Push-ups without weakening main-press experience selection. The focused boundary is 23/23, including injury and restricted-equipment controls. The exact two-athlete full-kit artifact has 52 weeks, 364 dates and 52 successful restart comparisons per gender; all 50 distinct male Upper Pull sessions contain exactly two major pulls, Dips falls from 51 visible row occurrences to 25 while Push-Ups supplies 26, and the retired pulldown identity occurs zero times. Final counts, mutation and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

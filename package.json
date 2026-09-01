@@ -416,7 +416,7 @@
     "test:ui-picture-manifest": "TZ=Australia/Melbourne sucrase-node src/__tests__/uiPictureManifestTests.ts",
     "test:dead-affordances": "TZ=Australia/Melbourne sucrase-node src/__tests__/deadAffordanceTests.ts",
     "test:off-feet-walking": "TZ=Australia/Melbourne sucrase-node src/__tests__/offFeetWalkingGateTests.ts",
-    "test:composer-b1": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSliceB1Tests.ts",
+    "test:composer-b1": "npm run test:upper-split-composition && TZ=Australia/Melbourne sucrase-node src/__tests__/composerSliceB1Tests.ts",
     "test:generated-week-assembly": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekAssemblyTests.ts",
     "test:generated-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekContractTests.ts",
     "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts",

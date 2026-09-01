@@ -223,7 +223,7 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
     ]), JSON.stringify(splitPush?.rows.map((row) => `${row.slot}:${row.identity}`)));
   ok('[SAM] a full-gym split PULL authors the ruled six-row shape',
     JSON.stringify(splitPull?.rows.map((row) => row.slot)) === JSON.stringify([
-      'horizontal_pull', 'vertical_pull', 'pull_accessory_1',
+      'horizontal_pull', 'vertical_pull', 'shoulders',
       'biceps', 'traps', 'core',
     ]), JSON.stringify(splitPull?.rows.map((row) => `${row.slot}:${row.identity}`)));
   ok('[SAM] male split upper sessions never exceed six rows',

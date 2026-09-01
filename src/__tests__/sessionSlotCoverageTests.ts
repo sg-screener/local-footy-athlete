@@ -130,26 +130,26 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
 
   const completePush = [
     row('Bench Press'), row('Overhead Press'),
-    row('DB Bench Press'), row('Half-Kneeling Single-Arm Overhead Press'),
+    row('DB Bench Press'),
     row('Tricep Pushdown'), row('Lateral Raise'), row('Ab Wheel'),
   ];
   const pushCov = sessionSlotCoverage(completePush, 'upper_split_push');
-  ok('[SAM] split PUSH is horizontal + vertical + 2 accessories + triceps + shoulders + core',
+  ok('[SAM] split PUSH is horizontal + vertical + 1 accessory + triceps + shoulders + core',
     pushCov.missing.length === 0
       && pushCov.filled.length === UPPER_SPLIT_PUSH_SLOTS.length
-      && UPPER_SPLIT_PUSH_SLOTS.length === 7,
+      && UPPER_SPLIT_PUSH_SLOTS.length === 6,
     `missing=${JSON.stringify(pushCov.missing)} filled=${JSON.stringify(pushCov.filled)}`);
 
   const completePull = [
     row('Barbell Row'), row('Pull-Ups'),
-    row('Seated Cable Row'), row('Neutral-Grip Pulldown'),
+    row('Band Pull-Apart'),
     row('Bicep Curl (Dumbbell)'), row('Shrugs'), row('Ab Wheel'),
   ];
   const pullCov = sessionSlotCoverage(completePull, 'upper_split_pull');
-  ok('[SAM] split PULL is horizontal + vertical + 2 accessories + biceps + traps + core',
+  ok('[SAM] split PULL is horizontal + vertical + prehab + biceps + traps + core',
     pullCov.missing.length === 0
       && pullCov.filled.length === UPPER_SPLIT_PULL_SLOTS.length
-      && UPPER_SPLIT_PULL_SLOTS.length === 7,
+      && UPPER_SPLIT_PULL_SLOTS.length === 6,
     `missing=${JSON.stringify(pullCov.missing)} filled=${JSON.stringify(pullCov.filled)}`);
 
   const pushWithoutTriceps = completePush.filter(
@@ -435,15 +435,15 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
 
   // A PULL DAY CAN NOW COVER ITS LADDER AT ALL — the cell that would have caught
   // the one-direction constant, and which did not exist when it shipped.
-  // The old three-row "complete" expectation predates the seven-slot split
-  // decision (2026-08-21). Keep direction/order checks against its current shape.
-  const pullRows = ['Barbell Row', 'Pull-Ups', 'Seated Cable Row', 'Neutral-Grip Pulldown',
+  // The old three-row "complete" expectation predates the six-slot split
+  // decisions (2026-08-21 and R305). Keep direction/order checks against its current shape.
+  const pullRows = ['Barbell Row', 'Pull-Ups', 'Band Pull-Apart',
     'Bicep Curl (Dumbbell)', 'Shrugs', 'Ab Wheel'].map(name => row(name));
   const pullDay = sessionSlotCoverage(pullRows, 'upper_split_pull');
   ok('a pull day covered by pull work reports NOTHING missing',
     pullDay.missing.length === 0, JSON.stringify(pullDay.missing));
   const pushDay = sessionSlotCoverage(
-    ['Bench Press', 'Overhead Press', 'DB Bench Press', 'Half-Kneeling Single-Arm Overhead Press',
+    ['Bench Press', 'Overhead Press', 'DB Bench Press',
       'Tricep Pushdown', 'Lateral Raise', 'Ab Wheel'].map(name => row(name)), 'upper_split_push');
   ok('a push day covered by push work reports NOTHING missing',
     pushDay.missing.length === 0, JSON.stringify(pushDay.missing));
