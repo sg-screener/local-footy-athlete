@@ -106,6 +106,8 @@ export interface ExerciseLoadProfile {
  * These should show "BW" in the UI. Everything else gets a load estimate.
  */
 export const TRUE_BODYWEIGHT_EXERCISES = new Set([
+  'Incline Push-Up',
+  'Single-Leg Hop and Stick',
   'Seated Single-Leg Pike Lift',
   'Standing Knee Extension',
   'Horse Stance Hold',

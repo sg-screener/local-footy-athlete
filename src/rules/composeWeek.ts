@@ -1779,7 +1779,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
          * block (13/13 in the founding tape). This exception changes no main
          * seat and admits no exercise outside the authored accessory pool. */
         const experienceLegal = slot === 'push_accessory_1'
-          ? hardLegal : experiencePreferred(hardLegal, inputs.profile);
+          ? applySourceBoundAutomaticRegression(hardLegal, inputs.profile)
+            .map(composedIdentityFor)
+          : experiencePreferred(hardLegal, inputs.profile);
         return hingePriorityFirst(slot, experienceLegal);
       };
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────

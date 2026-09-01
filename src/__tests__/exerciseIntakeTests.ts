@@ -24,7 +24,7 @@ import { flowSlotCandidates, selectMobilityPrehabFlow } from '../utils/mobilityP
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './support/athleteJourney';
 import { ARCHETYPES, athleteAnswers, plusDays } from './compilerYear/catalog';
 import { useProgramStore } from '../store/programStore';
-import { ATHLETE_CHOSEN_LOAD_EXERCISES, BAND_RESISTANCE_EXERCISES, resolveLoadAuthority, resolveLoadControlMode, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
+import { ATHLETE_CHOSEN_LOAD_EXERCISES, BAND_RESISTANCE_EXERCISES, TRUE_BODYWEIGHT_EXERCISES, resolveLoadAuthority, resolveLoadControlMode, estimateStartingWeight, equipmentClassFor, formatLoadLabel } from '../utils/loadEstimation';
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { SECTION_LABELS } from '../utils/sessionExecutionChecklist';
 import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
@@ -48,7 +48,8 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { exerciseVariationFamily } from '../rules/exerciseVariationFamily';
 import { buildSwapSuggestionPayload } from '../utils/swapSuggestionPayload';
 import { compileCanonicalExerciseEditOnWorkout } from '../rules/canonicalWeeklyExerciseEditCompiler';
-import { BAND_ASSISTED_PULL_UP_ELIGIBILITY, SOURCE_BOUND_EXERCISE_REGRESSIONS } from '../rules/sourceBoundExerciseRegression';
+import { BAND_ASSISTED_PULL_UP_ELIGIBILITY, SOURCE_BOUND_EXERCISE_REGRESSIONS, sourceBoundAutomaticIdentityFor } from '../rules/sourceBoundExerciseRegression';
+import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 armTotalsOrRed();
 // Mutations run in isolated child processes: no shared checkout is edited.
 const mutation = process.env.LFA_INTAKE_MUTATION;
@@ -73,6 +74,26 @@ if (mutation === 'band_source') (SOURCE_BOUND_EXERCISE_REGRESSIONS as any)[0].so
 if (mutation === 'band_eligibility') (BAND_ASSISTED_PULL_UP_ELIGIBILITY as any).developingFemale = false;
 if (mutation === 'band_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Band-Assisted Pull-Up'] = ['bands'];
 if (mutation === 'band_load') BAND_RESISTANCE_EXERCISES.delete('Band-Assisted Pull-Up');
+if (mutation === 'incline_source') {
+  const row = SOURCE_BOUND_EXERCISE_REGRESSIONS.find(entry => entry.target === 'Incline Push-Up') as any;
+  if (row) row.source = 'Bench Press';
+}
+if (mutation === 'incline_eligibility') {
+  const row = SOURCE_BOUND_EXERCISE_REGRESSIONS.find(entry => entry.target === 'Incline Push-Up') as any;
+  if (row?.eligibility) row.eligibility.developingFemale = false;
+}
+if (mutation === 'incline_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Incline Push-Up'] = [];
+if (mutation === 'incline_load') TRUE_BODYWEIGHT_EXERCISES.delete('Incline Push-Up');
+if (mutation === 'hop_experience') {
+  const row = POWER_EXERCISE_POOL.find(entry => entry.name === 'Single-Leg Hop and Stick') as any;
+  if (row) row.minTrainingAge = 'developing';
+}
+if (mutation === 'hop_inseason') {
+  const row = POWER_EXERCISE_POOL.find(entry => entry.name === 'Single-Leg Hop and Stick') as any;
+  if (row) row.inSeasonSafe = false;
+}
+if (mutation === 'hop_dose') EXERCISE_TAGS['Single-Leg Hop and Stick']!.prescription!.repsMax = 6;
+if (mutation === 'hop_load') TRUE_BODYWEIGHT_EXERCISES.delete('Single-Leg Hop and Stick');
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -94,6 +115,7 @@ const submitted = [
   ['Bench Thoracic Extension', 'xE5ZaEKAx1g'],
   ['Sleeper Stretch', 'clqjaMIRWfM'],
   ['Foam Roller Thoracic Extension', '9Hfy7ojEt18'],
+  ['Single-Leg Hop and Stick', 'ml-8WNXFJxw'],
 ];
 const vocabulary = new Set(selectableVocabularyGroups().flatMap(group => group.names));
 // Independent dose expectations transcribed from the signed intake, including
@@ -108,6 +130,7 @@ const doses = [
   [2, 5, 5, 30, 'reps', false],
   [2, 30, 30, 15, 'duration', true],
   [2, 5, 5, 30, 'reps', false],
+  [2, 5, 5, 120, 'reps', true],
 ];
 const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name]?.power);
 submitted.forEach(([name], index) => {
@@ -122,6 +145,8 @@ const intake = [
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_SLEEPER_STRETCH_2026-09-02.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_FOAM_ROLLER_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BAND_ASSISTED_PULL_UP_2026-09-02.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_INCLINE_PUSH_UP_2026-09-02.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_SINGLE_LEG_HOP_AND_STICK_2026-09-02.md'), 'utf8'),
 ].join('\n');
 for (const [name, video] of submitted) {
   check(`${name}: selectable`, vocabulary.has(name));
@@ -279,6 +304,115 @@ async function main() {
     && swappedBandRow.role === 'main_lift'
     && swappedBandRow.sessionSection === 'strength'
     && swappedBandRow.prescribedWeightKg === undefined);
+
+  const inclinePushUp = 'Incline Push-Up';
+  for (const [label, inclineProfile, eligible] of bandAssistedProfiles) {
+    const inclineEnvironment = resolveTapSwapEnvironment({
+      date, profile: inclineProfile, gameDates: [], activeConstraints: [], readinessSignal: null,
+    });
+    const fromPushUp = getTapSwapChoices({
+      originalExercise: 'Push-ups', reason: 'preference', environment: inclineEnvironment,
+      existingExerciseNames: [],
+    });
+    check(`Incline Push-Up: ${label} Push-ups-only Swap eligibility`,
+      fromPushUp.some(choice => choice.name === inclinePushUp) === eligible);
+    check(`Incline Push-Up: ${label} write-time eligibility`,
+      assessTapSwapCandidateSafety(inclinePushUp, inclineEnvironment,
+        { sourceExercise: 'Push-ups' } as any).safe === eligible);
+    check(`Incline Push-Up: ${label} never appears in Add`,
+      legalAddFamilies({ ...args, profile: inclineProfile, environment: inclineEnvironment })
+        .flatMap(f => f.groups.flatMap(g => g.leaves.flatMap(l =>
+          legalAddCandidates({ ...args, profile: inclineProfile, environment: inclineEnvironment, leaf: l.id }))))
+        .every(candidate => candidate.name !== inclinePushUp));
+  }
+  check('Incline Push-Up: only Push-ups may be the Swap source',
+    !getTapSwapChoices({ originalExercise: 'Bench Press', reason: 'preference',
+      environment: eligibleBandEnvironment, existingExerciseNames: [] })
+      .some(choice => choice.name === inclinePushUp)
+    && !assessTapSwapCandidateSafety(inclinePushUp, eligibleBandEnvironment,
+      { sourceExercise: 'Bench Press' } as any).safe
+    && !assessTapSwapCandidateSafety(inclinePushUp, eligibleBandEnvironment).safe);
+  check('Incline Push-Up: exact existing equipment rule',
+    exerciseIsAvailableWith(inclinePushUp, ['bodyweight', 'bench'])
+    && exerciseIsAvailableWith(inclinePushUp, ['bodyweight', 'plyo_box'])
+    && !exerciseIsAvailableWith(inclinePushUp, ['bodyweight']));
+  check('Incline Push-Up: bodyweight-only load control records no kilograms',
+    resolveLoadControlMode(inclinePushUp) === 'bodyweight'
+    && resolveLoadAuthority(inclinePushUp).kind === 'bodyweight');
+  check('Incline Push-Up: dose is inherited rather than separately authored',
+    EXERCISE_TAGS[inclinePushUp]?.prescription === undefined);
+  const inclineIntake = intake.split(/^## \d+\. /m)
+    .find(section => section.startsWith('Incline Push-Up\n')) ?? '';
+  const inclineMetadata = EXERCISE_MUSCLE_METADATA.find(row => row.exercise === inclinePushUp);
+  check('Incline Push-Up: horizontal-push catalogue and mapped muscles',
+    vocabulary.has(inclinePushUp)
+    && inclineMetadata?.pool === 'Upper push horizontal'
+    && JSON.stringify(inclineMetadata.primary) === JSON.stringify(['Chest', 'Triceps', 'Shoulders'])
+    && JSON.stringify(inclineMetadata.secondary) === JSON.stringify(['Midline', 'Glutes'])
+    && inclineMetadata.experienceGate === 'everyone_regression');
+  check('Incline Push-Up: exact supplied cues and video',
+    EXERCISE_CUES[inclinePushUp]?.primaryCue
+      === 'Keep a straight body line and lower your chest to the support.'
+    && EXERCISE_CUES[inclinePushUp]?.secondaryCue
+      === 'Press away without letting your hips sag or shoulders shrug.'
+    && EXERCISE_DEMO_VIDEOS[inclinePushUp]
+      === 'https://youtube.com/shorts/7f8JOu0i1cQ?si=5yAE7LhP43eJR7nX'
+    && inclineIntake.includes(EXERCISE_CUES[inclinePushUp].primaryCue));
+  const inclineRatings = [...inclineIntake.matchAll(/^\| ([^|]+) \| (Good|Caution|Avoid) \|$/gm)];
+  check('Incline Push-Up: all thirteen supplied injury ratings',
+    inclineRatings.length === 13 && inclineRatings.every(([, region, rating]) => {
+      const key = region === 'Lower back' ? 'lowerBack' : region.toLowerCase();
+      return EXERCISE_TAGS[inclinePushUp]?.injury[key] === rating.toLowerCase();
+    }));
+  check('Incline Push-Up: same-session Push-Up family prevents duplicates',
+    exerciseVariationFamily(inclinePushUp) === exerciseVariationFamily('Push-ups')
+    && exerciseVariationFamily(inclinePushUp) !== null);
+  const outgoingPushUp = {
+    id: 'push-up-row', exerciseId: 'push-ups', prescribedSets: 3,
+    prescribedRepsMin: 8, prescribedRepsMax: 12, restSeconds: 60,
+    prescriptionType: 'reps', perSide: false, role: 'accessory',
+    sessionSection: 'strength', exercise: { id: 'push-ups', name: 'Push-ups' },
+  } as any;
+  const inheritedInclinePayload = buildSwapSuggestionPayload(inclinePushUp, outgoingPushUp);
+  const swappedInclineWorkout = compileCanonicalExerciseEditOnWorkout({
+    id: 'push-day', exercises: [outgoingPushUp],
+  } as any, {
+    kind: 'swap', decisionId: 'incline-regression', occurredAt: `${date}T09:00:00.000Z`,
+    dateISO: date, targetName: 'Push-ups', targetComponentId: 'push-up-row',
+    replacement: inheritedInclinePayload,
+  });
+  const swappedInclineRow = swappedInclineWorkout.exercises[0];
+  check('Incline Push-Up: Push-Up dose and role survive the real swap compiler',
+    swappedInclineRow.exercise.name === inclinePushUp
+    && swappedInclineRow.prescribedSets === 3
+    && swappedInclineRow.prescribedRepsMin === 8
+    && swappedInclineRow.prescribedRepsMax === 12
+    && swappedInclineRow.restSeconds === 60
+    && swappedInclineRow.role === 'accessory'
+    && swappedInclineRow.sessionSection === 'strength'
+    && swappedInclineRow.prescribedWeightKg === undefined);
+
+  const hop = 'Single-Leg Hop and Stick';
+  const hopPoolEntry = POWER_EXERCISE_POOL.find(row => row.name === hop);
+  const hopMetadata = EXERCISE_MUSCLE_METADATA.find(row => row.exercise === hop);
+  check('Single-Leg Hop and Stick: ordinary lower-power pool entry with exact gates',
+    hopPoolEntry?.family === 'lower'
+    && hopPoolEntry.minTrainingAge === 'consistent'
+    && hopPoolEntry.phaseGate === 'all_phases'
+    && hopPoolEntry.inSeasonSafe
+    && hopPoolEntry.equipmentRequired.length === 0);
+  check('Single-Leg Hop and Stick: manual and automatic experience boundary is 2+ years',
+    !exerciseProgrammingAllows(hop, { route: 'manual', experienceLevel: 'Complete beginner', daysToGame: null })
+    && !exerciseProgrammingAllows(hop, { route: 'manual', experienceLevel: '1-2 years', daysToGame: null })
+    && exerciseProgrammingAllows(hop, { route: 'manual', experienceLevel: '2-5 years', daysToGame: null })
+    && exerciseProgrammingAllows(hop, { route: 'automatic', experienceLevel: '5+ years', daysToGame: null })
+    && !exerciseProgrammingAllows(hop, { route: 'automatic', experienceLevel: '2-5 years', daysToGame: 1 }));
+  check('Single-Leg Hop and Stick: exact power catalogue muscles and bodyweight loading',
+    hopMetadata?.pool === 'Power'
+    && JSON.stringify(hopMetadata.primary) === JSON.stringify(['Glutes', 'Quads', 'Calves'])
+    && JSON.stringify(hopMetadata.secondary) === JSON.stringify(['Hamstrings', 'Groin', 'Midline', 'Feet'])
+    && hopMetadata.experienceGate === 'two_plus_years'
+    && resolveLoadControlMode(hop) === 'bodyweight');
   check('Horse Stance Hold: manual Add is filed only under Mobility & stretching',
     inLeaf('mobility_drills').includes('Horse Stance Hold')
     && leaves.filter(leaf => leaf.id !== 'mobility_drills').every(leaf =>
@@ -482,10 +616,11 @@ async function main() {
   const recoveryReached = new Set<string>();
   const primerReached = new Set<string>();
   const horseRouteSeed: Partial<Record<'mobility' | 'recovery', string>> = {};
-  for (let block = 1; block <= 80; block++) {
-    const row = buildPowerRow({ family: 'upper', kind: 'primer', reduced: false,
-      sets: 3, repsMin: 3, repsMax: 5, reason: 'intake power reachability' }, `power-${block}`, {
-      availableEquipment: kit, phase: 'Pre-season', experienceLevel: profile.experienceLevel, blockId: `block-${block}`,
+  for (const family of ['upper', 'lower'] as const) for (let block = 1; block <= 80; block++) {
+    const row = buildPowerRow({ family, kind: 'primer', reduced: false,
+      sets: 3, repsMin: 3, repsMax: 5, reason: 'intake power reachability' }, `power-${family}-${block}`, {
+      availableEquipment: kit, phase: 'Pre-season', experienceLevel: profile.experienceLevel,
+      blockId: `block-${family}-${block}`,
     });
     powerReached.add(row.exercise.name);
     const index = submitted.findIndex(([name]) => name === row.exercise.name);
@@ -590,6 +725,32 @@ async function main() {
       names.includes(bandAssistedPullUp) === eligible
       && (!eligible || !names.includes('Pull-Ups')));
   }
+  const pushDays = program.microcycles[0].workouts.filter(w =>
+    w.strengthIntent?.plannedPatterns.includes('push'));
+  check('Incline Push-Up: fixture matrix has a real push session', pushDays.length > 0);
+  for (const [label, inclineProfile, eligible] of bandAssistedProfiles) {
+    const names = pushDays.flatMap((pushDay, dayIndex) => Array.from({ length: 12 }, (_, blockIndex) => {
+      const built = quiet(() => compileCanonicalStrengthTemplate({ composition: {
+        ...context.strengthComposition!, profile: inclineProfile,
+        blockNumber: 80 + blockIndex, blockStartISO: plusDays(date, 560 + blockIndex * 28),
+        selectionHistory: [], pinnedIdentities: [composedIdentityFor('Push-ups')],
+      }, plannedDay: {
+        planEntryId: pushDay.planEntryId!, isTeamDay: false,
+        dayOfWeek: pushDay.dayOfWeek, name: pushDay.name,
+        workoutType: pushDay.workoutType, sessionTier: pushDay.sessionTier!,
+        strengthIntent: pushDay.strengthIntent, daysToGame: null,
+      } }));
+      return built?.exercises.map(row => row.exercise.name) ?? [];
+    }).flat());
+    const automaticIdentity = sourceBoundAutomaticIdentityFor(
+      'Push-ups', ['Push-ups', inclinePushUp], inclineProfile,
+    );
+    check(`Incline Push-Up: ${label} automatic Push-ups regression`,
+      automaticIdentity === (eligible ? inclinePushUp : 'Push-ups')
+      && (!eligible || !names.includes('Push-ups'))
+      && (inclineProfile.experienceLevel === '1-2 years'
+        || names.includes(inclinePushUp) === eligible));
+  }
   const lowerDays = program.microcycles[0].workouts.filter(w => w.strengthIntent?.plannedPatterns.some(p => p === 'hinge' || p === 'squat'));
   check('fixture matrix has real generated lower sessions', lowerDays.length > 0);
   const firstLower = lowerDays[0];
@@ -639,6 +800,17 @@ async function main() {
       strengthIntent: workout.strengthIntent, daysToGame: null } }));
     for (const row of built!.exercises) reached.add(row.exercise.name);
   }
+  const hopSpec = { kind: 'primer' as const, family: 'lower' as const, sets: 3,
+    repsMin: 3, repsMax: 5, reduced: false, reason: 'intake reachability' };
+  for (let block = 1; block <= 80; block++) {
+    const built = buildPowerRow(hopSpec, `hop-reach-${block}`, {
+      phase: 'In-season', experienceLevel: '2-5 years', availableEquipment: kit,
+      blockId: `hop-reach-${block}`,
+    });
+    reached.add(built.exercise.name);
+  }
+  check('Single-Leg Hop and Stick: actual power selector reaches it in-season for 2+ years',
+    reached.has('Single-Leg Hop and Stick'));
   console.log('AUTOMATIC REACHED', submitted.filter(([name]) => reached.has(name)).map(([name]) => name));
   for (const [name] of submitted) check(`${name}: selected by a real automatic builder`, reached.has(name));
   const saved = visibleSignature(quiet(() => deriveVisibleWeekLive(date, date)));
@@ -666,7 +838,9 @@ async function main() {
       current.workout!.exercises.length === day.workout!.exercises.length + 1
       && day.workout!.exercises.every(old => current.workout!.exercises.some(r => r.id === old.id)));
     if (EXERCISE_TAGS[name]?.power) check(`${name}: manual Add retains typed power role for hidden rest and counting`,
-      row?.role === 'power' && row.power?.family === 'upper' && row.power.kind === 'primer');
+      row?.role === 'power'
+      && row.power?.family === (EXERCISE_TAGS[name]?.region === 'lower' ? 'lower' : 'upper')
+      && row.power.kind === 'primer');
     const alternative = legalAddAlternativesForExercise({ ...args, originalExercise: name,
       existingExerciseNames: coachRevisionExistingExerciseNames(current.workout!, day.date) }).find(c => !EXERCISE_TAGS[c.name]?.power);
     check(`${name}: a real Swap alternative exists`, !!alternative);
@@ -683,7 +857,9 @@ async function main() {
       const restored = quiet(() => deriveVisibleWeekLive(date, date)).find(d => d.date === day.date)!.workout!.exercises.find(row => row.exercise.name === name);
       check(`${name}: actual Swap round-trip`, away.ok && back.ok && !!restored);
       if (EXERCISE_TAGS[name]?.power) check(`${name}: Swap-back retains typed power role`,
-        restored?.role === 'power' && restored.power?.family === 'upper' && restored.power.kind === 'primer');
+        restored?.role === 'power'
+        && restored.power?.family === (EXERCISE_TAGS[name]?.region === 'lower' ? 'lower' : 'upper')
+        && restored.power.kind === 'primer');
       check(`${name}: Swap preserves prescribed units and sides`, !!restored && restored.prescriptionType === candidate.prescriptionType &&
         !!restored.perSide === !!candidate.perSide && restored.prescribedRepsMin === candidate.repsMin && restored.prescribedRepsMax === candidate.repsMax);
     }
@@ -734,6 +910,14 @@ async function main() {
     ['band_eligibility', /Band-Assisted Pull-Up: 1-2 years female Pull-Up-only Swap eligibility/],
     ['band_equipment', /Band-Assisted Pull-Up: exact existing equipment rule/],
     ['band_load', /Band-Assisted Pull-Up: band strength\/colour is the load control/],
+    ['incline_source', /Incline Push-Up: (beginner male Push-ups-only Swap eligibility|only Push-ups may be the Swap source)/],
+    ['incline_eligibility', /Incline Push-Up: 1-2 years female Push-ups-only Swap eligibility/],
+    ['incline_equipment', /Incline Push-Up: exact existing equipment rule/],
+    ['incline_load', /Incline Push-Up: bodyweight-only load control records no kilograms/],
+    ['hop_experience', /Single-Leg Hop and Stick: (manual and automatic experience boundary is 2\+ years|ordinary lower-power pool entry with exact gates)/],
+    ['hop_inseason', /Single-Leg Hop and Stick: ordinary lower-power pool entry with exact gates/],
+    ['hop_dose', /Single-Leg Hop and Stick: signed dose, rest, unit and side/],
+    ['hop_load', /Single-Leg Hop and Stick: exact power catalogue muscles and bodyweight loading/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

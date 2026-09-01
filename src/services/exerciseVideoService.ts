@@ -43,6 +43,8 @@ export interface ExerciseLookupResult {
 // Populate manually — do NOT use search URLs.
 
 export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
+  "Incline Push-Up": "https://youtube.com/shorts/7f8JOu0i1cQ?si=5yAE7LhP43eJR7nX",
+  "Single-Leg Hop and Stick": "https://youtube.com/shorts/ml-8WNXFJxw?si=_oGKDJbcRA66vTqC",
   "Band-Assisted Pull-Up": "https://youtube.com/shorts/pZozI1iaW0k?si=khFTBdN6N3PVZMi3",
   "Foam Roller Thoracic Extension": "https://youtube.com/shorts/9Hfy7ojEt18?si=WiIaDH0CmWP1tr-a",
   "Sleeper Stretch": "https://youtube.com/shorts/clqjaMIRWfM?si=GbVzhQVqIB8JTLBs",

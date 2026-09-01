@@ -84,6 +84,7 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Lateral Bounds', 'lower', 'developing', []],
   ['Kneeling Jump', 'lower', 'consistent', []],
   ['RFE Split Squat Jump', 'lower', 'consistent', ['Bench']],
+  ['Single-Leg Hop and Stick', 'lower', 'consistent', []],
   ['Box Jumps', 'lower', null, ['Box']],
   ['Broad Jumps', 'lower', null, []],
   ['Jump Squats', 'lower', null, []],
@@ -143,7 +144,7 @@ ok(
 
 console.log('\n[2] P1 — experience and phase gating');
 
-const HARDER = ['Depth Jumps', 'Lateral Bounds', 'Kneeling Jump', 'RFE Split Squat Jump'];
+const HARDER = ['Depth Jumps', 'Lateral Bounds', 'Kneeling Jump', 'RFE Split Squat Jump', 'Single-Leg Hop and Stick'];
 
 const newAthleteNames = eligiblePowerExercises(ctx({ trainingAge: 'new' })).map((e) => e.name);
 ok(
@@ -189,19 +190,32 @@ ok(
     === 'https://youtube.com/shorts/EY3bzgv2SYo?si=niQWD9Thz0mUex1d',
 );
 
+ok(
+  'Single-Leg Hop and Stick is restricted to 2+ years',
+  !developingNames.includes('Single-Leg Hop and Stick')
+    && consistentNames.includes('Single-Leg Hop and Stick'),
+);
+
+ok(
+  'Single-Leg Hop and Stick uses Sam\'s pinned video',
+  lookupExerciseDemo('Single-Leg Hop and Stick').url
+    === 'https://youtube.com/shorts/ml-8WNXFJxw?si=_oGKDJbcRA66vTqC',
+);
+
 // In-season = familiar / low-impact only (rule 4).
 const inSeasonNames = eligiblePowerExercises(
   ctx({ phase: 'In-season', trainingAge: 'advanced' }),
 ).map((e) => e.name);
 ok(
-  'the in-season lower pool includes the three additions approved on 2026-08-28',
-  inSeasonNames.slice().sort().join(',') === ['Box Jumps', 'Broad Jumps', 'Jump Squats', 'Lateral Jump', 'Vertical Jump'].join(','),
+  'the in-season lower pool includes the approved low-volume additions',
+  inSeasonNames.slice().sort().join(',') === ['Box Jumps', 'Broad Jumps', 'Jump Squats', 'Lateral Jump', 'Single-Leg Hop and Stick', 'Vertical Jump'].join(','),
   `found: ${inSeasonNames.join(', ')}`,
 );
 
 ok(
   'the off/pre-season-only entries are absent in-season even for advanced athletes',
-  HARDER.every((name) => !inSeasonNames.includes(name)),
+  HARDER.filter((name) => name !== 'Single-Leg Hop and Stick')
+    .every((name) => !inSeasonNames.includes(name)),
 );
 
 ok(

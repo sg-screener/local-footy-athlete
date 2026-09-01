@@ -4,32 +4,41 @@ import type { OnboardingData } from '../types/domain';
  * Regressions that are legal only as a replacement for one named source lift.
  *
  * This is deliberately not part of the global experience crosswalk. The
- * Band-Assisted Pull-Up carries Sam's one exercise-specific exception: all
- * complete beginners, plus female athletes at 1-2 years. It may not leak into
- * Add or become a general Chin-Up/vertical-pull alternative.
+ * Each row carries its own profile gate. Targets may not leak into Add or
+ * become general same-pattern alternatives.
  */
 export interface SourceBoundExerciseRegression {
   readonly source: string;
   readonly target: string;
+  readonly eligibility: {
+    completeBeginner: boolean;
+    developingFemale: boolean;
+  };
 }
 
 export const SOURCE_BOUND_EXERCISE_REGRESSIONS: readonly SourceBoundExerciseRegression[] = [
-  { source: 'Pull-Ups', target: 'Band-Assisted Pull-Up' },
+  {
+    source: 'Pull-Ups', target: 'Band-Assisted Pull-Up',
+    eligibility: { completeBeginner: true, developingFemale: true },
+  },
+  {
+    source: 'Push-ups', target: 'Incline Push-Up',
+    eligibility: { completeBeginner: true, developingFemale: true },
+  },
 ];
 
-export const BAND_ASSISTED_PULL_UP_ELIGIBILITY = {
-  completeBeginner: true,
-  developingFemale: true,
-};
+export const BAND_ASSISTED_PULL_UP_ELIGIBILITY = SOURCE_BOUND_EXERCISE_REGRESSIONS[0].eligibility;
+export const INCLINE_PUSH_UP_ELIGIBILITY = SOURCE_BOUND_EXERCISE_REGRESSIONS[1].eligibility;
 
 export function sourceBoundRegressionIsEligible(
   target: string,
   profile: Pick<OnboardingData, 'experienceLevel' | 'gender'> | null | undefined,
 ): boolean {
-  if (target !== 'Band-Assisted Pull-Up') return false;
-  return (BAND_ASSISTED_PULL_UP_ELIGIBILITY.completeBeginner
+  const policy = SOURCE_BOUND_EXERCISE_REGRESSIONS.find(row => row.target === target)?.eligibility;
+  if (!policy) return false;
+  return (policy.completeBeginner
       && profile?.experienceLevel === 'Complete beginner')
-    || (BAND_ASSISTED_PULL_UP_ELIGIBILITY.developingFemale
+    || (policy.developingFemale
       && profile?.experienceLevel === '1-2 years' && profile?.gender === 'female');
 }
 

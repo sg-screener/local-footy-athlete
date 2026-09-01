@@ -141,6 +141,28 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-single-leg-hop-and-stick-intake',
+    law: 'R-326: Single-Leg Hop and Stick is a bodyweight lower-power option for 2+ years only. It is automatic and manual Add/Swap eligible in all phases including low-volume in-season work, remains excluded from G-1 by the existing power policy, and uses 2 sets of 5 reps per side with 120 seconds rest.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-326',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `inclinehop`. The exercise-intake suite binds catalogue content, lower-power placement, 2+ years automatic/manual eligibility, in-season access, G-1 exclusion, bodyweight loading, per-side dose, equipment, cues, video and injury ratings. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_INCLINEHOP.md.',
+    },
+  },
+  {
+    id: 'LAW-incline-push-up-intake',
+    law: 'R-325: Incline Push-Up is a source-bound Push-ups regression. It inherits the replaced Push-ups role and dose, requires a bench or plyo box, uses bodyweight with support height recorded in the existing note, and is automatic/manual-Swap eligible only for complete beginners of either gender and female athletes at 1-2 years. It is never a general Add choice or a Swap from another exercise.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-325',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `inclinehop`. The exercise-intake suite binds catalogue content, equipment, bodyweight load control, source-only Swap, five eligibility coordinates, Add exclusion, inherited dose/role and automatic replacement. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_INCLINEHOP.md.',
+    },
+  },
+  {
     id: 'LAW-band-assisted-pull-up-intake',
     law: 'R-324: Band-Assisted Pull-Up is a source-bound Pull-Ups regression. It inherits the replaced Pull-Up row role and dose, requires bands plus a rack or pull-up bar, uses the existing band control, and is automatic/manual-Swap eligible only for complete beginners of either gender and female athletes at 1-2 years. It is never a general Add choice or a Swap from another exercise.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-324',

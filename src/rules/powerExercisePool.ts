@@ -110,8 +110,8 @@ export interface PowerPoolEntry {
 export const POWER_POOL_REDUCED_TAKEOVER = 'Pogo Hops';
 
 /**
- * Sam's pool. The first three are existing behaviour turned into data; the last
- * four are his 2026-07-23 additions.
+ * Sam's approved power pool. New identities join this same selector rather
+ * than creating exercise-specific programming branches.
  */
 export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
   {"name": "Rotational Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes, rotate hard, and slam outside the foot."},
@@ -223,6 +223,16 @@ export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
     reducedTakeoverOnly: false,
     authoredCueIntent:
       'Back foot on bench, slight lean forward, jump straight up off the front leg.',
+  },
+  {
+    name: 'Single-Leg Hop and Stick',
+    family: 'lower',
+    equipmentRequired: [],
+    minTrainingAge: 'consistent',
+    phaseGate: 'all_phases',
+    inSeasonSafe: true,
+    reducedTakeoverOnly: false,
+    authoredCueIntent: 'Hop forward from one leg and freeze the landing.',
   },
 ];
 

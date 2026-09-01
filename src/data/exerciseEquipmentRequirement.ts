@@ -44,6 +44,8 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
+  "Incline Push-Up": [["bench", "plyo_box"]],
+  "Single-Leg Hop and Stick": [],
   "Foam Roller Thoracic Extension": ["foam_roller", ["dumbbells", "barbell"]],
   "Band-Assisted Pull-Up": ["bands", ["rack", "pullup_bar"]],
   "Sleeper Stretch": [],

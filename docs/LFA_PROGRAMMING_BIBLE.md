@@ -1077,6 +1077,7 @@ Broad jump
 Countermovement jump
 Low box squat jump
 RFE split squat jump
+Single-leg hop and stick
 Depth jump
 Lateral jump
 Lateral bounds
@@ -1096,7 +1097,8 @@ Experience gating uses ONE ladder for the whole app: new -> developing -> consis
 * Depth jumps: off-season and pre-season only, minimum `developing`, and only if a knee-height box is available. 
 * Lateral bounds: off-season and pre-season only, minimum `developing`. 
 * Kneeling jump: off-season and pre-season only, minimum `consistent`. 
-* In-season the pool narrows to the familiar low-impact entries only: vertical jump and lateral jump. 
+* Single-leg hop and stick: minimum `consistent` (2+ years), all phases where power is allowed, including in-season at low volume. The existing power policy keeps it off G-1.
+* In-season the pool narrows to the approved familiar or low-volume entries, including single-leg hop and stick only for 2+ years.
 * When a lower niggle reduces power work, pogo jumps take over the lower slot regardless of any other eligibility. 
 * Equipment substitutes, it never forces: no box means no depth jumps and the selector falls back. A zero-equipment option always exists for every family, phase and experience level. 
 Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Everyone else reaches it through the injury door, an equipment constraint, or their own pick - it is never auto-programmed for them.
@@ -3124,6 +3126,8 @@ Two gates that ride on that ladder: contrast training requires `consistent` or a
 Regression convention: an exercise marked "everyone (regression)" is auto-programmed for new-to-training athletes only. Every other athlete reaches it through the injury door, an equipment constraint, or their own pick.
 
 R-324 is the one explicitly authored source-bound exception: Band-Assisted Pull-Up replaces Pull-Ups automatically and through Pull-Ups Swap only for complete beginners of either gender and female athletes at 1–2 years. This does not change the global crosswalk or expose any other regression to developing athletes.
+
+R-325 uses the same source-bound exception for Incline Push-Up: it replaces Push-ups automatically and through Push-ups Swap only for complete beginners of either gender and female athletes at 1–2 years. It is not a general Add choice and does not expose any other regression to developing athletes.
 THE EXPERIENCE CROSSWALK (Sam, 2026-07-27) — the single authored bridge between the onboarding answer, the ladder and the authored exercise gates. Three vocabularies exist for good reasons: the athlete answers in years at onboarding, the app reasons on the ladder, and Sam's authored sheets gate in years-of-training. This table is the ONLY mapping between them. No other crosswalk may exist anywhere in the app.
 
 | Onboarding answer | Ladder level | Sees exercises marked |

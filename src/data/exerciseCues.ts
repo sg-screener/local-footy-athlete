@@ -176,6 +176,8 @@ export function getExerciseCue(
 // ─── Part 3: Exercise Cue Library ───
 
 export const EXERCISE_CUES: Record<string, ExerciseCue> = {
+  "Incline Push-Up": {"primaryCue": "Keep a straight body line and lower your chest to the support.", "secondaryCue": "Press away without letting your hips sag or shoulders shrug."},
+  "Single-Leg Hop and Stick": {"primaryCue": "Hop forward from one leg and freeze the landing.", "secondaryCue": "Land quietly, absorb through the hip, and hold your balance."},
   "Band-Assisted Pull-Up": {"primaryCue": "Stand firmly on the band and pull your chest toward the bar.", "secondaryCue": "Lower under control until your elbows fully straighten."},
   "Rotational Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes, rotate hard, and slam outside the foot.", "secondaryCue": "Reset before each explosive repetition."},
   "Medicine-Ball Slam": {"primaryCue": "Reach tall onto toes and slam the ball straight down.", "secondaryCue": "Finish athletically with the hips and knees softly bent."},

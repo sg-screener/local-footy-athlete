@@ -8121,3 +8121,40 @@ answer, loading unit, role or prescription owner is introduced.
 Guard: `LAW-band-assisted-pull-up-intake` through chained
 `test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
 receipt: `docs/STATUS_BANDASSISTPULLUP.md`.
+
+**R-325** · Incline Push-Up joins the existing horizontal-push catalogue,
+2026-09-02.
+
+Owner: inclinehop. Incline Push-Up is a source-bound regression from Push-ups.
+It is automatically selected in place of Push-ups and manually offered only
+when swapping Push-ups for complete beginners of either gender and female
+athletes at 1–2 years. It is unavailable to 1–2-year male athletes and athletes
+above that tier. It inherits the replaced Push-ups row's role, sets and
+repetitions. It requires either a bench or plyo box, uses bodyweight only, and
+records support height in the existing session note rather than kilograms. It
+is not offered by Add or from any other Swap source. Its supplied muscles,
+cues, injury ratings, restrictions and video are recorded in
+`docs/EXERCISE_INTAKE_INCLINE_PUSH_UP_2026-09-02.md`. No new equipment answer,
+loading unit, role, screen or prescription owner is introduced.
+
+Guard: `LAW-incline-push-up-intake` through chained `test:exercise-intake`.
+Red-first, mutation, final execution and NOT COVERED receipt:
+`docs/STATUS_INCLINEHOP.md`.
+
+**R-326** · Single-Leg Hop and Stick joins the existing lower-body Power pool,
+2026-09-02.
+
+Owner: inclinehop. Single-Leg Hop and Stick is available automatically in
+lower-body Power blocks and manually through Add/Swap only for athletes with
+2+ years of training. It is a bodyweight, per-side movement in all phases,
+including in-season at low volume, while the existing Power policy excludes it
+from G-1. Its single app prescription uses the lower bound of the supplied
+range: 2 × 5 repetitions per side with 120 seconds rest and a full reset before
+each repetition. Its supplied muscles, cues, injury ratings, restrictions and
+video are recorded in
+`docs/EXERCISE_INTAKE_SINGLE_LEG_HOP_AND_STICK_2026-09-02.md`. No new equipment
+answer, loading unit, exercise role or power-selection path is introduced.
+
+Guard: `LAW-single-leg-hop-and-stick-intake` through chained
+`test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
+receipt: `docs/STATUS_INCLINEHOP.md`.

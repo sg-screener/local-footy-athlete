@@ -445,6 +445,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'DB Bench Press',  loadRatio: 0.80 },
         { name: 'Incline DB Bench', loadRatio: 0.70 },
         { name: 'Push-ups',        loadRatio: 0.00 },
+        { name: 'Incline Push-Up', loadRatio: 0.00 },
         { name: 'Dips',            loadRatio: 0.60 },
         { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
         // Sam's locked list (2026-07-24) pools the Bible's pressing injury-swap
