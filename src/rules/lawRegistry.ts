@@ -306,6 +306,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-annual-export-uses-final-rows-once-and-separates-categories-from-templates',
+    law: 'R-307: annual audit, HTML and PDF output display the canonical final day.rows projection exactly once. speedRows is typed evidence only: it must match a final canonical identity and modality and is never appended. Conditioning category means Continuous Aerobic, Tempo, Hard Intervals or Flush; conditioning template means the actual selected authored identity. Reports state both separately and include Movement Prep in total athlete-visible rows. Proper Speed retains one weekly energy-system credit.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-307',
+    guard: {
+      state: 'guarded',
+      by: 'test:programming-hierarchy + test:canonical-weekly-compiler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. Three annual consumers concatenated day.rows and speedRows even though the session template had already projected the Speed component. The fresh two-athlete artifact carries 32 Speed-evidence row placements across 16 athlete-dates; the broken concatenation would report 5,363 visible rows instead of the canonical 5,331. One shared projection owner now returns day.rows only and separately validates Speed evidence identity/modality. The repaired final audit exits zero with 0 duplicate, missing or modality-mismatch findings; generated HTML contains Air Bike Accelerations 4 times per athlete-year, not 8. The original 49eb2546 artifact reproduces 4 categories and 24 distinct templates. After R-303, the fresh artifact still reports the same 4 categories and truthfully reports 22 selected templates because two old automatic selections no longer occur. Appending speedRows back into the shared owner changes the focused gate from 5/5 to an immediate 2-versus-1 failure. The existing compiler mutation separately proves ignoring qualifying Speed makes the energy-evidence gate red. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

@@ -8,6 +8,8 @@ const { getExerciseTags } = require(path.join(repo, 'src/data/exerciseTags'));
 const { resolveTemplateByName, templateDurationMinutes } = require(path.join(repo, 'src/rules/conditioningSelection'));
 const { consecutiveEnergySystemTriples, validateEnergySystemExposureEvidence,
   validateWeeklyEnergySystemDensity } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
+const { finalAthleteFacingAuditRows, programmingAuditProjectionFindings,
+  summarizeProgrammingAuditConditioningVocabulary } = require(path.join(repo, 'src/rules/programmingYearAuditProjection'));
 const checks = [], findings = [];
 const flat = rows => rows.flatMap(row => row.choices ? row.choices.flatMap(choice =>
   flat(choice.rows).map(r => ({ ...r, modalityLabel: r.modalityLabel ?? choice.modalityLabel }))) : [row]);
@@ -17,7 +19,9 @@ for (const world of ['original-partial', 'corrected-commercial']) {
   if (data.revision !== revision || driver.revision !== revision || driver.sourceDiff) throw Error('Non-exact year source');
   for (const athlete of data.athletes) {
     const days = athlete.weeks.flatMap(w => w.days), label = `${world}/${athlete.gender}`;
-    const rows = days.flatMap(d => flat([...d.rows, ...(d.speedRows ?? [])]).map(row => ({ date: d.date, row })));
+    const rows = days.flatMap(d => finalAthleteFacingAuditRows(d).map(row => ({ date: d.date, row })));
+    const auditProjectionFindings = days.flatMap(programmingAuditProjectionFindings);
+    const conditioningVocabulary = summarizeProgrammingAuditConditioningVocabulary(days);
     const errors = days.filter(d => d.projectionError);
     const energySystemEvidenceFindings = athlete.weeks.flatMap(week => week.days.flatMap(day =>
       validateEnergySystemExposureEvidence(day.energySystem).map(finding => ({
@@ -73,19 +77,21 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       coreFlushRows: flush.filter(({ row }) => row.optional !== true).length,
       invalidLandmineRows: invalidLandmine.length,
       retiredAutomaticRows: retired.length,
+      auditProjectionFindings,
+      conditioningVocabulary,
       weeklyEnergySystemCounts,
       energySystemEvidenceFindings,
       energySystemDensityFindings };
     result.ok = result.weeks === 52 && result.athleteDays === 364 && result.restartChecks === 52 &&
       result.successfulRestarts === 52 && !errors.length && !painful.length && !corrupt.length &&
       !emptyLifts.length && !missingMode.length && !wrongMachineRecovery.length && power.length > 0 && !result.displayedPowerRestRows
-      && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length &&
+      && !invalidLandmine.length && flush.length > 0 && !badFlush.length && !retired.length && !auditProjectionFindings.length &&
       result.optionalFlushRows === flush.length && !energySystemEvidenceFindings.length && !energySystemDensityFindings.length;
-    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine, energySystemEvidenceFindings, energySystemDensityFindings });
+    checks.push(result); findings.push({ label, errors, painful, corrupt, emptyLifts, missingMode, wrongMachineRecovery, badFlush, retired, invalidLandmine, auditProjectionFindings, energySystemEvidenceFindings, energySystemDensityFindings });
   }
 }
 const receipt = { revision,
-  unit: 'displayed row occurrences and distinct athlete dates, per athlete/input world; choices expanded; not sets or completions',
+  unit: 'final day.rows occurrences and distinct athlete dates, per athlete/input world; choices expanded; Speed evidence is validated but never appended; not sets or completions',
   checks, findings, notCovered: ['Rendered HTML layout', 'Physical acceptance', 'Clinical validation', 'Native onboarding taps (separate simulator evidence)'] };
 fs.writeFileSync(path.join(output, 'year-audit.json'), JSON.stringify(receipt, null, 2));
 console.log(JSON.stringify(checks, null, 2));

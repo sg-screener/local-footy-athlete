@@ -33,6 +33,12 @@ const {
   validateEnergySystemExposureEvidence,
   validateWeeklyEnergySystemDensity,
 } = require('../src/rules/energySystemExposureEvidence');
+const {
+  finalAthleteFacingAuditRows,
+  programmingAuditProjectionFindings,
+  summarizeProgrammingAuditConditioningVocabulary,
+} = require('../src/rules/programmingYearAuditProjection');
+const { summarizeProgrammingYearRows } = require('../src/rules/programmingYearRowSummary');
 
 function parseCsvLine(line) {
   const cells = [];
@@ -100,8 +106,7 @@ for (const athlete of year.athletes) {
         ...(day.warmup ?? []).map((row) => ({
           ...row, role: 'warmup_mobility', auditSurface: 'mobility_preparation',
         })),
-        ...flattenRows(day.rows ?? []).map((row) => ({ ...row, auditSurface: 'session_template' })),
-        ...flattenRows(day.speedRows ?? []).map((row) => ({ ...row, auditSurface: 'speed_component' })),
+        ...finalAthleteFacingAuditRows(day).map((row) => ({ ...row, auditSurface: 'session_template' })),
       ];
       const record = { athlete, gender: athlete.gender, week, weekStart: week.start, day, rows };
       dayRecords.push(record);
@@ -247,6 +252,15 @@ const projectionErrors = dayRecords.filter(({ day }) => day.projectionError)
   .map(({ gender, day }) => ({ gender, date: day.date, error: day.projectionError }));
 const restartFailures = year.athletes.flatMap((athlete) => athlete.restarts
   .filter((restart) => !restart.ok).map((restart) => ({ gender: athlete.gender, ...restart })));
+const auditProjectionFindings = dayRecords.flatMap(({ gender, day }) =>
+  programmingAuditProjectionFindings(day).map((finding) => ({ gender, ...finding })));
+const conditioningVocabulary = summarizeProgrammingAuditConditioningVocabulary(
+  dayRecords.map(({ day }) => day),
+);
+const athleteRowSummaries = year.athletes.map((athlete) => ({
+  gender: athlete.gender,
+  ...summarizeProgrammingYearRows(athlete.weeks.flatMap((week) => week.days)),
+}));
 const energySystemEvidenceFindings = dayRecords.flatMap(({ gender, weekStart, day }) =>
   validateEnergySystemExposureEvidence(day.energySystem).map((finding) => ({
     gender, weekStart, date: day.date, finding, evidence: day.energySystem ?? null,
@@ -327,7 +341,7 @@ const report = {
   schemaVersion: 1,
   auditedRevision: year.revision,
   units: {
-    frequency: 'visible row placements across mobility preparation, session template and speed components, with choices expanded; distinct athlete dates and weeks include gender in the key; not sets, minutes, completions or selector calls',
+    frequency: 'visible row placements across Movement Prep and final day.rows, with choices expanded; typed Speed evidence is validated but never appended; distinct athlete dates and weeks include gender in the key; not sets, minutes, completions or selector calls',
     trace: 'distinct athlete + compiler decisionId pairs after rebuild/restart de-duplication',
     acceptedSelection: 'an attempt-selected identity counted as selected only when the accepted final rows contain that raw catalogue identity on the same athlete-date',
     concentration: 'trainable displayed row placements grouped by exercise movement or conditioning quality; withheld rows excluded',
@@ -344,6 +358,8 @@ const report = {
   catalogueIdentityFrequency: serialiseTallies(catalogueTallies),
   exerciseFrequency: serialiseTallies(exerciseTallies),
   conditioningFrequency: serialiseTallies(conditioningTallies),
+  conditioningVocabulary,
+  athleteRowSummaries,
   zeroPlacements: { count: zeroPlacements.length, classificationCounts: zeroClassificationCounts, rows: zeroPlacements },
   concentration: { exerciseMovement: exerciseConcentration, conditioningQuality: conditioningConcentration },
   energySystem: { weeklyCounts: weeklyEnergySystemCounts,
@@ -353,6 +369,7 @@ const report = {
   remainingStrangeFinalSessions: {
     projectionErrors,
     restartFailures,
+    auditProjectionFindings,
     missingConditioningModalities,
     squatlessLowerSessions,
     silentTeamGymSessions,
@@ -388,6 +405,7 @@ const markdown = [
   '| Display name | Row placements | Distinct athlete-dates | Distinct athlete-weeks |', '|---|---:|---:|---:|',
   ...frequencyLines(report.exerciseFrequency), '',
   '## Conditioning frequency', '',
+  `${conditioningVocabulary.distinctCategories.length} conditioning categories (${conditioningVocabulary.distinctCategories.join(', ')}) and ${conditioningVocabulary.distinctTemplates.length} distinct selected templates. Categories are programme roles; templates are the actual selected identities.`, '',
   '| Display name | Row placements | Distinct athlete-dates | Distinct athlete-weeks |', '|---|---:|---:|---:|',
   ...frequencyLines(report.conditioningFrequency), '',
   '## Every zero-placement catalogue identity', '',
@@ -406,6 +424,7 @@ const markdown = [
   `Reversing every automatic strength, power and conditioning catalogue changed **${orderComparison.differingAthleteDays} / 728 final athlete-days**; same=${orderComparison.same}.`, '',
   '## Remaining strange final sessions', '',
   `- Projection errors: ${strange.projectionErrors.length}; failed restart checks: ${strange.restartFailures.length}.`,
+  `- Duplicate/missing/mismatched Speed projection findings: ${strange.auditProjectionFindings.length}.`,
   `- Conditioning rows missing an explicit modality: ${strange.missingConditioningModalities.length}.`,
   `- Lower Squat sessions without a trainable squat main movement: ${strange.squatlessLowerSessions.length}.`,
   `- Team Training days with gym rows but no explicit Strength part: ${strange.silentTeamGymSessions.length}.`,
@@ -445,6 +464,6 @@ console.log(JSON.stringify({
   output,
 }, null, 2));
 if (!orderComparison.same || orderComparison.differingAthleteDays !== 0 || projectionErrors.length ||
-    restartFailures.length || missingConditioningModalities.length || squatlessLowerSessions.length ||
+    restartFailures.length || auditProjectionFindings.length || missingConditioningModalities.length || squatlessLowerSessions.length ||
     silentTeamGymSessions.length || duplicateQualityOwnershipWeeks.length ||
     energySystemEvidenceFindings.length || energySystemDensityFindings.length) process.exitCode = 1;

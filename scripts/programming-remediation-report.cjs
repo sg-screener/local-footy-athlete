@@ -7,6 +7,8 @@ require(path.join(repo, 'node_modules/sucrase/register'));
 const { consecutiveEnergySystemTriples, validateEnergySystemExposureEvidence,
   validateWeeklyEnergySystemDensity } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
 const { summarizeProgrammingYearRows } = require(path.join(repo, 'src/rules/programmingYearRowSummary'));
+const { finalAthleteFacingAuditRows, programmingAuditProjectionFindings,
+  summarizeProgrammingAuditConditioningVocabulary } = require(path.join(repo, 'src/rules/programmingYearAuditProjection'));
 const root = path.resolve(process.argv[2] ?? 'outputs/programming-remedy-2026-08-28');
 const baselineRoot = process.argv[3] ? path.resolve(process.argv[3]) : null;
 const baselinePath = '/Users/samgeurts/.codex/visualizations/2026/08/26/01a03b69-9022-7041-b909-ca28d5e0d275/year-programs.json';
@@ -49,9 +51,11 @@ for (const world of ['original-partial', 'corrected-commercial']) {
   const data = JSON.parse(fs.readFileSync(path.join(root, world, 'year-programs.json'), 'utf8'));
   for (const athlete of data.athletes) {
     const title = `${athlete.gender === 'male' ? 'Male' : 'Female'} year · ${world === 'original-partial' ? 'original partial kit' : 'corrected commercial gym'}`;
-    const days = daysOf(athlete), rows = days.flatMap(d => flatten([...d.rows, ...(d.speedRows ?? [])]));
+    const days = daysOf(athlete), rows = days.flatMap(finalAthleteFacingAuditRows);
     const warmup = days.flatMap(d => d.warmup ?? []);
     const rowSummary = summarizeProgrammingYearRows(days);
+    const auditProjectionFindings = days.flatMap(programmingAuditProjectionFindings);
+    const conditioningVocabulary = summarizeProgrammingAuditConditioningVocabulary(days);
     const energySystemFindings = athlete.weeks.flatMap(week => week.days.flatMap(day =>
       validateEnergySystemExposureEvidence(day.energySystem).map(finding => ({
         week: week.number, date: day.date, finding,
@@ -81,12 +85,14 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       optionalSessionDays: rowSummary.optionalSessionDays,
       optionalSessionRowPlacements: rowSummary.optionalSessionRows,
       duplicateCanonicalMainSessionRows: rowSummary.duplicateCanonicalRows,
+      auditProjectionFindings,
+      conditioningVocabulary,
       withheldRowPlacements: rows.filter(r => r.withheld).length,
       distinctWithheldAthleteDays: days.filter(d => flatten(d.rows).some(r => r.withheld)).length,
       trainableRowPlacements: rows.filter(r => !r.withheld).length,
       warmupRowPlacements: warmup.length, distinctWarmupDisplayNames: new Set(warmup.map(r => r.name)).size,
-      speedRowPlacements: days.reduce((n, d) => n + (d.speedRows?.length ?? 0), 0),
-      distinctSpeedAthleteDays: days.filter(d => d.speedRows?.length).length,
+      speedEvidenceRowPlacements: days.reduce((n, d) => n + flatten(d.speedRows ?? []).length, 0),
+      distinctSpeedEvidenceAthleteDays: days.filter(d => d.speedRows?.length).length,
       restartChecks: athlete.restarts.length,
       weeklyEnergySystemCounts,
       energySystemFindings,
@@ -105,14 +111,14 @@ for (const world of ['original-partial', 'corrected-commercial']) {
       beforeFrequency: frequency(before), afterFrequency: frequency(athlete), beforeSpacing: spacing(before), afterSpacing: spacing(athlete),
       weeks3and4: [2, 3].map(i => ({ week: i + 1, before: before.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })),
         after: athlete.weeks[i].days.map(d => ({ date: d.date, parts: d.parts })) })) });
-    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rowSummary.totalAthleteVisibleRows} athlete-visible row placements: ${rowSummary.mainSessionRows} main-session rows + ${rowSummary.movementPrepRows} Movement Prep rows, across ${days.length} athlete-days. Optional sessions contribute ${rowSummary.optionalSessionRows} main-session rows across ${rowSummary.optionalSessionDays} days and remain included in their content categories. ${total.withheldRowPlacements} rows are unavailable/Skip; ${total.trainableRowPlacements} are trainable. Power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => { const energy = weeklyEnergySystemCounts.find(row => row.week === w.number); return `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek} · ${energy.appProgrammedEnergySystemDays} app energy-system days (${energy.qualifyingSpeedDays} Speed)</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}${d.speedRows?.length ? `<h4>Speed</h4><ul>${d.speedRows.map(rowHTML).join('')}</ul>` : ''}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Movement Prep</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`; }).join('')}`;
+    const body = `<p>Revision ${esc(data.revision)} · ${data.start}–${data.end} · ${athlete.weeks.length} weeks</p><p>${rowSummary.totalAthleteVisibleRows} athlete-visible row placements: ${rowSummary.mainSessionRows} main-session rows + ${rowSummary.movementPrepRows} Movement Prep rows, across ${days.length} athlete-days. Optional sessions contribute ${rowSummary.optionalSessionRows} main-session rows across ${rowSummary.optionalSessionDays} days and remain included in their content categories. Conditioning: ${conditioningVocabulary.distinctCategories.length} categories and ${conditioningVocabulary.distinctTemplates.length} selected templates. ${total.withheldRowPlacements} rows are unavailable/Skip; ${total.trainableRowPlacements} are trainable. Power rest remains in the domain prescription but is not displayed.</p>${athlete.weeks.map(w => { const energy = weeklyEnergySystemCounts.find(row => row.week === w.number); return `<details><summary>Week ${w.number} · ${w.start} · ${esc(w.phase)} ${w.phaseWeek} · ${energy.appProgrammedEnergySystemDays} app energy-system days (${energy.qualifyingSpeedDays} Speed)</summary><div class="week">${w.days.map(d => `<article><h3>${d.date}</h3><h4>${esc(d.parts?.map(p => p.name).join(' + ') || d.name || 'Rest')}</h4><p>${esc(d.type)} · ${esc(d.tier)}${['optional', 'recovery'].includes(d.tier) ? ' · Optional' : ''}</p>${d.projectionError ? `<p class="red">${esc(d.projectionError)}</p>` : ''}${d.modifiers.map(m => `<p class="note">${esc(m.title)} — ${esc(m.body)}</p>`).join('')}<ul>${d.rows.map(rowHTML).join('')}</ul>${d.warmup?.length ? `<details><summary>Movement Prep</summary><ul>${d.warmup.map(r => `<li>${esc(r.name)} ${esc(r.dose)}</li>`).join('')}</ul></details>` : ''}</article>`).join('')}</div></details>`; }).join('')}`;
     const filename = `${world}-${athlete.gender}-year.html`;
     fs.writeFileSync(path.join(root, filename), page(title, body));
     links.push(`<li><a href="${filename}">${esc(title)}</a></li>`);
     content.push(`<section><h2>${esc(title)}</h2>${body}</section>`);
   }
 }
-const units = 'Frequency: one displayed row (choices expanded), including unavailable/Skip rows, NOT active prescriptions, sets, minutes, completions or selector calls. The original export omitted withholding, so before/after compares displayed rows only. Revised trainable and withheld counts are separate in year-summary.json. Warm-ups and newly exported Speed are excluded from before/after frequency because the original omitted Speed. Names are displayed names, not catalogue IDs. Spacing: adjacent calendar-day pairs sharing an Upper, Lower or Conditioning part, including forced adjacency; this is not an avoidability verdict.';
+const units = 'Frequency: one final day.rows placement (choices expanded), including unavailable/Skip rows, NOT Speed evidence, sets, minutes, completions or selector calls. Movement Prep is reported separately and included in total athlete-visible rows. Names are displayed names, not catalogue IDs. Spacing: adjacent calendar-day pairs sharing an Upper, Lower or Conditioning part, including forced adjacency; this is not an avoidability verdict.';
 fs.writeFileSync(path.join(root, 'year-comparison.html'), page('Programming remediation · four year reports', `<ul>${links.join('')}</ul>${content.join('')}`));
 fs.writeFileSync(path.join(root, 'year-summary.json'), JSON.stringify(totals, null, 2));
 fs.writeFileSync(path.join(root, 'before-after-frequency-spacing.json'), JSON.stringify({ baselinePath:baselineRoot??baselinePath, units, comparisons }, null, 2));
@@ -120,5 +126,5 @@ const count = f => Object.values(f).reduce((n, v) => n + v.displayedRowPlacement
 const lines = comparisons.map(c => `| ${c.world} | ${c.gender} | ${count(c.beforeFrequency)} → ${count(c.afterFrequency)} | ${Object.keys(c.beforeFrequency).length} → ${Object.keys(c.afterFrequency).length} | ${c.beforeSpacing.adjacentCalendarDayPairs} → ${c.afterSpacing.adjacentCalendarDayPairs} |`);
 fs.writeFileSync(path.join(root, 'before-after-summary.md'), `# Before/after programming evidence\n\nBaseline ${comparisons[0].beforeRevision}; revised ${totals[0].revision}. Earlier evidence is unchanged.\n\n${units}\n\n| World | Athlete | Displayed rows (incl. Skip) | Distinct names | Adjacent same-part pairs |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n\nEach world contains 364 athlete-days. Full per-name placements and distinct athlete-days, every adjacency pair and week 3/4 layouts are in before-after-frequency-spacing.json. ${baselineRoot?'Each before/after pair has identical profile, dated action and phase inputs; partial and commercial worlds remain separate.':'Corrected commercial kit is a separate input world, not a source-only comparison.'}\n\n## NOT COVERED\n\nPhysical-device acceptance; original Speed frequency; clinical validation; proof that every adjacent pair is avoidable; onboarding 2 km skip-tap consistency.\n`);
 console.log(JSON.stringify(totals, null, 2));
-if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length ||
+if (totals.length !== 4 || totals.some(t => t.weeks !== 52 || t.projectionErrors.length || t.auditProjectionFindings.length ||
   t.energySystemFindings.length || t.energySystemDensityFindings.length)) process.exitCode = 1;

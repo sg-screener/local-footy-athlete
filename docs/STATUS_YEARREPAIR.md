@@ -131,7 +131,7 @@ remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
 
 ## Current step
 
-Section 5 implementation and verification complete; Section 6 is next.
+Section 6 implementation and verification complete; Section 7 is next.
 
 ## Section 3 — selected tracked lifts are programming anchors
 
@@ -314,11 +314,56 @@ requires a machine modality to appear. Running that suite alone reproduces the
 same failure. Section 5 changes no conditioning selector or modality code and
 does not attribute that inherited red to R-306.
 
+## Section 6 — full-year audit and exporter
+
+The duplicate Speed output reproduced at source. All three annual consumers
+flattened `day.rows` and then concatenated `speedRows`. The final session
+template had already placed the typed Speed component inside `day.rows`, so the
+second array was evidence for the same component, not another athlete-facing
+prescription. This is why Air Bike Accelerations first appeared correctly with
+Air Bike/Effort copy and then reappeared under the separate Speed heading.
+
+Two options were compared. Display-text de-duplication would collapse legitimate
+same-word rows and still permit the Air Bike-to-Running reconstruction because
+copy is not identity. Removing Speed from the genuine final session would break
+the app and the energy-system count. The shared audit projection now returns
+only flattened final `day.rows`; it separately compares typed `speedRows`
+evidence by canonical catalogue identity and modality. A duplicate final row,
+missing final Speed row or modality disagreement is a typed finding. Audit,
+HTML/PDF report and final selection audit all consume this owner.
+
+The fresh exact artifact contains 32 Speed-evidence row placements on 16
+distinct athlete-dates across both genders (the Speed warm-up and work row).
+Appending them would report 5,363 displayed rows. The corrected total is 5,331:
+3,699 final main-session rows plus 1,632 Movement Prep rows. The repaired final
+audit exits zero with no projection, restart, Speed projection, conditioning-
+modality, squatless-lower, silent-team-gym, implausible-dose or density finding.
+The generated HTML contains Air Bike Accelerations four times per athlete-year,
+matching its four final placements rather than duplicating it to eight.
+
+The vocabulary report now distinguishes four categories—Continuous Aerobic,
+Tempo, Hard Intervals and Flush—from actual selected templates. The original
+`49eb2546` artifact reproduces the reviewer correction exactly: four categories
+and 24 distinct templates. The fresh post-R-303 year still has the same four
+categories and has 22 selected templates. `20 s Max Sprint — Small Dose` and
+`30 m Repeats` no longer occur after the canonical Off-season density/receiver
+repair; the audit reports that selection change rather than forcing the old
+denominator or calling four categories “four templates.”
+
+The focused audit-projection gate is 5/5. Its direct source mutation appends
+`speedRows` back into the display owner and immediately fails 2-versus-1. Input
+mutants separately prove duplicate final Speed, Air Bike reconstructed as Run,
+missing final Speed, and categories reported in place of templates. The Section
+5 headline mutation proves Movement Prep omission. The existing compiler-year
+energy evidence mutation proves qualifying Speed cannot be excluded from weekly
+counts. Script syntax, TypeScript and whitespace checks are green. R-307 is born
+guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
+
 ## NOT COVERED
 
-- Sections 6–7 and both addenda are not yet claimed.
-- Section 6 still owns the known duplicate Speed rendering in the legacy annual
-  HTML/PDF exporter; Section 5 counts the canonical final `day.rows` only.
+- Section 7 and both addenda are not yet claimed.
+- Section 7 still owns generation of the final new PDFs and every-page render
+  inspection; Section 6 verifies the corrected HTML/audit projection and counts.
 - Restricted-kit/injury/illness/fatigue annual scenario artifacts have not yet
   been regenerated; their typed legality paths are covered by focused gates and
   remain due in final acceptance.

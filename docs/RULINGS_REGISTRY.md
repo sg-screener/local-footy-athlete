@@ -7702,3 +7702,23 @@ Guard: `LAW-annual-row-report-preserves-intentional-gender-structure` through
 chained `test:programming-hierarchy` (which reaches `test:year-row-summary`
 through the programming-selection release boundary).
 Verification status and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-307** · Final session rows own annual display; Speed evidence is not appended, 2026-09-01.
+
+Owner: yearrepair. The canonical athlete-facing `day.rows` projection is the
+sole row source for annual audit, HTML and PDF output. `speedRows` remains typed
+evidence and must match a final canonical identity and modality, but it is never
+concatenated into display output. Duplicate final identities, missing Speed
+projection, or an evidence/final modality mismatch are red audit findings. An
+Air Bike row therefore cannot reappear as a fabricated Running row.
+
+Annual vocabulary uses two terms. A conditioning category is exactly
+Continuous Aerobic, Tempo, Hard Intervals or Flush. A conditioning template is
+an actual selected authored identity such as Classic 4×4, Fly 30 or Steady
+Blocks. Reports state both sets separately and include Movement Prep in the
+total athlete-visible row headline. Proper Speed continues to earn exactly one
+weekly energy-system credit through the canonical evidence owner.
+
+Guard: `LAW-annual-export-uses-final-rows-once-and-separates-categories-from-templates`
+through chained `test:programming-hierarchy + test:canonical-weekly-compiler`.
+Verification status and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
