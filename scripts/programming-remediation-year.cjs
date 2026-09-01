@@ -73,7 +73,17 @@ replace(
         const clearRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:date}));
         check(clearRestart.ok&&visibleSignature(view(weekStart,date))===afterClear,'travel Clear restart',clearRestart);
         w.events.push({date,label:'Back home - normal equipment and availability'});
-      }`,
+  }`,
+);
+replace(
+  "    const w={number:i+1,start:weekStart,phase,phaseWeek:pw,days:[],events:[]};",
+  `    const acceptedProfileForWeek=useProfileStore.getState().onboardingData;
+    const w={number:i+1,start:weekStart,phase,phaseWeek:pw,
+      acceptedProgrammingInputs:{
+        preferredTrainingDays:[...(acceptedProfileForWeek.preferredTrainingDays??[])],
+        teamTrainingDays:[...(acceptedProfileForWeek.teamTrainingDays??[])],
+        usualGameDay:acceptedProfileForWeek.usualGameDay??acceptedProfileForWeek.gameDay??null,
+      },days:[],events:[]};`,
 );
 replace('async function run(gender) {', `async function run(gender) {
   programmingSelectionTraceAthlete = gender;`);
@@ -101,7 +111,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Full onboarding equipment capabilities asserted before generation', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away and atomic return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
+  corrections: ['Full onboarding equipment capabilities asserted before generation', 'Accepted availability, club nights and usual game day captured per compiled week', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away and atomic return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);
