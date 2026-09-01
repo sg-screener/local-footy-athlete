@@ -416,6 +416,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-automatic-weekly-main-strength-budget',
+    law: 'R-317: automatic programming creates one typed weekly budget before composing sessions. Bilateral squat, bilateral hinge, horizontal push, vertical push, horizontal pull and vertical pull each have one main seat. Separate Lower Squat and Lower Hinge sessions own only their matching bilateral seat; limited-day weeks may consolidate unspent seats without giant sessions. Later compatible work is support. Tracked lifts are preferred once, athlete additions remain allowed, and broad-pattern equality does not trigger refills or veto athlete work.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-317',
+    guard: {
+      state: 'guarded',
+      by: 'test:full-body-balance',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `weeklybudget`. TEST FIRST: 50 real generated profile worlds across both genders, all three phases, 2-6 gym-day answers and club/no-club cases produced 92 automatic weekly main-seat breaches and 220 repeated tracked-lift occurrences. The current final-year male/female artifact had 88 of 104 athlete-weeks with duplicate automatic main slots, 144 dedicated lower-session occurrences carrying the other bilateral slot, and 54 athlete-weeks repeating a tracked lift. TWO OPTIONS COMPARED: filter individual exercise names after selection, or create one typed weekly budget before selection and make distinct session shapes own their semantic seats. The typed owner landed and the old lower/equality sources and tests were replaced. AFTER: the 50-world budget matrix is 5/5, composer 54/54, generated-week 36/36, slot coverage 84/84 and variety 5/5. Mutation and exact annual receipts plus NOT COVERED live in docs/STATUS_WEEKLYBUDGET.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',
@@ -2719,8 +2730,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-repeated-weekly-strength-patterns-use-distinct-stable-seats',
-    law: 'A movement pattern prescribed more than once in one week uses a distinct legal exercise for each occurrence until its same-pattern options are exhausted. The selection remains deterministic and each weekly occurrence stays stable throughout the build block. The durable selection key is movement slot plus zero-based weekly occurrence, never movement slot alone; legacy one-seat rows lift to occurrence zero at read ingress and new writes always carry the occurrence. Across repeated push and pull exposures, the main-lift role alternates between available horizontal and vertical planes so source order cannot make one plane lead every day.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-241 — Sam rejected weeks cloning Bench Press, Back Squat, RDLs and Bulgarian Split Squats while DB Bench Press and Pull-Ups never appeared.',
+    law: 'R-241 as superseded by R-317: when a weekly slot has later supporting occurrences, those support choices use distinct legal, block-stable selection seats until their options are exhausted. The durable key remains movement slot plus zero-based weekly occurrence for stability and legacy ingress. It does not authorise a second automatic weekly main lift or alternate which repeated plane becomes main.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-241, superseded in part by R-317.',
     guard: {
       state: 'guarded',
       by: 'test:full-body-balance',

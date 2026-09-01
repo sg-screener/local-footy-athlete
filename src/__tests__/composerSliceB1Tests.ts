@@ -186,15 +186,14 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
   ok('every composed row is legal under the ONE owner',
     day.rows.every((row) => composedRowIsLegal(row.identity, FULL_GYM)));
   const mains = day.rows.filter((row) => row.role === 'main_strength');
-  ok('each PLANNED pattern gets exactly one main lift',
-    mains.length === 2
-    && JSON.stringify(mains.map((row) => row.mainStrengthPattern).sort()) === '["pull","push"]',
-    JSON.stringify(mains.map((row) => `${row.identity}:${row.mainStrengthPattern}`)));
-  // GUARD (d): the SECOND push row of the day is a supplementary accessory.
-  const secondPush = day.rows.find((row) => row.slot === 'vertical_push');
-  ok('[guard d] a supplementary same-pattern row stays an accessory',
-    secondPush?.role === 'strength_accessory' && secondPush?.mainStrengthPattern === null,
-    `${secondPush?.identity} ${secondPush?.role}`);
+  ok('each authored weekly upper-plane seat gets exactly one main lift',
+    mains.length === 4
+    && JSON.stringify(mains.map((row) => row.slot).sort())
+      === '["horizontal_pull","horizontal_push","vertical_pull","vertical_push"]',
+    JSON.stringify(mains.map((row) => `${row.identity}:${row.slot}`)));
+  ok('[guard d] no upper plane is spent twice inside the day',
+    new Set(mains.map((row) => row.slot)).size === mains.length,
+    JSON.stringify(mains.map((row) => `${row.identity}:${row.slot}`)));
   // A day that never planned a pattern must not main-lift it.
   const pushOnly = composeWeek(inputs({
     plannedDays: [{ ...UPPER_FULL_DAY, strengthIntent: {

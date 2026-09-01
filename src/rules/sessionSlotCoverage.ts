@@ -1,5 +1,5 @@
 /**
- * SAM'S SLOT LAW — a session is the right size when its PATTERNS are covered.
+ * SESSION SLOT LAW — a session is the right size when its AUTHORED slots are covered.
  *
  * HIS RULING, 2026-08-13, verbatim:
  *   *"because the number of exercises is not important the total work being done
@@ -11,11 +11,9 @@
  *   shoulders"*
  *   *"then you can throw power and stuff in there"*
  *
- * AND IT WAS ALREADY HIS BIBLE, `:227`, in fill order: *"heavy squat pattern ->
- * heavy hinge pattern -> single-leg knee-dominant -> single-leg hip-dominant ->
- * accessories. An athlete is better served by a squat and a hinge than by two
- * squats."* He said *"i thought this would have been explained by now"* — it had
- * been, and nothing read it. Registry R-014, census C7.
+ * R-317 supersedes the old assumption that every lower session receives both
+ * bilateral patterns. A compressed combined day still does; separate Lower
+ * Squat and Lower Hinge days own one bilateral main seat each.
  *
  * WHY THIS IS A SEPARATE MODULE AND NOT A COUNTER. `SESSION_SIZE_FLOOR` asks
  * HOW MANY. He has ruled that question void: the count is a proxy, and a proxy
@@ -115,6 +113,8 @@ export type SessionSlot =
  */
 export type SlotDayKind =
   | 'lower'
+  | 'lower_squat'
+  | 'lower_hinge'
   | 'upper_full'
   | 'upper_split_push'
   | 'upper_split_pull'
@@ -131,6 +131,22 @@ export type SlotDayKind =
 
 export const LOWER_SLOTS: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'football_robustness',
+];
+
+/**
+ * R-317: separate lower days own separate bilateral MAIN seats. These are not
+ * two spellings of `LOWER_SLOTS`: keeping the bilateral slot out of the other
+ * day's authored shape means selection can never disguise it as an accessory.
+ * The combined lower shape remains available for a compressed one-day week.
+ */
+export const LOWER_SQUAT_SLOTS: readonly SessionSlot[] = [
+  'squat', 'single_leg_knee', 'single_leg_hip', 'football_robustness',
+  'football_robustness',
+];
+
+export const LOWER_HINGE_SLOTS: readonly SessionSlot[] = [
+  'hinge', 'single_leg_hip', 'single_leg_knee', 'football_robustness',
+  'football_robustness',
 ];
 
 /** A full upper day: both planes, both directions, plus arm/shoulder work. */
@@ -275,6 +291,8 @@ export const FULL_BODY_DAY_SIZE = 7;
 
 export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
   lower: LOWER_SLOTS,
+  lower_squat: LOWER_SQUAT_SLOTS,
+  lower_hinge: LOWER_HINGE_SLOTS,
   upper_full: UPPER_FULL_SLOTS,
   upper_split_push: UPPER_SPLIT_PUSH_SLOTS,
   upper_split_pull: UPPER_SPLIT_PULL_SLOTS,
@@ -295,6 +313,8 @@ export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]
  */
 export const FEMALE_SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
   lower: FEMALE_LOWER_SLOTS,
+  lower_squat: LOWER_SQUAT_SLOTS,
+  lower_hinge: LOWER_HINGE_SLOTS,
   upper_full: FEMALE_UPPER_FULL_SLOTS,
   upper_split_push: FEMALE_UPPER_SPLIT_PUSH_SLOTS,
   upper_split_pull: FEMALE_UPPER_SPLIT_PULL_SLOTS,
@@ -380,7 +400,11 @@ export function slotDayKindForPatterns(
   const push = named.has('push');
   const pull = named.has('pull');
   if (lower && (push || pull)) return null;
-  if (lower) return 'lower';
+  if (lower) {
+    if (named.has('squat') && !named.has('hinge')) return 'lower_squat';
+    if (named.has('hinge') && !named.has('squat')) return 'lower_hinge';
+    return 'lower';
+  }
   if (push && pull) return 'upper_full';
   if (push) return 'upper_split_push';
   if (pull) return 'upper_split_pull';
@@ -393,13 +417,8 @@ export function patternsCompletingLadder(
   const named = new Set<MainStrengthPattern>(intended);
   const admitted = new Set<MainStrengthPattern>(named);
   if (named.size === 0) return admitted;
-  // THE LOWER LADDER IS INDIVISIBLE. `LOWER_SLOTS` opens with squat AND hinge,
-  // and its two single-leg slots are filled by rows that classify as one or the
-  // other, so naming either half of a lower day names the whole ladder.
-  if (named.has('squat') || named.has('hinge')) {
-    admitted.add('squat');
-    admitted.add('hinge');
-  }
+  // R-317: a dedicated lower day admits only its authored bilateral pattern.
+  // A combined lower day already names both and therefore still admits both.
   // THE UPPER LADDER SPLITS, AND THAT IS SAM'S WORDING, NOT A SIMPLIFICATION:
   // *"if you upper body pull or upper body push then it just becomes horizontal
   // movement, vertical movement, more arm work"* — the DIRECTION collapses and
@@ -863,6 +882,8 @@ export function slotDayKindFor(sessionText: string | undefined): SlotDayKind | n
     inferStrengthMovementPatterns: (text: string | undefined) => readonly string[];
   };
   const patterns = inferStrengthMovementPatterns(sessionText);
+  if (patterns.includes('squat') && !patterns.includes('hinge')) return 'lower_squat';
+  if (patterns.includes('hinge') && !patterns.includes('squat')) return 'lower_hinge';
   if (patterns.includes('squat') || patterns.includes('hinge')) return 'lower';
   const push = patterns.includes('push');
   const pull = patterns.includes('pull');

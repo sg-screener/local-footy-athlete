@@ -1,5 +1,5 @@
 /**
- * R-241 — repeated weekly strength patterns use distinct, block-stable seats.
+ * R-317 — each weekly main seat is spent once; later compatible work supports it.
  *
  * The athlete-facing failure was a three-day week with Bench Press, Back Squat
  * and RDLs each prescribed twice while DB Bench Press and Pull-Ups never
@@ -89,6 +89,7 @@ interface WeeklyRow {
   readonly session: string;
   readonly slot: string;
   readonly name: string;
+  readonly role: string;
 }
 
 function strengthRows(program: TrainingProgram, cycleIndex = 0): WeeklyRow[] {
@@ -102,6 +103,7 @@ function strengthRows(program: TrainingProgram, cycleIndex = 0): WeeklyRow[] {
         session: workout.name,
         slot: String(row.section18Evidence?.slot ?? ''),
         name: String(row.exercise?.name ?? ''),
+        role: String(row.section18Evidence?.role ?? ''),
       })));
 }
 
@@ -168,7 +170,7 @@ run('a repeated weekly slot does not prescribe the same exercise twice', () => {
       + collisions.slice(0, 30).join('\n'));
 });
 
-run('a repeated upper pattern uses both a main lift and a real variation', () => {
+run('later work in a used upper plane is typed support and a real variation', () => {
   const world = worlds.find((entry) => entry.id === 'male/Pre-season/4d/noclub');
   assert(world, 'the named four-day control world was not generated');
   const names = world.rows.map((row) => row.name);
@@ -176,10 +178,10 @@ run('a repeated upper pattern uses both a main lift and a real variation', () =>
   assert(horizontalPresses.length >= 2
       && new Set(horizontalPresses.map((row) => row.name)).size >= 2,
   `horizontal presses did not vary: ${names.join(' | ')}`);
-  assert(horizontalPresses.some((row) => /\bDB\b|Dumbbell/i.test(row.name)),
-    `no dumbbell press variation in ${names.join(' | ')}`);
-  assert(world.rows.some((row) => row.slot === 'vertical_pull'),
-    `no vertical-pull variation in ${names.join(' | ')}`);
+  assert(horizontalPresses.filter((row) => row.role === 'main_strength').length === 1,
+    `horizontal push main seat was not spent exactly once: ${JSON.stringify(horizontalPresses)}`);
+  assert(horizontalPresses.some((row) => row.role === 'strength_accessory'),
+    `later horizontal push was not support work: ${JSON.stringify(horizontalPresses)}`);
 });
 
 run('each weekly seat stays stable across all four weeks of the block', () => {

@@ -1,10 +1,9 @@
 /**
- * SAM'S SLOT LAW, HELD (R-014, 2026-08-13).
+ * SESSION SHAPES, HELD (R-014 as superseded by R-317).
  *
- * His acceptance criteria, verbatim from the order: *"a new cell per slot: a
- * lower day with no hinge is RED, a lower day with two squats is RED, an upper
- * day missing vertical is RED. Sam's sentence is the assertion — nothing else
- * needs authoring."* These are those cells.
+ * A combined lower day still covers squat and hinge. Dedicated Lower Squat and
+ * Lower Hinge days deliberately do not: the week owns those two bilateral
+ * seats and assigns one to each day.
  *
  * THE SESSIONS HERE ARE SYNTHETIC ON PURPOSE. The rule must be provable
  * independently of what the generator happens to emit this week — a cell that
@@ -15,7 +14,9 @@
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
+  LOWER_HINGE_SLOTS,
   LOWER_SLOTS,
+  LOWER_SQUAT_SLOTS,
   UPPER_FULL_SLOTS,
   UPPER_SPLIT_PULL_SLOTS,
   UPPER_SPLIT_PUSH_SLOTS,
@@ -76,11 +77,11 @@ console.log('\n[1] The oracle reads real exercises — non-vacuity first');
       && !slotsFilledByRow(row('Walking Lunges')).includes('squat'));
 }
 
-console.log('\n[2] HIS ACCEPTANCE CRITERIA, one cell each');
+console.log('\n[2] Combined-lower and upper-full shapes remain exact');
 {
-  // "a lower day with no hinge is RED"
+  // A compressed/combined lower day still owns both bilateral seats.
   const noHinge = [row('Back Squat'), row('Walking Lunges'), row('Leg Extension')];
-  ok('[SAM] a lower day with NO HINGE names the missing slot',
+  ok('a COMBINED lower day with no hinge names the missing slot',
     sessionSlotCoverage(noHinge, 'lower').missing.includes('hinge'),
     JSON.stringify(sessionSlotCoverage(noHinge, 'lower').missing));
 
@@ -88,16 +89,16 @@ console.log('\n[2] HIS ACCEPTANCE CRITERIA, one cell each');
   // better served by a squat and a hinge than by two squats.
   const twoSquats = [row('Back Squat'), row('Front Squat'), row('Leg Extension')];
   const twoSquatCoverage = sessionSlotCoverage(twoSquats, 'lower');
-  ok('[SAM] a lower day with TWO SQUATS reports the doubled slot',
+  ok('a COMBINED lower day with two squats reports the doubled slot',
     twoSquatCoverage.duplicated.includes('squat'),
     JSON.stringify(twoSquatCoverage.duplicated));
-  ok('[SAM] ...and that same day is still missing its hinge',
+  ok('that COMBINED day is still missing its hinge',
     twoSquatCoverage.missing.includes('hinge'));
 
   // "an upper day missing vertical is RED"
   const noVertical = [row('Bench Press'), row('Barbell Row'), row('Bicep Curls')];
   const upper = sessionSlotCoverage(noVertical, 'upper_full');
-  ok('[SAM] an upper day with NO VERTICAL names both vertical slots',
+  ok('a FULL upper day with no vertical names both vertical slots',
     upper.missing.includes('vertical_push') && upper.missing.includes('vertical_pull'),
     JSON.stringify(upper.missing));
 }
@@ -194,8 +195,9 @@ console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred')
   // sessionNaming.inferStrengthMovementPatterns already answers "what movement
   // is this session about". A second regex here would be a second
   // representation of a question the app has already answered once.
-  ok('a squat day and a hinge day are both LOWER',
-    slotDayKindFor('Lower Squat') === 'lower' && slotDayKindFor('Lower Hinge') === 'lower');
+  ok('dedicated squat and hinge names keep distinct lower purposes',
+    slotDayKindFor('Lower Squat') === 'lower_squat'
+      && slotDayKindFor('Lower Hinge') === 'lower_hinge');
   // AND THE SPLIT CARRIES ITS DIRECTION. Judging a pull day against push slots
   // made every Upper Pull day unsatisfiable — 12 of 20 misses in a 5-world sweep
   // were this oracle, not the app.
@@ -259,47 +261,43 @@ console.log('\n[6] A unilateral lift fills its SINGLE-LEG slot, not the bilatera
     sessionSlotCoverage([row('Back Squat'), row('Single Leg RDL')], 'lower').missing.includes('hinge'));
 }
 
-console.log('\n[7] THE TWO PRODUCTION FALLBACKS, judged by his own rule');
+console.log('\n[7] Dedicated lower shapes and the compressed combined shape');
 {
-  // These are the exact lists `defaultProgram.ts` returns. The squat one is LIVE
-  // — measured firing 6 times across 5 generated worlds.
-  const fallback = (names: readonly string[]) => sessionSlotCoverage(names.map((n) => row(n)), 'lower');
+  const squat = (names: readonly string[]) =>
+    sessionSlotCoverage(names.map((n) => row(n)), 'lower_squat');
+  const hinge = (names: readonly string[]) =>
+    sessionSlotCoverage(names.map((n) => row(n)), 'lower_hinge');
+  const combined = (names: readonly string[]) =>
+    sessionSlotCoverage(names.map((n) => row(n)), 'lower');
 
-  const oldSquat = fallback(['Back Squat', 'Reverse Lunges', 'Leg Extension']);
-  ok('[:227] the OLD squat fallback had NO HINGE',
-    oldSquat.missing.includes('hinge') && oldSquat.missing.includes('single_leg_hip'),
-    JSON.stringify(oldSquat.missing));
-  const oldHinge = fallback(['RDLs', 'Hip Thrusts', 'Hamstring Curl']);
-  ok('[:227] the OLD hinge fallback was TWO HINGES — his exact "two squats" shape',
-    oldHinge.duplicated.includes('hinge') && oldHinge.missing.includes('squat'),
-    `dup=${JSON.stringify(oldHinge.duplicated)} missing=${JSON.stringify(oldHinge.missing)}`);
-
-  // AND THE REPLACEMENTS COVER THE BODY. If either of these ever reds, a
-  // fallback has drifted back off his fill order.
-  const newSquat = fallback(['Back Squat', 'RDLs', 'Reverse Lunges', 'Single Leg RDL', 'Leg Extension']);
-  ok('[:227] the squat-led fallback now covers every slot, none doubled',
-    newSquat.missing.length === 0 && newSquat.duplicated.length === 0,
-    `missing=${JSON.stringify(newSquat.missing)} dup=${JSON.stringify(newSquat.duplicated)}`);
-  const newHinge = fallback(['RDLs', 'Back Squat', 'Bulgarian Split Squats', 'Single Leg RDL', 'Pallof Press']);
-  ok('[:227] the hinge-led fallback now covers every slot, none doubled',
-    newHinge.missing.length === 0 && newHinge.duplicated.length === 0,
-    `missing=${JSON.stringify(newHinge.missing)} dup=${JSON.stringify(newHinge.duplicated)}`);
+  ok('the dedicated squat shape does not request a bilateral hinge',
+    !LOWER_SQUAT_SLOTS.includes('hinge'));
+  ok('the dedicated hinge shape does not request a bilateral squat',
+    !LOWER_HINGE_SLOTS.includes('squat'));
+  const completeSquat = squat(['Back Squat', 'Reverse Lunges', 'Single Leg RDL']);
+  ok('a dedicated squat day is complete without a bilateral hinge',
+    completeSquat.missing.length === 0,
+    JSON.stringify(completeSquat.missing));
+  const completeHinge = hinge(['RDLs', 'Single Leg RDL', 'Bulgarian Split Squats']);
+  ok('a dedicated hinge day is complete without a bilateral squat',
+    completeHinge.missing.length === 0,
+    JSON.stringify(completeHinge.missing));
 
   // ── AND THE COMBINED DAYS, WHICH WERE THE LAST 3-ROW LOWER FALLBACK ──────
   //
   // **`Lower Body Strength` is the commonest strength day the app builds — 20
   // of 94 in a 6-world x 4-week sweep — and it shipped three rows.** Naming BOTH
   // lower patterns had somehow bought FEWER of Sam's slots than naming one.
-  const oldCombinedLower = fallback(['Back Squat', 'RDLs', 'Pallof Press']);
+  const oldCombinedLower = combined(['Back Squat', 'RDLs', 'Pallof Press']);
   ok('[:227] the OLD combined-lower fallback had NEITHER single-leg slot',
     oldCombinedLower.missing.includes('single_leg_knee')
       && oldCombinedLower.missing.includes('single_leg_hip'),
     JSON.stringify(oldCombinedLower.missing));
-  const newCombinedSquatLed = fallback(['Back Squat', 'RDLs', 'Reverse Lunges', 'Single Leg RDL', 'Pallof Press']);
+  const newCombinedSquatLed = combined(['Back Squat', 'RDLs', 'Reverse Lunges', 'Single Leg RDL', 'Pallof Press']);
   ok('[:227] the squat-led COMBINED fallback covers every slot, none doubled',
     newCombinedSquatLed.missing.length === 0 && newCombinedSquatLed.duplicated.length === 0,
     `missing=${JSON.stringify(newCombinedSquatLed.missing)} dup=${JSON.stringify(newCombinedSquatLed.duplicated)}`);
-  const newCombinedHingeLed = fallback(['RDLs', 'Goblet Squat', 'Bulgarian Split Squats', 'Single Leg RDL', 'Pallof Press']);
+  const newCombinedHingeLed = combined(['RDLs', 'Goblet Squat', 'Bulgarian Split Squats', 'Single Leg RDL', 'Pallof Press']);
   ok('[:227] the hinge-led COMBINED fallback covers every slot, none doubled',
     newCombinedHingeLed.missing.length === 0 && newCombinedHingeLed.duplicated.length === 0,
     `missing=${JSON.stringify(newCombinedHingeLed.missing)} dup=${JSON.stringify(newCombinedHingeLed.duplicated)}`);
@@ -408,10 +406,10 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   // THE FIX ITSELF. Measured before it: `DRIFT-DROP "Deadlift" pattern=hinge
   // intended=[squat] workout="Lower Squat"` — one line in the away suite, zero
   // across the whole QA corpus. After it, that line is gone.
-  ok('a squat-led day ADMITS a hinge — :227, "a squat and a hinge, not two squats"',
-    admits(['squat'], 'hinge'));
-  ok('a hinge-led day ADMITS a squat — the ladder is indivisible in both directions',
-    admits(['hinge'], 'squat'));
+  ok('a dedicated squat day refuses a bilateral hinge',
+    !admits(['squat'], 'hinge'));
+  ok('a dedicated hinge day refuses a bilateral squat',
+    !admits(['hinge'], 'squat'));
 
   // AND THE GUARD IS NOT WEAKENED, which is the half that makes this safe. The
   // order was explicit: do not delete the drift guard.
@@ -429,8 +427,10 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
 
   // A MIXED DAY TAKES THE UNION OF THE HALVES IT NAMES, and the pull answer is
   // what proves it is a union rather than "anything goes once two are named".
-  ok('a squat+push day admits a hinge', admits(['squat', 'push'], 'hinge'));
+  ok('a squat+push day does not invent an unplanned hinge', !admits(['squat', 'push'], 'hinge'));
   ok('a squat+push day still refuses a pull', !admits(['squat', 'push'], 'pull'));
+  ok('a combined lower day admits both authored patterns',
+    admits(['squat', 'hinge'], 'squat') && admits(['squat', 'hinge'], 'hinge'));
 
   // A PULL DAY CAN NOW COVER ITS LADDER AT ALL — the cell that would have caught
   // the one-direction constant, and which did not exist when it shipped.
@@ -484,10 +484,10 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   // This is what lets the canonicaliser ask "does this accessory belong on THIS
   // day" — the check that was missing when a day named `Lower Squat` shipped
   // Bicep Curls, Tricep Pushdowns and Face Pulls alongside one Back Squat.
-  ok('a squat-led plan entry is a LOWER day',
-    slotDayKindForPatterns(['squat'] as any) === 'lower');
-  ok('a hinge-led plan entry is a LOWER day',
-    slotDayKindForPatterns(['hinge'] as any) === 'lower');
+  ok('a squat-led plan entry is a dedicated SQUAT day',
+    slotDayKindForPatterns(['squat'] as any) === 'lower_squat');
+  ok('a hinge-led plan entry is a dedicated HINGE day',
+    slotDayKindForPatterns(['hinge'] as any) === 'lower_hinge');
   ok('push+pull is a FULL upper day',
     slotDayKindForPatterns(['push', 'pull'] as any) === 'upper_full');
   ok('pull alone is a PULL split',

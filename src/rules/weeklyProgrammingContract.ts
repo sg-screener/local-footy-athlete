@@ -119,21 +119,8 @@ export const REQUIRED_PATTERNS: readonly MovementPattern[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
 ];
 
-/**
- * WC-021. Paired-pattern balance, measured across the WEEK and not inside a
- * session. *"a second vertical pull requires a second vertical push. A second
- * squat requires a second hinge."*
- */
-export const PATTERN_PARTNER: Readonly<Record<MovementPattern, MovementPattern>> = {
-  horizontal_push: 'horizontal_pull',
-  horizontal_pull: 'horizontal_push',
-  vertical_push: 'vertical_pull',
-  vertical_pull: 'vertical_push',
-  squat: 'hinge',
-  hinge: 'squat',
-  single_leg_knee: 'single_leg_hip',
-  single_leg_hip: 'single_leg_knee',
-};
+/** WC-021 / R-317. An automatic weekly MAIN seat may be spent once. */
+export const AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE = 1;
 
 /**
  * WC-022. The PLANE a pattern belongs to, for the consecutive-day rule (§3,
@@ -675,8 +662,8 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
     statement: 'Across the complete week, aim for at least one meaningful exposure '
       + 'in each of the eight named patterns.' },
   { id: 'WC-021', provenance: '§2 / §3 Lower balance',
-    statement: 'Additional exposures remain balanced with their partner, measured '
-      + 'across the whole week, not necessarily inside each session.' },
+    statement: 'Each automatic bilateral squat, bilateral hinge and upper-plane '
+      + 'main seat may be spent once per week; later compatible work is support.' },
   { id: 'WC-022', provenance: '§3 Repeated patterns / decision 17',
     statement: 'Do not repeat the same movement plane on consecutive days. '
       + 'Different planes in the same broad family may follow each other.' },

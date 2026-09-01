@@ -225,7 +225,7 @@ Canonical order inside a session: power -> main -> secondary -> accessories -> f
 Midline and prehab sit after the accessories.
 EXCEPTION - contrast training. A heavy lift may superset with an explosive lift of the SAME pattern (heavy bench -> explosive push-up, heavy squat -> vertical jump). The pairing sits at the MAIN slot; it is not appended to the end of the session. Contrast is allowed only for athletes at training age `consistent` or `advanced`. A `developing` athlete does not receive contrast work.
 ONE MAIN PER PATTERN PER SESSION. Never two heavy lifts of the same movement pattern in one session. Deadlift + RDL is two heavy hinges and is illegal. Box squat + back squat is two heavy squats and is illegal. A second heavy lift in a session must be a different pattern.
-Lower-session heavy-slot ladder, in fill order: heavy squat pattern -> heavy hinge pattern -> single-leg knee-dominant -> single-leg hip-dominant -> accessories. An athlete is better served by a squat and a hinge than by two squats; if both are present, think single-leg knee-dominant and single-leg hip-dominant, then accessories.
+R-317 supersedes the old assumption that this makes every lower session request both bilateral mains. A combined lower session in a compressed one- or two-gym-day week may use: bilateral squat -> bilateral hinge -> single-leg knee -> single-leg hip -> support. When separate `Lower Squat` and `Lower Hinge` sessions exist, `Lower Squat` owns the week's bilateral squat and does not request a bilateral hinge; `Lower Hinge` owns the week's bilateral hinge and does not request a bilateral squat. Both use unilateral, hamstring, calf, groin, trunk, carry, power, robustness and prehab support as appropriate.
 The session is ONE list. There are no separate boxes for midline/support work, recovery add-ons or the power block - every exercise renders in the single session list carrying a role badge: power, main lift, accessory, midline, prehab, conditioning. A second heavy lift reuses the Main Lift badge.
 One optional "Mobility & Prehab flow" sits at the TOP of the session, collapsed. It includes session-appropriate primers, e.g. external rotations on upper days. The flow is NEVER load-bearing: the app assumes athletes skip it, so any prehab that actually matters lives in the session itself, not in the flow.
 Team training renders as a non-badged banner. Recovery days keep their own simple template. On a combined day, conditioning is one badged row that expands in place; on a conditioning-only day the rows follow phase order, and there is no flow.
@@ -4703,7 +4703,7 @@ Whole-week repair and derived-session lifecycle
 * The currently accepted effective week plus the proposed mutation enters one deterministic whole-week repair owner. Fixture, availability, readiness, injury, equipment, Coach edit, Repeat Week, rebuild, rollover, future activation and rehydration paths do not own separate repair or lifecycle policies.
 * The repair unit is a rolling dependency horizon, not an isolated Monday–Sunday container. Start with the mutation week and only the adjacent G-relative weeks it can affect, then close over any source, target or restoration week named by persisted provenance. Do not blindly regenerate three full weeks.
 * Every week in that closure is composed from accepted base, overlay, override, calendar and constraint state before mutation. The accepted composed workouts are the next mutation's structural source; athlete-visible gap fill and placement are evaluation-only. Publication may carry forward an identity-matched accepted prescription and must persist dependency-owned derived work, but it must not turn unrelated visible-only fill into canonical source truth.
-* Every system-derived session or component persists typed provenance recording authorship, origin, trigger/contract signature, target metric, supplied credit, originating fixture/date, valid-while and invalidation conditions, replacement/relocation history and source `planEntryId` where applicable. Supported origins include fixture replacement, contract-shortfall repair, required-core relocation, pattern-balance repair, rest-distribution repair, safety substitution, equipment substitution and optional planner addition.
+* Every system-derived session or component persists typed provenance recording authorship, origin, trigger/contract signature, target metric, supplied credit, originating fixture/date, valid-while and invalidation conditions, replacement/relocation history and source `planEntryId` where applicable. Supported origins include fixture replacement, contract-shortfall repair, required-core relocation, weekly-main-seat allocation, rest-distribution repair, safety substitution, equipment substitution and optional planner addition.
 * Fixture-derived provenance additionally records the exact source fixture/date, target session/date, whether the dependency crosses a week boundary, the exact displaced accepted session, and its restoration target. G+1 recovery, G-1/G-2 projection, temporary required-core relocation and temporary rest creation all inherit that fixture dependency.
 * Derived work exists only while its typed validity conditions remain true. The repair owner expires or downgrades obsolete system work before preservation scoring, then recalculates the target ledger. A fixture-replacement top-up therefore expires when a qualifying game/practice-match returns and supplies that credit; an untyped identifier prefix is never sufficient lifecycle evidence.
 * Expiring a derived replacement restores its recorded displaced session when that session remains safe and valid. A temporary rest placeholder must not erase a recoverable base session, and a temporary relocation must expire with the dependency that required it.
@@ -4723,7 +4723,11 @@ Field-action power credit
 
 D. Strength-pattern rules
 
-* Default to push, pull, squat and hinge in every healthy pre-season, mid/late off-season and in-season week.
+* Automatic programming decides one typed weekly strength budget before composing sessions. A healthy week generally has one bilateral main squat, one bilateral main hinge, one horizontal and one vertical main push, and one horizontal and one vertical main pull.
+* Those six seats are weekly allowances, not repeat requests. Once an automatic main seat is spent, later compatible work is secondary, unilateral, accessory, robustness or prehab work.
+* `Lower Squat` owns the bilateral squat and `Lower Hinge` owns the bilateral hinge when both sessions exist. A dedicated hinge day contains no bilateral squat-family row; a dedicated squat day contains no bilateral hinge row. One- and two-gym-day weeks may consolidate several unspent seats without exceeding the seven-row strength-session ceiling.
+* Back Squat, RDL, Bench Press and Pull-Ups, plus athlete-selected alternatives, are preferred for their one weekly main seat. Tracking and block stability do not pin them into every compatible session.
+* Athlete-added work is permitted outside the automatic budget. It does not make the compiler refill or duplicate automatic work and is not rejected merely because the automatic seat was already spent.
 * If a pattern is removed earlier in the week, modify a later session to restore it where safe.
 * Rolling two-week balance is only a fallback when game spacing, availability, readiness or injury genuinely prevents weekly coverage.
 * Three-session weeks may use full-body sessions to cover several patterns.
@@ -4732,9 +4736,7 @@ D. Strength-pattern rules
 * A session receives credit for multiple patterns only when it contains a meaningful main-strength contribution to each credited pattern.
 * Examples of valid multi-pattern credit include squat + press + row for squat/push/pull, squat + RDL for squat/hinge, and bench + pull-ups for push/pull.
 * Token accessory work does not earn full pattern credit. Injury-prohibited patterns cannot receive credit.
-* Across each healthy week, default to equal or near-equal numbers of meaningful main lifts for push, pull, squat and hinge.
-* Full-body sessions must not repeatedly overrepresent one pattern while underdosing another. Three full-body sessions with several push main lifts but only one meaningful pull main lift across the week are not a valid default balance.
-* Any intentional imbalance must be justified by season phase, athlete goal, injury, readiness, availability or another explicit constraint.
+* Equal or near-equal broad-pattern counts are not a programming target. The typed six-seat weekly budget is the automatic ceiling; supporting work may make broad counts differ without authorising another main seat.
 
 E. Readiness, injury, equipment and invalid weeks
 
@@ -4851,7 +4853,7 @@ All five previously open coaching-policy questions are resolved in this section:
 * Practice-match strength, conditioning, sprint, power, recovery and hard-day rules are defined in Sections B, C, G and H.
 * Bye-recovery conditioning across 0, 1 and 2+ TT is defined in Sections B and C.
 * Off-season subphase ownership, the first-block deload exception and the user-owned transition to Pre-season are defined in Sections B and F.
-* Meaningful multi-pattern credit and equal or near-equal weekly main-lift balance are defined in Section D.
+* Meaningful multi-pattern credit and the one-per-week automatic main-seat budget are defined in Section D.
 * Field actions receive no automatic formal power-primer credit; power remains an app category with no required numeric weekly minimum.
 * Fixture days are conditionally occupied rather than permanently unavailable. Removal/movement releases the old fixture day under the typed availability rule in Section C without mutating stored athlete preferences.
 

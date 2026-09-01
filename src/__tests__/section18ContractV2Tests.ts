@@ -919,8 +919,9 @@ property('P8 reduced frequency cannot be exceeded silently',
     strength(1, ['squat', 'hinge', 'push', 'pull'], { repeated: { push: 4 } }),
     strength(3, ['squat', 'hinge', 'pull']),
   ]);
-  property('P9 balance uses meaningful main-lift counts',
-    result.ledger.strengthPatterns.meaningfulMainLiftCount.push === 4 && has(result, 'pattern_imbalance'));
+  property('P9 athlete-visible broad counts do not trigger the retired equality veto',
+    result.ledger.strengthPatterns.meaningfulMainLiftCount.push === 4
+      && !has(result, 'pattern_imbalance'));
 }
 {
   const c = contract('in_season_bye_build', {

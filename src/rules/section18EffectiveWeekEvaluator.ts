@@ -1470,33 +1470,11 @@ export function evaluateSection18EffectiveWeek(
       });
     }
   }
-  if (patternCoverageSelected &&
-      contract.strengthPatterns.balanceExpectation === 'equal_or_near_equal' &&
-      !contract.strengthPatterns.intentionalImbalanceReason) {
-    const relevant = contract.strengthPatterns.requiredSafePatterns.map((pattern) =>
-      ledger.strengthPatterns.meaningfulMainLiftCount[pattern]);
-    if (relevant.length > 1 && Math.max(...relevant) - Math.min(...relevant) >
-      contract.strengthPatterns.permittedCountDifference) {
-      addFinding(findings, {
-        code: 'pattern_imbalance',
-        // THE TWIN READS THE SAME BOUNDARY (§18 ownership reassessment
-        // 2026-08-05, defect D2; approved by Sam). Balance is a whole-week
-        // authoring expectation, exactly like the restoration rule directly
-        // above, and over a governed remainder it fails for exactly the same
-        // honest reason: the first days are immutable history and a reduced
-        // remainder may be unable to even them out. This rule alone counted the
-        // whole week and blocked — so two statements about one fact ("this
-        // remainder could not cover every pattern") disagreed, and the blocking
-        // half refused an athlete's report over elapsed days.
-        severity: partialWeekGoverned ? 'advisory' : 'blocking',
-        domain: 'strength_patterns',
-        expected: `count difference <= ${contract.strengthPatterns.permittedCountDifference}`,
-        actual: ledger.strengthPatterns.meaningfulMainLiftCount,
-        detail: 'Meaningful main-lift counts are not equal or near-equal and no reason authorises the imbalance.',
-        evidence: [],
-      });
-    }
-  }
+  // R-317: broad-pattern equality was the rule that encouraged extra heavy
+  // work and rejected athlete-authored additions. Automatic composition is now
+  // guarded by six typed weekly main seats before this evaluator runs. This
+  // boundary keeps coverage/safety checks, but does not refill or veto a week
+  // merely because broad pattern totals differ.
 
   const primers = ledger.power.achievedPrimerCount;
   // Ineligibility governs the remainder: a primer the athlete already

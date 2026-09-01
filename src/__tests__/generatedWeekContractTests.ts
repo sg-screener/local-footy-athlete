@@ -53,8 +53,7 @@ function contract(over: Partial<GeneratedWeekContract['targets']> = {}): Generat
       hardDayPermittedMaximum: 7,
       requiredSafePatterns: ['squat', 'hinge'],
       prohibitedPatterns: [],
-      balanceExpected: false,
-      permittedCountDifference: 1,
+      weeklyMainSeatCeilingExpected: true,
       trainingPaused: false,
       prohibitedSprintHighSpeed: false,
       prohibitedPowerFamilies: [],
@@ -72,6 +71,7 @@ function mainLift(pattern: string, provenance = 'composer_declaration'): unknown
     exercise: { id: 'e', name: `Lift ${pattern} ${rowSeq}` },
     section18Evidence: {
       protocolVersion: 1, role: 'main_strength',
+      slot: pattern === 'squat' || pattern === 'hinge' ? pattern : null,
       strengthPattern: pattern, mainStrengthPattern: pattern, provenance,
     },
   };
@@ -222,11 +222,11 @@ console.log('\n[clauses] Each clause accepts what satisfies it and REDS what doe
     && disclosed.findings.length === 0,
     `${disclosed.verdict} / ${disclosed.findings.length} findings`);
 
-  // pattern_balance
+  // pattern_balance — the historical id now guards the weekly-seat ceiling.
   const lop = [day(1, [mainLift('squat'), mainLift('squat'), mainLift('squat')]),
     day(3, [mainLift('hinge')])];
-  const r5 = verdictOf(lop, contract({ balanceExpected: true }));
-  ok('[pattern_balance] RED when main lifts are lopsided beyond the permitted difference',
+  const r5 = verdictOf(lop);
+  ok('[pattern_balance] RED when one automatic weekly main seat is spent twice',
     r5.verdict === 'refused' && r5.clauses.includes('pattern_balance'),
     r5.clauses.join(','));
 

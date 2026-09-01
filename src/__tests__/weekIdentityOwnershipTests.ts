@@ -382,8 +382,8 @@ run('A1 an impossible week throws for a restoration and publishes for a forward 
   assert(verdict.status === 'impossible',
     `the fixture is wrong, not the rule: the gateway returned ${verdict.status} `
     + `(blockers ${JSON.stringify(blockers)})`);
-  assert(blockers.includes('pattern_imbalance'),
-    'the fixture must fail on the coordinate Sam\'s device hit — a squat-only week — '
+  assert(blockers.includes('pattern_restore_failure'),
+    'the fixture must fail because required safe patterns are absent — '
     + `and it failed on ${JSON.stringify(blockers)} instead`);
 
   let restorationError: unknown = null;

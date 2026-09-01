@@ -210,7 +210,7 @@ const MUTATIONS: Mutation[] = [
     edits: [c("clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.75,\n    runningRequired: false, sprintExposureRequired: false, maxRestDays: 3,",
       "clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.95,\n    runningRequired: true, sprintExposureRequired: false, maxRestDays: 1,")] },
   { name: 'M33 a pattern loses its partner',
-    breaks: 'WC-020 / WC-021 pattern set and pairing',
+    breaks: 'WC-020 / WC-021 pattern coverage and weekly main-seat allowance',
     edits: [c("  single_leg_knee: 'single_leg_hip',\n  single_leg_hip: 'single_leg_knee',\n};",
       "  single_leg_knee: 'squat',\n  single_leg_hip: 'single_leg_knee',\n};")] },
   { name: 'M34 the daily movement ceiling and conditioning cap move',

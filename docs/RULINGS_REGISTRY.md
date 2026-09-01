@@ -6329,6 +6329,10 @@ seat field.
 **Search words:** boring program, strength variety, top of list, repeated bench,
 repeated squat, repeated RDL, DB bench, pull ups, weekly exercise seat,
 horizontal always first.
+· `SUPERSEDED IN PART BY R-317` — distinct stored occurrence seats remain useful
+for supporting exercise stability and variety, but R-241 no longer authorises a
+second automatic weekly main lift in the same slot or alternating which repeated
+plane becomes main.
 · `BUILT` — `test:weekly-strength-variety` drives 40 real full-gym profile
 worlds across both genders, all three phases and 3/4/5/6 gym-day answers. Its
 test-first state counted 64 repeated weekly exercise identities across 20 of 40
@@ -7939,3 +7943,28 @@ Guard: `LAW-seated-good-morning-is-one-variant-aware-identity` through chained
 `test:exercise-canonicalisation + test:programming-selection-release`.
 Verification status, mutation receipt and NOT COVERED:
 `docs/STATUS_YEARREPAIR.md`.
+
+**R-317** · Automatic strength programming spends each weekly main seat once,
+2026-09-01.
+
+Owner: weeklybudget. A healthy automatically programmed week generally owns six
+main seats: bilateral squat, bilateral hinge, horizontal push, vertical push,
+horizontal pull and vertical pull. They are weekly allowances. Separate Lower
+Squat and Lower Hinge sessions own their matching bilateral seat and do not
+borrow the other. Limited one- or two-day weeks may consolidate unspent seats
+without creating a giant session. Once a seat is spent, later compatible work
+is typed support rather than another main lift.
+
+Tracked Back Squat, RDL, Bench Press, Pull-Ups and athlete-selected alternatives
+are preferred for their one matching weekly main seat, not copied into every
+compatible occurrence. Block stability remains for the selected main and
+supporting seats without freezing the same whole session skeleton across the
+year. Athlete-added sessions stay outside this automatic budget and do not
+trigger automatic refills or a broad-count equality veto.
+
+This supersedes the every-lower-day squat-plus-hinge assumption, equal or
+near-equal broad-pattern counts, and the main-lift part of R-241's repeated-seat
+rule. Guard: `LAW-automatic-weekly-main-strength-budget` through chained
+`test:full-body-balance`, which invokes `test:weekly-strength-budget` and
+`test:weekly-strength-variety`. Full red-first, mutation, annual audit and NOT
+COVERED evidence: `docs/STATUS_WEEKLYBUDGET.md`.

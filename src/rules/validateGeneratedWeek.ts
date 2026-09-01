@@ -43,6 +43,11 @@ import type { Workout, WorkoutExercise } from '../types/domain';
 import { hasQualifyingSpeedConditioning } from './conditioningCredit';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import type { GeneratedWeekClauseId, GeneratedWeekContract } from './generatedWeekContract';
+import { isWeeklyMainStrengthSlot } from './weeklyStrengthBudget';
+import {
+  AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE,
+  slotCountsTowardSetBudget,
+} from './weeklyProgrammingContract';
 
 export type GeneratedWeekVerdict =
   | 'accepted'
@@ -87,6 +92,7 @@ export interface GeneratedWeekValidation {
 export interface GeneratedWeekLedger {
   readonly mainStrengthSessions: number;
   readonly mainLiftsByPattern: Readonly<Record<string, number>>;
+  readonly weeklyMainLiftsBySlot: Readonly<Record<string, number>>;
   readonly sprintNights: number;
   readonly coreConditioningExposures: number;
   readonly fullRestDays: number;
@@ -119,6 +125,13 @@ function declaredStrengthPattern(row: WorkoutExercise): MainStrengthPattern | nu
     section18Evidence?: { strengthPattern?: MainStrengthPattern | null };
   }).section18Evidence;
   return evidence?.strengthPattern ?? null;
+}
+
+function declaredSlot(row: WorkoutExercise): string | null {
+  const evidence = (row as unknown as {
+    section18Evidence?: { slot?: string | null };
+  }).section18Evidence;
+  return evidence?.slot ?? null;
 }
 
 /**
@@ -210,6 +223,7 @@ export function measureGeneratedWeek(
 ): GeneratedWeekLedger {
   const { workouts, anchors } = input;
   const mainLiftsByPattern: Record<string, number> = {};
+  const weeklyMainLiftsBySlot: Record<string, number> = {};
   const prohibited = new Set(input.contract.targets.prohibitedPatterns);
   const prohibitedPatternBreaches: string[] = [];
   const prohibitedPowerBreaches: string[] = [];
@@ -224,23 +238,28 @@ export function measureGeneratedWeek(
 
   for (const workout of workouts) {
     const day = workout.dayOfWeek;
-    let dayHasMainLift = false;
+    let dayHasMainStrengthWork = false;
 
     for (const row of rows(workout)) {
       const role = declaredRole(row);
+      const slot = declaredSlot(row);
       if (role === 'main_strength') {
         const pattern = declaredMainPattern(row);
         // A main lift with no declared pattern earns no credit. It is not
         // guessed at from the exercise name.
         if (pattern) {
           mainLiftsByPattern[pattern] = (mainLiftsByPattern[pattern] ?? 0) + 1;
-          dayHasMainLift = true;
+          dayHasMainStrengthWork = true;
+          if (isWeeklyMainStrengthSlot(slot)) {
+            weeklyMainLiftsBySlot[slot] = (weeklyMainLiftsBySlot[slot] ?? 0) + 1;
+          }
           if (prohibited.has(pattern)) prohibitedPatternBreaches.push(`${day}:${pattern}`);
         } else {
           undeclaredStrengthRows += 1;
         }
       } else if (role === 'strength_accessory') {
         const pattern = declaredStrengthPattern(row);
+        if (slotCountsTowardSetBudget(slot)) dayHasMainStrengthWork = true;
         if (pattern && prohibited.has(pattern)) {
           prohibitedPatternBreaches.push(`${day}:${pattern}`);
         }
@@ -251,7 +270,7 @@ export function measureGeneratedWeek(
         if (looksStrength) undeclaredStrengthRows += 1;
       }
     }
-    if (dayHasMainLift) mainStrengthSessions += 1;
+    if (dayHasMainStrengthWork) mainStrengthSessions += 1;
 
     for (const family of powerFamilies(workout)) {
       if (prohibitedFamilies.has(family)) prohibitedPowerBreaches.push(`${day}:${family}`);
@@ -268,7 +287,7 @@ export function measureGeneratedWeek(
       if (conditioningStressOf(workout) === 'hard') hardDays.add(day);
     }
 
-    if (dayHasMainLift && (workout.intensity === 'High' || workout.intensity === 'Maximal')) {
+    if (dayHasMainStrengthWork && (workout.intensity === 'High' || workout.intensity === 'Maximal')) {
       hardDays.add(day);
     }
   }
@@ -307,6 +326,7 @@ export function measureGeneratedWeek(
   return {
     mainStrengthSessions,
     mainLiftsByPattern,
+    weeklyMainLiftsBySlot,
     sprintNights: sprintDays.size,
     coreConditioningExposures,
     fullRestDays,
@@ -436,15 +456,11 @@ export function validateGeneratedWeek(
       `the week trains no ${pattern}`, 1, pattern);
   }
 
-  if (targets.balanceExpected) {
-    const judged = targets.requiredSafePatterns.filter((pattern) => !kitGaps.has(pattern));
-    const counts = judged.map((pattern) => ledger.mainLiftsByPattern[pattern] ?? 0);
-    if (counts.length > 1) {
-      const spread = Math.max(...counts) - Math.min(...counts);
-      if (spread > targets.permittedCountDifference) {
-        block('pattern_balance', 'main lifts are unbalanced across the required patterns',
-          targets.permittedCountDifference, spread);
-      }
+  if (targets.weeklyMainSeatCeilingExpected) {
+    for (const [slot, count] of Object.entries(ledger.weeklyMainLiftsBySlot)) {
+      if (count <= AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE) continue;
+      block('pattern_balance', `automatic weekly main seat ${slot} was spent more than once`,
+        AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE, `${slot}:${count}`);
     }
   }
 

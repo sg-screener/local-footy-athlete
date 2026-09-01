@@ -90,6 +90,10 @@ import {
   footballRobustnessCategoriesForExercise,
   type FootballRobustnessCategory,
 } from './footballRobustnessFoundation';
+import {
+  createWeeklyStrengthBudget,
+  isWeeklyMainStrengthSlot,
+} from './weeklyStrengthBudget';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -1025,7 +1029,7 @@ function doseFor(
   if (kind === 'full_body_a' || kind === 'full_body_b') {
     return FULL_BODY_DOSE[slot] ?? [2, 10, 15];
   }
-  const ladder = kind === 'lower' ? LOWER_DOSE : UPPER_DOSE;
+  const ladder = kind.startsWith('lower') ? LOWER_DOSE : UPPER_DOSE;
   return ladder[Math.min(position, ladder.length - 1)];
 }
 
@@ -1059,7 +1063,13 @@ function doseFor(
 export function composedDayKind(intent: StrengthIntent): SlotDayKind | null {
   const planned = intent.plannedPatterns ?? [];
   if (intent.archetype === 'full_body') return null;   // the WEEK decides A vs B
-  if (intent.archetype === 'lower') return 'lower';
+  if (intent.archetype === 'lower') {
+    const hasSquat = planned.includes('squat');
+    const hasHinge = planned.includes('hinge');
+    if (hasSquat && !hasHinge) return 'lower_squat';
+    if (hasHinge && !hasSquat) return 'lower_hinge';
+    return 'lower';
+  }
   if (intent.archetype !== 'upper') return null;
   const hasPush = planned.includes('push');
   const hasPull = planned.includes('pull');
@@ -1180,11 +1190,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   /* The stable weekly seats for a repeated movement pattern. Slot alone is too
    * broad: it made two horizontal presses restore one Bench Press decision. */
   const seatCountBySlot = new Map<SessionSlot, number>();
-  /* Push and pull each have two planes. The old per-day "first row wins" rule
-   * meant horizontal ALWAYS won because it appears first in the ladder, so a
-   * multi-day athlete could get Barbell Row twice and never see Pull-Ups. This
-   * count alternates which available plane owns the main role across the week. */
-  const mainExposureCountByPattern = new Map<MainStrengthPattern, number>();
+  // One typed weekly allowance exists before the first exercise is selected.
+  // Dedicated sessions reserve their purpose; full-body days may spend only
+  // seats that the rest of the week has not reserved or spent.
+  const weeklyStrengthBudget = createWeeklyStrengthBudget(inputs.plannedDays);
   /* What this block chose, per weekly slot occurrence — handed back so
    * generation can RECORD it. */
   const selectionsThisBlock: BlockExerciseSelection[] = [];
@@ -1482,44 +1491,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     /** R-080, per DAY and per SLOT — see `POOL_GROUP_OF`. */
     const groupsUsedBySlot = new Map<SessionSlot, Set<string>>();
     const rows: ComposedRow[] = [];
-    // A pattern is main-lifted ONCE per day. Sam: "any push pull hinge squat
-    // single leg knee single leg hip get the main lift role there" — with guard
-    // (d): the day's FIRST row of a planned pattern takes the role, and a
-    // supplementary row of the same pattern stays an accessory.
-    const patternHasItsMainLift = new Set<MainStrengthPattern>();
-    const desiredMainPlaneFor = (
-      pattern: MainStrengthPattern,
-    ): SessionSlot | null => {
-      const planes = pattern === 'push'
-        ? (['horizontal_push', 'vertical_push'] as const)
-        : pattern === 'pull'
-          ? (['horizontal_pull', 'vertical_pull'] as const)
-          : null;
-      if (!planes) return null;
-      const exposure = mainExposureCountByPattern.get(pattern) ?? 0;
-      // A tracked anchor owns its real movement plane. Before R-305, Pull-Ups
-      // could be injected into the horizontal seat simply because horizontal
-      // happened to lead the alternation; the vertical seat then added a
-      // pulldown and the spare pull accessory added a row — three major pulls,
-      // while the row labelled horizontal was actually vertical. The anchor's
-      // typed seat resolves the plane first; the alternation remains only a
-      // defensive fallback for a future pattern with no tracked seat.
-      const trackedSeat = selectedTrackedLiftProgrammingSeat(
-        inputs.trackedLiftChoices,
-        pattern as TrackedLiftProgrammingPattern,
-      );
-      const preferred = trackedSeat === planes[0] || trackedSeat === planes[1]
-        ? trackedSeat as typeof planes[0]
-        : exposure % 2 === 0 ? planes[0] : planes[1];
-      const other = preferred === planes[0] ? planes[1] : planes[0];
-      const canLead = (candidate: SessionSlot): boolean =>
-        shapeSlots.includes(candidate)
-          && slotCandidates(candidate).some((id) =>
-            !excludedToday.has(id) && composedRowIsLegal(id, kitToday));
-      if (canLead(preferred)) return preferred;
-      if (canLead(other)) return other;
-      return null;
-    };
+    const mainSeatsComposedForDay = new Set<SessionSlot>();
     /* ⚠ **ONE IDENTITY, ONCE PER DAY — the last 4 of Sam's 52 (2026-08-20).**
      *
      * After the conditioning warm-up rename was fixed, four occurrences
@@ -1574,11 +1546,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // ordinary week took the else arm: its lower rows came out accessories
     // (no main lift for squat or hinge) and its planes never fell back on the
     // kit. `isFullBodyDay` is the answer to the question both were asking.
-    const plannedPatterns = new Set(
-      isFullBodyDay
-        ? shapeSlots.map((slot) => PATTERN_FOR_SLOT[slot]).filter(Boolean) as MainStrengthPattern[]
-        : planned.strengthIntent.plannedPatterns ?? []);
-
     for (const declaredSlot of shapeSlots) {
       // The kit outranks the plane preference, and Sam ruled the fallback.
       const planeChoice = isFullBodyDay && OPPOSITE_PLANE[declaredSlot]
@@ -1609,14 +1576,18 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       if (pattern && prohibited.has(pattern)) continue;   // safety, not kit
       const seatIndex = seatCountBySlot.get(slot) ?? 0;
       seatCountBySlot.set(slot, seatIndex + 1);
-      const desiredMainPlane = pattern ? desiredMainPlaneFor(pattern) : null;
       const isMainLift = !!pattern
-        && plannedPatterns.has(pattern)
-        && !patternHasItsMainLift.has(pattern)
-        && (desiredMainPlane === null || desiredMainPlane === slot);
+        && weeklyStrengthBudget.canSpend(slot, planned.planEntryId);
       const ordinaryPool = (isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
         .filter((identity) => !displacedTrackedDefaults.has(identity));
+      const trackedSeat = pattern
+        ? selectedTrackedLiftProgrammingSeat(
+          inputs.trackedLiftChoices,
+          pattern as TrackedLiftProgrammingPattern,
+        )
+        : null;
       const trackedAnchor = isMainLift
+        && trackedSeat === slot
         && pattern && trackedAnchorByPattern.has(pattern as TrackedLiftProgrammingPattern)
         ? trackedAnchorByPattern.get(pattern as TrackedLiftProgrammingPattern) ?? null
         : null;
@@ -2035,6 +2006,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           : selection.reason,
       });
       usedThisWeek.add(identity);
+      if (isMainLift) {
+        if (!weeklyStrengthBudget.spend(slot, planned.planEntryId)) {
+          throw new Error(`Weekly main-strength seat was spent twice: ${slot}`);
+        }
+        mainSeatsComposedForDay.add(slot);
+      }
       identitiesThisDay.add(identity);
       for (const category of footballRobustnessCategoriesForExercise(identity)) {
         footballRobustnessCovered.add(category);
@@ -2061,13 +2038,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         offseasonSubphase: inputs.offseasonSubphase,
         authoredFallback,
       });
-      if (isMainLift && pattern) {
-        patternHasItsMainLift.add(pattern);
-        mainExposureCountByPattern.set(
-          pattern,
-          (mainExposureCountByPattern.get(pattern) ?? 0) + 1,
-        );
-      }
       rows.push({
         identity,
         ...(substitutionReason ? { substitutedFor: substitutionReason } : {}),
@@ -2107,7 +2077,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // not create one after injury has prohibited every planned main pattern.
     // In that case the honest result is the existing typed adjustment, not an
     // accessory-only card presented as the athlete's required gym session.
-    if (patternHasItsMainLift.size === 0) {
+    const expectedMainSeatHere = shapeSlots.some((slot) =>
+      isWeeklyMainStrengthSlot(slot)
+      && weeklyStrengthBudget.reservedOwnerBySlot[slot] === planned.planEntryId);
+    if (expectedMainSeatHere && mainSeatsComposedForDay.size === 0) {
       rows.splice(0, rows.length);
       required.splice(0, required.length);
     }

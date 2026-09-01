@@ -113,8 +113,7 @@ export interface GeneratedWeekTargets {
   readonly hardDayPermittedMaximum: number;
   readonly requiredSafePatterns: readonly MainStrengthPattern[];
   readonly prohibitedPatterns: readonly MainStrengthPattern[];
-  readonly balanceExpected: boolean;
-  readonly permittedCountDifference: number;
+  readonly weeklyMainSeatCeilingExpected: boolean;
   readonly trainingPaused: boolean;
   readonly prohibitedSprintHighSpeed: boolean;
   readonly prohibitedPowerFamilies: readonly string[];
@@ -193,14 +192,14 @@ export const GENERATED_WEEK_CLAUSES: readonly GeneratedWeekClause[] = [
   {
     id: 'pattern_balance',
     requirement:
-      'Main-lift counts across the required patterns differ by no more than the '
-      + 'permitted difference, unless an intentional imbalance is stated.',
+      'Each automatic weekly main squat, hinge, horizontal/vertical push and '
+      + 'horizontal/vertical pull seat is spent at most once.',
     authority: {
       kind: 'bible',
       section: 'Section 18 D — strength-pattern rules',
       quote:
-        'Across each healthy week, default to equal or near-equal numbers of '
-        + 'meaningful main lifts for push, pull, squat and hinge.',
+        'These are weekly allowances—not requirements to repeat inside every '
+        + 'compatible session.',
     },
     disclosable: true,
   },
@@ -332,9 +331,10 @@ export function generatedWeekContractFrom(
       hardDayPermittedMaximum: contract.restStress.permittedHardDayMaximum,
       requiredSafePatterns: contract.strengthPatterns.requiredSafePatterns,
       prohibitedPatterns: contract.strengthPatterns.prohibitedPatterns,
-      balanceExpected:
-        contract.strengthPatterns.balanceExpectation === 'equal_or_near_equal',
-      permittedCountDifference: contract.strengthPatterns.permittedCountDifference,
+      // Automatic generation always answers to R-317's one-seat ceiling. This
+      // is deliberately independent of the retired equal-count setting carried
+      // by older stored contracts at ingress.
+      weeklyMainSeatCeilingExpected: true,
       trainingPaused: contract.safety.trainingPaused,
       prohibitedSprintHighSpeed: contract.safety.prohibitedSprintHighSpeed,
       prohibitedPowerFamilies: contract.safety.prohibitedPowerFamilies,

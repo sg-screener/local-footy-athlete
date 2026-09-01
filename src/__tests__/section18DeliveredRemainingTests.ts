@@ -362,7 +362,7 @@ run('D6b a week that EXCEEDS its authorised reduction is disclosed, not refused'
 // pattern"), so they must agree about elapsed days. Same week, same missing
 // hinge/push, same boundary: the twins are asserted together, in both
 // directions, so neither can drift again.
-run('D7 pattern_imbalance and pattern_restore_failure agree about elapsed days', () => {
+run('D7 coverage still protects whole weeks without the retired equality veto', () => {
   // MON squat + TUE squat are delivered history. FRI pull is the whole
   // authored remainder. Hinge and push are absent — not removed, never
   // reachable — and the counts are maximally uneven (squat 2, pull 1, rest 0).
@@ -400,10 +400,8 @@ run('D7 pattern_imbalance and pattern_restore_failure agree about elapsed days',
     governedFromISO: null,
     deliveredDates: [],
   });
-  assert(has(wholeWeek, 'pattern_imbalance', 'strength_patterns'),
-    'a whole authored week with squat 2 / hinge 0 / push 0 must still block on ' +
-    `pattern_imbalance — the boundary softening leaked past its boundary: ${
-      JSON.stringify(wholeWeek.blockingViolations)}`);
+  assert(!has(wholeWeek, 'pattern_imbalance', 'strength_patterns'),
+    `the retired broad-count equality veto returned: ${JSON.stringify(wholeWeek.blockingViolations)}`);
   assert(has(wholeWeek, 'pattern_restore_failure', 'strength_patterns'),
     'the twin must block on a whole week too, or this cell proves nothing about ' +
     `agreement: ${JSON.stringify(wholeWeek.blockingViolations)}`);

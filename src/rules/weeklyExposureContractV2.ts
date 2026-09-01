@@ -465,7 +465,9 @@ export interface WeeklyExposureContractV2 {
     prohibitedPatterns: MainStrengthPattern[];
     prohibitedPatternProvenance: 'active_constraints' | 'profile_injury' | 'explicit_none' | 'legacy_missing';
     achievedMeaningfulMainLifts: Record<MainStrengthPattern, number | null>;
+    /** @deprecated R-317: retained only so older stored contracts still lift. */
     balanceExpectation: 'equal_or_near_equal' | 'not_applicable';
+    /** @deprecated R-317: automatic weekly ceilings are slot-typed downstream. */
     permittedCountDifference: number;
     intentionalImbalanceReason: string | null;
     laterSessionRestorationRequired: boolean;
@@ -1476,10 +1478,8 @@ export function buildSection18WeeklyExposureContractV2(
         squat: null, hinge: null, single_leg_knee: null, single_leg_hip: null,
         push: null, pull: null,
       },
-      balanceExpectation: policy.balance && !patternSetNarrowed
-        ? 'equal_or_near_equal'
-        : 'not_applicable',
-      permittedCountDifference: 1,
+      balanceExpectation: 'not_applicable',
+      permittedCountDifference: 0,
       intentionalImbalanceReason: input.intentionalImbalanceReason ?? null,
       laterSessionRestorationRequired: policy.balance && !patternSetNarrowed,
     },

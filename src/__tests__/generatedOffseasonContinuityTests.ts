@@ -8,6 +8,7 @@
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import type { Microcycle } from '../types/domain';
 
 armTotalsOrRed();
@@ -45,7 +46,9 @@ function build(overrides: Record<string, unknown>) {
 
 function mainStrengthDays(week: Microcycle): number {
   return week.workouts.filter((workout) => (workout.exercises ?? []).some((row) =>
-    row.section18Evidence?.role === 'main_strength')).length;
+    (row.section18Evidence?.role === 'main_strength'
+      || row.section18Evidence?.role === 'strength_accessory')
+    && slotCountsTowardSetBudget(row.section18Evidence?.slot))).length;
 }
 
 function snapshot(week: Microcycle): string {

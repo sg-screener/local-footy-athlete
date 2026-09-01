@@ -24,7 +24,7 @@ import {
   GLOBAL_RULES,
   INSEASON_OVERLAY,
   OFFSEASON_OVERLAYS,
-  PATTERN_PARTNER,
+  AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE,
   PATTERN_PLANE,
   PATTERNS_FOR_PURPOSE,
   PRESEASON_OVERLAY,
@@ -765,14 +765,14 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-console.log('\n[patterns] Weekly movement coverage and paired balance');
+console.log('\n[patterns] Weekly movement coverage and automatic main-seat allowance');
 // ═══════════════════════════════════════════════════════════════════════════
 {
   const week = built({ phase: 'Pre-season', gymAccessDays: [MON, TUE, THU, FRI] });
   ok('[WC-020] the eight named patterns are the contract\'s required set',
     ['WC-020'], REQUIRED_PATTERNS.length === 8);
-  ok('[WC-021] every pattern\'s partner is its own inverse', ['WC-021'],
-    REQUIRED_PATTERNS.every((p) => PATTERN_PARTNER[PATTERN_PARTNER[p]] === p));
+  ok('[WC-021] the automatic weekly main-seat allowance is one', ['WC-021'],
+    AUTOMATIC_WEEKLY_MAIN_SEAT_ALLOWANCE === 1);
   ok('[WC-023] a four-session pre-season week intends both lower pairs',
     ['WC-023'],
     week.intendedPatterns.includes('squat') && week.intendedPatterns.includes('hinge')
