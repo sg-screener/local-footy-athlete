@@ -147,6 +147,11 @@ export const CUE_REQUIRED_APPARATUS: Readonly<Record<string, readonly EquipmentT
 export const CUE_IMPLEMENT_NEUTRAL: ReadonlySet<string> = new Set([
   'Z-Press',
 
+  // The pad is the back-extension bench already required by the canonical
+  // equipment sheet, not the load in the athlete's hands. This cue remains
+  // correct whether the row is bodyweight or externally loaded.
+  'SL 45° Back Extension',
+
   /* ── READ AND RULED NEUTRAL, 2026-08-20, alongside the apparatus rows ────
    *
    * Both name an apparatus and NEITHER is a contradiction, so both are filed

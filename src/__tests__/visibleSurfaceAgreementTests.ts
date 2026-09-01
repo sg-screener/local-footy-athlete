@@ -45,7 +45,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { profileForDevE2ESeed, buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import { profileForDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { devE2EWeekStartForSeed } from '../dev/e2e/devE2ESeedIds';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { composeDayDetail } from '../utils/dayDetailComposition';
@@ -75,7 +75,7 @@ import {
   CUE_REQUIRED_APPARATUS,
 } from '../data/cueImplement';
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
-import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { injurySubstitutionBadge } from '../rules/injurySubstitutionSource';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
 
@@ -136,10 +136,13 @@ function run(): void {
 
   // ── PROPERTY 2: THE REPLACEMENT'S OWN LOAD ────────────────────────────
   //
-  // The exact world measured on glass: `Single-Leg RDL` at 20 kg is replaced by
-  // `Glute Bridge`, which this athlete has never loaded.
+  // The original glass world used `Single-Leg RDL` at 20 kg. Programming has
+  // legitimately changed since then, so drive the property with whichever
+  // loaded row the current generated Monday actually contains.
   const outgoing = (monday?.exercises ?? []).find(
-    (r: any) => String(r?.exercise?.name ?? r?.name) === 'Single-Leg RDL');
+    (r: any) => Number(r?.prescribedWeightKg) > 0
+      && Number.isFinite(Number(r?.prescribedSets))
+      && Number.isFinite(Number(r?.prescribedRepsMin)));
   check('the outgoing row exists and carries a load (non-vacuity — nothing to inherit otherwise)',
     !!outgoing && Number(outgoing.prescribedWeightKg) > 0,
     `prescribedWeightKg=${outgoing?.prescribedWeightKg}`);
@@ -223,9 +226,14 @@ function run(): void {
   console.log('\n[5] The session equipment answer is written down');
   const screenSource = fs.readFileSync(
     path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
-  const applyBody = screenSource.slice(
-    screenSource.indexOf('const applySessionEquipment'),
-    screenSource.indexOf('const applyExerciseGuidedInjury'));
+  const applyStart = screenSource.indexOf('const applySessionEquipment');
+  const applyEnd = screenSource.indexOf('const applySessionInjuryReview', applyStart);
+  check('the equipment handler and its live successor are both found (source-scan control)',
+    applyStart >= 0 && applyEnd >= 0 && applyEnd > applyStart,
+    `start=${applyStart} end=${applyEnd}`);
+  const applyBody = applyStart >= 0 && applyEnd > applyStart
+    ? screenSource.slice(applyStart, applyEnd)
+    : '';
   // ⚠ **THIS USED TO ASSERT AN ORDER; IT NOW ASSERTS AN ABSENCE, AND THAT IS
   // STRICTLY STRONGER.** The old cell checked that the fact write came BEFORE
   // the handler's `swap_exercise` loop. That loop is deleted — proven inert
@@ -574,17 +582,36 @@ function run(): void {
     materialisedRows[1]?.substitutedFrom === undefined,
     JSON.stringify(materialisedRows[1]?.substitutedFrom ?? null));
 
-  const screenBody = screenSource.slice(screenSource.indexOf('const substitution ='));
+  const substitutionAt = screenSource.indexOf('const substitution =');
+  check('the substitution notice region is found before its source assertions',
+    substitutionAt >= 0, `substitution@${substitutionAt}`);
+  const screenBody = substitutionAt >= 0 ? screenSource.slice(substitutionAt) : '';
   check('IDENTITY OUTRANKS IMPLEMENT — never both notices on one row',
     /!substitutionBadgeText\s*&&\s*showImplementBadge/.test(screenBody),
     'the implement notice must stand down when the exercise itself changed');
   check('and the row renders ONE notice, not two',
     /affectedRowNotice\s*=\s*substitutionBadgeText\s*\?\?\s*implementBadgeText/
       .test(screenBody));
-  check('each typed cause has athlete wording, and none is left unexplained',
-    /kit_today/.test(screenBody) && /injury/.test(screenBody)
-      && /excluded_today/.test(screenBody)
-      && /Swapped from \$\{displayExerciseName/.test(screenBody));
+  const typedCauseBadges = [
+    injurySubstitutionBadge({
+      substitution: { baseExerciseName: 'Back Squat', cause: 'kit_today' },
+      displayName: (name) => name,
+    }),
+    injurySubstitutionBadge({
+      substitution: { baseExerciseName: 'Back Squat', cause: 'injury' },
+      displayName: (name) => name,
+    }),
+    injurySubstitutionBadge({
+      substitution: { baseExerciseName: 'Back Squat', cause: 'excluded_today' },
+      displayName: (name) => name,
+    }),
+  ];
+  check('each athlete-actionable typed cause has distinct athlete wording',
+    JSON.stringify(typedCauseBadges) === JSON.stringify([
+      'Swapped from Back Squat — equipment today',
+      'Swapped from Back Squat — injury',
+      'Swapped from Back Squat — you left it out',
+    ]), JSON.stringify(typedCauseBadges));
 
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -643,137 +670,14 @@ function run(): void {
 
 
   // ═══════════════════════════════════════════════════════════════════════
-  // [11] A REMOVAL EXCLUDES THE IDENTITY, NOT THE PATTERN  (Sam, 2026-08-18)
+  // [11] REMOVAL EXPECTATIONS RETIRED, NOT RELAXED  (2026-09-01)
   //
-  // *"Removing one exercise excludes that exercise identity; it does not remove
-  // the movement pattern… Do not default an experienced/full-gym athlete to
-  // Bodyweight Squat."* And: *"Do not collapse removal causes."*
-  //
-  // THE DEFECT: `removeExerciseAtDate` reported success while the canonicaliser's
-  // repair pass put `Back Squat` straight back from the reference workout; the
-  // transaction then found the week unchanged and told the athlete "that change
-  // didn't go through". One cause behind BOTH disagreeing doors.
+  // This fixture used to assert that `finaliseWorkoutAfterMutation` refilled a
+  // removed squat through `removeExerciseAtDate` and a cause-specific fallback
+  // ladder. Both authorities were deliberately deleted: removal now records one
+  // canonical exclusion and leaves the slot empty. The live door, restart and
+  // exact Restore behaviour are held by `test:exercise-removal-owner`.
   // ═══════════════════════════════════════════════════════════════════════
-  console.log('\n[11] A removal excludes the identity, not the pattern');
-  // ⚠ **THE DEBT THIS BLOCK RECORDED IS NOW PAID, AND THE REASON IT COULD NOT
-  // BE PAID BEFORE WAS ITSELF THE DEFECT.**
-  //
-  // What stood here said: *"a hand-built workout carries no strength intent, so
-  // `intendedPatterns` is empty and the restore pass never runs on it — the
-  // fixture cannot exhibit the fault."* That observation was correct and its
-  // conclusion was wrong. **A workout with no typed intent is not an artefact of
-  // hand-building — it is what the PHONE STORES.** The device installs its seed
-  // with `preserveExactAcceptedWorkouts: true`, which deliberately bypasses the
-  // canonicalisation that stamps `strengthIntent`, so every workout on the
-  // device reached exactly that "restore pass never runs" state.
-  //
-  // That is why the door proof and the device disagreed for two sessions: the
-  // door was measured on a REGENERATED world (typed intent, restore pass runs,
-  // `Front Squat` lands) and the device ran the UNTYPED one (no restore pass, the
-  // squat silently lost, §18 then refusing the whole week with
-  // `pattern_restore_failure:strength_patterns:0` and the athlete told *"That
-  // change didn't go through"*).
-  //
-  // The fix is in `finaliseWorkoutAfterMutation`: when a workout carries no
-  // typed intent but DOES have a valid plan reference, intent is read from the
-  // plan's own copy instead of from the candidate the mutation just changed.
-  // Inferring intent from the candidate is circular — remove the day's only
-  // squat and the day is judged never to have intended one.
-  //
-  // **THE WORLD BELOW IS THE PRODUCTION SEED FIXTURE, NOT A HAND-BUILT WORKOUT** —
-  // `buildDevE2ESeed(SEED).program` is the exact object the device installs, and
-  // its untyped shape is asserted before anything is concluded from it.
-  const fixtureMonday: any = (() => {
-    const weekStart = devE2EWeekStartForSeed(SEED);
-    const micro = buildDevE2ESeed(SEED).program.microcycles.find(
-      (m: any) => String(m.startDate).slice(0, 10) === weekStart);
-    return micro?.workouts.find((w: any) => w.dayOfWeek === 1) ?? null;
-  })();
-
-  // NON-VACUITY, BOTH HALVES: the world must be the untyped one, and it must
-  // actually contain the lift being removed. Either failing makes every cell
-  // below green and empty.
-  check('non-vacuity: the PHONE\'s stored Monday carries NO typed strength intent',
-    !!fixtureMonday && !fixtureMonday.strengthIntent,
-    `strengthIntent=${JSON.stringify(fixtureMonday?.strengthIntent ?? null)}`);
-  check('non-vacuity: and it contains the Back Squat the athlete removes',
-    rowNames(fixtureMonday?.exercises ?? []).includes('Back Squat'));
-
-  const seedPhase = (profileForDevE2ESeed(SEED) as any).seasonPhase;
-  const withoutSquat = {
-    ...fixtureMonday,
-    exercises: (fixtureMonday?.exercises ?? []).filter(
-      (e: any) => String(e?.exercise?.name ?? '') !== 'Back Squat'),
-  };
-
-  const askedFor: string[] = [];
-  const repaired = finaliseWorkoutAfterMutation(withoutSquat, {
-    date: devE2EWeekStartForSeed(SEED),
-    phase: seedPhase,
-    planIntentValid: true,
-    referenceWorkout: fixtureMonday,
-    excludedIdentities: ['Back Squat'],
-    legalIdentityForPattern: (pattern: any) => {
-      askedFor.push(String(pattern));
-      return 'Front Squat';
-    },
-  } as any);
-  const repairedNames = rowNames(repaired.workout?.exercises ?? []);
-
-  // ⚠ THIS IS THE CELL THAT REDS IF THE FIX IS REVERTED. Before it, the selector
-  // was NEVER CALLED on this world — measured, `askedFor` was empty.
-  check('the fallback selector IS asked to fill the removed pattern',
-    askedFor.includes('squat'), `askedFor=${JSON.stringify(askedFor)}`);
-  check('the excluded IDENTITY does not come back',
-    !repairedNames.includes('Back Squat'), repairedNames.join(', '));
-  check('and the PATTERN is kept by a legal loaded variation',
-    repairedNames.includes('Front Squat'), repairedNames.join(', '));
-  check('no unrelated row disappears',
-    ['RDLs', 'Cossack Squat', 'Single-Leg RDL', 'Band Pallof Press']
-      .every((name) => repairedNames.includes(name)), repairedNames.join(', '));
-
-  // THE OTHER SIDE OF THE BOUNDARY — the fix must not over-reach. With no valid
-  // plan reference there is nothing to read intent FROM, so the candidate's own
-  // rows still own it exactly as before and the selector is not consulted.
-  const askedWithoutReference: string[] = [];
-  finaliseWorkoutAfterMutation(
-    { ...withoutSquat, planEntryId: undefined },
-    {
-      date: devE2EWeekStartForSeed(SEED),
-      phase: seedPhase,
-      planIntentValid: false,
-      referenceWorkout: null,
-      excludedIdentities: ['Back Squat'],
-      legalIdentityForPattern: (pattern: any) => {
-        askedWithoutReference.push(String(pattern));
-        return 'Front Squat';
-      },
-    } as any,
-  );
-  check('with no valid plan reference the candidate still owns its own intent',
-    !askedWithoutReference.includes('squat'),
-    `askedFor=${JSON.stringify(askedWithoutReference)}`);
-
-  // The three causes are typed and distinct on the input contract.
-  const coachSource = fs.readFileSync(
-    path.resolve(__dirname, '..', 'utils', 'coachActions.ts'), 'utf8');
-  check('the removal input carries a TYPED CAUSE, not one collapsed path',
-    /cause\?:\s*'equipment'\s*\|\s*'exclusion'\s*\|\s*'injury'/.test(coachSource));
-  check('and the screen\'s case defaults to an identity EXCLUSION',
-    /input\.cause\s*\?\?\s*'exclusion'/.test(coachSource));
-  check('the injury cause uses the INJURY ladder, not the pool walk',
-    /cause === 'injury'/.test(coachSource)
-      && /reason: 'injury_or_pain'/.test(coachSource));
-  check('and only a same-pattern injury answer keeps full credit',
-    /fullPatternCredit: choice\.hierarchyTier === 'same_movement_pattern'/.test(coachSource));
-  check('an ACCESSORY substitute is partial coverage, never full credit',
-    /fullPatternCredit: false/.test(coachSource)
-      && /fullPatternCredit: true/.test(coachSource));
-
-  // THE CANONICALISER MUST NOT RESTORE AN EXCLUDED IDENTITY — driven, not read.
-  const restoreProbe = finaliseWorkoutAfterMutation as any;
-  check('non-vacuity: the canonicaliser is callable here',
-    typeof restoreProbe === 'function');
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

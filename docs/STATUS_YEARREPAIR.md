@@ -1145,3 +1145,57 @@ None required from Sam.
   remote persistence and true OS process death.
 - Clinical review of the canonical exercise's injury ratings; this change keeps
   the already-authored single injury profile.
+
+## Visible-surface fixture — 13-failure investigation
+
+All 13 failures were obsolete expectations or fixture instrumentation drift;
+none reproduced a defect in the current app.
+
+| # | Plain-English failure | Classification | Disposition |
+|---:|---|---|---|
+| 1 | The fixture demanded a loaded Single-Leg RDL on Monday, but the current generated Monday no longer contains that exercise. | Obsolete test expectation | The swap-load property now uses a real loaded row from the generated Monday. |
+| 2 | Because the old outgoing row was missing, the fixture compared the replacement dose with `undefined`. | Obsolete test expectation | The same live loaded row now proves sets and reps carry across. |
+| 3 | The equipment-handler scan stopped at a handler name that no longer exists, so it accidentally scanned the rest of the screen and found the ordinary Swap door. | Obsolete test expectation | The scan is bounded by the live successor handler and proves both anchors exist. |
+| 4 | The cue scan treated the word “pad” in SL 45° Back Extension as a machine implement, although it means the already-required back-extension bench. | Obsolete test expectation | The cue is explicitly filed as implement-neutral; its canonical bench requirement remains unchanged. |
+| 5 | The fixture searched the screen file for substitution sentences after those words moved to the shared substitution-badge owner. | Obsolete test expectation | It now calls the owner and checks the three athlete-actionable causes directly. |
+| 6 | The fixture required the device seed to have no typed strength intent, but current generated seeds correctly carry typed squat/hinge intent. | Obsolete test expectation | The old untyped-seed premise was retired. |
+| 7 | It expected the post-edit canonicaliser to call a squat-refill selector that was deliberately deleted. | Obsolete test expectation | Retired with the deleted refill authority. |
+| 8 | It expected Front Squat to be inserted after Back Squat removal, but current removal deliberately leaves the slot empty. | Obsolete test expectation | Retired; the canonical exclusion owner holds removal. |
+| 9 | It hard-coded an older Monday’s unrelated exercise names and treated later programming changes as data loss. | Obsolete test expectation | Retired with the old synthetic removal block. |
+| 10 | It searched the deleted removal implementation for a default exclusion cause. | Obsolete test expectation | Retired; the canonical exclusion decision is now the one removal authority. |
+| 11 | It searched that same deleted implementation for injury-ladder routing. | Obsolete test expectation | Retired; current injury review/recomposition owns and tests this behaviour. |
+| 12 | It searched the deleted refill code for same-pattern full-credit wording. | Obsolete test expectation | Retired; current injury review tests the approved hierarchy behaviourally. |
+| 13 | It searched the deleted refill code for accessory partial-credit literals. | Obsolete test expectation | Retired for the same reason; the live injury owner remains guarded. |
+
+### Verification
+
+- `test:visible-surfaces`: 70/70; chained form-cue/equipment gate 23/23.
+- `test:session-equipment-owner`: 27/27.
+- `test:session-injury-review`: 80/80.
+- `typecheck`: zero errors.
+- Source-boundary liveness: temporarily placing `swap_exercise` inside the
+  session-equipment handler made the intended visible-surface cell fail; the
+  mutation was restored and the suite returned green.
+- `test:exercise-removal-owner`: 31/34 in the shared checkout. Its three
+  restart/Restore failures are outside the 13 investigated here and match the
+  active `visible` seat's already-recorded work; no file owned by that seat was
+  changed.
+- `test:repo-law-guards`: this file's source-anchor debt is zero after both
+  touched scan regions gained explicit found-before-slice controls. The wider
+  gate remains at its 12 unrelated shared-checkout failures.
+
+### What remains
+
+- The annual audit and year PDFs were deliberately not run or regenerated.
+- The separate removal-after-restart work above remains with seat `visible`.
+- No simulator, clean Release build or physical-iPhone acceptance ran.
+
+### Product decision
+
+None required from Sam.
+
+### NOT COVERED
+
+- Annual generation/audit/PDFs, simulator pixels, physical iPhone, remote
+  persistence and true OS process-death acceptance.
+- The separate three-cell removal-after-restart failure owned by seat `visible`.
