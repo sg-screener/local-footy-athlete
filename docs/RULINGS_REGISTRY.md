@@ -8260,3 +8260,29 @@ owners.
 Guard: `LAW-fresh-automatic-speed-placement` through chained
 `test:weekly-scheduler`. Focused behavior, real persistence/Undo tape, mutation
 and NOT COVERED receipt: `docs/STATUS_SPEEDFRESH.md`.
+
+**R-331** · COD is one combined session and may sit on a lower-body day,
+2026-09-02.
+
+Owner: codcombine. The COD catalogue has one selectable Run-only session named
+`Change of Direction`. It uses the normal Speed warm-up, then shows exactly
+three sections in this order:
+
+1. Low-Intensity Deceleration Drills — 20 m build-up + 3 m controlled stop;
+   start every 30 seconds; 10 reps; effort 4/10.
+2. 45-Degree Cut Reps — 10 m approach + cut + 10 m exit; start every 60
+   seconds; 5 reps per side; effort 10/10.
+3. Up-Back Shuttle — 30 m out + 30 m back; start every 60 seconds; 15 reps;
+   effort 7/10.
+
+The supplied cues remain attached to their matching section. `Deceleration and
+Landing Work` is removed. The other three names are sections, not separate
+selectable sessions. This combined COD session may replace conditioning on a
+Lower Squat, Lower Hinge, upper-body or standalone day. It is therefore an
+explicit exception to the normal lower-day off-feet preference. It remains one
+conditioning exposure/day, retains R-329's cadence and safety rules, and can
+never be rendered as a machine session.
+
+Guard: `LAW-one-combined-cod-session` through chained `test:weekly-scheduler`,
+with workbook equality through `test:conditioning-templates`. Red-first,
+mutation and NOT COVERED receipt: `docs/STATUS_CODCOMBINE.md`.

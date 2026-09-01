@@ -117,8 +117,8 @@ function renderedConditioningCopy(workout: Workout): string[] {
 }
 
 console.log('\n[1] Complete authored catalogue x every permitted modality');
-check('the census reaches exactly all 55 authored conditioning templates', () => {
-  assert.equal(CONDITIONING_TEMPLATES.length, 55);
+check('the census reaches exactly all 52 authored conditioning templates', () => {
+  assert.equal(CONDITIONING_TEMPLATES.length, 52);
 });
 
 const nonRunningReceipts: Array<{ template: string; modality: string; line: string }> = [];
@@ -245,7 +245,7 @@ function orderReceipt(catalogue: readonly ConditioningTemplate[]): Record<string
       return `${modality}:${intensityLine(template, mode)}`;
     })]));
 }
-check('reversing all 55 catalogue rows leaves every modality/intensity result unchanged', () => {
+check('reversing all 52 catalogue rows leaves every modality/intensity result unchanged', () => {
   assert.deepEqual(orderReceipt([...CONDITIONING_TEMPLATES].reverse()), orderReceipt(CONDITIONING_TEMPLATES));
 });
 

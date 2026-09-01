@@ -219,7 +219,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-conditioning-template-and-selected-modality-must-be-compatible',
-    law: 'R-298: each of the 55 conditioning templates explicitly declares supported typed modalities. Distance and running identities are Run-only, Air Bike identities are Air Bike-only and Erg identities are machine-only. A required incompatible modality selects a stable same-quality compatible template; typed warm-up copy follows the selected mode, the pair survives save/restart, and final composition refuses an incompatible pair.',
+    law: 'R-298: each signed conditioning template explicitly declares supported typed modalities. Distance and running identities are Run-only, Air Bike identities are Air Bike-only and Erg identities are machine-only. A required incompatible modality selects a stable same-quality compatible template; typed warm-up copy follows the selected mode, the pair survives save/restart, and final composition refuses an incompatible pair.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-298',
     guard: {
       state: 'guarded',
@@ -538,7 +538,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-fortnightly-cod-outside-team-training',
-    law: 'R-329: Team Training supplies change-of-direction exposure, so the app adds none in a team-training week. In no-team, no-game healthy build weeks, the app exchanges one existing easy/moderate conditioning component for Low-Intensity Deceleration Drills every second late-off-season week and every second accepted Christmas-shutdown week. It never adds a day or conditioning credit. Early/mid off-season, ordinary clubless pre-season, in-season, deload, low-readiness and running-restricted weeks receive no automatic dose from this rule.',
+    law: 'R-329: Team Training supplies change-of-direction exposure, so the app adds none in a team-training week. In no-team, no-game healthy build weeks, the app exchanges one existing easy/moderate conditioning component for one COD session every second late-off-season week and every second accepted Christmas-shutdown week. It never adds a day or conditioning credit. Early/mid off-season, ordinary clubless pre-season, in-season, deload, low-readiness and running-restricted weeks receive no automatic dose from this rule.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-329',
     guard: {
       state: 'guarded',
@@ -559,6 +559,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-one-combined-cod-session',
+    law: 'R-331: automatic COD is one Run-only Change of Direction session with the Speed warm-up followed, in order, by Low-Intensity Deceleration Drills, 45-Degree Cut Reps and Up-Back Shuttle using Sam\'s exact work, recovery, amount, effort and cues. Deceleration and Landing Work is removed and none of the three retained sections is independently selectable. The session may replace conditioning on lower-body, upper-body or standalone days and is an explicit exception to the lower-day off-feet preference. It counts once and retains R-329 cadence and safety.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-331',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `codcombine`. Red-first: the focused COD tape failed five exact cells before the catalogue, section composer and lower-day off-feet exception existed. It now binds the one selectable template, removal of all four former identities, Speed warm-up plus exact three-row order/copy, one conditioning credit and legal lower-body placement. The workbook equality gate binds the same section copy. Mutation and final command receipt: docs/STATUS_CODCOMBINE.md. NOT COVERED: full-year audit/PDF regeneration, simulator and physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',
@@ -571,7 +582,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
-    law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
+    law: 'R-300: every signed conditioning template has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the three explicitly retired legacy templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',
     guard: {
       state: 'guarded',

@@ -451,7 +451,7 @@ function isHeartRateClause(clause: string): boolean {
  * Sam: *"correct labels such as Work, Recovery and Rounds — not 'Sets: 4 reps'
  * for intervals."*
  *
- * ⚠ **THE SHEET'S OWN UNIT WORD IS NOISE.** Measured across all 55 templates it
+ * ⚠ **THE SHEET'S OWN UNIT WORD IS NOISE.** Measured across the signed templates it
  * uses `reps` and `rounds` for structurally identical doses inside ONE quality:
  * `aerobic_power` holds both `4 reps` (Classic 4×4) and `8 rounds` (MAS 15:15);
  * `anaerobic` holds both `6 reps` and `8 rounds` (Tabata). Promoting that word

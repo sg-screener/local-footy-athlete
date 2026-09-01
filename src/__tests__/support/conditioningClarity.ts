@@ -20,11 +20,26 @@ const prescriptionNumbers = (copy: string) => copy.split('\n')
   .join('\n').match(/\d+(?:\.\d+)?/g);
 export async function conditioningClarity(storage: Map<string, string>, ok: Check) {
   const templates = CONDITIONING_TEMPLATES;
-  ok('clarity: all 55 authored templates have individually reviewed coaching copy',
-    templates.length === 55 && Object.keys(CONDITIONING_ATHLETE_COPY).length === 55
+  ok('clarity: all 52 authored templates have individually reviewed coaching copy',
+    templates.length === 52 && Object.keys(CONDITIONING_ATHLETE_COPY).length === 52
     && templates.every(t => !!CONDITIONING_ATHLETE_COPY[t.name]));
   for (const t of templates) for (const authoredMinimumDose of [false, true]) {
-    const row = composeConditioningRows(t, '2026-09-28', { authoredMinimumDose }).at(-1)!;
+    const composed = composeConditioningRows(t, '2026-09-28', { authoredMinimumDose });
+    const row = composed.at(-1)!;
+    if (t.sections?.length) {
+      const sectionRows = composed.slice(-t.sections.length);
+      ok(`clarity/${t.name}/${authoredMinimumDose}: cue adds information rather than repeating intensity`,
+        t.sections.every((section) => !section.cue.toLowerCase().includes(section.intensity.toLowerCase())));
+      ok(`clarity/${t.name}/${authoredMinimumDose}: emitted Work and Recovery match the existing dose owner`,
+        t.sections.every((section, index) => sectionRows[index]?.notes === [
+          `Work: ${section.work}`,
+          `Recovery: ${section.recovery}`,
+          `Reps: ${section.reps}`,
+          `Intensity: ${section.intensity}`,
+          section.cue,
+        ].join('\n')));
+      continue;
+    }
     const lines = conditioningDisplayLines({ template: t, resolvedSetsRounds: row.prescribedSets });
     const prescription = conditioningAthletePrescription(t, row.prescribedSets);
     const intensity = lines.find(l => l.label === 'Intensity')!.text;

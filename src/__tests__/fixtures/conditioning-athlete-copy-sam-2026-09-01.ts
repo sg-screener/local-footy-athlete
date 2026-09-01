@@ -27,10 +27,7 @@ export const APPROVED_CONDITIONING_ATHLETE_COPY: readonly ApprovedConditioningAt
   { name: "Sprint Sets (3×5×6 s)", title: "Sprint Sets", work: "6 s sprint · Start every 30 s", recovery: "3 min between sets", count: "3 sets × 5 reps", intensity: "9/10", cue: "Stop if your speed or technique drops." },
   { name: "10 s Max Sprint Repeats", title: "10 s Max Sprint Repeats", work: "10 s max sprint", recovery: "50 s rest", count: "6 reps", intensity: "10/10", cue: "Reset before each effort and attack every rep." },
   { name: "10 s Repeat Efforts", title: "10 s Repeat Efforts", work: "10 s hard", recovery: "30 s easy", count: "8 reps", intensity: "8/10", cue: "Keep the same output from the first rep to the last." },
-  { name: "Up-Back Shuttle", title: "Up-Back Shuttle", work: "30 m out + 30 m back", recovery: "Start every 60 s", count: "15 reps", intensity: "7/10", cue: "Plant cleanly and accelerate out of the turn." },
-  { name: "Low-Intensity Deceleration Drills", title: "Low-Intensity Deceleration Drills", work: "20 m build-up + 3 m controlled stop", recovery: "Start every 30 s", count: "10 reps", intensity: "4/10", cue: "Lower your body and stop under control." },
-  { name: "Deceleration and Landing Work", title: "Deceleration and Landing Work", work: "One jump-and-stick or run-and-stick", recovery: "Start every 60 s", count: "4 reps", intensity: "Controlled", cue: "Land quietly and hold your position." },
-  { name: "45-Degree Cut Reps", title: "45-Degree Cut Reps", work: "10 m approach + cut + 10 m exit", recovery: "Start every 60 s", count: "5 reps", intensity: "10/10", cue: "Keep your plant foot underneath you." },
+  { name: "Change of Direction", title: "Change of Direction", work: "Three ordered running sections", recovery: "As shown in each section", count: "3 sections", intensity: "4–10/10", cue: "Control the stop first, then build into sharper cuts and turns." },
   { name: "20 s Max Sprint — Small Dose", title: "20 s Max Sprint — Small Dose", work: "20 s as hard as possible", recovery: "Start every 2 min", count: "3 reps", intensity: "10/10", cue: "Do this properly and you won't want to do a fourth rep." },
   { name: "Erg Short-Burst Repeats (15–20 s)", title: "Erg Short-Burst Repeats", work: "15 s hard", recovery: "45 s easy", count: "10 rounds", intensity: "8/10", cue: "Keep every effort sharp rather than grinding." },
   { name: "Tabata Finisher", title: "Tabata Finisher", work: "20 s hard", recovery: "10 s easy", count: "8 rounds", intensity: "8/10", cue: "Stay controlled enough to complete all eight rounds." },
@@ -67,4 +64,3 @@ export const APPROVED_CONDITIONING_ATHLETE_COPY: readonly ApprovedConditioningAt
   { name: "Flush Intervals 1:1 (1 min / 1 min)", title: "1-Minute Flush Intervals", work: "1 min easy", recovery: "1 min rest", count: "6 reps", intensity: "Very easy, 2–3/10", cue: "Stay relaxed and breathe comfortably.", total: "12 min total" },
   { name: "Flush Intervals 2:1 (2 min / 1 min)", title: "2-Minute Flush Intervals", work: "2 min easy", recovery: "1 min rest", count: "4 reps", intensity: "Very easy, 2–3/10", cue: "Keep moving without accumulating fatigue.", total: "12 min total" },
 ];
-

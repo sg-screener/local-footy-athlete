@@ -143,7 +143,7 @@ export function pendingListProblems(repoRoot: string): string[] {
  * conditioning dose authority sitting beside the equality-bound one, which is
  * the precise defect the sheet exists to remove." Under this split, that is
  * KNOWINGLY TRUE OF THE COACH PATH — five coach doses go on competing with
- * Sam's 55 signed templates until the coach rebuild lifts LR-6 and retires
+ * Sam's signed conditioning catalogue until the coach rebuild lifts LR-6 and retires
  * them. That is a declared, ruled cost, not an oversight, and the pin below
  * keeps it visible rather than letting it pass as paid.
  */

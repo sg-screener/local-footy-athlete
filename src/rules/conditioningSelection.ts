@@ -1,5 +1,5 @@
 /**
- * CONDITIONING SELECTION + COMPOSITION — the one owner that turns Sam's 55
+ * CONDITIONING SELECTION + COMPOSITION — the one owner that turns Sam's 52
  * signed templates into the athlete's conditioning and speed sessions.
  *
  * Stage B's switchover (prediction:
@@ -80,6 +80,21 @@ export type ConditioningSelectionTier = 'A' | 'B-high' | 'B-low' | 'C';
 
 /** The role a conditioning block plays in its session. Selection-time only. */
 export type ConditioningRole = 'standalone' | 'finisher' | 'component';
+
+/**
+ * Lower-body strength normally pushes attached conditioning off-feet. The one
+ * authored COD session is an explicit exception: it is running mechanics work
+ * and cannot truthfully become a bike or erg session.
+ */
+export function combinedConditioningMustBeOffFeet(args: {
+  readonly category: AthleteConditioningCategory;
+  readonly strengthRegion: 'lower' | 'upper' | 'full' | undefined;
+  readonly hasAvailableMachine: boolean;
+}): boolean {
+  if (!args.hasAvailableMachine) return false;
+  if (args.category === 'cod_decel') return false;
+  return args.category !== 'sprint' || args.strengthRegion === 'lower';
+}
 
 /* ── Tier ← quality (placement policy, declared once) ── */
 
@@ -168,15 +183,9 @@ function templatesOfQuality(...qualities: ConditioningQuality[]): ConditioningTe
  * request — which is the enforcement the two narrowings never had. Sam's
  * standing instruction is to fix the class, not the instance.
  *
- * ## `cod_decel` is `null` ON PURPOSE, and that is the finding
- *
- * `null` means AUTHORED BUT NOT REQUESTABLE: Sam signed four COD/deceleration
- * templates on 2026-07-25 and there is no category any planner can name to reach
- * them. It is written here rather than left as an absence, because an absence is
- * what hid it for a month. **Giving it a category is a placement change — the
- * planner's coverage maths is sensitive to pool SIZE, and adding one member
- * moved four unrelated phase checks — so it is a separate unit with its own
- * before/after, not a line in this one.**
+ * `cod_decel` used to be the missing waist. It now has one explicit category
+ * and one combined session, so it cannot disappear merely because nobody gave
+ * the planner a word for it.
  */
 export const REQUESTABLE_CATEGORIES_FOR_QUALITY:
   Readonly<Record<ConditioningQuality, readonly AthleteConditioningCategory[]>> = {
@@ -184,7 +193,7 @@ export const REQUESTABLE_CATEGORIES_FOR_QUALITY:
   acceleration: ['sprint'],
   top_end_speed: ['sprint'],
   repeat_sprint: ['sprint'],
-  // AUTHORED, NOT REQUESTABLE. Four signed templates, no category, no reader.
+  // One explicit request reaches the one combined COD session.
   cod_decel: ['cod_decel'],
   anaerobic: ['glycolytic'],
   aerobic_power: ['vo2'],
@@ -973,6 +982,28 @@ export function composeConditioningRows(
       opts.authoredAtISO,
     ));
   }
+  if (template.sections?.length) {
+    for (const section of template.sections) {
+      const parsedRest = parseConditioningDose(section.recovery);
+      const restSeconds = parsedRest.ok ? doseSeconds(parsedRest.quantity) : null;
+      rows.push(conditioningRow(
+        `${prefix}-section-${rows.length}`,
+        section.name,
+        base + rows.length,
+        section.prescribedReps,
+        restSeconds ? Math.round((restSeconds.min + restSeconds.max) / 2) : 0,
+        [
+          `Work: ${section.work}`,
+          `Recovery: ${section.recovery}`,
+          `Reps: ${section.reps}`,
+          `Intensity: ${section.intensity}`,
+          section.cue,
+        ].join('\n'),
+        opts.authoredAtISO,
+      ));
+    }
+    return rows;
+  }
   const resolvedSetsRounds = template.intervalPrescription?.rounds ?? (opts.authoredMinimumDose
     ? headlineSetsLow(template)
     : headlineSets(template, opts));
@@ -1152,13 +1183,25 @@ export interface ConditioningVisibleDose {
 
 export function conditioningVisibleDoseFor(name: string, modality?: import('../types/domain').ConditioningOption['modality']): ConditioningVisibleDose | null {
   const template = resolveTemplateByName(name);
-  if (!template) return null;
-  const prescription = conditioningAthletePrescription(template, undefined, modality);
+  if (template) {
+    const prescription = conditioningAthletePrescription(template, undefined, modality);
+    return {
+      templateName: template.name,
+      work: prescription.work,
+      rest: prescription.recovery,
+      setsRounds: prescription.setsRounds,
+      totalSessionTime: prescription.totalSessionTime,
+    };
+  }
+  const section = CONDITIONING_TEMPLATES
+    .flatMap((candidate) => candidate.sections ?? [])
+    .find((candidate) => candidate.name === name);
+  if (!section) return null;
   return {
-    templateName: template.name,
-    work: prescription.work,
-    rest: prescription.recovery,
-    setsRounds: prescription.setsRounds,
-    totalSessionTime: prescription.totalSessionTime,
+    templateName: section.name,
+    work: section.work,
+    rest: section.recovery,
+    setsRounds: section.reps,
+    totalSessionTime: '',
   };
 }

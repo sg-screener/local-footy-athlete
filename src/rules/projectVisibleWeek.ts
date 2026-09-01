@@ -645,7 +645,7 @@ function toVisibleRows(rows: readonly any[], workout?: Workout | null): VisibleR
  * headlines, the menu renders capabilities, and the day-detail screen's row
  * rendering is the INPUT surface (weights, receipts, cues, video), which reads the
  * workout directly and always did. The authored vocabulary these rows are owed
- * exists and is not wired: `data/conditioningTemplates.ts`, Sam's 55 signed
+ * exists and is not wired: `data/conditioningTemplates.ts`, Sam's signed
  * doses, "NOT WIRED YET ... Stage B switches selection onto it". Wiring it is the
  * conditioning-generation owner's, not a UI task's.
  *

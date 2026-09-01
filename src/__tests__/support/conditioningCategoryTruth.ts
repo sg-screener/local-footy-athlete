@@ -42,9 +42,11 @@ export function conditioningCategoryTruth(ok: Check) {
       try {
         const selected = selectConditioningTemplate({ category, dateStr: '2026-07-13', miniCycleNumber,
           noTeamTrainingWeek: true, availableMachines: ['bike', 'air_bike', 'row', 'ski'] });
+        const composed = composeConditioningRows(selected, '2026-07-13');
+        const expectedRowNames = selected.sections?.map((section) => section.name) ?? [selected.name];
         ok(`[C12 current] ${category}/${miniCycleNumber}: selection and composed prescription retain the requested quality`,
           expected[category].includes(selected.quality) && pool?.some(t => t.name === selected.name)
-          && composeConditioningRows(selected, '2026-07-13').some(row => row.exercise.name === selected.name), selected.name);
+          && expectedRowNames.every((name) => composed.some(row => row.exercise.name === name)), selected.name);
       } catch (error) {
         ok(`[C12 current] ${category}/${miniCycleNumber}: selection and composed prescription retain the requested quality`, false, String(error));
       }

@@ -309,13 +309,16 @@ console.log('\n[5] VOCABULARY — the sheet uses only signed words');
 console.log('\n[6] COVERAGE — the sheet and the template vocabulary agree');
 {
   const templateNames = new Set(CONDITIONING_TEMPLATES.map((template) => template.name));
+  const sectionNames = new Set(CONDITIONING_TEMPLATES.flatMap((template) =>
+    template.sections?.map((section) => section.name) ?? []));
   const covered = new Set(CONDITIONING_MUSCLE_METADATA.map((entry) => entry.exercise));
 
-  okEmpty('every row names a template that ships',
-    [...covered].filter((name) => !templateNames.has(name)));
+  okEmpty('every row names a template or visible section that ships',
+    [...covered].filter((name) => !templateNames.has(name) && !sectionNames.has(name)));
 
-  // 53 + the 2 Sam signed earlier = the 55. A 56th template arriving with no
-  // muscle row would land here, which is the gap this cell exists to catch.
+  // A new template arriving with no muscle row lands here, which is the gap
+  // this cell exists to catch. Combined-session sections are separately held
+  // above because they are visible rows but not selectable templates.
   okEmpty('every signed template has muscle metadata somewhere',
     [...templateNames].filter((name) =>
       !covered.has(name) && !SIGNED_ELSEWHERE.includes(name)));

@@ -25,7 +25,7 @@ export function templateSupportsSelectedModalities(
 export function assertConditioningTemplateModalityCompatibility(workout: Partial<Workout>): void {
   for (const option of workout.conditioningBlock?.options ?? []) {
     const template = TEMPLATE_BY_NAME.get(option.title);
-    if (!template) continue; // Athlete-authored conditioning is not one of the signed 55.
+    if (!template) continue; // Athlete-authored conditioning is outside the signed catalogue.
     const selected = selectedConditioningModalities(option.modality, option.modalitySequence);
     if (!templateSupportsSelectedModalities(template, selected)) {
       throw new Error(`conditioning_template_modality_incompatible:${template.name}:${selected.join('+') || 'missing'}:workout=${workout.name ?? workout.id ?? 'unknown'}:optional=${workout.composedOptionalKind ?? 'none'}`);

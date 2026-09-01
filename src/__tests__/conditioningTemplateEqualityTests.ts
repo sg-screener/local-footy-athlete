@@ -3,7 +3,7 @@
  *
  *   docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx   (Sam, AUTHORED FINAL)
  *
- * The workbook is the SOURCE OF TRUTH for all 55 conditioning doses. This suite
+ * The workbook is the SOURCE OF TRUTH for all 52 conditioning sessions. This suite
  * parses it directly and holds `src/data/conditioningTemplates.ts` to it field
  * for field, in both directions. If Sam edits a dose, adds a row, bins a row or
  * changes a property, this suite fails until the typed module matches.
@@ -99,7 +99,7 @@ const AUTHORED_TAB_COUNTS: Readonly<Record<string, number>> = {
   Acceleration: 7,
   'Top End Speed': 4,
   'Repeat Sprint': 5,
-  'Change of Direction-Decel': 4,
+  'Change of Direction-Decel': 1,
   Anaerobic: 9,
   'Aerobic Power': 9,
   'Aerobic Capacity': 10,
@@ -127,8 +127,8 @@ ok(
 );
 
 ok(
-  'the sheet holds exactly 55 templates',
-  sheetRows.length === 55,
+  'the sheet holds exactly 52 templates',
+  sheetRows.length === 52,
   `sheet has ${sheetRows.length}`,
 );
 
@@ -137,6 +137,23 @@ for (const [tab] of TAB_TO_QUALITY) {
   const actual = sheetRows.filter((row) => row.tab === tab).length;
   ok(`${tab} holds Sam's ${expected} rows`, actual === expected, `found ${actual}`);
 }
+
+const codSectionRows = readSheetRecords(SHEET, 'COD Session Sections');
+const codTemplate = CONDITIONING_TEMPLATES.find((template) => template.name === 'Change of Direction');
+const codSectionsFromSheet = codSectionRows.map((record) => ({
+  name: record.Section,
+  work: record.Work,
+  recovery: record.Recovery,
+  reps: record.Amount,
+  prescribedReps: Number.parseInt(record.Amount, 10),
+  intensity: record.Effort,
+  cue: record.Cue,
+}));
+ok(
+  'the combined COD section sheet equals the typed session in exact order',
+  JSON.stringify(codSectionsFromSheet) === JSON.stringify(codTemplate?.sections ?? []),
+  `sheet=${JSON.stringify(codSectionsFromSheet)} code=${JSON.stringify(codTemplate?.sections ?? [])}`,
+);
 
 // Sam signed off at zero flags. `Change Mark` and `Framework Check` narrate
 // flags being CLEARED and legitimately contain "⚑", so the check is scoped to
@@ -173,8 +190,8 @@ ok(
 console.log('\n[2] EQUALITY — every authored row ships exactly, and nothing else does');
 
 ok(
-  'the module ships exactly 55 templates',
-  CONDITIONING_TEMPLATES.length === 55,
+  'the module ships exactly 52 templates',
+  CONDITIONING_TEMPLATES.length === 52,
   `module has ${CONDITIONING_TEMPLATES.length}`,
 );
 
@@ -287,7 +304,7 @@ ok(
 );
 
 ok(
-  'all 55 supported-modality declarations ship verbatim from the workbook',
+  'all 52 supported-modality declarations ship verbatim from the workbook',
   modalityMismatches.length === 0,
   modalityMismatches.slice(0, 8).join('\n      '),
 );
@@ -362,7 +379,7 @@ const AUTHORED_PROPERTY_COUNTS: Readonly<Record<TemplateProperty, number>> = {
   set_length_max_4_5_min: 3,
   finisher_role_only: 1,
   fallback_only: 1,
-  availability_gate_no_team_training: 4,
+  availability_gate_no_team_training: 1,
   mid_session_mixing_flush_only: 3,
   no_ski_row_flywheel: 4,
   // Sam's ruling 5, 2026-08-05 (docs/SWITCHOVER_PARKED_RULINGS_2026-08-05.md):
@@ -633,7 +650,6 @@ ok(
     if (template.automaticSelection === 'retired') {
       const retired = new Set([
         'Bodyweight Circuit (no-equipment fallback)',
-        'Deceleration and Landing Work',
         'Erg EMOM',
         'Easy Aerobic Flush',
       ]);
@@ -677,8 +693,9 @@ ok(
 
   // AND THE COUNT SAM CARES ABOUT, stated every run rather than inferred.
   const codTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'cod_decel');
-  ok('the four signed COD/decel templates still exist on the sheet',
-    codTemplates.length === 4, String(codTemplates.length));
+  ok('the one signed combined COD session exists on the sheet',
+    codTemplates.length === 1 && codTemplates[0]?.name === 'Change of Direction',
+    codTemplates.map((template) => template.name).join(', '));
 }
 
 // ── C3: THE ERG CAP IS ENFORCED, NOT JUST ENCODED ─────────────────────────
@@ -950,7 +967,7 @@ ok(
   }));
 
   ok('[C13] every authored conditioning row was projected — the sweep is live',
-    projected.length === CONDITIONING_TEMPLATES.length && projected.length === 55,
+    projected.length === CONDITIONING_TEMPLATES.length && projected.length === 52,
     `${projected.length}/${CONDITIONING_TEMPLATES.length}`);
 
   const ratioTitles = projected.filter(({ title }) => /\b\d+\s*:\s*\d+\b/.test(title));
@@ -1064,7 +1081,7 @@ ok(
     const card = conditioningCardPresentation(lines, 'Bike');
     return !card.structure || !card.intensity || !card.cue;
   });
-  ok('[C13] all 55 templates reach the same structure-intensity-cue hierarchy',
+  ok('[C13] all 52 templates reach the same structure-intensity-cue hierarchy',
     incompleteCards.length === 0,
     incompleteCards.map(({ template }) => template.name).join(' | '));
 
@@ -1089,10 +1106,12 @@ ok(
     return JSON.stringify(actual) === JSON.stringify(expected)
       ? [] : [`${template.name}\n        expected ${JSON.stringify(expected)}\n        actual   ${JSON.stringify(actual)}`];
   });
-  ok('[C13] all 55 cards equal Sam\'s complete approved athlete wording',
-    approvedByName.size === 55 && approvedMismatches.length === 0,
+  ok('[C13] all 52 cards equal Sam\'s complete approved athlete wording',
+    approvedByName.size === 52 && approvedMismatches.length === 0,
     approvedMismatches.slice(0, 8).join('\n      '));
-  const generatedCopyMismatches = CONDITIONING_TEMPLATES.flatMap((template) => {
+  const generatedCopyMismatches = CONDITIONING_TEMPLATES
+    .filter((template) => !template.sections?.length)
+    .flatMap((template) => {
     const expectedText = conditioningDisplayLines({ template })
       .map((line) => line.label ? `${line.label}: ${line.text}` : line.text)
       .join('\n');
@@ -1101,7 +1120,7 @@ ok(
       `${template.name}\n        expected ${JSON.stringify(expectedText)}\n        actual   ${JSON.stringify(row.notes)}`,
     ];
   });
-  ok('[C13] all 55 generated workout rows carry the same approved copy',
+  ok('[C13] every single-row session carries the same approved copy',
     generatedCopyMismatches.length === 0,
     generatedCopyMismatches.slice(0, 8).join('\n      '));
   ok('[C13] the structural warm-up uses Sam\'s final build-up wording',
@@ -1151,10 +1170,9 @@ ok(
 
   const retiredNames = CONDITIONING_TEMPLATES.filter((template) => template.automaticSelection === 'retired')
     .map((template) => template.name).sort();
-  ok('[C13] exactly the four ruled sessions are retired from current programming',
+  ok('[C13] exactly the three ruled legacy sessions are retired from current programming',
     JSON.stringify(retiredNames) === JSON.stringify([
-      'Bodyweight Circuit (no-equipment fallback)', 'Deceleration and Landing Work',
-      'Easy Aerobic Flush', 'Erg EMOM',
+      'Bodyweight Circuit (no-equipment fallback)', 'Easy Aerobic Flush', 'Erg EMOM',
     ]), JSON.stringify(retiredNames));
 }
 
@@ -1180,7 +1198,7 @@ ok(
         miniCycleNumber: index + 1,
         noTeamTrainingWeek: true,
       }).name);
-    if (new Set(picks).size < 2) {
+    if (poolForCategoryPublic(category).length > 1 && new Set(picks).size < 2) {
       stuck.push(`${category}: ${picks.join(' | ')}`);
     }
     const repeat = selectConditioningTemplate({
@@ -1191,7 +1209,7 @@ ok(
     }).name;
     if (repeat !== picks[1]) unstable.push(`${category}: ${picks[1]} / ${repeat}`);
   }
-  ok('[C14] every conditioning category advances beyond its first eligible template',
+  ok('[C14] every multi-template conditioning category advances beyond its first eligible template',
     stuck.length === 0,
     stuck.join(' || '));
   ok('[C14] the chosen template stays stable inside its mini-cycle',

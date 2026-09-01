@@ -2174,6 +2174,23 @@ export function registerProjectionCopy(): void {
       + 'generation ruling.',
     text: 'Acceleration',
   });
+  for (const template of CONDITIONING_TEMPLATES) {
+    for (const section of template.sections ?? []) {
+      NAMES_WITH_CUE.add(section.name);
+      exerciseEntries.push({
+        id: exerciseNameCopyId(section.name),
+        source: 'sam_ruling',
+        provenance: 'R-331 (Sam, 2026-09-02): one combined Change of Direction session with three exact visible sections.',
+        text: section.name,
+      });
+      exerciseEntries.push({
+        id: `${EXERCISE_CUE_PREFIX}${section.name}`,
+        source: 'sam_ruling',
+        provenance: 'R-331 (Sam, 2026-09-02): exact cue attached to its matching Change of Direction section.',
+        text: section.cue,
+      });
+    }
+  }
   for (const name of selectableExerciseNames()) {
     exerciseEntries.push({
       id: exerciseNameCopyId(name),
@@ -2204,9 +2221,13 @@ export function registerProjectionCopy(): void {
   // writes from the same fields. A trace, not an invention — the same shape as
   // the exercise vocabulary above.
   const doseEntries: SignedCopyEntry[] = [];
-  for (const template of CONDITIONING_TEMPLATES) for (const modality of [undefined, 'running', 'bike'] as const) {
+  const conditioningDoseNames = CONDITIONING_TEMPLATES.flatMap((template) => [
+    template.name,
+    ...(template.sections?.map((section) => section.name) ?? []),
+  ]);
+  for (const name of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike'] as const) {
     const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
-    const dose = conditioningVisibleDoseFor(template.name, modality);
+    const dose = conditioningVisibleDoseFor(name, modality);
     if (!dose) continue;
     const fields: readonly (readonly [ConditioningDoseField, string])[] = [
       ['work', dose.work],
@@ -2215,9 +2236,10 @@ export function registerProjectionCopy(): void {
       ['total_time', dose.totalSessionTime],
     ];
     for (const [field, text] of fields) {
-      DOSE_VALUES_REGISTERED.add(`${template.name} ${field}${suffix}`);
+      if (!text.trim()) continue;
+      DOSE_VALUES_REGISTERED.add(`${dose.templateName} ${field}${suffix}`);
       doseEntries.push({
-        id: `${DOSE_VALUE_PREFIX}${field}.${template.name}${suffix}`,
+        id: `${DOSE_VALUE_PREFIX}${field}.${dose.templateName}${suffix}`,
         source: 'authored_sheet',
         provenance: 'data/conditioningTemplates.ts — the authored dose sheet, read '
           + 'through conditioningSelection.conditioningVisibleDoseFor so the value '
@@ -2233,12 +2255,13 @@ export function registerProjectionCopy(): void {
    * recognise the complete rendered line without widening SignedCopy's global
    * placeholder rule back to arbitrary text. */
   const renderedDoseEntries: SignedCopyEntry[] = [];
-  for (const template of CONDITIONING_TEMPLATES) for (const modality of [undefined, 'running', 'bike'] as const) {
+  for (const templateName of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike'] as const) {
     const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
     for (const [field, labelId] of CONDITIONING_DOSE_COPY_LINES) {
-      const valueId = `${DOSE_VALUE_PREFIX}${field}.${template.name}${suffix}`;
+      const valueId = conditioningDoseValueCopyId(templateName, field, modality);
+      if (!valueId) continue;
       renderedDoseEntries.push({
-        id: `row.dose.rendered.${field}.${template.name}${suffix}`,
+        id: `row.dose.rendered.${field}.${templateName}${suffix}`,
         source: 'authored_sheet',
         provenance: 'Finite rendered conditioning dose: the registered label filled '
           + 'with the registered authored template value; no open text placeholder.',

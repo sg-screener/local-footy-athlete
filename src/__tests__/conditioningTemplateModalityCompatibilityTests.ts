@@ -24,8 +24,8 @@ const optionMode = (mode: ConditioningModality): Pick<ConditioningOption, 'modal
     : mode === 'air_bike' ? { modality: 'bike', modalitySequence: ['air_bike'] }
       : { modality: mode, modalitySequence: [mode] };
 
-check('all 55 templates explicitly declare a valid identity/modality contract', () => {
-  assert.equal(CONDITIONING_TEMPLATES.length, 55);
+check('all 52 templates explicitly declare a valid identity/modality contract', () => {
+  assert.equal(CONDITIONING_TEMPLATES.length, 52);
   for (const template of CONDITIONING_TEMPLATES) {
     assert.equal(isTemplateIdentityModalityContractValid(template), true, template.name);
   }
@@ -39,7 +39,7 @@ check('every supported machine modality gets machine warm-up copy without runnin
   assert.match(conditioningWarmupCopyForModality('running'), /jog.*run-throughs/i);
 });
 
-check('all 55 templates validate on every declared modality and reject an incompatible pair', () => {
+check('all 52 templates validate on every declared modality and reject an incompatible pair', () => {
   for (const template of CONDITIONING_TEMPLATES.filter((candidate) => candidate.automaticSelection !== 'retired')) {
     for (const mode of template.permittedModalities) {
       const typed = optionMode(mode);
@@ -94,4 +94,4 @@ check('Air Bike Accelerations reaches the final card as Air Bike with machine wa
 });
 
 console.log(`PASS ${passed} conditioning template/modality compatibility gates`);
-console.log('NOT COVERED: physical iPhone, athlete-authored conditioning outside the signed 55, final PDFs');
+console.log('NOT COVERED: physical iPhone, athlete-authored conditioning outside the signed 52, final PDFs');

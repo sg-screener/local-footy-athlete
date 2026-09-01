@@ -1632,10 +1632,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       optional: entry.owner === 'strength' ? entry.optional : !required,
       clauseId: 'R-265' };
   });
-  // R-329 — exchange one existing easy/moderate conditioning component for a
-  // small COD dose. This does not create a session, change a weekday or increase
-  // the conditioning count. Prefer an upper/standalone receiver so COD is not
-  // stacked onto lower strength when another existing seat is available.
+  // R-329/R-331 — exchange one existing easy/moderate conditioning component
+  // for the one authored Change of Direction session. It may sit beside lower
+  // strength; the composition owner keeps it on-feet and renders its three
+  // ordered parts. This does not add a day or conditioning credit.
   const withFortnightlyCod = (() => {
     if (!fortnightlyCodDoseDue(inputs)) return withFlush;
     const isReceiver = (entry: SessionIntention) =>
@@ -1643,15 +1643,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       && (entry.conditioningCategory === 'aerobic_base'
         || entry.conditioningCategory === 'tempo')
       && !entry.clubTraining && !entry.game;
-    const preferred = withFlush.find(entry => isReceiver(entry)
-      && (entry.purpose === null || !PURPOSE_IS_LOWER[entry.purpose]));
-    const receiver = preferred ?? withFlush.find(isReceiver);
+    const receiver = withFlush.find(isReceiver);
     if (!receiver) return withFlush;
     return withFlush.map((entry): SessionIntention => entry !== receiver ? entry : ({
       ...entry,
       conditioning: 'running',
       conditioningCategory: 'cod_decel',
-      conditioningTemplatePreference: 'Low-Intensity Deceleration Drills',
+      conditioningTemplatePreference: 'Change of Direction',
       clauseId: 'R-329',
     }));
   })();

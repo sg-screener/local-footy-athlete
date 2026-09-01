@@ -605,7 +605,7 @@ export function resolveConditioning(
   const eligibleTiers = getEligibleTiers(ctx, weekLog, dateTiers);
   if (eligibleTiers.length === 0) return null;
 
-  // Step 5: The selection pool is the AUTHORED sheet — Sam's 55 signed
+  // Step 5: The selection pool is the AUTHORED sheet — Sam's 52 signed
   // templates (Stage B switchover). The legacy CONDITIONING_META name
   // vocabulary survives for rendering stored content, but nothing selects
   // from it any more; every template name carries a META triple (curated

@@ -7,7 +7,10 @@
  */
 import { canonicalWeeklyAvailabilityStateFrom,
   schedulerInputsWithAvailabilityState } from '../rules/canonicalWeeklyAvailabilityState';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { materialiseAuthoredSessions } from '../rules/materialiseAuthoredSessions';
+import { combinedConditioningMustBeOffFeet,
+  composeConditioningRows } from '../rules/conditioningSelection';
 import { scheduleRefused, scheduleWeek,
   type WeeklySchedule, type WeeklySchedulerInputs } from '../rules/weeklyScheduler';
 
@@ -103,10 +106,39 @@ const materialised = materialiseAuthoredSessions({
   },
   gameDay: null,
 });
-ok('the small dose resolves to Low-Intensity Deceleration Drills',
+ok('the fortnightly dose resolves to the one Change of Direction session',
   materialised.some(session => session.conditioningTemplate?.name
-    === 'Low-Intensity Deceleration Drills'),
+    === 'Change of Direction'),
   materialised.map(session => session.conditioningTemplate?.name ?? null));
+
+const codTemplates = CONDITIONING_TEMPLATES.filter(template => template.quality === 'cod_decel');
+ok('the catalogue contains one programmable COD identity',
+  codTemplates.length === 1 && codTemplates[0]?.name === 'Change of Direction',
+  codTemplates.map(template => template.name));
+ok('retired individual COD sessions cannot be selected or programmed',
+  ['Low-Intensity Deceleration Drills', '45-Degree Cut Reps', 'Up-Back Shuttle',
+    'Deceleration and Landing Work'].every(name =>
+    CONDITIONING_TEMPLATES.every(template => template.name !== name)));
+
+const codRows = codTemplates[0]
+  ? composeConditioningRows(codTemplates[0], '2026-10-27') : [];
+ok('Change of Direction renders the Speed warm-up then three ordered work sections',
+  codRows.map(row => row.exercise.name).join(' | ') === [
+    'Warm-up',
+    'Low-Intensity Deceleration Drills',
+    '45-Degree Cut Reps',
+    'Up-Back Shuttle',
+  ].join(' | '), codRows.map(row => row.exercise.name));
+ok('the three sections preserve Sam\'s exact work, recovery, amount, effort and cues',
+  codRows.slice(1).map(row => row.notes).join('\n---\n') === [
+    'Work: 20 m build-up + 3 m controlled stop\nRecovery: Start every 30 s\nReps: 10 reps\nIntensity: 4/10\nLower your body and stop under control.',
+    'Work: 10 m approach + cut + 10 m exit\nRecovery: Start every 60 s\nReps: 5 reps per side\nIntensity: 10/10\nKeep your plant foot underneath you.',
+    'Work: 30 m out + 30 m back\nRecovery: Start every 60 s\nReps: 15 reps\nIntensity: 7/10\nPlant cleanly and accelerate out of the turn.',
+  ].join('\n---\n'), codRows.slice(1).map(row => row.notes));
+ok('the combined COD session is an explicit on-feet exception on lower-body days',
+  combinedConditioningMustBeOffFeet({
+    category: 'cod_decel', strengthRegion: 'lower', hasAvailableMachine: true,
+  }) === false);
 
 const profile = {
   teamTrainingStopsOverChristmas: true,

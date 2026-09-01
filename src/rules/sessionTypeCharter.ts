@@ -304,7 +304,7 @@ export const SESSION_TYPE_CHARTER: Readonly<Record<SessionTypeId, SessionTypeCha
       + 'picker Upper / Lower / Full Body (Sam, 2026-07-30).',
   },
 
-  /** CONDITIONING — 55 signed templates, two doors, counts as load. */
+  /** CONDITIONING — signed templates, two doors, counts as load. */
   conditioning: {
     id: 'conditioning',
     placedBy: {

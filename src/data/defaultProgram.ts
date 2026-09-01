@@ -60,6 +60,7 @@ import {
   type AthleteConditioningCategory,
   type ConditioningRole,
   codDecelPermitted,
+  combinedConditioningMustBeOffFeet,
 } from '../rules/conditioningSelection';
 import { selectPowerExerciseWithTrace } from '../rules/powerExercisePool';
 import { parseConditioningDose, doseMidpoint } from '../rules/conditioningDose';
@@ -1147,6 +1148,7 @@ export function buildConditioningBlock(
   attachedKind?: AttachedConditioningKind,
   modality?: 'bike' | 'row' | 'ski' | 'running' | 'mixed',
   availableMachines?: ReadonlyArray<'bike' | 'air_bike' | 'row' | 'ski'>,
+  templateName?: string,
 ): ConditioningBlock | undefined {
   if (!condBlock || condBlock.length === 0) return undefined;
 
@@ -1159,7 +1161,8 @@ export function buildConditioningBlock(
       return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
     }) ?? condBlock[condBlock.length - 1];
   const headlineName = headline.exercise?.name || 'Conditioning';
-  const template = resolveTemplateByName(headlineName);
+  const template = resolveTemplateByName(templateName ?? headlineName);
+  const optionTitle = template?.name ?? headlineName;
   const machines = template ? renderableModalities(template).filter(m => m !== 'run'
     && (availableMachines === undefined || availableMachines.includes(m as never))) : [];
   const mixedMachines = (['bike', 'air_bike', 'ski', 'row'] as const)
@@ -1174,7 +1177,7 @@ export function buildConditioningBlock(
     ...(attachedKind ? { attachedKind } : {}),
     options: [
       {
-        title: headlineName,
+        title: optionTitle,
         description: '',
         ...(template?.quality === 'flush' ? { durationMinutes: templateDurationMinutes(template) } : {}),
         exerciseIds: condBlock.map((ex) => ex.id),
@@ -1736,15 +1739,18 @@ export function buildWorkoutsFromCoach(
           ?? flavourToCategory(planEntry.conditioningFlavour),
         planEntry.section18ConditioningRole,
       )!;
-    // Selection over the 55 signed templates (Stage B switchover). The
+    // Selection over the signed conditioning catalogue (Stage B switchover). The
     // planner's category (or legacy flavour) names the demand; the engine's
     // off-feet ruling (typed field) and the standing combined-day policy are
     // selection CONSTRAINTS now, not hardcoded names. The policy is the old
     // path's, unchanged: combined non-sprint conditioning renders off-feet
     // (the lift owns the legs); combined sprint goes off-feet only when
     // paired with a lower-body lift.
-    const legSparingOffFeet = isCombined && availableMachines.length > 0
-      && (selectionCategory !== 'sprint' || strengthRegion === 'lower');
+    const legSparingOffFeet = isCombined && combinedConditioningMustBeOffFeet({
+      category: selectionCategory,
+      strengthRegion,
+      hasAvailableMachine: availableMachines.length > 0,
+    });
     const selectedTemplate = selectConditioningTemplate({
       category: selectionCategory,
       preferredTemplateName: planEntry.conditioningVariant,
@@ -1754,8 +1760,8 @@ export function buildWorkoutsFromCoach(
       availableMachines,
       role: selectionRole,
       // THE GATE THAT WAS DEAD TWICE, AND THEN READ THE WRONG THING.
-      // `availability_gate_no_team_training` sat on the four COD templates since
-      // they were authored with NO caller passing the flag, so the filter could
+      // `availability_gate_no_team_training` sits on the combined COD session.
+      // The old templates were authored with NO caller passing the flag, so the filter could
       // never open. It was then wired to
       // `onboardingData.teamTrainingDays.length === 0` — the athlete's STANDING
       // PROFILE, not a fact about THIS WEEK. A club athlete's list is non-empty
@@ -2123,6 +2129,7 @@ export function buildWorkoutsFromCoach(
           planEntry.conditioningFlavour!, condExercises, undefined,
           resolvedBlockModality(exerciseName, planEntry.ergModality as ErgModality | undefined, availableMachines),
           availableMachines,
+          exerciseName,
         ) } : {}),
         // 4B: carry the energy-system category onto conditioning workouts
         // so the rules kernel classifies from the typed field. True speed
@@ -2470,6 +2477,7 @@ export function buildWorkoutsFromCoach(
           availableMachines,
         ),
         availableMachines,
+        condExName,
       );
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);

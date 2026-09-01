@@ -106,7 +106,7 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
       category === 'sprint' ? new Set(selected.map(t => t.quality)).size === 3 : new Set(selected.map(t => t.name)).size === 5,
       JSON.stringify(selected.map(t => t.name)));
   }
-  ok('conditioning display audit reaches all 55 authored templates', CONDITIONING_TEMPLATES.length === 55);
+  ok('conditioning display audit reaches all 52 authored templates', CONDITIONING_TEMPLATES.length === 52);
   for (const template of CONDITIONING_TEMPLATES) {
     const lines = conditioningDisplayLines({ template });
     ok(`${template.name}: shared projection has work, recovery and no duplicate prescription labels`,

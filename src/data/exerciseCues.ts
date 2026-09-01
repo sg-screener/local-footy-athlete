@@ -153,7 +153,7 @@ export function getExerciseCue(
 
   // 3. An authored conditioning template's own cue (Stage B landed,
   // 2026-08-05). This is the supersession the pending-pair note above always
-  // promised: the 55 signed templates each carry Sam's `effortCue`, and both
+  // promised: the signed templates each carry Sam's `effortCue`, and both
   // lines here are the workbook's fields VERBATIM, equality-gated to the
   // sheet. Not a table copy — the workbook stays the one owner.
   const template = resolveTemplateByName(exerciseName);

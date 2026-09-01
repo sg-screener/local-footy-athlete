@@ -1,5 +1,5 @@
 /**
- * Conditioning templates — the 55 authored doses, as typed data.
+ * Conditioning templates — the 52 authored sessions, as typed data.
  *
  * SOURCE OF TRUTH: `docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx`
  * (Sam, AUTHORED FINAL, sign-off 2026-07-25/27). Paired physiology:
@@ -109,6 +109,8 @@ export interface ConditioningTemplate {
   readonly permittedModalities: readonly ConditioningModality[];
   /** Retired entries remain readable for saved sessions, but are not selected. */
   readonly automaticSelection?: 'retired';
+  /** One selectable session may contain several ordered athlete-visible parts. */
+  readonly sections?: readonly ConditioningTemplateSection[];
   /** R-266: one concrete timed flush, including the final recovery/transition. */
   readonly intervalPrescription?: {
     readonly workSeconds: number;
@@ -135,6 +137,17 @@ export interface ConditioningTemplate {
   readonly source: string;
   /** What this pass did to the row. Traces to the Change Log tab. */
   readonly changeMark: string;
+}
+
+export interface ConditioningTemplateSection {
+  readonly name: string;
+  readonly work: string;
+  readonly recovery: string;
+  /** Athlete-visible quantity without repeating the `Reps` label. */
+  readonly reps: string;
+  readonly prescribedReps: number;
+  readonly intensity: string;
+  readonly cue: string;
 }
 
 /* ── Governing quality table ── */
@@ -347,7 +360,7 @@ export const EFFORT_LENGTH_ASSUMPTIONS: readonly EffortLengthAssumption[] = [
   { label: '1 km', approxEffort: '≈3.5–4 min' },
 ];
 
-/* ── The 55 authored templates ── */
+/* ── The 52 authored templates ── */
 
 /**
  * Every dose below is verbatim from the authored workbook. Generated from the
@@ -669,77 +682,51 @@ export const CONDITIONING_TEMPLATES: readonly ConditioningTemplate[] = [
 
   /* ── Change of Direction-Decel ── */
   {
-    name: 'Up-Back Shuttle',
+    name: 'Change of Direction',
     quality: 'cod_decel',
     permittedModalities: ['run'],
-    workPeriod: '≈11 s (30 m out, 180° turn, 30 m back)',
-    restPeriod: '≈30–40 s walk',
-    setsRounds: '15–20 reps inside 10–15 min',
-    intensity: 'Hard but controlled — turn quality is the governor',
-    workToRest: '≈1:3',
-    totalSessionTime: '10–15 min after warm-up',
+    sections: [
+      {
+        name: 'Low-Intensity Deceleration Drills',
+        work: '20 m build-up + 3 m controlled stop',
+        recovery: 'Start every 30 s',
+        reps: '10 reps',
+        prescribedReps: 10,
+        intensity: '4/10',
+        cue: 'Lower your body and stop under control.',
+      },
+      {
+        name: '45-Degree Cut Reps',
+        work: '10 m approach + cut + 10 m exit',
+        recovery: 'Start every 60 s',
+        reps: '5 reps per side',
+        prescribedReps: 5,
+        intensity: '10/10',
+        cue: 'Keep your plant foot underneath you.',
+      },
+      {
+        name: 'Up-Back Shuttle',
+        work: '30 m out + 30 m back',
+        recovery: 'Start every 60 s',
+        reps: '15 reps',
+        prescribedReps: 15,
+        intensity: '7/10',
+        cue: 'Plant cleanly and accelerate out of the turn.',
+      },
+    ],
+    workPeriod: 'Three ordered running sections',
+    restPeriod: 'As prescribed in each section',
+    setsRounds: '3 sections',
+    intensity: '4–10/10',
+    workToRest: 'Varies by section',
+    totalSessionTime: '≈40 min including warm-up',
     properties: ['availability_gate_no_team_training'],
-    effortCue: 'Turn should be sharp and controlled, not a slide — plant and go.',
-    baseUnit: 'distance',
-    modalityNotes: 'Run-only (field sprint/cutting mechanics; rule 4). No machine rendering.',
-    frameworkCheck: 'No framework band — COD/Decel is not a row in Sam\'s governing table (mechanics quality). W:R shown for information only. Dose APPROVED AS DRAFTED by Sam\'s FINAL ruling 5.',
-    source: 'Bible Sect.7 L1627–1632 / L606–611 (the only structured COD example the Bible gives); rest, reps, W:R computed in v2',
-    changeMark: 'kept · FINAL ruling 5: availability gate applied',
-  },
-  {
-    name: 'Low-Intensity Deceleration Drills',
-    quality: 'cod_decel',
-    permittedModalities: ['run'],
-    workPeriod: '≈5 s (jog in, controlled stop over 15–20 m)',
-    restPeriod: '30–45 s walk-back',
-    setsRounds: '2–4 reps',
-    intensity: 'Low intensity — braking under control',
-    workToRest: '≈1:8',
-    totalSessionTime: '≈3–5 min',
-    properties: ['availability_gate_no_team_training'],
-    effortCue: 'This is about braking under control, not stopping like you hit a wall.',
-    baseUnit: 'distance',
-    modalityNotes: 'Run-only (field sprint/cutting mechanics; rule 4). No machine rendering.',
-    frameworkCheck: 'No framework band — COD/Decel is not a row in Sam\'s governing table (mechanics quality). W:R shown for information only. Dose APPROVED AS DRAFTED by Sam\'s FINAL ruling 5.',
-    source: 'Bible names this for building-back athletes (L1758) with no dose; structure drafted here and APPROVED by Sam\'s FINAL ruling 5',
-    changeMark: 'kept · FINAL ruling 5: dose approved as drafted; availability gate applied',
-  },
-  {
-    name: 'Deceleration and Landing Work',
-    quality: 'cod_decel',
-    permittedModalities: ['run'],
-    automaticSelection: 'retired',
-    workPeriod: '3–5 s per rep (jump-land-stick / run-and-stick)',
-    restPeriod: '45–60 s',
-    setsRounds: '3–4 reps',
-    intensity: 'Controlled landings, quiet feet — quality-gated',
-    workToRest: '≈1:12',
-    totalSessionTime: '≈4–5 min',
-    properties: ['availability_gate_no_team_training'],
-    effortCue: 'Stick the landing — quiet feet, not a crash.',
+    effortCue: 'Control the stop first, then build into sharper cuts and turns.',
     baseUnit: 'reps',
     modalityNotes: 'Run-only (field sprint/cutting mechanics; rule 4). No machine rendering.',
-    frameworkCheck: 'No framework band — COD/Decel is not a row in Sam\'s governing table (mechanics quality). W:R shown for information only. Dose APPROVED AS DRAFTED by Sam\'s FINAL ruling 5. STAYS IN COD per Sam\'s V3-final ruling 3: landing MECHANICS, not jump training (the deleted repeated-jumps session was jump training).',
-    source: 'Bible names this (L1739) with no dose; structure drafted here and APPROVED by Sam\'s FINAL ruling 5',
-    changeMark: 'kept (V3-final ruling 3) · FINAL ruling 5: dose approved as drafted; availability gate applied',
-  },
-  {
-    name: '45-Degree Cut Reps',
-    quality: 'cod_decel',
-    permittedModalities: ['run'],
-    workPeriod: '≈4 s (10 m in / cut / 10 m out)',
-    restPeriod: '60–90 s (full recovery)',
-    setsRounds: '4–6 reps',
-    intensity: 'Maximal-intent cut, mechanics-gated',
-    workToRest: '≈1:20',
-    totalSessionTime: '≈5–9 min',
-    properties: ['availability_gate_no_team_training'],
-    effortCue: 'Plant foot stays under you — if the knee caves, stop the session.',
-    baseUnit: 'distance',
-    modalityNotes: 'Run-only (field sprint/cutting mechanics; rule 4). No machine rendering.',
-    frameworkCheck: 'No framework band — COD/Decel is not a row in Sam\'s governing table (mechanics quality). W:R shown for information only. Dose APPROVED AS DRAFTED by Sam\'s FINAL ruling 5.',
-    source: 'Standard COD drill, not in the Bible; dose drafted here and APPROVED by Sam\'s FINAL ruling 5',
-    changeMark: 'kept · FINAL ruling 5: dose approved as drafted; availability gate applied',
+    frameworkCheck: 'No framework band — one occasional ordered mechanics session, not a separately trained energy-system quality.',
+    source: 'Sam ruling 2026-09-02: combine the three retained COD drills into one ordered session and remove Deceleration and Landing Work.',
+    changeMark: 'COMBINED 2026-09-02 — one selectable COD session with three ordered sections.',
   },
 
   /* ── Anaerobic ── */
@@ -1439,11 +1426,11 @@ export const LEGACY_CONDITIONING_FORMAT_MAP: readonly LegacyConditioningFormat[]
   },
   {
     legacyName: 'Short COD Circuit',
-    resolution: { kind: 'retired', ruling: 'Sam FINAL ruling 13 — binned; COD keeps 4 rows.' },
+    resolution: { kind: 'retired', ruling: 'Sam ruling 2026-09-02 — binned; COD is one combined Change of Direction session.' },
   },
   {
     legacyName: 'COD Finisher',
-    resolution: { kind: 'retired', ruling: 'Sam FINAL ruling 13 — binned; COD keeps 4 rows.' },
+    resolution: { kind: 'retired', ruling: 'Sam ruling 2026-09-02 — binned; COD is one combined Change of Direction session.' },
   },
   {
     legacyName: '60-90 s Max Sustained',
