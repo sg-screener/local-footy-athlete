@@ -43,6 +43,7 @@ export interface ExerciseLookupResult {
 // Populate manually — do NOT use search URLs.
 
 export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
+  "Bench Thoracic Extension": "https://youtube.com/shorts/xE5ZaEKAx1g?si=Ylfp3Xa034vjwtZS",
   "Rotational Medicine-Ball Slam": "https://www.youtube.com/shorts/M9ryqecCLf0",
   "Medicine-Ball Slam": "https://youtube.com/shorts/fGLHGiYFIqc?si=nRpguZLephK8ZgMD",
   "Rotational Medicine-Ball Throw": "https://youtube.com/shorts/02c2YLgF8iE?si=0wuPpSMgXz_f0evm",

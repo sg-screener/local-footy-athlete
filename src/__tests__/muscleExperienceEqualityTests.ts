@@ -97,8 +97,8 @@ console.log('\n[1] THE SHEET — still reads as Sam signed it');
    together with its pool entry, cue, tags, load list and vocabulary entry. The
    number moves with the sheet; that is what makes this cell a ratchet rather
    than a decoration. */
-ok('the sheet holds 208 canonical exercise rows after both legacy identity merges',
-  sheetRows.length === 208, `found ${sheetRows.length}`);
+ok('the sheet holds 209 canonical exercise rows after both legacy identity merges and Bench Thoracic Extension',
+  sheetRows.length === 209, `found ${sheetRows.length}`);
 
 ok(
   'every row names an exercise and a pool',
@@ -340,8 +340,9 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 // everyone canonical identity; the detailed variant gate lives beside the
 // selected implement, so one_plus_years loses one row without everyone gaining
 // a duplicate identity.
+// Bench Thoracic Extension is one new everyone identity (141 -> 142).
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
-  everyone: 141,
+  everyone: 142,
   everyone_regression: 11,
   one_plus_years: 37,
   two_plus_years: 17,

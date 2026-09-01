@@ -387,6 +387,7 @@ export const MOBILITY_POOL: PoolExercise[] = [
   authoredExercise("seated-good-morning", "Seated Good Morning", [["bench", "plyo_box"], ["barbell", "dumbbells"]]),
   authoredExercise("crab-hold", "Crab Hold", []),
   authoredExercise("horse-stance-hold", "Horse Stance Hold", []),
+  authoredExercise("bench-thoracic-extension", "Bench Thoracic Extension", [["bench", "plyo_box"]]),
   ex('hip-90-90',         'Hip 90/90 Stretch',           2, 30, 45, 30, 'Breathe into the stretch.',                    ['bodyweight'], ['hip', 'knee'],  'low', { prescriptionType: 'duration', perSide: true }),
   ex('cat-cow',           'Cat-Cow',                     2, 10, 12, 15, 'Slow and controlled. Match movement to breath.', ['bodyweight'], [],             'low', { prescriptionType: 'reps' }),
   ex('worlds-greatest',   "World's Greatest Stretch",    2, 5,  5,  15, 'Hold each position 3 seconds.',                ['bodyweight'], [],              'low', { prescriptionType: 'reps', perSide: true }),

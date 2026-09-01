@@ -44,6 +44,7 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
+  "Bench Thoracic Extension": [["bench", "plyo_box"]],
   "Rotational Medicine-Ball Slam": ["medicine_ball"],
   "Medicine-Ball Slam": ["medicine_ball"],
   "Rotational Medicine-Ball Throw": ["medicine_ball"],

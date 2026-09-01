@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-bench-thoracic-extension-intake',
+    law: 'R-321: Bench Thoracic Extension uses the existing bodyweight Mobility path, bench-or-plyo-box equipment choice, supplied dose, cues, muscles, injury ratings and video. It remains eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including comfortable G-1 use.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-321',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `benchthoracic`. The exercise-intake suite binds the source intake to catalogue metadata, dose, cues, video, bench-or-box equipment legality, injury ratings, upper Movement Prep, Mobility, Recovery, manual Add/Swap, G-1 eligibility and accumulated restart. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_BENCHTHORACIC.md.',
+    },
+  },
+  {
     id: 'LAW-upper-split-composition-and-pulldown-identity',
     law: 'R-299: Single-Arm Lat Pulldown is the sole current identity and the retired spelling is read-ingress only. Normal male Upper Push and Upper Pull each have six rows with one accessory slot; female split tables remain separate. One explicit variation-family owner prevents same-session near-duplicates across composition, Add and Swap. Easier split-upper sessions retain their important movement planes and trim low-value accessories before producing many one-set rows.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-299',

@@ -475,6 +475,27 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       excludeWithinDaysOfGame: 1, warmup: true, primer: false,
     },
   },
+  'Bench Thoracic Extension': {
+    movement: 'core', region: 'upper', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: false, eccentric: 'low', lateWeek: 'good',
+    injury: {
+      groin: 'good', hip: 'good', quad: 'good',
+      hamstring: 'good', knee: 'caution', calf: 'good',
+      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
+      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'good',
+    },
+    prescription: {
+      sets: 2, repsMin: 5, repsMax: 5,
+      restSeconds: 30, prescriptionType: 'reps', perSide: false,
+      notes: 'Slow reps. Pause 3 seconds at the bottom. Bodyweight only; use a comfortable range near games.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // LOWER BODY — SQUAT / LUNGE

@@ -56,6 +56,9 @@ if (mutation === 'equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, 
 if (mutation === 'cue') EXERCISE_CUES['Horse Stance Hold'].primaryCue = 'incorrect cue';
 if (mutation === 'video') EXERCISE_DEMO_VIDEOS['Horse Stance Hold'] = 'https://example.invalid';
 if (mutation === 'duration') EXERCISE_TAGS['Horse Stance Hold'].prescription!.prescriptionType = 'reps';
+if (mutation === 'bench_dose') EXERCISE_TAGS['Bench Thoracic Extension'].prescription!.repsMax = 6;
+if (mutation === 'bench_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Bench Thoracic Extension'] = [];
+if (mutation === 'bench_route') EXERCISE_TAGS['Bench Thoracic Extension'].programming!.warmup = false;
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -74,6 +77,7 @@ const submitted = [
   ['Medicine-Ball Slam', 'fGLHGiYFIqc'],
   ['Rotational Medicine-Ball Slam', 'M9ryqecCLf0'],
   ['Horse Stance Hold', '4P9w2Kvgl0A'],
+  ['Bench Thoracic Extension', 'xE5ZaEKAx1g'],
 ];
 const vocabulary = new Set(selectableVocabularyGroups().flatMap(group => group.names));
 // Independent dose expectations transcribed from the signed intake, including
@@ -85,15 +89,19 @@ const doses = [
   [2, 5, 5, 60, 'reps', false], [3, 3, 5, 60, 'reps', true],
   [3, 4, 6, 60, 'reps', false], [3, 4, 6, 60, 'reps', true],
   [2, 60, 60, 30, 'duration', false],
+  [2, 5, 5, 30, 'reps', false],
 ];
-const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name].power);
+const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name]?.power);
 submitted.forEach(([name], index) => {
-  const p = EXERCISE_TAGS[name].prescription!;
-  check(`${name}: signed dose, rest, unit and side`, JSON.stringify([
+  const p = EXERCISE_TAGS[name]?.prescription;
+  check(`${name}: signed dose, rest, unit and side`, !!p && JSON.stringify([
     p.sets, p.repsMin, p.repsMax, p.restSeconds, p.prescriptionType, p.perSide,
   ]) === JSON.stringify(doses[index]));
 });
-const intake = readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_2026-08-28.md'), 'utf8');
+const intake = [
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_2026-08-28.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BENCH_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
+].join('\n');
 for (const [name, video] of submitted) {
   check(`${name}: selectable`, vocabulary.has(name));
   check(`${name}: full thirteen-region ratings`, Object.keys(EXERCISE_TAGS[name]?.injury ?? {}).length === 13);
@@ -108,7 +116,7 @@ for (const [name, video] of submitted) {
   check(`${name}: intake rating table found`, ratings.length === 13);
   for (const [, region, rating] of ratings) {
     const key = region === 'Lower back' ? 'lowerBack' : region.toLowerCase();
-    check(`${name}: supplied ${region} rating`, EXERCISE_TAGS[name].injury[key] === rating.toLowerCase());
+    check(`${name}: supplied ${region} rating`, EXERCISE_TAGS[name]?.injury[key] === rating.toLowerCase());
   }
 }
 check('Bird Dogs stay deferred', !vocabulary.has('Band-Resisted Bird Dogs'));
@@ -199,16 +207,16 @@ async function main() {
   }
   for (const [name] of submitted) {
     const choice = choices.find(c => c.name === name);
-    const authored = EXERCISE_TAGS[name].prescription!;
+    const authored = EXERCISE_TAGS[name]?.prescription;
     check(`${name}: actual Add menu`, !!choice);
-    check(`${name}: manual dose and unit`, !!choice && choice.sets === authored.sets &&
+    check(`${name}: manual dose and unit`, !!choice && !!authored && choice.sets === authored.sets &&
       choice.repsMin === authored.repsMin && choice.repsMax === authored.repsMax &&
       choice.prescriptionType === authored.prescriptionType && !!choice.perSide === authored.perSide);
     check(`${name}: swap menu uses same legality`, legalAddAlternativesForExercise({ ...args,
       originalExercise: name }).some(c => c.name === name));
     check(`${name}: explicit kit allows`, exerciseIsAvailableWith(name, kit));
   }
-  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning']) {
+  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Bench Thoracic Extension']) {
     check(`${name}: not a main strength seat`, slotsForExerciseName(name).length === 0);
   }
   check('Horse Stance Hold: bodyweight loading and no equipment gate',
@@ -216,6 +224,8 @@ async function main() {
     && equipmentRequiredFor('Horse Stance Hold')?.length === 0
     && exerciseIsAvailableWith('Horse Stance Hold', ['bodyweight'])
     && formatLoadLabel(resolveLoadAuthority('Horse Stance Hold'), 4) === 'BW + 4kg');
+  check('Bench Thoracic Extension: bodyweight-only loading has no load control',
+    resolveLoadAuthority('Bench Thoracic Extension').kind === 'unloaded');
   for (const name of ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']) {
     check(`${name}: athlete chooses total ball load`, resolveLoadAuthority(name).kind === 'athlete_chosen' && estimateStartingWeight(name, profile) === null);
   }
@@ -235,14 +245,32 @@ async function main() {
     ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']
       .every(name => exerciseIsAvailableWith(name, ['bodyweight', 'medicine_ball'])));
   check('box can support bodyweight Seated Good Morning', exerciseIsAvailableWith('Seated Good Morning', ['bodyweight', 'plyo_box']));
+  check('Bench Thoracic Extension accepts either support and refuses neither',
+    exerciseIsAvailableWith('Bench Thoracic Extension', ['bodyweight', 'bench'])
+    && exerciseIsAvailableWith('Bench Thoracic Extension', ['bodyweight', 'plyo_box'])
+    && !exerciseIsAvailableWith('Bench Thoracic Extension', ['bodyweight']));
+  check('Bench Thoracic Extension manual Add/Swap uses the same support rule',
+    assessTapSwapCandidateSafety('Bench Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight', 'bench'],
+    }).safe
+    && assessTapSwapCandidateSafety('Bench Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight', 'plyo_box'],
+    }).safe
+    && !assessTapSwapCandidateSafety('Bench Thoracic Extension', {
+      ...environment, availableEquipmentTags: ['bodyweight'],
+    }).safe);
   for (const [name] of submitted) {
-    const policy = EXERCISE_TAGS[name].programming!;
+    const policy = EXERCISE_TAGS[name]?.programming;
     const novice = { ...athlete, onboardingData: { ...profile, experienceLevel: 'Complete beginner' as const } };
     check(`${name}: automatic novice boundary`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: novice.onboardingData.experienceLevel, daysToGame: null }) === [
       'Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Seated Good Morning', 'Medicine-Ball Slam',
-      'Horse Stance Hold',
+      'Horse Stance Hold', 'Bench Thoracic Extension',
     ].includes(name));
     for (const daysToGame of [1, 2, 3, null]) {
+      if (!policy) {
+        check(`${name}: automatic fixture ${daysToGame}`, false);
+        continue;
+      }
       const limit = Math.max(policy.excludeWithinDaysOfGame ?? -1, policy.automaticExcludeWithinDaysOfGame ?? -1);
       check(`${name}: automatic fixture ${daysToGame}`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: profile.experienceLevel, daysToGame }) === (daysToGame === null || daysToGame > limit));
     }
@@ -263,7 +291,7 @@ async function main() {
         route: 'warmup', experienceLevel: '5+ years', daysToGame: undefined,
       }));
   }
-  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Reverse Nordic Curl', 'Knee'],
+  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Bench Thoracic Extension', 'Shoulder', 6], ['Reverse Nordic Curl', 'Knee'],
     ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']] as const) {
     const severity = suppliedSeverity ?? 5;
     const constraint = buildGuidedInjuryConstraint({ area: bodyArea, region: 'upper_body', severity,
@@ -276,7 +304,7 @@ async function main() {
       check(`${name}: injury excludes it from the actual lower-prehab pool`, !filterPoolForAthlete('lower_prehab', injuredAthlete).some(row => row.name === name));
       continue;
     }
-    const type = name === 'Crab Hold' || name === 'Horse Stance Hold' ? 'mobility' : 'primer';
+    const type = ['Crab Hold', 'Horse Stance Hold', 'Bench Thoracic Extension'].includes(name) ? 'mobility' : 'primer';
     let healthySeed: string | undefined;
     for (let seed = 0; seed < 120 && !healthySeed; seed++) {
       const seedDate = plusDays(date, seed);
@@ -356,7 +384,7 @@ async function main() {
       }
     }
   }
-  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold']) {
+  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold', 'Bench Thoracic Extension']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
   }
   for (const name of ['Seated Good Morning']) {
@@ -368,6 +396,8 @@ async function main() {
       seasonPhase: profile.seasonPhase!, isGameWeek: true })?.movements.some(row => row.exercise.name === 'Horse Stance Hold'));
   check('the one canonical Seated Good Morning is selected by automatic mobility',
     reached.has('Seated Good Morning') && !reached.has('Seated Good Morning (Barbell)'));
+  check('Bench Thoracic Extension reaches both automatic Mobility and Recovery sessions',
+    mobilityReached.has('Bench Thoracic Extension') && recoveryReached.has('Bench Thoracic Extension'));
   const context = getCoachRevisionTemplateContext(date);
   check('reachability crosses actual generated strength sessions', program.microcycles[0].workouts.some(w => !!w.strengthIntent));
   const lowerDays = program.microcycles[0].workouts.filter(w => w.strengthIntent?.plannedPatterns.some(p => p === 'hinge' || p === 'squat'));
@@ -445,7 +475,7 @@ async function main() {
     check(`${name}: Add preserves all existing rows and adds exactly one`,
       current.workout!.exercises.length === day.workout!.exercises.length + 1
       && day.workout!.exercises.every(old => current.workout!.exercises.some(r => r.id === old.id)));
-    if (EXERCISE_TAGS[name].power) check(`${name}: manual Add retains typed power role for hidden rest and counting`,
+    if (EXERCISE_TAGS[name]?.power) check(`${name}: manual Add retains typed power role for hidden rest and counting`,
       row?.role === 'power' && row.power?.family === 'upper' && row.power.kind === 'primer');
     const alternative = legalAddAlternativesForExercise({ ...args, originalExercise: name,
       existingExerciseNames: coachRevisionExistingExerciseNames(current.workout!, day.date) }).find(c => !EXERCISE_TAGS[c.name]?.power);
@@ -457,12 +487,12 @@ async function main() {
       }, { todayISO: date }));
       const away = await swap(name, alternative);
       const awayRow = quiet(() => deriveVisibleWeekLive(date, date)).find(d => d.date === day.date)!.workout!.exercises.find(r => r.exercise.name === alternative.name);
-      if (EXERCISE_TAGS[name].power) check(`${name}: Swap to non-power clears inherited power metadata`,
+      if (EXERCISE_TAGS[name]?.power) check(`${name}: Swap to non-power clears inherited power metadata`,
         !!awayRow && awayRow.role !== 'power' && !awayRow.power && !awayRow.supersetGroup);
       const back = away.ok ? await swap(alternative.name, candidate) : away;
       const restored = quiet(() => deriveVisibleWeekLive(date, date)).find(d => d.date === day.date)!.workout!.exercises.find(row => row.exercise.name === name);
       check(`${name}: actual Swap round-trip`, away.ok && back.ok && !!restored);
-      if (EXERCISE_TAGS[name].power) check(`${name}: Swap-back retains typed power role`,
+      if (EXERCISE_TAGS[name]?.power) check(`${name}: Swap-back retains typed power role`,
         restored?.role === 'power' && restored.power?.family === 'upper' && restored.power.kind === 'primer');
       check(`${name}: Swap preserves prescribed units and sides`, !!restored && restored.prescriptionType === candidate.prescriptionType &&
         !!restored.perSide === !!candidate.perSide && restored.prescribedRepsMin === candidate.repsMin && restored.prescribedRepsMax === candidate.repsMax);
@@ -499,6 +529,9 @@ async function main() {
     ['duration', /Horse Stance Hold: signed dose, rest, unit and side/],
     ['cue', /Horse Stance Hold: exact supplied primary cue/],
     ['video', /Horse Stance Hold: exact confirmed video URL/],
+    ['bench_dose', /Bench Thoracic Extension: signed dose, rest, unit and side/],
+    ['bench_equipment', /Bench Thoracic Extension accepts either support and refuses neither/],
+    ['bench_route', /Bench Thoracic Extension: approved warm-up route actually selects it/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

@@ -8047,3 +8047,20 @@ Guard: `LAW-canonical-session-work-has-one-visible-owner` through chained
 `test:session-work-ownership` and `test:deload-quality-owner`. The exact
 accumulated Christmas-break journey, three deliberate mutations, final results
 and NOT COVERED receipt live in `docs/STATUS_FLYOWNER.md`.
+
+**R-321** · Bench Thoracic Extension joins the existing mobility catalogue,
+2026-09-02.
+
+Owner: benchthoracic. Bench Thoracic Extension is a bodyweight Mobility exercise
+for everyone. It requires a bench or plyo box, uses a total prescription of
+2 × 5 slow repetitions with a 3-second bottom pause and 30 seconds rest, and is
+eligible for automatic upper-body Movement Prep, Mobility and Recovery sessions
+plus manual Add/Swap. It is available in all phases and at G-1 in a comfortable
+range. Its supplied muscles, cues, injury ratings and video are recorded in
+`docs/EXERCISE_INTAKE_BENCH_THORACIC_EXTENSION_2026-09-02.md`; app terminology
+maps latissimus dorsi to Lats, thoracic spinal extensors to Upper back and
+abdominals to Midline. No new equipment answer is introduced.
+
+Guard: `LAW-bench-thoracic-extension-intake` through chained
+`test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
+receipt: `docs/STATUS_BENCHTHORACIC.md`.

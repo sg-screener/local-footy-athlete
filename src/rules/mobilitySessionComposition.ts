@@ -60,6 +60,7 @@ export type MobilityRegion = (typeof MOBILITY_REGIONS)[number];
 export const MOBILITY_REGION_BY_ID: Readonly<Record<string, MobilityRegion>> = {
   'crab-hold': 'upper',
   'seated-good-morning': 'midline',
+  'bench-thoracic-extension': 'upper',
   // ── lower (knee, ankle, calf, hamstring) ──
   'deep-squat-hold': 'lower',
   'toe-stretch': 'lower',
