@@ -40,6 +40,8 @@ const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(exp
 const weekday = (dateISO) => new Intl.DateTimeFormat('en-AU', {
   weekday: 'long', timeZone: 'Australia/Melbourne',
 }).format(new Date(`${dateISO}T12:00:00+10:00`));
+const daysBetween = (earlierISO, laterISO) =>
+  (Date.parse(`${laterISO}T12:00:00Z`) - Date.parse(`${earlierISO}T12:00:00Z`)) / 86_400_000;
 
 record('exact_source_revision', year.revision === revision && driver.revision === revision
   && trace.revision === revision && driver.sourceDiff === '', {
@@ -158,6 +160,35 @@ for (const athlete of year.athletes) {
     unit: 'final explicit fixture athlete-dates', total: fixtures.length, fixtureByWeekday,
     byeWeeks: athlete.weeks.filter((week) => week.events.some((event) => event.label === 'Bye week')).map((week) => week.number),
     maximumFixturesInOneWeek: Math.max(...gamesByWeek.map((week) => week.count)),
+  });
+
+  const expectedOptional = label === 'male' ? 'Gunshow' : 'Primer';
+  const otherGenderOptional = label === 'male' ? 'Primer' : 'Gunshow';
+  const optionalWeekFindings = athlete.weeks.flatMap((week) => {
+    const weekFixtures = week.days.filter((day) => day.kind === 'game');
+    return week.days.flatMap((day) => {
+      if (day.name !== expectedOptional && day.name !== otherGenderOptional) return [];
+      const fixture = weekFixtures[0];
+      const valid = day.name === expectedOptional
+        && ['Pre-season', 'In-season'].includes(week.phase)
+        && weekFixtures.length === 1
+        && fixture != null
+        && daysBetween(day.date, fixture.date) === 1;
+      return valid ? [] : [{
+        week: week.number,
+        phase: week.phase,
+        optionalDate: day.date,
+        optionalName: day.name,
+        fixtureDates: weekFixtures.map((item) => item.date),
+        events: week.events.map((event) => event.label),
+      }];
+    });
+  });
+  record(`${label}_gendered_optional_fixture_rule`, optionalWeekFindings.length === 0, {
+    expectedOptional,
+    unit: 'final gendered optional athlete-dates',
+    occurrences: days.filter((day) => day.name === expectedOptional).length,
+    findings: optionalWeekFindings,
   });
 
   record(`${label}_energy_system_semantics`, evidenceFindings.length === 0

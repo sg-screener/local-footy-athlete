@@ -1867,15 +1867,37 @@ async function main(): Promise<void> {
       resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature);
 
   console.log('\n[fixture durability] Add, Move and Remove compile across restart and Undo');
+  const { isAutomaticFixtureRelativePlannerOffer } =
+    require('../utils/fixtureMinimalReplan') as typeof import('../utils/fixtureMinimalReplan');
+  ok('fixture-relative generated Gunshow and Primer are planner offers',
+    isAutomaticFixtureRelativePlannerOffer({
+      composedOptionalKind: 'gunshow', planEntryId: 'sched:2026-07-13:5:gunshow',
+    }) && isAutomaticFixtureRelativePlannerOffer({
+      composedOptionalKind: 'primer', planEntryId: 'sched:2026-07-13:5:primer',
+    }));
+  ok('athlete-added Gunshow and Primer are decisions, not planner offers',
+    !isAutomaticFixtureRelativePlannerOffer({ composedOptionalKind: 'gunshow' })
+      && !isAutomaticFixtureRelativePlannerOffer({
+        composedOptionalKind: 'primer', planEntryId: 'athlete:accepted-add',
+      }));
   const runFixtureRestartWitness = async (
     action: 'add' | 'move' | 'remove',
+    gender: 'male' | 'female' = 'male',
   ): Promise<{
     landed: boolean; changed: boolean; restarted: boolean; exact: boolean;
-    undoOnlyLast: boolean; detail: string;
+    undoOnlyLast: boolean; reachedAutomaticOption: boolean;
+    noStaleAutomaticOption: boolean; detail: string;
   }> => {
     localStorageData.clear();
+    const expectedOption = gender === 'male' ? 'Gunshow' : 'Primer';
     const install = await coldStartThroughOnboarding({
-      profile: illnessAthlete(), installDayISO: INSTALL_DAY,
+      profile: {
+        ...illnessAthlete(),
+        gender,
+        trainingDaysPerWeek: 5,
+        preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      },
+      installDayISO: INSTALL_DAY,
     });
     const act = async (args: {
       action: 'add' | 'move' | 'remove'; sourceDate?: string; targetDate?: string;
@@ -1905,7 +1927,9 @@ async function main(): Promise<void> {
       if (prerequisite.outcome !== 'accepted') {
         return {
           landed: false, changed: false, restarted: false, exact: false,
-          undoOnlyLast: false, detail: JSON.stringify(prerequisite),
+          undoOnlyLast: false, reachedAutomaticOption: false,
+          noStaleAutomaticOption: false,
+          detail: JSON.stringify(prerequisite),
         };
       }
       beforeLast = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
@@ -1924,12 +1948,18 @@ async function main(): Promise<void> {
         commandId: 'compiler-fixture:remove',
       });
     }
+    const reachedAutomaticOption = action !== 'remove'
+      || beforeLast.some((day) => day.sessionName === expectedOption);
     const after = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
     const afterSignature = fixtureSignature(after);
     const restarted = await quietAsync(() => relaunchApp({
       storage: localStorageData, todayISO: INSTALL_DAY,
     }));
     const afterRestart = quiet(() => resolvedDays(install.blockOneStart, INSTALL_DAY));
+    const noStaleAutomaticOption = action !== 'remove' || (
+      after.every((day) => day.sessionName !== expectedOption)
+      && afterRestart.every((day) => day.sessionName !== expectedOption)
+    );
     const activeAdjustments = useProgramStore.getState()
       .reversibleAdjustmentLedger.adjustments
       .filter((adjustment) => adjustment.status === 'active').length;
@@ -1940,10 +1970,14 @@ async function main(): Promise<void> {
       changed: afterSignature !== fixtureSignature(beforeLast),
       restarted: restarted.ok,
       exact: fixtureSignature(afterRestart) === afterSignature,
+      reachedAutomaticOption,
+      noStaleAutomaticOption,
       undoOnlyLast: activeAdjustments > 0 && undo.outcome === 'undone' &&
         fixtureSignature(afterUndo) === fixtureSignature(beforeLast),
       detail: JSON.stringify({
         action,
+        gender,
+        reachedAutomaticOption,
         resultOutcome: result.outcome,
         acceptedEffect: decisionLedgerEntries().find((entry) =>
           entry.decision.kind === `fixture_${action}`)?.decision,
@@ -1963,7 +1997,18 @@ async function main(): Promise<void> {
       witness.restarted && witness.exact, witness.detail);
     ok(`fixture ${action} keeps one exact Undo after restart`,
       witness.undoOnlyLast, witness.detail);
+    if (action === 'remove') {
+      ok('fixture remove rebuilds the male bye without a stale automatic Gunshow',
+        witness.reachedAutomaticOption && witness.noStaleAutomaticOption, witness.detail);
+    }
   }
+  const femaleRemoveWitness = await runFixtureRestartWitness('remove', 'female');
+  ok('fixture remove rebuilds the female bye without a stale automatic Primer',
+    femaleRemoveWitness.landed && femaleRemoveWitness.changed
+      && femaleRemoveWitness.restarted && femaleRemoveWitness.exact
+      && femaleRemoveWitness.undoOnlyLast && femaleRemoveWitness.reachedAutomaticOption
+      && femaleRemoveWitness.noStaleAutomaticOption,
+    femaleRemoveWitness.detail);
 
   console.log('\n[fixture composition] accumulated Add, Move and Remove keep ledger order');
   localStorageData.clear();

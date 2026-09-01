@@ -387,8 +387,22 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
  * training order, so it takes the core slot and Saturday falls through to the
  * offer — the same week inverted. The two rulings only hold together.
  */
+/**
+ * The scheduler owns these fixture-relative offers. A fixture edit must
+ * re-derive them from the target week, while a manually added Gunshow or Primer
+ * remains an athlete decision and therefore has no `sched:` allocation id.
+ */
+export function isAutomaticFixtureRelativePlannerOffer(
+  workout: Pick<Workout, 'composedOptionalKind' | 'planEntryId'>,
+): boolean {
+  return (workout.composedOptionalKind === 'gunshow'
+      || workout.composedOptionalKind === 'primer')
+    && workout.planEntryId?.startsWith('sched:') === true;
+}
+
 function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
   return workouts.flatMap((workout) => {
+    if (isAutomaticFixtureRelativePlannerOffer(workout)) return [];
     if (workout.section18ConditioningRole !== 'optional_flush') return [workout];
     const stripped = stripConditioningComponent(workout);
     return stripped ? [stripped] : [];
@@ -398,8 +412,15 @@ function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
 /** Reconsider offers from the newly compiled fixture week, never the old week. */
 function withCompilerPlannerOffers(workouts: readonly Workout[], compiled: readonly Workout[]): Workout[] {
   let result = [...workouts];
-  for (const offer of compiled.filter(workout => workout.section18ConditioningRole === 'optional_flush')) {
+  const offers = compiled.filter((workout) =>
+    workout.section18ConditioningRole === 'optional_flush'
+    || isAutomaticFixtureRelativePlannerOffer(workout));
+  for (const offer of offers) {
     const existing = result.find(workout => workout.dayOfWeek === offer.dayOfWeek);
+    if (isAutomaticFixtureRelativePlannerOffer(offer)) {
+      if (!existing) result.push(offer);
+      continue;
+    }
     if (!existing) {
       // An offer on a compiled combined day cannot restore a removed lift.
       if (!hasMainStrength(offer)) result.push(offer);

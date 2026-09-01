@@ -7771,8 +7771,9 @@ content rather than re-running a different accessory fill.
 
 Guard: `LAW-required-programming-shares-football-robustness-foundation` through
 chained `test:programming-hierarchy + test:mobility-accessory-doors +
-test:weekly-scheduler + test:team-night-content`. Verification status,
-mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+test:weekly-scheduler + test:team-night-content +
+test:canonical-weekly-compiler`. Verification status, mutation receipts and
+NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
 
 **R-310** · A genuine deload reduces the whole visible week, 2026-09-01.
 

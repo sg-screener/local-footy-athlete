@@ -131,7 +131,8 @@ remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
 
 ## Current step
 
-Section 6 implementation and verification complete; Section 7 is next.
+Final PDF review exposed and now guards one fixture-replan acceptance gap.
+Fresh exact-commit year generation and replacement PDFs are next.
 
 ## Section 3 — selected tracked lifts are programming anchors
 
@@ -426,7 +427,58 @@ R-315 is born guarded.
 - Physical-iPhone acceptance, native onboarding taps and a clean Release install
   were not run, per instruction.
 - Clinical validation of prescriptions and competition/team metadata beyond
-  distinct accepted fixture date/kind remain outside this audit.
+distinct accepted fixture date/kind remain outside this audit.
+
+### Final PDF review — invalidated green audit and fixture-offer repair
+
+The first clean artifact at `output/full-year-audit-7153ec70/` reported 22/22,
+and both 114-page PDFs rendered without layout defects. Reading every page then
+exposed a real programming defect the audit did not ask about: the three
+In-season bye weeks still displayed automatic male Gunshow and female Primer.
+Four Sunday-game weeks also retained the old Friday offer instead of re-deriving
+the target fixture's true G-1 Saturday. The unit is final gendered-optional
+athlete-dates: each sex had 24 occurrences, seven invalid—three no-fixture bye
+weeks and four two-days-before-Sunday-game placements. The supposedly green
+artifact and PDFs are therefore invalid and are not deliverables.
+
+The missing final-artifact rule began red at 22/24 checks: the male and female
+gendered-option checks each named all seven bad final dates. The initial live
+fixture journey also demonstrated why a non-vacuity condition matters: its
+three-gym-day profile never reached an automatic option, so it passed without
+testing the defect. The corrected five-day journey first reaches a real
+Gunshow/Primer, then both new cells fail after fixture Remove and after restart.
+
+Two designs were compared. Deleting every Gunshow/Primer by name during fixture
+repair would erase athlete decisions. Leaving the preservation-biased replan
+unchanged and adding report exceptions would preserve the bug. The existing
+source-of-truth boundary already strips an old fixture-relative flush and
+reconsiders only the target compiler's offer. Generated Gunshow/Primer now join
+that typed class through their `sched:` allocation identity. Athlete-added
+options do not have that identity and remain accepted decisions. The target
+compiler therefore supplies no option for a bye and relocates a Sunday game's
+offer to Saturday G-1.
+
+The repaired canonical fixture boundary proves generated-versus-athlete-owned
+classification, male and female removal, exact cold reconstruction and one
+exact Undo. Both final-state cells are green. The unchanged scheduler is
+128/128 and its continuations are green. Product and dev-tool TypeScript remain
+at zero errors; the repository-wide test scope currently reports 11 errors,
+including one in the canonical suite at an unrelated pre-existing
+`reasonLabel` read and ten in other agents' files. No baseline allowance was
+added.
+
+R-309's guard now includes chained `test:canonical-weekly-compiler`. Fresh
+exact-revision year generation and replacement every-page PDF review follow
+this repair checkpoint; no artifact from `7153ec70` will be delivered.
+
+### NOT COVERED
+
+- Fresh exact-commit annual acceptance and replacement PDF rendering are not
+  yet run.
+- Physical iPhone acceptance, native onboarding taps and a clean Release
+  installation remain unrun as instructed.
+- Clinical validation and competition/team metadata beyond accepted fixture
+  date and kind remain outside this audit.
 
 ## Addendum Section 7 — compact Team Training gym work
 
