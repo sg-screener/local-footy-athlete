@@ -71,7 +71,32 @@ Mutation receipt: after checkpoint `81e1e38e`, restoring the old weekly-style
 behaviour by removing the complete-14-day-window gate made the phase/window cell
 red (12/13). Restoring the gate returned 13/13 green.
 
-## Sections 3–5
+## Section 3 — standalone flush presentation
+
+Two options were considered:
+
+1. Patch the Recovery renderer or special-case Bike Flush Intervals 2:1.
+2. Let an exercise row's typed conditioning-block ownership choose the existing
+   canonical conditioning presentation, regardless of the surrounding session
+   label.
+
+Option 2 was used. It fixes every standalone flush through the same final
+composer used by ordinary conditioning and leaves ordinary Recovery exercises
+alone.
+
+Red-first receipt: the exact Bike 2:1 row already retained its template,
+modality, work/recovery, amount, effort and cue internally, but the final item
+said `presentation: recovery`; its final-card and restart cells failed.
+
+Green receipt: `test:standalone-flush-presentation` is 4/4. The real
+flush-restart journey now compares the complete conditioning card before and
+after relaunch, not only its title and modality. The wider session-template
+suite is 87/88: its one numeric-index source-shape failure is inherited and
+unrelated to this work.
+
+Mutation receipt: pending the path-scoped implementation checkpoint.
+
+## Sections 4–5
 
 Pending.
 

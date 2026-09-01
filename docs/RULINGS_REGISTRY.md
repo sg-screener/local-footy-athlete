@@ -8293,3 +8293,18 @@ never be rendered as a machine session.
 Guard: `LAW-one-combined-cod-session` through chained `test:weekly-scheduler`,
 with workbook equality through `test:conditioning-templates`. Red-first,
 mutation and NOT COVERED receipt: `docs/STATUS_CODCOMBINE.md`.
+
+**R-333** · A typed conditioning block keeps the canonical conditioning card,
+including inside a Recovery session, 2026-09-02.
+
+Owner: fivebridge. Conditioning-block ownership, rather than the surrounding
+workout label, selects the athlete-facing presentation. Standalone flushes keep
+their template identity, selected modality, work, recovery, exact amount,
+effort and cue through final composition, save and restart. Ordinary Recovery
+exercises keep the existing low-load exercise card. No template-name exception
+is permitted.
+
+Guard: `LAW-standalone-flush-conditioning-presentation` through chained
+`test:standalone-conditioning-ownership`, which invokes
+`test:standalone-flush-presentation`. Red-first, real restart, mutation and NOT
+COVERED receipt: `docs/STATUS_FIVEBRIDGE.md`.

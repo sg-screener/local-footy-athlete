@@ -570,6 +570,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-standalone-flush-conditioning-presentation',
+    law: 'R-333: every exercise row owned by a typed conditioningBlock uses the canonical conditioning presentation even when the surrounding workout is Recovery. Template identity, selected modality, work, recovery, exact amount, effort and cue survive final composition and restart. Ordinary Recovery rows remain on the low-load exercise route, and no individual template owns a display exception.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-333',
+    guard: {
+      state: 'guarded',
+      by: 'test:standalone-conditioning-ownership',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `fivebridge`. TEST FIRST: the exact Bike Flush Intervals 2:1 row retained all seven data fields internally but reached presentation `recovery`, and both final-card and restart cells failed. TWO OPTIONS COMPARED: patch the Recovery renderer/template name, or let typed conditioningBlock ownership select the existing canonical conditioning card. The shared ownership route landed. Focused tests cover the exact Bike card, every authored flush, ordinary Recovery, final composition and restart. Mutation, final results and NOT COVERED receipt: docs/STATUS_FIVEBRIDGE.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

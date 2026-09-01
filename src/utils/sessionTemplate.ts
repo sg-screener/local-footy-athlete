@@ -318,6 +318,11 @@ export function buildSessionTemplate(
   const isConditioningOnly =
     !teamState.isTeamTrainingOnly &&
     CONDITIONING_ONLY_TYPES.has(String(workout.workoutType ?? ''));
+  const conditioningBlockRowIds = new Set<string>(
+    (workout.conditioningBlock?.options ?? [])
+      .flatMap((option) => option.exerciseIds ?? [])
+      .map(String),
+  );
 
   const items: SessionTemplateItem[] = [];
 
@@ -328,7 +333,12 @@ export function buildSessionTemplate(
     items.push(exerciseItem(row, 'mobility', { role: 'prehab' }));
   }
   for (const row of componentRows.recoveryRows) {
-    items.push(exerciseItem(row, 'recovery', { role: 'prehab' }));
+    const belongsToConditioningBlock = conditioningBlockRowIds.has(String(row?.id ?? ''));
+    items.push(exerciseItem(
+      row,
+      belongsToConditioningBlock ? 'conditioning_phase' : 'recovery',
+      { role: belongsToConditioningBlock ? 'conditioning' : 'prehab' },
+    ));
   }
 
   // A speed block is real prescribed row content, not component metadata.

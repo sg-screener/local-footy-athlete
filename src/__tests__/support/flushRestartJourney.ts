@@ -6,6 +6,21 @@ import { visibleSignature } from '../compilerYear/invariants';
 import { normalizeConditioningSelectionHistory, resolveTemplateByName, templateDurationMinutes } from '../../rules/conditioningSelection';
 import { useBlockSelectionHistoryStore } from '../../store/blockSelectionHistoryStore';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
+import { conditioningCardPresentationFromText } from '../../rules/conditioningDisplay';
+
+function displayedFlushCards(view: ReturnType<typeof deriveVisibleWeekLive>) {
+  return view.flatMap(day => day.workout ? buildSessionTemplate(day.workout).items.flatMap(item =>
+    item.kind === 'exercise' && day.workout?.conditioningBlock?.options.some(option =>
+      option.exerciseIds.includes(String(item.row.id)))
+      ? [{
+        title: day.workout.conditioningBlock.options.find(option =>
+          option.exerciseIds.includes(String(item.row.id)))?.title,
+        modality: item.modalityLabel,
+        presentation: item.presentation,
+        card: conditioningCardPresentationFromText(item.row.notes ?? '', item.modalityLabel),
+      }]
+      : []) : []);
+}
 
 /** Accepted block history is produced by real rollover, never inserted into
  * storage. Every legacy flush identity must be reached and survive a boot on
@@ -31,14 +46,11 @@ export async function flushRestartJourney(storage: Map<string, string>, ok: (lab
           return o.modalitySequence?.join(',') === (machine === 'bike_erg' ? 'bike' : machine)
             && o.durationMinutes === templateDurationMinutes(resolveTemplateByName(o.title)!) && o.durationMinutes < 15;
         }), JSON.stringify(offered));
-      const displayed = view().flatMap(day => day.workout ? buildSessionTemplate(day.workout).items.flatMap(item =>
-        item.kind === 'exercise' && day.workout?.conditioningBlock?.options.some(option =>
-          option.exerciseIds.includes(String(item.row.id)))
-          ? [{ title: day.workout.conditioningBlock.options.find(option =>
-            option.exerciseIds.includes(String(item.row.id)))?.title, modality: item.modalityLabel }]
-          : []) : []);
-      ok(`flush-restart/${gender}/${machine}/${date}: final flush card displays its selected machine`,
-        offered.every(option => displayed.some(card => card.title === option.title && !!card.modality)),
+      const displayed = displayedFlushCards(view());
+      ok(`flush-restart/${gender}/${machine}/${date}: final flush card uses complete conditioning presentation`,
+        offered.every(option => displayed.some(card => card.title === option.title
+          && !!card.modality && card.presentation === 'conditioning_phase'
+          && !!card.card.workRecovery && !!card.card.intensity && !!card.card.cue && !!card.card.total)),
         JSON.stringify(displayed));
       const before = visibleSignature(view());
       const recorded = useBlockSelectionHistoryStore.getState().conditioningSelections;
@@ -56,13 +68,8 @@ export async function flushRestartJourney(storage: Map<string, string>, ok: (lab
         && lifted.filter(entry => resolveTemplateByName(entry.templateName)?.quality === 'flush').every(entry => entry.category === 'recovery_flush'));
       const boot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
       ok(`flush-restart/${gender}/${machine}/${date}: accepted dose and order survive restart`, boot.ok && before === visibleSignature(view()));
-      const restarted = view().flatMap(day => day.workout ? buildSessionTemplate(day.workout).items.flatMap(item =>
-        item.kind === 'exercise' && day.workout?.conditioningBlock?.options.some(option =>
-          option.exerciseIds.includes(String(item.row.id)))
-          ? [{ title: day.workout.conditioningBlock.options.find(option =>
-            option.exerciseIds.includes(String(item.row.id)))?.title, modality: item.modalityLabel }]
-          : []) : []);
-      ok(`flush-restart/${gender}/${machine}/${date}: final flush modality survives real save and relaunch`,
+      const restarted = displayedFlushCards(view());
+      ok(`flush-restart/${gender}/${machine}/${date}: complete final flush card survives real save and relaunch`,
         boot.ok && JSON.stringify(restarted) === JSON.stringify(displayed),
         JSON.stringify({ displayed, restarted }));
     }
