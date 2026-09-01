@@ -7872,3 +7872,23 @@ Guard: `LAW-automatic-loads-follow-the-typed-implement-lattice` through chained
 `test:equipment-load-increments` final progression and cold-restart boundary.
 Verification status, mutation receipt and NOT COVERED:
 `docs/STATUS_YEARREPAIR.md`.
+
+**R-314** · Required Team Training gym work is compact at composition, 2026-09-01.
+
+Owner: yearrepair. Movement Prep remains outside the gym count. The required gym
+portion attached to a Team Training day contains no more than one explosive
+row, one main upper-body lift, one secondary upper-body lift and one or two
+football-robustness or trunk rows. In a healthy build week both upper lifts and
+one or two support rows remain; compactness may not be manufactured by deleting
+the session. Injury and deload may reduce the work, but may not inflate it.
+
+Ordinary Off-season generation retires team anchors. Athlete-added rows and
+clearly optional sessions remain outside this required-session shape and are
+not silently removed. The canonical composer declares the compact strength
+slots before materialisation; the final stored/visible non-power rows must equal
+that declaration rather than being trimmed by a screen, exporter or restart.
+
+Guard: `LAW-required-team-night-gym-is-compact-at-composition` through chained
+`test:team-night-size`, whose first command is the 34/34
+`test:team-night-compact` final-generation matrix. Verification status,
+mutation receipt and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

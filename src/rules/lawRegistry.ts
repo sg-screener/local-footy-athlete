@@ -383,6 +383,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-required-team-night-gym-is-compact-at-composition',
+    law: 'R-314: after Movement Prep, required gym work attached to a Team Training day is composed as at most one explosive row, one main upper lift, one secondary upper lift and one or two football-robustness or trunk rows. A healthy build keeps both upper lifts and one or two support rows; injury and deload may reduce that work but never inflate it. Off-season retires automatic team anchors. Additional athlete-authored or explicitly optional work is outside the required-session shape. Final rows equal the composer declaration rather than a later display trim.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-314',
+    guard: {
+      state: 'guarded',
+      by: 'test:team-night-size',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The external-review evidence came from older PDFs and the current checkpoint did not reproduce the defect. The first 14/26 run was an instrument fault: secondary upper rows do not all carry a main-pattern evidence value, so the test initially called Barbell Row and Z-Press “other”. Reading their existing typed movement tags returned the true 26/26, then stronger non-deletion cells made the final boundary 34/34. It drives real final generated workouts for both sexes, Off-season anchor retirement, Pre-season and In-season build, scheduled deload and moderate upper injury. Healthy build nights retain exactly two upper rows plus one or two support rows, at most one power row and five gym rows total; final non-power row counts equal `composedDeclaredSlots`. TWO OPTIONS COMPARED: trim stored/display rows to a count, or preserve and guard the already-correct R-309 composer declaration. The latter is the source-of-truth design and required no production rewrite. LIVENESS: adding three trunk seats to the male pull composer made seven exact cells red (27/34) across build, injury and deload; restoration returned 34/34. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

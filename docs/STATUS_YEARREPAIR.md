@@ -369,6 +369,61 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 7 — compact Team Training gym work
+
+The older-PDF concern does not reproduce as a production defect at the current
+checkpoint. Real local generation already delivers the R-309 composer shape on
+club nights: after Movement Prep, every healthy male and female Team Training
+gym session has two upper-body lifts, one or two football-robustness/trunk rows,
+at most one explosive row and no more than five gym rows. Scheduled deload and
+moderate upper-injury worlds stay at or below the same ceilings. Ordinary
+Off-season generation retires the supplied club anchors rather than inventing
+an Off-season exception.
+
+The first focused run printed 14 passing and 12 failing cells, but that was an
+instrument finding, not a product finding. The first classifier trusted only
+row-level `mainStrengthPattern`/`strengthPattern`; secondary rows such as
+Barbell Row and Z-Press do not all carry those values, so it mislabeled them
+`other`. Reading the same existing typed movement registry the composer uses
+corrected the instrument and returned all 26 original cells green. No production
+behavior changed in that correction.
+
+Two designs were compared. A final-row cap or display trim would make the old
+PDF look shorter while allowing the composer to keep authoring the wrong
+session. Guarding the existing canonical declaration removes that class. The
+final 34-cell matrix therefore also requires every healthy team night to retain
+both upper lifts plus one or two support rows, and requires the final non-power
+row count to equal `composedDeclaredSlots`. This prevents an empty or crudely
+trimmed session from passing merely because it is short.
+
+The matrix drives real final generated workouts for both sexes across:
+
+- Off-season anchor retirement.
+- Pre-season and In-season healthy build weeks.
+- Pre-season and In-season scheduled deload weeks.
+- Pre-season and In-season moderate upper-injury weeks.
+
+Liveness was proved against the production composer and restored. Adding three
+extra trunk seats to the male Upper Pull declaration made seven exact cells red
+(27/34): both healthy-build shape cells and the Pre-season/In-season build,
+injury and deload compactness cells. Restoration returns 34/34. The new gate is
+the first command in chained `test:team-night-size`; its inherited 50-cell
+team-session-feedback boundary remains separate.
+
+R-314 is born guarded. No production module changed because the current
+checkpoint already satisfies the requested composition.
+
+### NOT COVERED
+
+- Athlete-added rows and optional sessions are intentionally outside the
+  required-session cap; their existing preservation gates were not rerun here.
+- The matrix reads final stored workout rows and typed composer declarations,
+  not physical pixels or elapsed gym time.
+- The exact two-athlete 52-week audit still needs regeneration in Addendum 8;
+  its accumulated return-home spacing defect remains open and PDFs stay
+  withheld.
+- No simulator, Release build or physical phone work ran.
+
 ## Addendum Section 6 — equipment-specific load increments
 
 The older-PDF symptom did not reproduce in the existing current-checkpoint
