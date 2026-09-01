@@ -116,7 +116,8 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ];
   const cov = sessionSlotCoverage(completeLower, 'lower');
   ok('[SAM] a lower day built to his fill order is COMPLETE',
-    cov.missing.length === 0 && cov.filled.length === LOWER_SLOTS.length,
+    cov.missing.length === 0
+      && cov.filled.length === LOWER_SLOTS.filter((slot) => slot !== 'football_robustness').length,
     `missing=${JSON.stringify(cov.missing)} filled=${JSON.stringify(cov.filled)}`);
 
   const completeUpper = [
@@ -125,7 +126,9 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ];
   const upperCov = sessionSlotCoverage(completeUpper, 'upper_full');
   ok('[SAM] an upper day covering both planes and directions is COMPLETE',
-    upperCov.missing.length === 0 && upperCov.filled.length === UPPER_FULL_SLOTS.length,
+    upperCov.missing.length === 0
+      && upperCov.filled.length === UPPER_FULL_SLOTS.filter(
+        (slot) => slot !== 'football_robustness').length,
     `missing=${JSON.stringify(upperCov.missing)}`);
 
   const completePush = [
@@ -134,10 +137,10 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
     row('Tricep Pushdown'), row('Lateral Raise'), row('Ab Wheel'),
   ];
   const pushCov = sessionSlotCoverage(completePush, 'upper_split_push');
-  ok('[SAM] split PUSH is horizontal + vertical + 1 accessory + triceps + shoulders + core',
+  ok('[SAM] split PUSH is horizontal + vertical + core before weekly robustness allocation',
     pushCov.missing.length === 0
-      && pushCov.filled.length === UPPER_SPLIT_PUSH_SLOTS.length
-      && UPPER_SPLIT_PUSH_SLOTS.length === 6,
+      && pushCov.filled.length === 3
+      && UPPER_SPLIT_PUSH_SLOTS.length === 5,
     `missing=${JSON.stringify(pushCov.missing)} filled=${JSON.stringify(pushCov.filled)}`);
 
   const completePull = [
@@ -146,19 +149,15 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
     row('Bicep Curl (Dumbbell)'), row('Shrugs'), row('Ab Wheel'),
   ];
   const pullCov = sessionSlotCoverage(completePull, 'upper_split_pull');
-  ok('[SAM] split PULL is horizontal + vertical + prehab + biceps + traps + core',
+  ok('[SAM] split PULL is horizontal + vertical + core before weekly robustness allocation',
     pullCov.missing.length === 0
-      && pullCov.filled.length === UPPER_SPLIT_PULL_SLOTS.length
-      && UPPER_SPLIT_PULL_SLOTS.length === 6,
+      && pullCov.filled.length === 3
+      && UPPER_SPLIT_PULL_SLOTS.length === 5,
     `missing=${JSON.stringify(pullCov.missing)} filled=${JSON.stringify(pullCov.filled)}`);
 
-  const pushWithoutTriceps = completePush.filter(
-    (exercise) => exercise.exercise?.name !== 'Tricep Pushdown');
-  ok('[SAM] shoulder work cannot stand in for the required triceps row',
-    sessionSlotCoverage(pushWithoutTriceps, 'upper_split_push').missing.includes('triceps'));
-  const pullWithoutTraps = completePull.filter((exercise) => exercise.exercise?.name !== 'Shrugs');
-  ok('[SAM] biceps work cannot stand in for the required traps row',
-    sessionSlotCoverage(pullWithoutTraps, 'upper_split_pull').missing.includes('traps'));
+  ok('[SAM] required split uppers declare no direct arm or delt-pump seat',
+    [...UPPER_SPLIT_PUSH_SLOTS, ...UPPER_SPLIT_PULL_SLOTS].every((slot) =>
+      !['biceps', 'triceps', 'shoulders', 'traps', 'arm_or_shoulder'].includes(slot)));
   ok('[SAM] shoulder isolation is not misused as a pull accessory',
     !slotsFilledByRow(row('Band Pull-Apart')).includes('pull_accessory_1')
       && slotsFilledByRow(row('Band Pull-Apart')).includes('shoulders'),
@@ -462,9 +461,9 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   const realPullDay = sessionSlotCoverage(
     [row('Pull-Ups'), row('Barbell Row'), row('Face Pulls')], 'upper_split_pull');
   ok('the historical three-row pull day is incomplete under the current split contract',
-    realPullDay.missing.includes('biceps') && realPullDay.missing.includes('core'), JSON.stringify(realPullDay.missing));
-  ok('face pulls do not silently replace the required traps or biceps seats',
-    realPullDay.missing.includes('traps') && realPullDay.missing.includes('biceps'));
+    realPullDay.missing.length === 1 && realPullDay.missing.includes('core'), JSON.stringify(realPullDay.missing));
+  ok('face pulls do not silently replace the required core seat',
+    realPullDay.missing.includes('core'));
   // AND THE ANCHOR IS STILL AN ANCHOR — the non-vacuity. Two ROWS with nowhere
   // else to go is still his "two squats" shape and must still report doubled.
   const twoAnchors = sessionSlotCoverage(
@@ -477,7 +476,8 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   const reversed = sessionSlotCoverage(
     [...pullRows].reverse(), 'upper_split_pull');
   ok('the answer does not depend on row order',
-    reversed.missing.length === 0 && reversed.duplicated.length === 0,
+    JSON.stringify(reversed.missing) === JSON.stringify(pullDay.missing)
+      && JSON.stringify(reversed.duplicated) === JSON.stringify(pullDay.duplicated),
     `missing=${JSON.stringify(reversed.missing)} dup=${JSON.stringify(reversed.duplicated)}`);
 
   // ── THE LADDER FROM THE PLAN'S PATTERNS, not from a session title ──────
@@ -500,8 +500,8 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   ok('[non-vacuity] no patterns means no ladder',
     slotDayKindForPatterns([] as any) === null);
   // AND THE LOWER LADDER HAS NO ARM SLOT — the fact the whole fix rests on.
-  ok('the LOWER ladder contains accessory_or_core but NOT arm_or_shoulder',
-    LOWER_SLOTS.includes('accessory_or_core') && !LOWER_SLOTS.includes('arm_or_shoulder'));
+  ok('the required LOWER ladder contains football robustness but no arm work',
+    LOWER_SLOTS.includes('football_robustness') && !LOWER_SLOTS.includes('arm_or_shoulder'));
 
   // NON-VACUITY: an empty intent admits nothing, so the caller's own
   // `intendedPatterns.size > 0` check is what turns the guard on — not this.

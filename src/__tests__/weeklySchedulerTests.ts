@@ -102,6 +102,8 @@ const strengthDays = (week: WeeklySchedule) =>
   week.days.filter((d) => d.owner === 'strength');
 const purposesOf = (week: WeeklySchedule): SessionPurpose[] =>
   strengthDays(week).map((d) => d.purpose as SessionPurpose);
+const composedOptionalKinds = (week: WeeklySchedule): string[] => week.days
+  .flatMap((day) => day.composedOptional ? [day.composedOptional] : []);
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n[source] The contract is pinned to the document Sam approved');
@@ -902,6 +904,51 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
   ok('[boundary] an unmaterialised session is typed, and its day still exists', [],
     materialised.every((session) => session.unmaterialised === null
       || typeof session.unmaterialised === 'string'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[optional G-1] gender, phase, fixture count and reduced-week law');
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  const gameWeek = {
+    phase: 'In-season' as const,
+    gymAccessDays: [MON, TUE, WED, THU, FRI],
+    clubNights: [TUE, THU],
+    gameDay: SAT,
+    gameDays: [SAT],
+    age: 24,
+  };
+  const male = built({ ...gameWeek, athleteGender: 'male' });
+  const female = built({ ...gameWeek, athleteGender: 'female' });
+  ok('one-game in-season male receives only the optional G-1 Gunshow', [],
+    JSON.stringify(composedOptionalKinds(male)) === JSON.stringify(['gunshow']));
+  ok('one-game in-season female receives only the optional G-1 Primer', [],
+    JSON.stringify(composedOptionalKinds(female)) === JSON.stringify(['primer']));
+  ok('a scheduled deload removes the automatic male Gunshow', [],
+    composedOptionalKinds(built({
+      ...gameWeek, athleteGender: 'male', weekKind: 'deload',
+    })).length === 0);
+  ok('a fatigue-triggered low-readiness week removes the automatic female Primer', [],
+    composedOptionalKinds(built({
+      ...gameWeek,
+      athleteGender: 'female',
+      readiness: {
+        lowReadiness: true, highReadiness: false,
+        lowFatigue: false, consistentlyCompletesThree: false,
+      },
+    })).length === 0);
+  ok('a pre-season practice-match week may use the same G-1 gender rule', [],
+    JSON.stringify(composedOptionalKinds(built({
+      ...gameWeek, phase: 'Pre-season', athleteGender: 'male',
+    }))) === JSON.stringify(['gunshow']));
+  ok('a multi-game in-season week receives no automatic Gunshow', [],
+    composedOptionalKinds(built({
+      ...gameWeek, athleteGender: 'male', gameDays: [FRI, SAT],
+    })).length === 0);
+  ok('an in-season bye receives no automatic Primer', [],
+    composedOptionalKinds(built({
+      ...gameWeek, athleteGender: 'female', gameDays: [],
+    })).length === 0);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

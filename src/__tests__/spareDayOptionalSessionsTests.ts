@@ -112,6 +112,21 @@ check('[3] the male spare gym offer is Gunshow, never Primer',
   workoutKind(maleFive, 'gunshow').length === 1
     && workoutKind(maleFive, 'primer').length === 0);
 
+const maleModerateUpperInjury = generate({
+  ...inSeasonBase,
+  trainingDaysPerWeek: 5,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  injuries: [{
+    bodyArea: 'Shoulder', description: 'Pain with upper-body lifting',
+    severity: 'Moderate', severityScore: 5, whenItHurts: 'Lifting',
+  }],
+});
+const reducedGunshow = workoutKind(maleModerateUpperInjury, 'gunshow');
+check('[3a] a moderate upper-body injury reduces the final Gunshow to three rows',
+  reducedGunshow.length === 1 && (reducedGunshow[0].exercises ?? []).length === 3,
+  maleModerateUpperInjury.workouts.map((workout) =>
+    `${workout.dayOfWeek}:${workout.name}:${workout.exercises?.length ?? 0}`).join(' | '));
+
 const femaleFive = generate({
   ...inSeasonBase,
   gender: 'female',
@@ -206,6 +221,7 @@ check('[9] P03: Off-season keeps its two-mobility target without automatic Gunsh
 
 for (const [label, week] of [
   ['male five', maleFive], ['female five', femaleFive], ['male three', maleThree],
+  ['male moderate upper injury', maleModerateUpperInjury],
   ['male four', maleFour], ['male six', maleSix],
   ['pre-season', preSeason], ['female pre-season', femalePreSeason],
   ['off-season', offSeason],

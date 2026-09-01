@@ -85,6 +85,11 @@ import {
   type TrackedLiftChoices,
   type TrackedLiftProgrammingPattern,
 } from './estimatedOneRepMax';
+import {
+  FOOTBALL_ROBUSTNESS_CATEGORIES,
+  footballRobustnessCategoriesForExercise,
+  type FootballRobustnessCategory,
+} from './footballRobustnessFoundation';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -1184,6 +1189,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
    * generation can RECORD it. */
   const selectionsThisBlock: BlockExerciseSelection[] = [];
   const selectionTraces: AutomaticProgrammingSelectionTrace[] = [];
+  // Complete-week coverage, shared by male and female composition. A
+  // robustness seat selects only from the first category no delivered row has
+  // supplied yet; ordinary lower rows contribute through the same classifier.
+  const footballRobustnessCovered = new Set<FootballRobustnessCategory>();
   // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
   // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
   // it, which is why a main lift changed every week. `rules/blockExerciseSelection.ts`
@@ -1684,11 +1693,25 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         const family = exerciseVariationFamily(id);
         return family === null || !variationFamiliesThisDay.has(family);
       });
+      const preferMissingFootballCategory = (
+        candidates: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => {
+        if (slot !== 'football_robustness') return candidates;
+        for (const category of FOOTBALL_ROBUSTNESS_CATEGORIES) {
+          if (footballRobustnessCovered.has(category)) continue;
+          const inCategory = candidates.filter((candidate) =>
+            footballRobustnessCategoriesForExercise(candidate).includes(category));
+          if (inCategory.length > 0) return inCategory;
+        }
+        return candidates;
+      };
       const baseLegalBeforeDayFamily = legalUnder(excluded, inputs.kit);
-      const baseLegal = withoutUsedVariationFamily(baseLegalBeforeDayFamily);
-      const legalBeforeDayIdentity = withoutUsedVariationFamily(
-        withoutRdlFamily(legalUnder(excludedToday, kitToday)),
+      const baseLegal = preferMissingFootballCategory(
+        withoutUsedVariationFamily(baseLegalBeforeDayFamily),
       );
+      const legalBeforeDayIdentity = preferMissingFootballCategory(withoutUsedVariationFamily(
+        withoutRdlFamily(legalUnder(excludedToday, kitToday)),
+      ));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
       const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));
@@ -2013,6 +2036,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       });
       usedThisWeek.add(identity);
       identitiesThisDay.add(identity);
+      for (const category of footballRobustnessCategoriesForExercise(identity)) {
+        footballRobustnessCovered.add(category);
+      }
       const selectedVariationFamily = exerciseVariationFamily(identity);
       if (selectedVariationFamily) variationFamiliesThisDay.add(selectedVariationFamily);
       const chosenGroup = POOL_GROUP_OF.get(identity);
@@ -2077,6 +2103,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       });
     }
 
+    // Robustness and trunk work support a required strength session; they do
+    // not create one after injury has prohibited every planned main pattern.
+    // In that case the honest result is the existing typed adjustment, not an
+    // accessory-only card presented as the athlete's required gym session.
+    if (patternHasItsMainLift.size === 0) {
+      rows.splice(0, rows.length);
+      required.splice(0, required.length);
+    }
     if (rows.length === 0) {
       // Clause (d): requested, and nothing lawful could fill it. Said out loud
       // with a typed reason rather than silently dropped.
@@ -2114,9 +2148,63 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     });
   }
 
+  // A later ordinary row can make an earlier robustness seat redundant (an
+  // upper session may precede the lower session that supplies the same RDL or
+  // unilateral quality). Inspect the COMPLETE composed strength week and keep
+  // a robustness row only when it adds a still-missing category. This remains
+  // canonical composition: the slot selector authored every retained row and
+  // no generated or stored week is rewritten afterwards.
+  const suppliedByOrdinaryRows = new Set<FootballRobustnessCategory>(
+    days.flatMap((day) => day.rows
+      .filter((row) => row.slot !== 'football_robustness')
+      .flatMap((row) => footballRobustnessCategoriesForExercise(row.identity))),
+  );
+  const removeRobustnessSlots = (
+    slots: readonly SessionSlot[],
+    count: number,
+  ): SessionSlot[] => {
+    let remaining = count;
+    return slots.filter((slot) => {
+      if (slot !== 'football_robustness' || remaining <= 0) return true;
+      remaining -= 1;
+      return false;
+    });
+  };
+  const finalDays = days.map((day) => {
+    let removed = 0;
+    const rows = day.rows.filter((row) => {
+      if (row.slot !== 'football_robustness') return true;
+      const supplied = footballRobustnessCategoriesForExercise(row.identity);
+      if (supplied.length === 0
+        || supplied.some((category) => !suppliedByOrdinaryRows.has(category))) {
+        supplied.forEach((category) => suppliedByOrdinaryRows.add(category));
+        return true;
+      }
+      removed += 1;
+      return false;
+    });
+    return removed === 0 ? day : {
+      ...day,
+      rows,
+      requiredSlots: removeRobustnessSlots(day.requiredSlots, removed),
+      declaredSlots: removeRobustnessSlots(day.declaredSlots, removed),
+    };
+  });
+  const finalStrengthIdentitiesByDay = new Map(finalDays.map((day) => [
+    day.dayOfWeek,
+    new Set(day.rows.map((row) => row.identity)),
+  ]));
+  // A complete-week de-duplication is the final composition decision. Do not
+  // publish an interim strength choice as selected after its row was removed;
+  // audit traces describe content that survived into the athlete's session.
+  const finalSelectionTraces = selectionTraces.filter((trace) =>
+    trace.kind !== 'strength_exercise'
+      || (trace.selected !== null
+        && finalStrengthIdentitiesByDay.get(trace.need.dayOfWeek)?.has(trace.selected)));
+
   return {
     weekStartISO: mondayISO(inputs.todayISO),
-    days,
+    days: finalDays,
     gaps,
     sessionCount: {
       // Clause (d) counts what the PLANNER asked for. `composedDayKind !== null`
@@ -2127,6 +2215,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     },
     kitUnachievablePatterns: kitUnachievablePatterns(weekReachableKit),
     selections: selectionsThisBlock,
-    selectionTraces,
+    selectionTraces: finalSelectionTraces,
   };
 }

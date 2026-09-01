@@ -94,9 +94,8 @@ check('[2] R-090 selects the two kit-achievable main-strength days',
     + `delivered=${mainStrengthDays(bodyweightGame)}`);
 check('[3] R-083 keeps pull out of the required safe pattern set',
   !bodyweightGame.exposureContractV2?.strengthPatterns.requiredSafePatterns.includes('pull'));
-check('[4] the missing pull capability remains typed on the stored week',
-  kitGaps(bodyweightGame).includes('horizontal_pull')
-    && kitGaps(bodyweightGame).includes('vertical_pull'),
+check('[4] only the unavailable capability on a selected required day remains typed',
+  JSON.stringify(kitGaps(bodyweightGame)) === JSON.stringify(['vertical_push']),
   JSON.stringify(kitGaps(bodyweightGame)));
 check('[5] the full-gym control still selects and delivers all three layout days',
   fullGymGame.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget === 3

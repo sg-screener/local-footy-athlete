@@ -418,6 +418,95 @@ fixture/team/speed/conditioning totals are separate semantic day counts.
 - Addendum Sections 1–8 and the in-season arm/foundation addendum remain open.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 2 + in-season arm/foundation refinement
+
+The previous required-session structures did not satisfy the refinement. Male
+split upper days still spent seats on direct biceps, triceps and delt-pump work,
+and the female/male tables described different required accessory foundations.
+The first focused final-composition run named this as 19 passing and 5 failing
+cells. A second first-run guard found two additional live defects: automatic G-1
+Gunshow/Primer ignored the scheduler's already-derived reduced-week state, and a
+severe shoulder injury still received all six Gunshow rows.
+
+Two designs were compared. Replacing individual arm names in each table would
+leave every session independently guessing at what the athlete's week lacked.
+A typed complete-week source of truth removes that class: four explicit football
+qualities—hamstring eccentric/isometric, adductor/groin, calf/soleus and
+knee-capacity/unilateral—are derived from authored pool/tag membership, never
+name fragments. Ordinary lower work earns credit first. One or two short
+`football_robustness` seats then select only still-missing categories, and the
+complete-week pass removes an earlier support row if later ordinary work makes
+it redundant. Required sessions do not grow; the split upper ceiling is five.
+
+Male and female required split/full/lower structures now consume the same
+foundation. The final in-season boundary is 29/29 across both sexes, all four
+categories, no direct arm/delt-pump required seats, no duplicated robustness
+category, 13 recorded block histories, restricted kit, injury adjustment and
+byte-equivalent final row/slot/dose signatures after restart. Every annual block
+keeps exactly two major pulls. Replacing the male robustness seats with triceps
+killed four named cells; restoration returned 29/29.
+
+Gunshow keeps the signed 8/7/8 source pools and ordinary 2+2+2 shape, but its
+automatic shelf excludes the slow Chin-Up Negative and every description now
+requires three reps in reserve. The real builder walks 366 dated Gunshows. The
+existing injury severity owner now adjusts the session-level dose: a 4-7/10
+upper-body injury changes 2+2+2 to 1+1+1 and 8-10/10 pauses it; mild injuries
+retain the exact-trigger filter. The focused door is 33/33 and the final
+generated moderate-injury week contains exactly three Gunshow rows. Bypassing
+the injury count made both the builder and final-week cells red.
+
+The G-1 scheduler now consumes its existing `weekIsReduced` fact. Its direct
+boundary is 125/125 and covers male Gunshow, female Primer, one-game In-season,
+Pre-season practice match, multi-game congestion, bye, scheduled deload and
+fatigue-triggered low readiness. Removing the reduced-week predicate killed
+exactly the scheduled-deload and low-readiness cells. The full
+`test:weekly-scheduler` chain exits zero, including the 22/22 final generated
+spare-day tape and the corrected zero-equipment disclosure unit.
+
+Canonical de-duplication initially left an interim removed robustness choice in
+the audit stream. `test:programming-selection-trace` correctly went red on
+`Reverse Nordic Curl`: the trace called it selected although no final session
+contained it. Final composition now publishes only strength decisions that
+survive onto that exact day; the trace boundary is 10/10.
+
+The real accumulated team-night transaction tape is 10/10 plus 32/32. Both
+sexes, both safe-swap/keep routes, accepted save, cold restart and Undo preserve
+the exact chosen content and club anchor. The separate direct composer restart
+cells preserve the complete final male and female in-season sessions.
+
+R-309 is born guarded by `test:programming-hierarchy +
+test:mobility-accessory-doors + test:weekly-scheduler +
+test:team-night-content`. R-305 retains its two-major-pull and typed-plane law
+but its interim direct-arm/accessory structure is superseded. R-306 retains the
+annual reporting law but no longer treats unequal required foundations as an
+intentional gender difference. The older Gunshow and spare-capacity registry
+receipts now state their current P03/R-309 behavior rather than their obsolete
+pre-amendment branches.
+
+Focused verification is green: composer B1 54/54, slot coverage 83/83,
+programming final composition 6/6, generated-week assembly 30/30, Primer 25/25,
+optional top-up 30/30, team-night size 50/50, practice-match week 39/39 and
+TypeScript. The exhaustive catalogue-reversal year remains 0 changes across 728
+athlete-days. The programming-hierarchy chain reaches the new gates and the
+repaired trace, then retains the inherited conditioning-modality-persistence
+red: its four-date control selects Run on all four dates while the historical
+cell demands a machine modality. The ruling registry also retains its unrelated
+R-070, nine-UNENFORCED and uncited-question reds. The law registry recognizes
+242 rows / 221 guarded and retains its existing 21-UNENFORCED repository debt.
+
+### NOT COVERED
+
+- The exact 52-week audit has not yet been regenerated after the new foundation;
+  its previous Section 7 artifact remains red on the accumulated return-home
+  Thursday/Friday/Saturday energy sequence.
+- Section 7 PDFs remain deliberately withheld while that acceptance artifact is
+  red. Addendum Sections 3-8 remain open.
+- Injury/equipment combinations are covered by focused typed boundaries, not an
+  exhaustive all-combinations annual matrix. Severe upper injury can make the
+  required-strength compiler refuse the whole week before there is a final
+  Gunshow; the pure composition boundary proves its zero-row pause.
+- No simulator, Release build or physical phone work has run.
+
 ## Addendum Section 1 — legitimate consecutive fixtures
 
 The older-PDF concern does not reproduce as a production defect at the current
@@ -449,6 +538,7 @@ R-308 is born guarded by chained `test:fixture-mutation-transaction`.
 
 - Tournament identity has no competition/team metadata beyond distinct accepted
   event date/kind; the ruled behavior needs distinct events, not new metadata.
-- Addendum Sections 2–8 and the in-season arm/foundation addendum remain open.
+- Addendum Sections 3–8 remain open; Section 2 and the in-season
+  arm/foundation refinement are complete in the checkpoint above.
 - Section 7's accumulated return-home spacing defect and PDFs remain open.
 - No simulator, Release build or physical phone work has run.

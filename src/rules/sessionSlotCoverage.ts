@@ -39,6 +39,7 @@ import type { EquipmentTag } from '../data/exercisePools';
 import type { WorkoutExercise } from '../types/domain';
 import { participatesInCounting } from './sessionRowCounting';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import { isFootballRobustnessAccessory } from './footballRobustnessFoundation';
 
 /** The slots Sam named, in his fill order. */
 export type SessionSlot =
@@ -90,6 +91,8 @@ export type SessionSlot =
    * row already separates it from pump delts). No male table declares it.
    */
   | 'shoulder_prehab'
+  /** One short row selected from a football quality the complete week lacks. */
+  | 'football_robustness'
   | 'core';
 
 /**
@@ -127,12 +130,13 @@ export type SlotDayKind =
   | 'full_body_coverage';
 
 export const LOWER_SLOTS: readonly SessionSlot[] = [
-  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'football_robustness',
 ];
 
 /** A full upper day: both planes, both directions, plus arm/shoulder work. */
 export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
-  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull', 'arm_or_shoulder',
+  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
+  'football_robustness',
 ];
 
 /**
@@ -160,16 +164,12 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  */
 export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'push_accessory_1',
-  'triceps', 'shoulders', 'core',
+  'core', 'football_robustness', 'football_robustness',
 ];
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  // R-305: the third seat is shoulder/prehab work, not a third row/pulldown.
-  // Horizontal + vertical already own the two major pulling exercises.
-  'shoulders',
-  'biceps', 'traps', 'core',
+  'core', 'football_robustness', 'football_robustness',
 ];
 
 /**
@@ -191,11 +191,11 @@ export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
  * composer imports them, so there is exactly one statement of Sam's sentence.
  */
 export const FULL_BODY_A_SLOTS: readonly SessionSlot[] = [
-  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'accessory_or_core',
+  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'football_robustness',
 ];
 
 export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
-  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'accessory_or_core',
+  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'football_robustness',
 ];
 
 /**
@@ -218,24 +218,22 @@ export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
  * to the split days — so they stand as R-130a left them.
  */
 export const FEMALE_LOWER_SLOTS: readonly SessionSlot[] = [
-  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
-  'lower_accessory',
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'football_robustness',
 ];
 
 export const FEMALE_UPPER_FULL_SLOTS: readonly SessionSlot[] = [
-  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull', 'midline',
+  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
+  'football_robustness',
 ];
 
 export const FEMALE_UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'core', 'midline', 'shoulder_prehab',
-  'lower_accessory', 'second_lower_accessory',
+  'core', 'football_robustness', 'football_robustness',
 ];
 
 export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'core', 'midline', 'shoulder_prehab',
-  'lower_accessory', 'second_lower_accessory',
+  'core', 'football_robustness', 'football_robustness',
 ];
 
 /**
@@ -263,7 +261,7 @@ export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
 export const WEEKLY_COVERAGE_SET: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
   'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
-  'arm_or_shoulder', 'accessory_or_core',
+  'football_robustness', 'core',
 ];
 
 /**
@@ -496,6 +494,13 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   // Power, conditioning, team training and mobility are not strength slots.
   // They are exempt from counting for the same reason they cannot fill a slot.
   if (!participatesInCounting(row)) return [];
+  // A composed robustness row was deliberately selected AS the missing weekly
+  // accessory. Its movement tags may also describe a lunge or hinge, but that
+  // must not make the short accessory double a main day slot after
+  // materialisation. The composer's typed slot outranks re-inference by name.
+  if (row.section18Evidence?.slot === 'football_robustness') {
+    return ['football_robustness'];
+  }
   const name = row.exercise?.name;
   if (!name) return [];
   return slotsForExerciseName(name);
@@ -520,7 +525,10 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   // so the membership is inert on the male path.
   const shoulderHealth = isShoulderHealthPoolMember(name);
   const strengthMembership = authoredPoolMembership(name);
-  const out: SessionSlot[] = shoulderHealth ? ['shoulder_prehab'] : [];
+  const out: SessionSlot[] = [
+    ...(shoulderHealth ? ['shoulder_prehab' as const] : []),
+    ...(isFootballRobustnessAccessory(name) ? ['football_robustness' as const] : []),
+  ];
   // A movement tag describes what a prehab drill does; it does not grant that
   // drill an ordinary strength route. Bottoms-Up KB Press was in only the
   // shoulder-health pool but its vertical-push tag also admitted it to the
@@ -532,7 +540,7 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   if (!tag) return out;
   // Power is an overlay, never a strength seat. The name-only path is also
   // used by the composer before a row exists, so its role guard belongs here.
-  if (tag.power || tag.programming?.strengthRole === 'none') return [];
+  if (tag.power || tag.programming?.strengthRole === 'none') return out;
   const unilateral = tag.unilateral === true;
 
   // ⚠ A UNILATERAL LIFT FILLS ITS SINGLE-LEG SLOT AND NOT THE BILATERAL ONE.
@@ -717,7 +725,13 @@ export function sessionSlotCoverage(
    */
   declaredSlots?: readonly SessionSlot[],
 ): SlotCoverage {
-  const declared = declaredSlots ?? SLOTS_FOR_KIND[kind];
+  // The football foundation is a WEEK-level allocation. A composed day carries
+  // its resolved `declaredSlots`, so its selected robustness seats are judged.
+  // A caller with only a day kind can judge movement-pattern completeness but
+  // cannot honestly infer which of the week's missing robustness categories
+  // this one day owed.
+  const declared = declaredSlots
+    ?? SLOTS_FOR_KIND[kind].filter((slot) => slot !== 'football_robustness');
   // R-084: a slot the kit cannot train is not owed, so it is removed from the
   // requirement BEFORE assignment rather than subtracted from `missing` after —
   // otherwise it would still soak up a row in the matching step.

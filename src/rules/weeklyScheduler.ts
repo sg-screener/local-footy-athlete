@@ -1507,7 +1507,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
-    if (inputs.phase !== 'Off-season' && fixtureDays.length === 1) {
+    if (inputs.phase !== 'Off-season' && !weekIsReduced && fixtureDays.length === 1) {
       const gameIdx = orderIndex(fixtureDays[0]);
       if (gameIdx <= 0) return withFlush;
       const g1Day = WEEK_ORDER[gameIdx - 1];

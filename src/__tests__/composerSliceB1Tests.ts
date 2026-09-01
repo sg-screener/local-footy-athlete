@@ -30,6 +30,7 @@ import {
   exerciseVariationFamily,
   sessionHasExerciseVariationCollision,
 } from '../rules/exerciseVariationFamily';
+import { missingFootballRobustnessCategories } from '../rules/footballRobustnessFoundation';
 
 armTotalsOrRed();
 
@@ -180,7 +181,7 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
     `${day.requiredSlots.join(',')} / ${day.rows.length} rows`);
   ok('rows arrive in Sam\'s fill order',
     JSON.stringify(day.rows.map((row) => row.slot))
-      === '["horizontal_push","horizontal_pull","vertical_push","vertical_pull","arm_or_shoulder"]',
+      === '["horizontal_push","horizontal_pull","vertical_push","vertical_pull","football_robustness"]',
     JSON.stringify(day.rows.map((row) => row.slot)));
   ok('every composed row is legal under the ONE owner',
     day.rows.every((row) => composedRowIsLegal(row.identity, FULL_GYM)));
@@ -216,18 +217,20 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
   const split = composeWeek(inputs({ plannedDays: [UPPER_PUSH_DAY, UPPER_PULL_DAY] }));
   const splitPush = split.days.find((candidate) => candidate.kind === 'upper_split_push');
   const splitPull = split.days.find((candidate) => candidate.kind === 'upper_split_pull');
-  ok('[SAM] a full-gym split PUSH authors the ruled six-row shape',
-    JSON.stringify(splitPush?.rows.map((row) => row.slot)) === JSON.stringify([
-      'horizontal_push', 'vertical_push', 'push_accessory_1',
-      'triceps', 'shoulders', 'core',
-    ]), JSON.stringify(splitPush?.rows.map((row) => `${row.slot}:${row.identity}`)));
-  ok('[SAM] a full-gym split PULL authors the ruled six-row shape',
-    JSON.stringify(splitPull?.rows.map((row) => row.slot)) === JSON.stringify([
-      'horizontal_pull', 'vertical_pull', 'shoulders',
-      'biceps', 'traps', 'core',
-    ]), JSON.stringify(splitPull?.rows.map((row) => `${row.slot}:${row.identity}`)));
-  ok('[SAM] male split upper sessions never exceed six rows',
-    split.days.every((candidate) => candidate.rows.length <= 6),
+  ok('[SAM] split PUSH keeps both planes, core and no more than two robustness rows',
+    splitPush?.rows[0]?.slot === 'horizontal_push'
+    && splitPush?.rows[1]?.slot === 'vertical_push'
+    && splitPush.rows.some((row) => row.slot === 'core')
+    && splitPush.rows.filter((row) => row.slot === 'football_robustness').length <= 2,
+    JSON.stringify(splitPush?.rows.map((row) => `${row.slot}:${row.identity}`)));
+  ok('[SAM] split PULL keeps both planes, core and no more than two robustness rows',
+    splitPull?.rows[0]?.slot === 'horizontal_pull'
+    && splitPull?.rows[1]?.slot === 'vertical_pull'
+    && splitPull.rows.some((row) => row.slot === 'core')
+    && splitPull.rows.filter((row) => row.slot === 'football_robustness').length <= 2,
+    JSON.stringify(splitPull?.rows.map((row) => `${row.slot}:${row.identity}`)));
+  ok('[SAM] male split upper sessions never exceed five rows',
+    split.days.every((candidate) => candidate.rows.length <= 5),
     JSON.stringify(split.days.map((candidate) => `${candidate.kind}:${candidate.rows.length}`)));
   ok('[non-vacuity] each split row is a distinct exercise',
     split.days.every((candidate) => new Set(candidate.rows.map((row) => row.identity)).size
@@ -251,8 +254,11 @@ console.log('\n[c] Slots, then rows — Sam\'s ladder, with main-lift-as-role');
     profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate', gender: 'female' } as never,
     plannedDays: [UPPER_PUSH_DAY, UPPER_PULL_DAY],
   }));
-  ok('[female control] the separate female split structures remain seven rows',
-    female.days.every((candidate) => candidate.rows.length === 7),
+  ok('[female control] required female split sessions share the compact foundation',
+    female.days.every((candidate) => candidate.rows.length <= 5)
+    && missingFootballRobustnessCategories(
+      female.days.flatMap((candidate) => candidate.rows.map((row) => row.identity)),
+    ).length === 0,
     JSON.stringify(female.days.map((candidate) => candidate.rows.map((row) => row.slot))));
 }
 
@@ -270,10 +276,10 @@ console.log('\n[d] Session counts are honest, or adjusted with a typed reason');
   const partlyProhibited = composeWeek(inputs({
     injuries: { prohibitedPatterns: ['push', 'pull'], excludedIdentities: [] },
   }));
-  ok('a day whose main patterns are prohibited still ships its lawful slot',
-    partlyProhibited.sessionCount.composed === 1
-    && partlyProhibited.days[0].rows.every((row) => row.slot === 'arm_or_shoulder'),
-    JSON.stringify(partlyProhibited.days[0]?.rows.map((row) => row.slot)));
+  ok('a day whose main patterns are prohibited does not become robustness-only work',
+    partlyProhibited.sessionCount.composed === 0
+    && partlyProhibited.sessionCount.adjustment?.[0].reason === 'no_trainable_slot_on_this_kit',
+    JSON.stringify(partlyProhibited.sessionCount));
   // Every slot genuinely empty: prohibit both directions AND exclude the three
   // bodyweight arm rows, so the ladder has nothing lawful left anywhere.
   const nothingLeft = composeWeek(inputs({
@@ -358,8 +364,9 @@ console.log('\n[f] The composer cannot ask which world it is in, and nothing rew
   const composerSource = readFileSync(resolve(__dirname, '../rules/composeWeek.ts'), 'utf8');
   ok('[anti-overfit] the composer never imports the migration gate',
     !composerSource.includes('composedRouteAdmission'));
-  ok('[anti-overfit] the composer names no world, kit label, phase or day count',
-    !/Full Gym|Bodyweight Only|'Pre-season'|trainingDaysPerWeek|weekNumber === /.test(composerSource),
+  const executableComposerSource = composerSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+  ok('[anti-overfit] executable composer code names no fixture world, kit label or day count',
+    !/Full Gym|Bodyweight Only|trainingDaysPerWeek|weekNumber === /.test(executableComposerSource),
     'a branch keyed to the control fixture would appear here');
   // ⚠ THE MIGRATION GATE IS DELETED (B1-PIVOT). These four cells asserted that
   // it admitted exactly one configuration; there is no gate to admit anything
@@ -371,8 +378,8 @@ console.log('\n[f] The composer cannot ask which world it is in, and nothing rew
   const canonSource = readFileSync(resolve(__dirname, '../utils/workoutCanonicalisation.ts'), 'utf8');
   ok('[f] the canonicaliser\'s drift branch stands down for a composed workout',
     canonSource.includes('!context.composed &&'));
-  ok('[f] the canonicaliser\'s restore branch stands down for a composed workout',
-    canonSource.includes('&& !context.composed'));
+  ok('[f] the canonicaliser contains no restore-missing-pattern branch',
+    !canonSource.includes('restoreMissingPlanPatterns('));
   const builderSource = readFileSync(resolve(__dirname, '../data/defaultProgram.ts'), 'utf8');
   // STRONGER THAN THE GUARD IT REPLACES: the generation builder does not call
   // the rewriter at all any more, so there is no branch to get wrong.
@@ -390,9 +397,9 @@ console.log('\n[pure] Same inputs, same week; and every input has a reader');
     JSON.stringify(composeWeek(inputs())) === JSON.stringify(composeWeek(inputs())));
   const week1 = composeWeek(inputs());
   const week2 = composeWeek(inputs({ phaseClock: { weekNumber: 2 } }));
-  ok('[input: phaseClock] the week number changes what is selected',
+  ok('[selection owner] phase week number cannot rotate a block-stable selection',
     JSON.stringify(week1.days[0].rows.map((r) => r.identity))
-      !== JSON.stringify(week2.days[0].rows.map((r) => r.identity)));
+      === JSON.stringify(week2.days[0].rows.map((r) => r.identity)));
   ok('[input: kit] the kit changes what is selected',
     JSON.stringify(week1) !== JSON.stringify(composeWeek(inputs({ kit: DB_BANDS }))));
   ok('[input: plannedDays] the calendar changes which days are composed',

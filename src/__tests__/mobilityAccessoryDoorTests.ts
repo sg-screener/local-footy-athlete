@@ -89,6 +89,9 @@ import {
   TRICEPS_POOL,
   DELTS_POOL,
   GUNSHOW_DO_NOT_PAIR_IDS,
+  GUNSHOW_AUTOMATIC_EXCLUDED_IDS,
+  gunshowExerciseIsAutomaticEligible,
+  preferAutomaticCurlCandidates,
   UPPER_BACK_PUMP_POOL,
   GROIN_ADDUCTORS_POOL,
   CALVES_POOL,
@@ -201,6 +204,54 @@ run('A1. a Gunshow is 2 biceps + 2 triceps + 2 shoulder', () => {
     `Sam signed 2 + 2 + 2 and the session is ${JSON.stringify(counts)}: ${rows.join(', ')}`);
 });
 
+run('A1b. every automatic Gunshow stays away from failure and slow eccentrics', () => {
+  assert(GUNSHOW_AUTOMATIC_EXCLUDED_IDS.has('bw-chin-curl'),
+    'the slow chin-up negative is not named by the Gunshow exclusion owner');
+  for (let day = 0; day < 366; day += 1) {
+    const date = new Date(Date.UTC(2027, 0, 1 + day)).toISOString().slice(0, 10);
+    const workout = quiet(() => buildCoachRevisionTemplateWorkout('accessories_pump', date));
+    assert(workout, `the Gunshow builds nothing on ${date}`);
+    assert((workout.exercises ?? []).every((row) =>
+      !GUNSHOW_AUTOMATIC_EXCLUDED_IDS.has(row.exerciseId)),
+    `${date} selected a high-eccentric Gunshow row: ${names(workout).join(', ')}`);
+    assert(String(workout.description).includes('3 reps in reserve'),
+      `${date} does not tell the athlete to stay away from failure: ${workout.description}`);
+  }
+});
+
+run('A1c. upper-body injury bands reduce then remove Gunshow pump work', () => {
+  const before = useProfileStore.getState().onboardingData;
+  assert(before, 'the live athlete context is missing');
+  try {
+    useProfileStore.setState({
+      onboardingData: {
+        ...before,
+        injuries: [{
+          bodyArea: 'Shoulder', description: 'Pain with upper-body lifting',
+          severity: 'Moderate', severityScore: 5, whenItHurts: 'Lifting',
+        }],
+      },
+    } as never);
+    const reduced = built('accessories_pump');
+    assert((reduced?.exercises ?? []).length === 3,
+      `the 5/10 injury received ${(reduced?.exercises ?? []).length} rows, not three`);
+    useProfileStore.setState({
+      onboardingData: {
+        ...before,
+        injuries: [{
+          bodyArea: 'Shoulder', description: 'Pain with upper-body lifting',
+          severity: 'Severe', severityScore: 8, whenItHurts: 'Lifting',
+        }],
+      },
+    } as never);
+    const injured = built('accessories_pump');
+    assert((injured?.exercises ?? []).length === 0,
+      `the 8/10 injury still received ${(injured?.exercises ?? []).length} Gunshow rows`);
+  } finally {
+    useProfileStore.setState({ onboardingData: before } as never);
+  }
+});
+
 run('A2. NO CROSS-FAMILY TOP-UPS — nothing outside the signed 23', () => {
   // THE DEFECT THIS CLOSES. The slot table ended `{ delts: 1 }, { upper_back_pump: 1 }`,
   // so the sixth exercise came from a pool Sam did not sign for this session —
@@ -296,7 +347,13 @@ run('A6. every Gunshow candidate rotates in, and forbidden pairs never do', () =
     }
   }
 
-  const expectedIds = [...BICEPS_POOL, ...TRICEPS_POOL, ...DELTS_POOL]
+  const eligibleBiceps = preferAutomaticCurlCandidates(
+    BICEPS_POOL.filter(gunshowExerciseIsAutomaticEligible),
+    samExport8Profile().experienceLevel,
+    (entry) => entry.name,
+  );
+  const expectedIds = [...eligibleBiceps, ...TRICEPS_POOL, ...DELTS_POOL]
+    .filter(gunshowExerciseIsAutomaticEligible)
     .map((entry) => entry.id);
   const missing = expectedIds.filter((id) => !seen.has(id));
   assert(missing.length === 0,

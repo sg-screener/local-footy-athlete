@@ -41,12 +41,14 @@ import {
   MOBILITY_POOL,
   preferAutomaticCurlCandidates,
   gunshowExercisesCanPair,
+  gunshowExerciseIsAutomaticEligible,
   type PoolExercise,
   type ExerciseCategory,
   type EquipmentTag,
   type InjuryTag,
 } from '../data/exercisePools';
 import {
+  injurySeverityPausesAffectedTraining,
   injurySeverityReducesAffectedWork,
   onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
@@ -460,7 +462,7 @@ const SESSION_META: Record<DerivedSessionType, {
     sessionTier: 'optional',
     durationMinutes: 35,
     intensity: 'Light',
-    descriptionSuffix: 'light upper body pump work',
+    descriptionSuffix: 'low-soreness upper body pump; stop with 3 reps in reserve',
   },
   /**
    * PRIMER (R-129). `sessionTier: 'optional'` is the whole counting answer and
@@ -791,6 +793,32 @@ function pairRuleFor(type: DerivedSessionType): ((
     return gunshowExercisesCanPair;
   }
   return undefined;
+}
+
+const GUNSHOW_AFFECTED_INJURY_REGIONS = new Set<InjuryRegion>([
+  'shoulder', 'elbow', 'wrist/hand', 'neck',
+]);
+
+/**
+ * Gunshow is optional pump work, so the Bible injury band owns its whole dose:
+ * 4-7/10 reduces each 2-row family to one; 8-10/10 pauses it. Mild injuries
+ * keep the ordinary per-exercise trigger filter. This preserves the manual Add
+ * door while preventing a significant upper-body injury receiving six rows.
+ */
+function gunshowSlotCount(
+  authoredCount: number,
+  injuries: readonly OnboardingInjury[],
+): number {
+  const relevantSeverities = injuries.flatMap((injury) => {
+    const region = resolveInjuryRegion(injury.bodyArea);
+    return region && GUNSHOW_AFFECTED_INJURY_REGIONS.has(region)
+      ? [onboardingInjurySeverityScore(injury)] : [];
+  });
+  if (relevantSeverities.some(injurySeverityPausesAffectedTraining)) return 0;
+  if (relevantSeverities.some(injurySeverityReducesAffectedWork)) {
+    return Math.min(authoredCount, 1);
+  }
+  return authoredCount;
 }
 
 // ─── WorkoutExercise Builder ───
@@ -1224,13 +1252,17 @@ export function buildDerivedSession(
       ? pool.filter((entry) => slot.regions.indexOf(mobilityRegionOf(entry)) !== -1)
       : pool;
     const filtered = filterPoolEntriesForAthlete([...inRegion, ...(slot.alternatives ?? [])], athlete).filter(notAlreadyProgrammed)
+      .filter(row => type !== 'arms_pump' || gunshowExerciseIsAutomaticEligible(row))
       .filter(row => type !== 'primer' || exerciseProgrammingAllows(row.name, {
         experienceLevel: athlete.onboardingData?.experienceLevel, daysToGame: 1, route: 'primer',
       }));
     const slotSeed = slotSeedForSource; // prime offset for variety
+    const requestedCount = type === 'arms_pump'
+      ? gunshowSlotCount(slot.count, athlete.injuries)
+      : slot.count;
     const picks = slot.spread
-      ? pickAcrossRegions(filtered, slot.count, slot.spread, slotSeed)
-      : pickFromPool(filtered, slot.count, slotSeed, pairRuleFor(type));
+      ? pickAcrossRegions(filtered, requestedCount, slot.spread, slotSeed)
+      : pickFromPool(filtered, requestedCount, slotSeed, pairRuleFor(type));
 
     for (const pe of picks) {
       // Recovery sessions already carry their identity in `workoutType`; the

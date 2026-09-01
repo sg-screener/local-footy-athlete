@@ -240,6 +240,15 @@ export function gunshowExercisesCanPair(left: PoolExercise, right: PoolExercise)
   return !GUNSHOW_DO_NOT_PAIR_KEYS.has([left.id, right.id].sort().join('|'));
 }
 
+/** High-eccentric rows never enter the automatic pre-game Gunshow. */
+export const GUNSHOW_AUTOMATIC_EXCLUDED_IDS: ReadonlySet<string> = new Set([
+  'bw-chin-curl',
+]);
+
+export function gunshowExerciseIsAutomaticEligible(entry: PoolExercise): boolean {
+  return !GUNSHOW_AUTOMATIC_EXCLUDED_IDS.has(entry.id);
+}
+
 export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
   BAND_PULL_APART,
   FACE_PULL,

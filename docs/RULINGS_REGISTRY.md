@@ -7665,19 +7665,16 @@ Guard: `LAW-selected-tracked-lift-is-program-anchor` through chained
 **R-305** · Male Upper Pull owns two major pulls, not three, 2026-09-01.
 
 Owner: yearrepair. A normal male Upper Pull contains exactly one horizontal and
-one vertical major pull. Once those planes are covered, its four remaining
-strength seats are shoulder/prehab, biceps, traps and core; a spare accessory
-seat may not add another row or pulldown. The athlete's selected tracked lift
-occupies its real authored plane, so Pull-Up and Lat Pulldown anchor vertical
-pull rather than wearing a horizontal seat label.
+one vertical major pull; a spare seat may not add another row or pulldown. The
+athlete's selected tracked lift occupies its real authored plane, so Pull-Up and
+Lat Pulldown anchor vertical pull rather than wearing a horizontal seat label.
+R-309 supersedes this ruling's interim shoulder/prehab, biceps, traps and core
+seat prescription with the shared football-robustness foundation.
 
-Male Upper Push keeps one distinct push-accessory seat. Dips remains a common
-option, but the seat also admits the authored Push-ups accessory for an advanced
-athlete and uses recorded block history to rotate between legal options. This
-does not admit Push-ups as a main press and does not use exercise-name guessing.
+The interim Male Upper Push accessory rotation is likewise superseded by R-309;
+direct pump work belongs in optional Gunshow rather than a required upper seat.
 The existing canonical Single-Arm Lat Pulldown identity, typed variation-family
-rules, progression, injury and equipment priorities remain unchanged. Female
-split tables remain separately authored.
+rules, progression, injury and equipment priorities remain unchanged.
 
 Guard: `LAW-male-upper-split-has-two-major-pulls-and-rotating-accessories`
 through chained `test:composer-b1 + test:estimated-1rm`. Verification status
@@ -7685,11 +7682,11 @@ and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
 
 **R-306** · Annual workload reports preserve the intentional female structure, 2026-09-01.
 
-Owner: yearrepair. Male and female programs are not flattened into one session
-table. Female Primer, trunk, shoulder-prehab and low-fatigue lower-accessory
-seats remain intentional; male Gunshow and ordinary male strength/accessory
-seats remain separately authored. A difference is removable only when final
-canonical rows prove a duplicate or another coaching rule proves it unintended.
+Owner: yearrepair. Annual reporting preserves intentional coaching differences
+instead of forcing equality. R-309 refines the programming premise: required
+male and female sessions share the football-performance foundation unless an
+explicit rule differs, while optional male Gunshow versus female Primer remains
+the main intentional Friday difference.
 
 The annual workload instrument partitions final main-session rows into main
 strength, power, core, prehab, mobility/recovery and conditioning. Optional
@@ -7739,3 +7736,31 @@ ledger, cold reconstruction and Undo retain that distinction.
 Guard: `LAW-explicit-consecutive-fixtures-are-distinct-fixed-facts` through
 chained `test:fixture-mutation-transaction`. Verification status and NOT
 COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-309** · Required programming shares the football-robustness foundation, 2026-09-01.
+
+Owner: yearrepair. Required male and female sessions share the same performance
+foundation unless an explicit coaching rule says otherwise. Required upper
+sessions keep the important push and pull planes but do not automatically spend
+rows on biceps, triceps or delt-pump work. Without lengthening the session, one
+or two short accessory seats fill only complete-week gaps across hamstring
+eccentric/isometric, adductor/groin, calf/soleus and knee-capacity/unilateral
+work. Ordinary lower rows earn the same typed credit, so an exposure already in
+the delivered week is not duplicated merely because an upper seat exists.
+
+Male Gunshow and female Primer remain optional G-1 offers only in a one-game
+In-season or Pre-season fixture week, including a Pre-season practice match.
+They are not automatic in ordinary Off-season, no-game, multi-game or bye weeks,
+and a scheduled or low-readiness deload suppresses them. The Gunshow stays low
+soreness and three reps from failure, excludes slow Chin-Up Negatives, reduces
+from 2+2+2 to 1+1+1 for a 4-7/10 upper-body injury, and pauses at 8-10/10.
+Manual Add remains available subject to the same composition and safety owner.
+
+The canonical selection record must reconstruct the exact same final male and
+female sessions after restart; accepted edits and Undo preserve the same final
+content rather than re-running a different accessory fill.
+
+Guard: `LAW-required-programming-shares-football-robustness-foundation` through
+chained `test:programming-hierarchy + test:mobility-accessory-doors +
+test:weekly-scheduler + test:team-night-content`. Verification status,
+mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

@@ -30,6 +30,11 @@ import {
   UPPER_SPLIT_PULL_SLOTS,
   UPPER_SPLIT_PUSH_SLOTS,
 } from '../rules/sessionSlotCoverage';
+import {
+  FOOTBALL_ROBUSTNESS_CATEGORIES,
+  footballRobustnessCategoriesForExercise,
+  missingFootballRobustnessCategories,
+} from '../rules/footballRobustnessFoundation';
 import type { WorkoutExercise } from '../types/domain';
 import { legalAddCandidates } from '../utils/addExerciseCandidates';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
@@ -79,19 +84,22 @@ check('legacy history progresses the canonical exercise without a duplicate key'
     exerciseName: CANONICAL, recordedLoadByExercise: history.lastRecordedLoadByExercise,
   }) === 32.5);
 
-console.log('\n[composition] male six-row shape; female table unchanged');
+console.log('\n[composition] shared football foundation replaces required arm-pump seats');
 const expectedPush = [
-  'horizontal_push', 'vertical_push', 'push_accessory_1', 'triceps', 'shoulders', 'core',
+  'horizontal_push', 'vertical_push', 'core',
+  'football_robustness', 'football_robustness',
 ];
 const expectedPull = [
-  'horizontal_pull', 'vertical_pull', 'shoulders', 'biceps', 'traps', 'core',
+  'horizontal_pull', 'vertical_pull', 'core',
+  'football_robustness', 'football_robustness',
 ];
-check('the male push table contains one accessory and exactly six rows',
+check('the male push table keeps both planes and replaces pump work within five rows',
   JSON.stringify(UPPER_SPLIT_PUSH_SLOTS) === JSON.stringify(expectedPush));
-check('the male pull table contains one accessory and exactly six rows',
+check('the male pull table keeps both planes and replaces pump work within five rows',
   JSON.stringify(UPPER_SPLIT_PULL_SLOTS) === JSON.stringify(expectedPull));
-check('the separate female split structures remain seven rows',
-  FEMALE_UPPER_SPLIT_PUSH_SLOTS.length === 7 && FEMALE_UPPER_SPLIT_PULL_SLOTS.length === 7);
+check('female required split sessions use the same five-seat performance foundation',
+  JSON.stringify(FEMALE_UPPER_SPLIT_PUSH_SLOTS) === JSON.stringify(expectedPush)
+  && JSON.stringify(FEMALE_UPPER_SPLIT_PULL_SLOTS) === JSON.stringify(expectedPull));
 
 const fullGym = resolveEquipmentCapabilities({
   equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete',
@@ -109,9 +117,9 @@ const planned = (direction: 'push' | 'pull', dayOfWeek: number): ComposerPlanned
   sessionTier: 'core',
 });
 const baseInputs: ComposerInputs = {
-  profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate' } as never,
+  profile: { seasonPhase: 'In-season', experienceLevel: 'Intermediate' } as never,
   phaseClock: { weekNumber: 1 },
-  seasonPhase: 'Off-season' as never,
+  seasonPhase: 'In-season' as never,
   offseasonSubphase: null,
   plannedDays: [planned('push', 2), planned('pull', 4)],
   kit: fullGym,
@@ -120,10 +128,18 @@ const baseInputs: ComposerInputs = {
   ...COMPOSER_ROTATION_DEFAULTS,
 };
 const normal = composeWeek(baseInputs);
-check('normal male composition emits both exact six-row structures',
-  JSON.stringify(normal.days[0]?.rows.map((row) => row.slot)) === JSON.stringify(expectedPush)
-  && JSON.stringify(normal.days[1]?.rows.map((row) => row.slot)) === JSON.stringify(expectedPull),
+check('normal male composition keeps the shared foundation at or below its five-seat ceiling',
+  normal.days.every((day) => day.rows.length <= 5)
+  && normal.days[0]?.rows[0]?.slot === 'horizontal_push'
+  && normal.days[0]?.rows[1]?.slot === 'vertical_push'
+  && normal.days[1]?.rows[0]?.slot === 'horizontal_pull'
+  && normal.days[1]?.rows[1]?.slot === 'vertical_pull',
   JSON.stringify(normal.days.map((day) => day.rows.map((row) => `${row.slot}:${row.identity}`))));
+check('the final male split week supplies all four football-robustness categories',
+  missingFootballRobustnessCategories(
+    normal.days.flatMap((day) => day.rows.map((row) => row.identity)),
+  ).length === 0,
+  JSON.stringify(normal.days.map((day) => day.rows.map((row) => row.identity))));
 check('normal male composition has no variation-family collision',
   normal.days.every((day) => !sessionHasExerciseVariationCollision(
     day.rows.map((row) => row.identity))));
@@ -138,6 +154,10 @@ check('male Upper Pull has exactly one horizontal and one vertical major pull',
   && majorPullSlots.filter((slot) => slot === 'horizontal_pull').length === 1
   && majorPullSlots.filter((slot) => slot === 'vertical_pull').length === 1,
   JSON.stringify(normalPull.rows.map((row) => `${row.slot}:${row.identity}`)));
+check('required male upper sessions contain no direct arm or delt-pump seats',
+  normal.days.every((day) => day.rows.every((row) =>
+    !['biceps', 'triceps', 'shoulders', 'traps', 'arm_or_shoulder'].includes(row.slot))),
+  JSON.stringify(normal.days.map((day) => day.rows.map((row) => `${row.slot}:${row.identity}`))));
 const injuryAdjusted = composeWeek({
   ...baseInputs,
   injuries: {
@@ -152,8 +172,9 @@ check('injury-adjusted composition obeys the same ceiling and family rule',
 console.log('\n[annual selection] typed block history rotates legal non-anchor work');
 {
   const history: import('../rules/blockExerciseSelection').BlockExerciseSelection[] = [];
-  const pushAccessories: string[] = [];
+  const robustnessAccessories: string[] = [];
   const pullMajorCounts: number[] = [];
+  const foundationMisses: string[][] = [];
   for (let block = 1; block <= 13; block += 1) {
     const blockStart = new Date('2026-09-07T12:00:00Z');
     blockStart.setUTCDate(blockStart.getUTCDate() + (block - 1) * 28);
@@ -168,22 +189,74 @@ console.log('\n[annual selection] typed block history rotates legal non-anchor w
     history.push(...composed.selections);
     const push = composed.days.find((day) => day.kind === 'upper_split_push')!;
     const pull = composed.days.find((day) => day.kind === 'upper_split_pull')!;
-    pushAccessories.push(...push.rows
-      .filter((row) => row.slot === 'push_accessory_1').map((row) => row.identity));
+    robustnessAccessories.push(...composed.days.flatMap((day) => day.rows
+      .filter((row) => row.slot === 'football_robustness').map((row) => row.identity)));
+    foundationMisses.push([...missingFootballRobustnessCategories(
+      composed.days.flatMap((day) => day.rows.map((row) => row.identity)),
+    )]);
     pullMajorCounts.push(pull.rows.filter((row) => {
       const membership = findPoolEntry(row.identity);
       return membership?.slot === 'horizontal_pull' || membership?.slot === 'vertical_pull';
     }).length);
   }
   const counts = new Map<string, number>();
-  pushAccessories.forEach((identity) => counts.set(identity, (counts.get(identity) ?? 0) + 1));
-  check('thirteen blocks use at least two legal push-accessory identities',
-    counts.size >= 2, JSON.stringify([...counts]));
-  check('no one legal push accessory owns more than three quarters of the blocks',
-    Math.max(...counts.values()) <= Math.ceil(13 * 0.75), JSON.stringify([...counts]));
+  robustnessAccessories.forEach((identity) => counts.set(identity, (counts.get(identity) ?? 0) + 1));
+  check('every annual block retains the complete football foundation',
+    foundationMisses.every((missing) => missing.length === 0), JSON.stringify(foundationMisses));
+  check('typed block history rotates the legal robustness bench',
+    counts.size >= FOOTBALL_ROBUSTNESS_CATEGORIES.length, JSON.stringify([...counts]));
   check('every annual Upper Pull has two major pulls, never three',
     pullMajorCounts.every((count) => count === 2), JSON.stringify(pullMajorCounts));
 }
+
+const female = composeWeek({
+  ...baseInputs,
+  profile: { ...baseInputs.profile, gender: 'female' } as never,
+});
+check('female required sessions retain the same four-category foundation and ceiling',
+  female.days.every((day) => day.rows.length <= 5)
+  && missingFootballRobustnessCategories(
+    female.days.flatMap((day) => day.rows.map((row) => row.identity)),
+  ).length === 0,
+  JSON.stringify(female.days.map((day) => day.rows.map((row) => row.identity))));
+
+const finalWeekSignature = (week: ReturnType<typeof composeWeek>): string => JSON.stringify(
+  week.days.map((day) => ({
+    dayOfWeek: day.dayOfWeek,
+    kind: day.kind,
+    requiredSlots: day.requiredSlots,
+    declaredSlots: day.declaredSlots,
+    rows: day.rows.map((row) => ({
+      identity: row.identity,
+      slot: row.slot,
+      role: row.role,
+      sets: row.sets,
+      repsMin: row.repsMin,
+      repsMax: row.repsMax,
+      load: row.load,
+      prescriptionType: row.prescriptionType ?? null,
+    })),
+  })),
+);
+const restartedMale = composeWeek({ ...baseInputs, selectionHistory: normal.selections });
+const restartedFemale = composeWeek({
+  ...baseInputs,
+  profile: { ...baseInputs.profile, gender: 'female' } as never,
+  selectionHistory: female.selections,
+});
+check('saved in-season male selections restart to the exact same final sessions',
+  finalWeekSignature(restartedMale) === finalWeekSignature(normal),
+  `${finalWeekSignature(normal)} -> ${finalWeekSignature(restartedMale)}`);
+check('saved in-season female selections restart to the exact same final sessions',
+  finalWeekSignature(restartedFemale) === finalWeekSignature(female),
+  `${finalWeekSignature(female)} -> ${finalWeekSignature(restartedFemale)}`);
+
+const robustnessCategoryOccurrences = normal.days.flatMap((day) => day.rows
+  .filter((row) => row.slot === 'football_robustness')
+  .flatMap((row) => footballRobustnessCategoriesForExercise(row.identity)));
+check('no robustness category is added twice merely to fill both upper sessions',
+  robustnessCategoryOccurrences.every((category, index, all) => all.indexOf(category) === index),
+  JSON.stringify(robustnessCategoryOccurrences));
 
 const limitedKit = resolveEquipmentCapabilities({
   equipment: ['Dumbbells', 'Resistance Bands'], equipmentSelectionCompleteness: 'complete',
