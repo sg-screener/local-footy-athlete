@@ -581,6 +581,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-final-year-audit-accepted-journey',
+    law: 'R-335: the final-year audit checks Pre-season Monday/Wednesday Team Training, In-season Tuesday/Thursday Team Training, the accepted 19 December-11 January Christmas club shutdown, Going Away from 28 December through 1 January with normal equipment restored 2 January, and final fixture placements equal to the accepted fixture facts. Multiple distinct accepted fixtures in one week are legal, and optional fixture-relative work may key off any accepted fixture. This changes audit tooling only, not production programming.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-335',
+    guard: {
+      state: 'guarded',
+      by: 'test:programming-year-audit-rules',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `fivebridge`. TWO OPTIONS COMPARED: patch each stale annual assertion in place, or make the journey driver and final checker consume one audit-only accepted-fact source. The shared audit source landed. Six focused synthetic cases bind phase schedules, accepted inputs, the Christmas shutdown, exact travel/restoration dates, two accepted fixtures in one week, and multi-fixture optional placement. The driver exports canonical accepted fixture facts after fixture edits, and the checker compares exact accepted dates with exact final placements rather than applying a ceiling. No annual PDF was generated. Mutations and NOT COVERED receipt: docs/STATUS_FIVEBRIDGE.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

@@ -5,6 +5,10 @@ const path = require('node:path');
 const Module = require('node:module');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const {
+  ACCEPTED_AWAY_SPAN,
+  ACCEPTED_CHRISTMAS_BREAK,
+} = require('./programming-final-year-audit-rules.cjs');
 const repo = path.resolve(__dirname, '..');
 const fullKit = process.argv.includes('--kit=full');
 const output = path.resolve(repo, process.argv.find(a => a.startsWith('--output='))?.slice(9)
@@ -47,36 +51,43 @@ app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionT
 const events = [];`);
 replace("for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');",
   `for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');
-event(35,0,'cooked');`);
+event(35,0,'cooked');
+event(11,3,'christmas_break');`);
 replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=await act(readinessActionForKind(e.kind==='tired'?'tired_today':'illness_moderate',{anchorDateISO:date,todayISO:date}),date,e.kind);\n          if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];\n          label=e.kind==='tired'?'Tired today':'Sick';",
   `        if(e.kind==='tired'||e.kind==='cooked'||e.kind==='sick') {
           const readinessKind=e.kind==='tired'?'tired_today':e.kind==='cooked'?'cooked_week':'illness_moderate';
           const r=await act(readinessActionForKind(readinessKind,{anchorDateISO:date,todayISO:date}),date,e.kind);
           if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];
-          label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Very tired - remaining week deload':'Sick';`);
+          label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Very tired - remaining week deload':'Sick';
+        } else if(e.kind==='christmas_break') {
+          const span=${JSON.stringify(ACCEPTED_CHRISTMAS_BREAK)};
+          await act({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'christmas_break',initiatedBy:'tap'},scope:'current_week',payload:{date:span.from,todayISO:date,noTeamTrainingSpan:span},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},date,'Christmas team-training break');
+          label='Christmas team-training break accepted';`);
 replace(
   "    for(let d=0;d<7;d++) {",
-  `    if (phase==='Pre-season' && pw===7) {
+  `    if (weekStart===${JSON.stringify(ACCEPTED_AWAY_SPAN.from)}) {
       const beforeTravel=visibleSignature(view(weekStart,weekStart));
       const preTravelRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:weekStart}));
       check(preTravelRestart.ok&&visibleSignature(view(weekStart,weekStart))===beforeTravel,'pre-travel accumulated restart',preTravelRestart);
       const owned=ownedEquipmentKit();
       const allowed=new Set(['dumbbells','bands','bench']);
       const unavailable=owned.tags.filter(tag=>!allowed.has(String(tag).toLowerCase()));
-      const away=await quietAsync(()=>executeProgramControlActionDurably({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'away_this_week',initiatedBy:'tap'},scope:'current_week',payload:{date:weekStart,todayISO:weekStart,awaySpan:{from:weekStart,until:plusDays(weekStart,4)},awayEquipment:{tags:unavailable,conditioningModalities:owned.conditioningModalities}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},{visibleWeek:view(weekStart,weekStart),todayISO:weekStart}));
+      const away=await quietAsync(()=>executeProgramControlActionDurably({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'away_this_week',initiatedBy:'tap'},scope:'current_week',payload:{date:weekStart,todayISO:weekStart,awaySpan:${JSON.stringify({ from: ACCEPTED_AWAY_SPAN.from, until: ACCEPTED_AWAY_SPAN.until })},awayEquipment:{tags:unavailable,conditioningModalities:owned.conditioningModalities}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},{visibleWeek:view(weekStart,weekStart),todayISO:weekStart}));
       check(away.ok===true,'accumulated travel and equipment',away);
       w.events.push({date:weekStart,label:'Going Away Monday-Friday - dumbbells, bands and bench only'});
     }
+    const acceptedFixtureInputs=gatherDeriveInputs(weekStart);
+    w.acceptedFixtures=app('src/rules/fixtureConditionedAvailability').targetWeekFixtures({profile:acceptedFixtureInputs.onboardingData,weekStart,markedDays:acceptedFixtureInputs.markedDays,ownedPhase:app('src/rules/seasonPhaseOwner').ownSeasonPhase({profile:acceptedFixtureInputs.onboardingData,program:acceptedFixtureInputs.currentProgram})});
     for(let d=0;d<7;d++) {`,
 );
 replace(
   "      const date=plusDays(weekStart,d);setJourneyClock(date);",
   `      const date=plusDays(weekStart,d);setJourneyClock(date);
-      if(phase==='Pre-season'&&pw===7&&d===5){
-        const travel=activeTemporaryFacts().find(fact=>fact.factKind==='schedule'&&fact.status==='active');
+      if(date===${JSON.stringify(ACCEPTED_AWAY_SPAN.restoredOn)}){
+        const travel=activeTemporaryFacts().find(fact=>fact.factKind==='schedule'&&fact.scheduleKind==='travel'&&fact.status==='active');
         check(!!travel,'active travel before Clear',activeTemporaryFacts());
         const cleared=await act({type:'clear_fatigue_status',source:{screen:'program_tab',surface:'my_status',initiatedBy:'tap'},scope:'current_and_future',payload:{modifierId:travel.factId,date},requiresRebuild:false,createsActiveModifier:false,oneOffOnly:false},date,'Back home - clear travel');
-        check(cleared.ok===true&&!activeTemporaryFacts().some(fact=>fact.status==='active'&&(fact.factKind==='schedule'||fact.factKind==='equipment')),'travel and equipment clear atomically',activeTemporaryFacts());
+        check(cleared.ok===true&&!activeTemporaryFacts().some(fact=>fact.status==='active'&&(fact.factKind==='equipment'||(fact.factKind==='schedule'&&fact.scheduleKind==='travel'))),'travel and equipment clear atomically',activeTemporaryFacts());
         const afterClear=visibleSignature(view(weekStart,date));
         const clearRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:date}));
         check(clearRestart.ok&&visibleSignature(view(weekStart,date))===afterClear,'travel Clear restart',clearRestart);
@@ -124,7 +135,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Full onboarding equipment capabilities asserted before generation', 'The canonical annual phase calendar shifts the accepted profile to pre-season in mid-November and in-season in late March', 'Pre-season team training is Monday/Wednesday; in-season team training is Tuesday/Thursday', 'Accepted availability, club nights and usual game day captured per compiled week', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away and atomic return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Main muscles projected from the signed metadata owners for PDF reporting only', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
+  corrections: ['Full onboarding equipment capabilities asserted before generation', 'The canonical annual phase calendar shifts the accepted profile to pre-season in mid-November and in-season in late March', 'Pre-season team training is Monday/Wednesday; in-season team training is Tuesday/Thursday', 'The accepted 19 December-11 January Christmas team-training break is committed through the production action', 'Accepted availability, club nights, fixture facts and usual game day captured per compiled week', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away 28 December-1 January and atomic 2 January return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Main muscles projected from the signed metadata owners for PDF reporting only', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);

@@ -148,7 +148,28 @@ The same mutation then made the Gunshow and Primer authorship cells red
 
 ## Section 5
 
-Pending.
+Two options were considered:
+
+1. Replace each stale count/date literal inside the final acceptance script.
+2. Give the audit journey and acceptance checker one small audit-only source of
+   accepted calendar facts and compare exact accepted dates with exact final
+   placements.
+
+Option 2 was used. Production scheduling is untouched. The audit journey now
+commits the accepted Christmas team-training break, uses the exact 28
+December-1 January away span and 2 January restoration, and exports the
+canonical accepted fixture facts after fixture edits. The acceptance checker
+uses the same source for phase-specific team nights, Christmas/travel
+exclusions and equipment dates. It compares every accepted fixture date with
+the final placement and permits any number of distinct accepted fixtures.
+Gendered optional work may key off any accepted fixture rather than requiring a
+one-fixture week.
+
+Red-first receipt: `test:programming-year-audit-rules` could not load because
+the shared audit rule source did not exist. Green receipt: 6/6 synthetic
+journey cells; all three audit scripts also pass Node syntax checks.
+
+Mutation receipt: pending the path-scoped implementation checkpoint.
 
 ## NOT COVERED
 

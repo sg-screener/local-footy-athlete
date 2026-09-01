@@ -26,6 +26,14 @@ const {
 const { summarizeProgrammingYearRows } = require(path.join(repo, 'src/rules/programmingYearRowSummary'));
 const { trackedLiftProgrammingEvidence } = require(path.join(repo, 'src/rules/trackedLiftProgrammingEvidence'));
 const { resolveTemplateByName } = require(path.join(repo, 'src/rules/conditioningSelection'));
+const {
+  ACCEPTED_AWAY_SPAN,
+  acceptedProgrammingInputFindings,
+  fixturePlacementFindings,
+  fullEquipmentTravelRestoreFindings,
+  genderedOptionalFixtureFindings,
+  teamTrainingAnchorFindings,
+} = require('./programming-final-year-audit-rules.cjs');
 
 const year = JSON.parse(fs.readFileSync(path.join(artifact, 'year-programs.json'), 'utf8'));
 const driver = JSON.parse(fs.readFileSync(path.join(artifact, 'driver-receipt.json'), 'utf8'));
@@ -37,11 +45,6 @@ const record = (id, ok, detail) => {
   if (!ok) findings.push({ id, detail });
 };
 const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
-const weekday = (dateISO) => new Intl.DateTimeFormat('en-AU', {
-  weekday: 'long', timeZone: 'Australia/Melbourne',
-}).format(new Date(`${dateISO}T12:00:00+10:00`));
-const daysBetween = (earlierISO, laterISO) =>
-  (Date.parse(`${laterISO}T12:00:00Z`) - Date.parse(`${earlierISO}T12:00:00Z`)) / 86_400_000;
 
 record('exact_source_revision', year.revision === revision && driver.revision === revision
   && trace.revision === revision && driver.sourceDiff === '', {
@@ -94,37 +97,19 @@ for (const athlete of year.athletes) {
     rowProjectionFindings,
   });
 
-  const inputMismatches = athlete.weeks.flatMap((week) => {
-    const expectedPreferred = week.phase === 'In-season'
-      ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-      : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const expectedTeam = week.phase === 'Off-season' ? [] : ['Tuesday', 'Thursday'];
-    const expectedGame = week.phase === 'In-season' ? 'Saturday' : null;
-    return same(week.acceptedProgrammingInputs?.preferredTrainingDays, expectedPreferred)
-      && same(week.acceptedProgrammingInputs?.teamTrainingDays, expectedTeam)
-      && week.acceptedProgrammingInputs?.usualGameDay === expectedGame
-      ? [] : [{ week: week.number, phase: week.phase, actual: week.acceptedProgrammingInputs,
-        expected: { preferredTrainingDays: expectedPreferred, teamTrainingDays: expectedTeam,
-          usualGameDay: expectedGame } }];
-  });
+  const inputMismatches = acceptedProgrammingInputFindings(athlete.weeks);
   record(`${label}_accepted_programming_inputs`, inputMismatches.length === 0, inputMismatches);
 
   const equipmentAnswer = athlete.profile.equipmentAnswer;
   const missingTags = requiredEquipmentTags.filter((tag) => equipmentAnswer?.tags?.[tag] !== 'have');
   const missingModalities = requiredModalities.filter((modality) => equipmentAnswer?.modalities?.[modality] !== 'have');
-  const travelWeek = athlete.weeks.find((week) => week.number === 19);
-  const restrictedDates = travelWeek.days.filter((day) => day.date <= '2027-02-05');
-  const restoredDates = travelWeek.days.filter((day) => day.date >= '2027-02-06');
-  const restrictedExpected = ['bodyweight', 'dumbbells', 'bands', 'bench'];
-  const restrictedOk = restrictedDates.every((day) => same(day.resolvedEquipment?.tags, restrictedExpected)
-    && same(day.resolvedEquipment?.conditioningModalities, []));
-  const restoredOk = restoredDates.every((day) => requiredEquipmentTags.every((tag) =>
-    day.resolvedEquipment?.tags?.includes(tag)) && requiredModalities.every((modality) =>
-    day.resolvedEquipment?.conditioningModalities?.includes(modality)));
+  const travelRestoreFindings = fullEquipmentTravelRestoreFindings(
+    days, requiredEquipmentTags, requiredModalities,
+  );
   record(`${label}_full_equipment_travel_restore`, missingTags.length === 0
-    && missingModalities.length === 0 && restrictedOk && restoredOk, {
-    missingTags, missingModalities, restrictedDates: restrictedDates.map((day) => day.date),
-    restoredDates: restoredDates.map((day) => day.date), restrictedOk, restoredOk,
+    && missingModalities.length === 0 && travelRestoreFindings.length === 0, {
+    missingTags, missingModalities, acceptedAwaySpan: ACCEPTED_AWAY_SPAN,
+    findings: travelRestoreFindings,
   });
 
   const actionFailures = athlete.actions.filter((action) =>
@@ -140,50 +125,25 @@ for (const athlete of year.athletes) {
   record(`${label}_accepted_actions_and_events`, actionFailures.length === 0
     && Object.values(eventKinds).every((count) => count > 0), { actionFailures, eventKinds });
 
-  const teamDays = days.filter((day) => day.type === 'Team Training');
-  const teamByWeekday = Object.fromEntries(['Tuesday', 'Thursday'].map((name) => [name,
-    teamDays.filter((day) => weekday(day.date) === name).length]));
-  const invalidTeamDays = teamDays.filter((day) => !['Tuesday', 'Thursday'].includes(weekday(day.date)));
-  record(`${label}_team_training_anchors`, teamByWeekday.Tuesday === 39
-    && teamByWeekday.Thursday === 39 && invalidTeamDays.length === 0, {
-    unit: 'final team-training athlete-dates', teamByWeekday,
-    intentionalTravelWeekWithheldPerNight: 1, invalidTeamDays: invalidTeamDays.map((day) => day.date),
+  const teamAnchorFindings = teamTrainingAnchorFindings(athlete.weeks);
+  record(`${label}_team_training_anchors`, teamAnchorFindings.length === 0, {
+    unit: 'accepted scheduled team-training athlete-dates after Christmas/travel exclusions',
+    findings: teamAnchorFindings,
   });
 
   const fixtures = days.filter((day) => day.kind === 'game');
-  const fixtureByWeekday = Object.fromEntries(['Saturday', 'Sunday'].map((name) => [name,
-    fixtures.filter((day) => weekday(day.date) === name).length]));
+  const fixtureFindings = fixturePlacementFindings(athlete.weeks);
   const gamesByWeek = athlete.weeks.map((week) => ({ week: week.number,
     count: week.days.filter((day) => day.kind === 'game').length }));
-  record(`${label}_fixture_journey`, fixtures.length === 21 && fixtureByWeekday.Saturday === 17
-    && fixtureByWeekday.Sunday === 4 && gamesByWeek.every((week) => week.count <= 1), {
-    unit: 'final explicit fixture athlete-dates', total: fixtures.length, fixtureByWeekday,
+  record(`${label}_fixture_journey`, fixtureFindings.length === 0, {
+    unit: 'accepted fixture facts and their final athlete-date placements', total: fixtures.length,
     byeWeeks: athlete.weeks.filter((week) => week.events.some((event) => event.label === 'Bye week')).map((week) => week.number),
     maximumFixturesInOneWeek: Math.max(...gamesByWeek.map((week) => week.count)),
+    findings: fixtureFindings,
   });
 
   const expectedOptional = label === 'male' ? 'Gunshow' : 'Primer';
-  const otherGenderOptional = label === 'male' ? 'Primer' : 'Gunshow';
-  const optionalWeekFindings = athlete.weeks.flatMap((week) => {
-    const weekFixtures = week.days.filter((day) => day.kind === 'game');
-    return week.days.flatMap((day) => {
-      if (day.name !== expectedOptional && day.name !== otherGenderOptional) return [];
-      const fixture = weekFixtures[0];
-      const valid = day.name === expectedOptional
-        && ['Pre-season', 'In-season'].includes(week.phase)
-        && weekFixtures.length === 1
-        && fixture != null
-        && daysBetween(day.date, fixture.date) === 1;
-      return valid ? [] : [{
-        week: week.number,
-        phase: week.phase,
-        optionalDate: day.date,
-        optionalName: day.name,
-        fixtureDates: weekFixtures.map((item) => item.date),
-        events: week.events.map((event) => event.label),
-      }];
-    });
-  });
+  const optionalWeekFindings = genderedOptionalFixtureFindings(athlete.weeks, label);
   record(`${label}_gendered_optional_fixture_rule`, optionalWeekFindings.length === 0, {
     expectedOptional,
     unit: 'final gendered optional athlete-dates',

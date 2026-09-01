@@ -8316,3 +8316,24 @@ Guard: `LAW-standalone-flush-conditioning-presentation` through chained
 `test:standalone-conditioning-ownership`, which invokes
 `test:standalone-flush-presentation`. Red-first, real restart, mutation and NOT
 COVERED receipt: `docs/STATUS_FIVEBRIDGE.md`.
+
+**R-335** · The final-year audit checks the accepted journey rather than stale
+calendar shortcuts, 2026-09-02.
+
+Owner: fivebridge. This changes the audit harness only. Pre-season Team
+Training is Monday and Wednesday; In-season Team Training is Tuesday and
+Thursday. The accepted Christmas club shutdown runs 19 December 2026 through
+11 January 2027. The illustrative Going Away span runs 28 December through 1
+January, with normal equipment restored on 2 January. Team anchors are checked
+date by date after those accepted absences, rather than against fixed annual
+weekday totals.
+
+Every final fixture placement must equal the accepted fixture facts exported
+for that week. Two or more distinct accepted fixtures in one week are legal;
+the audit no longer imposes a one-fixture ceiling, and an automatic gendered
+optional session may be valid relative to any accepted fixture in that week.
+The production scheduler is unchanged.
+
+Guard: `LAW-final-year-audit-accepted-journey` through chained
+`test:programming-year-audit-rules`. Focused synthetic journey cases, mutation
+and NOT COVERED receipt: `docs/STATUS_FIVEBRIDGE.md`.
