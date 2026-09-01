@@ -35,7 +35,10 @@ Green receipt: `test:movement-planes` is 11/11 green. The workbook was rendered
 after editing and its formula-error scan found 0 matches. The unanswered
 question list fell from 92 identities to 81, exactly matching the workbook.
 
-Mutation receipt: pending until the section implementation checkpoint is saved.
+Mutation receipt: after checkpoint `c2f7eb78`, changing Explosive Landmine
+Press from sagittal to frontal made both the exact typed-classification guard
+and the workbook/code equality guard red. Restoring the row returned the suite
+to 11/11 green.
 
 ## Sections 2–5
 
