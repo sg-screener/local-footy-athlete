@@ -144,7 +144,12 @@ selector from the optional-session adapter first survived because the repeat
 counter could no longer see rows whose automatic marker had disappeared. The
 guard was strengthened to prove typed automatic authorship before counting.
 The same mutation then made the Gunshow and Primer authorship cells red
-(14/16); restoring the selector returned the focused boundary to 16/16.
+(14/16); restoring the selector returned the focused boundary to 16/16. Final
+verification added the missing explicit injury-rebuild coordinate: an earlier
+automatic `Glute Bridge` forces a quad-injury rebuild of `Walking Lunges` to
+take the next legal unused answer. Disconnecting the injury compiler from
+earlier automatic history made that cell report two `Glute Bridge` rows
+(16/17). Restoring the handoff returned the boundary to 17/17.
 
 ## Section 5
 

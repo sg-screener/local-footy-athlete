@@ -27,8 +27,10 @@ import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
 import { deriveVisibleWeekLive } from '../utils/deriveVisibleWeek';
 import { visibleSignature } from './compilerYear/invariants';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
+import { compileCanonicalInjuryWeek } from '../rules/canonicalWeeklyInjuryCompiler';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import type { OnboardingData, SeasonPhase, TrainingProgram, Workout } from '../types/domain';
+import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 
 armTotalsOrRed();
 let passed = 0;
@@ -332,6 +334,47 @@ run('mid-week remainder starts with earlier delivered automatic choices spent', 
   assert(!selector.canUse({ identity: 'Band Pallof Press', requestedSlot: 'core',
     dayKind: 'upper_split_push', route: 'strength', requestedAsMain: false }),
   'earlier exact support exercise did not seed the remainder');
+});
+
+run('injury rebuilding spends earlier automatic choices instead of repeating them', () => {
+  const stampedAt = '2026-08-03T00:00:00.000Z';
+  const automaticWorkout = (id: string, dayOfWeek: number, identity: string): Workout => ({
+    id, microcycleId: 'injury-selector-week', dayOfWeek, name: 'Lower',
+    description: '', durationMinutes: 45, intensity: 'Moderate', workoutType: 'Strength',
+    exercises: [{
+      id: `${id}-row`, workoutId: id, exerciseId: identity.toLowerCase().replace(/\W+/g, '-'),
+      exerciseOrder: 1, prescribedSets: 2, prescribedRepsMin: 5, prescribedRepsMax: 5,
+      restSeconds: 60, notes: '', automaticSelection: true,
+      section18Evidence: { protocolVersion: 1,
+        role: 'strength_accessory', strengthPattern: null, mainStrengthPattern: null,
+        provenance: 'canonical_row_classifier' },
+      exercise: { id: identity.toLowerCase().replace(/\W+/g, '-'), name: identity,
+        description: '' }, createdAt: stampedAt, updatedAt: stampedAt,
+    }],
+    createdAt: stampedAt, updatedAt: stampedAt,
+  });
+  const injury: ActiveInjuryConstraint = {
+    id: 'weekly-selector-quad', type: 'injury', bodyPart: 'Quadriceps', bucket: 'quad',
+    severity: 6, status: 'active', startDate: '2026-08-05', lastUpdatedAt: '2026-08-05',
+    triggers: ['lunging'], rules: [], safeFocus: [], advice: [],
+  };
+  const result = quiet(() => compileCanonicalInjuryWeek({
+    workoutsByDate: {
+      '2026-08-03': automaticWorkout('earlier-lower', 1, 'Glute Bridge'),
+      '2026-08-05': automaticWorkout('later-lower', 3, 'Walking Lunges'),
+    },
+    profile: athlete('male', 'Pre-season', 3, false), constraints: [injury],
+    exclusions: [], recordedLoads: {},
+  }));
+  const laterStage = result.stagesByDate['2026-08-05']?.[0];
+  assert(laterStage?.plan.unsafeRows.includes('Walking Lunges'),
+    `injury rebuild never reached the unsafe automatic row: ${JSON.stringify(laterStage?.plan)}`);
+  const rebuilt = Object.values(result.workoutsByDate);
+  assert(automaticRepeatsInWorkouts(rebuilt).length === 0,
+    `injury rebuild repeated an earlier automatic choice: ${JSON.stringify(automaticRepeatsInWorkouts(rebuilt))}`);
+  assert(!result.workoutsByDate['2026-08-05']?.exercises
+    .some((row) => row.exercise?.name === 'Glute Bridge'),
+  'injury rebuild reused Glute Bridge after the earlier automatic session spent it');
 });
 
 run('athlete-authored duplicates are outside the automatic selector and do not create refills', () => {
