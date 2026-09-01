@@ -67,6 +67,7 @@ import {
 } from '../rules/weekStructureValidator';
 
 const WEEK_START = '2026-03-23';
+const FRIDAY = '2026-03-27';
 const SATURDAY = '2026-03-28';
 const SUNDAY = '2026-03-29';
 
@@ -708,6 +709,87 @@ async function main(): Promise<void> {
       `${__dirname}/../utils/fixtureMinimalReplan.ts`, 'utf8') as string;
     assert(!/gameMinusTwoDayNumbers|gameMinusTwoDays/.test(sourceText),
       'fixture repair invented a blanket G-2 exclusion instead of using the existing validator rules');
+  });
+
+  await run('17 Friday school game plus Saturday club game are two explicit fixtures', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const added = await executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: 'game', targetDate: FRIDAY,
+      source: source('legitimate-double:school-friday'),
+    }));
+    assert(added.outcome === 'accepted', JSON.stringify(added));
+    const marks = useProgramStore.getState().acceptedMaterialContext.markedDays;
+    assert(marks[FRIDAY] === 'game' && marks[SATURDAY] === 'game', JSON.stringify(marks));
+    const visible = deriveVisibleWeekLive(WEEK_START, WEEK_START);
+    const fixtures = visible.filter((day) => day.workout?.workoutType === 'Game')
+      .map((day) => day.date).sort();
+    assert(JSON.stringify(fixtures) === JSON.stringify([FRIDAY, SATURDAY]),
+      `explicit consecutive fixtures were rejected, deleted or collapsed: ${JSON.stringify(fixtures)}`);
+    const safety = fixtureSafetyAcrossMaterialisedHorizon(athlete);
+    assert(safety.strongG1.length === 0 && safety.strongG2.length === 0,
+      `generated work did not move around the fixed fixtures: ${JSON.stringify(safety)}`);
+  });
+
+  await run('18 Saturday and Sunday round-robin fixtures coexist; a duplicate add is no-change', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const added = await executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: 'game', targetDate: SUNDAY,
+      source: source('legitimate-double:round-robin-sunday'),
+    }));
+    assert(added.outcome === 'accepted', JSON.stringify(added));
+    const duplicate = await executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: 'game', targetDate: SUNDAY,
+      source: source('legitimate-double:duplicate-sunday'),
+    }));
+    assert(duplicate.outcome === 'no_change', JSON.stringify(duplicate));
+    const marks = useProgramStore.getState().acceptedMaterialContext.markedDays;
+    assert(marks[SATURDAY] === 'game' && marks[SUNDAY] === 'game', JSON.stringify(marks));
+  });
+
+  await run('19 moving one explicit game preserves the other fixture', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const friday = await executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: 'game', targetDate: FRIDAY,
+      source: source('legitimate-double:before-move'),
+    }));
+    assert(friday.outcome === 'accepted', JSON.stringify(friday));
+    const moved = await executeFixtureMutationTransaction(input({
+      action: 'move', fixtureKind: 'game', sourceDate: FRIDAY, targetDate: SUNDAY,
+      source: source('legitimate-double:move-school-game'),
+    }));
+    assert(moved.outcome === 'accepted', JSON.stringify(moved));
+    const marks = useProgramStore.getState().acceptedMaterialContext.markedDays;
+    assert(marks[FRIDAY] === undefined && marks[SATURDAY] === 'game'
+      && marks[SUNDAY] === 'game', JSON.stringify(marks));
+  });
+
+  await run('20 restart and Undo preserve two genuine fixtures as two facts', async () => {
+    const athlete = profile();
+    await seedAcceptedWeek({ athlete });
+    const baseline = visibleSemantic(athlete);
+    const added = await executeFixtureMutationTransaction(input({
+      action: 'add', fixtureKind: 'game', targetDate: FRIDAY,
+      source: source('legitimate-double:restart-undo'),
+    }));
+    assert(added.outcome === 'accepted', JSON.stringify(added));
+    const withTwo = visibleSemantic(athlete);
+    const { relaunchApp } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const restart = await relaunchApp({ storage: localStorageData, todayISO: WEEK_START });
+    assert(restart.ok && visibleSemantic(athlete) === withTwo,
+      restart.error ?? 'restart changed the two-fixture week');
+    const marksAfterRestart = useProgramStore.getState().acceptedMaterialContext.markedDays;
+    assert(marksAfterRestart[FRIDAY] === 'game' && marksAfterRestart[SATURDAY] === 'game',
+      JSON.stringify(marksAfterRestart));
+    const undone = await undoLastDecision();
+    assert(undone.outcome === 'undone', JSON.stringify(undone));
+    assert(visibleSemantic(athlete) === baseline,
+      'Undo did not remove only the added Friday fixture and restore the original week');
+    const marksAfterUndo = useProgramStore.getState().acceptedMaterialContext.markedDays;
+    assert(marksAfterUndo[FRIDAY] === undefined && marksAfterUndo[SATURDAY] === 'game',
+      JSON.stringify(marksAfterUndo));
   });
 }
 

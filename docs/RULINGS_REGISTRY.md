@@ -7722,3 +7722,20 @@ weekly energy-system credit through the canonical evidence owner.
 Guard: `LAW-annual-export-uses-final-rows-once-and-separates-categories-from-templates`
 through chained `test:programming-hierarchy + test:canonical-weekly-compiler`.
 Verification status and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-308** · Separate explicit fixtures remain separate fixed facts, 2026-09-01.
+
+Owner: yearrepair. Consecutive football games are valid when the accepted
+calendar holds distinct explicit fixture events. A Friday school match plus a
+Saturday club match, or Saturday and Sunday round-robin matches, therefore
+remain two fixed anchors. Generated conditioning and Speed adapt around those
+anchors; a spacing preference never rejects or deletes the fixtures.
+
+A Move releases only its exact source event and retains any other event in the
+week. Adding an already-explicit date is a duplicate no-change; adding a
+different date is a genuine second fixture. The accepted effect, decision
+ledger, cold reconstruction and Undo retain that distinction.
+
+Guard: `LAW-explicit-consecutive-fixtures-are-distinct-fixed-facts` through
+chained `test:fixture-mutation-transaction`. Verification status and NOT
+COVERED: `docs/STATUS_YEARREPAIR.md`.

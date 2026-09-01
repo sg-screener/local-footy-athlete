@@ -317,6 +317,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-explicit-consecutive-fixtures-are-distinct-fixed-facts',
+    law: 'R-308: separate explicit fixture events remain separate fixed facts even on consecutive dates. Generated conditioning and Speed adapt around them; spacing rules never delete or reject the fixtures. Moving one fixture releases only that event source, preserving every other explicit fixture. Re-adding the same date is a duplicate no-change, while different dates are genuine fixtures. Restart and Undo preserve this identity.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-308',
+    guard: {
+      state: 'guarded',
+      by: 'test:fixture-mutation-transaction',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The current canonical accepted fixture-effect owner already preserved the required semantics, so no production change was made from the older-PDF review. Four new live transaction cells prove Friday school plus Saturday club, Saturday plus Sunday round-robin, moving only the Friday event while Saturday remains, and restart plus Undo of the two-fixture week. A second Add on the same Sunday returns no_change rather than manufacturing a third event. The final boundary is 20/20. Mutation: reinstating a one-fixture-per-week loop made all four new cells red (16/20), proving the gate distinguishes separate dates rather than merely counting one Game label. The older fixture-identity diagnostic independently retains its inherited 4/7 baseline and does not guard this ruling. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

@@ -417,3 +417,38 @@ fixture/team/speed/conditioning totals are separate semantic day counts.
 - PDFs are deliberately not generated from a red acceptance artifact.
 - Addendum Sections 1–8 and the in-season arm/foundation addendum remain open.
 - No simulator, Release build or physical phone work has run.
+
+## Addendum Section 1 — legitimate consecutive fixtures
+
+The older-PDF concern does not reproduce as a production defect at the current
+checkpoint. The canonical accepted fixture-effect owner carries a complete
+explicit week layer and already preserves multiple distinct dates. I therefore
+made no production-code change.
+
+The chained live transaction tape now proves the four requested worlds:
+
+- Friday school game plus Saturday club game: both final Game dates remain and
+  the generated horizon has no strong G-1/G-2 violation.
+- Saturday plus Sunday round-robin: both remain; attempting to add Sunday again
+  is `no_change`, distinguishing a duplicate action from a genuine second date.
+- Moving the Friday game to Sunday clears only Friday and preserves Saturday.
+- Cold restart preserves Friday and Saturday as two accepted facts; Undo removes
+  only the added Friday event and restores the exact standing-Saturday week.
+
+`test:fixture-mutation-transaction` is 20/20. A direct production mutation that
+deleted every pre-existing game when adding a target made exactly the four new
+cells fail (16/20), then the source was restored and the tape returned to 20/20.
+The older `test:fixture-identity` diagnostic remains at its inherited 4/7
+baseline: its three reds concern published-versus-derived week identity and an
+impossible one-fixture add in a different July diagnostic. They predate and are
+not caused or hidden by this no-production-change section.
+
+R-308 is born guarded by chained `test:fixture-mutation-transaction`.
+
+### NOT COVERED
+
+- Tournament identity has no competition/team metadata beyond distinct accepted
+  event date/kind; the ruled behavior needs distinct events, not new metadata.
+- Addendum Sections 2–8 and the in-season arm/foundation addendum remain open.
+- Section 7's accumulated return-home spacing defect and PDFs remain open.
+- No simulator, Release build or physical phone work has run.
