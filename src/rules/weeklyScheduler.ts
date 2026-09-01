@@ -980,26 +980,28 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // authored three component exposures plus a standalone sprint plus the game,
   // which is five against the overlay's target of four. The app is only ever
   // meant to supply *"the remaining shortfall"*.
-  // ── WC-138: THE SPRINT RIDES AN UPPER DAY WHEN THERE IS ONE ──────────────
-  //
-  // **Sam, 2026-08-17**, on both rejected layouts: the sprint belongs ON a
-  // strength day, not on a day of its own. Pre-season *"Tuesday: Sprint first →
-  // Upper strength → authored hard conditioning"*; later off-season *"Friday:
-  // Upper + sprint/top-end"*. §3 already said so — *"Upper + running: hard
-  // running/top-end work belongs with upper days where possible"* — and the
-  // scheduler was reading that for `running` and not for the sprint.
-  //
-  // A standalone sprint day is the FALLBACK, not the default: it is what an
-  // athlete with no legal upper day gets, and it is what produced the rejected
-  // Wednesday and Sunday sprints.
-  //
-  // **THE LAST legal upper day, not the first.** Off-season's approved
-  // reference puts it on Friday with Tuesday carrying the hard running, so the
-  // week's two high-output running exposures sit apart. Taking the first upper
-  // day would stack them on Tuesday.
-  const sprintUpperDay = upperDayForSprint(inputs, overlay, purposeByDay);
-  const unrestrictedPlannedSprintDay = clubSpeedTopUp ? null : sprintUpperDay
-    ?? appSprintDay(inputs, overlay, new Set(purposeByDay.keys()));
+  // R-330: one placement owner ranks every legal receiver. Recovery wins first,
+  // then an upper-strength receiver, then a free standalone day, then the safest
+  // remaining legal fallback. Week order is the final tie-break, so catalogue or
+  // caller enumeration can never move Speed.
+  const automaticSpeedCandidates: SpeedPlacementCandidate[] = WEEK_ORDER.map((day) => {
+    const purpose = purposeByDay.get(day);
+    return {
+      dayOfWeek: day,
+      role: purpose === undefined ? 'standalone'
+        : PURPOSE_IS_LOWER[purpose] ? 'other_strength' : 'upper_strength',
+    };
+  });
+  const unrestrictedPlannedSprintDay = clubSpeedTopUp
+    || !overlay.sprintExposureRequired || !appSprintNeedPermitted(inputs)
+    ? null
+    : selectFreshSpeedDay({
+        inputs,
+        candidates: automaticSpeedCandidates,
+        heavyLowerDays: [...purposeByDay]
+          .filter(([, purpose]) => PURPOSE_IS_LOWER[purpose])
+          .map(([day]) => day),
+      });
   const plannedSprintDay = deliveredSprintDays.size > 0
     ? null
     : unrestrictedPlannedSprintDay !== null
@@ -1007,20 +1009,6 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       ? unrestrictedPlannedSprintDay
       : null;
 
-  // ── WC-139: PRE-SEASON PUTS THE SPRINT ON THE HARD DAY, AS A SECOND
-  //           COMPONENT ─────────────────────────────────────────────────────
-  //
-  // **Sam:** *"Tuesday: Sprint first → Upper strength → authored hard
-  // conditioning"*, and *"consolidate the two high-output running exposures
-  // onto Tuesday"*. So pre-season's sprint does not take a slot or a day of its
-  // own — it joins the day the hard conditioning is already on.
-  //
-  // `hardDay` is computed below, so this is resolved after it. Off-season keeps
-  // WC-138's separate Friday (its reference deliberately SPREADS the two), and
-  // in-season keeps its own standalone day.
-  const preseasonSprintRidesHardDay = inputs.phase === 'Pre-season'
-    && overlay.sprintExposureRequired
-    && inputs.clubNights.length === 0;
   const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
   // ── WC-143: THE NO-CLUB GAME WEEK GETS SAM'S FAST SESSION ────────────────
   //
@@ -1038,8 +1026,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // consequences, each expressed through an existing owner:
   //   1. the week AUTHORS one hard exposure (`weekAllowsHard` exception here),
   //   2. its quality is GLYCOLYTIC — his 30s-2min interval range — with the
-  //      WC-135 sprint riding the same day as its opener (*"a short sprint
-  //      workout into"*), see `sprintRidesHardDay` below,
+  //      with Speed now independently placed by R-330's freshness ranking,
   //   3. the SECOND app exposure prefers the G-2 day at moderate intensity —
   //      the receiver ordering below; WC-115's modality pairing then renders
   //      it as running on an upper day or off-leg on a lower day, which is
@@ -1059,18 +1046,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       ? 'glycolytic'
       : hardConditioningQualityFor(overlay, inputs.miniCycleNumber);
 
+  // Speed consumes one of these existing exposure DAYS. The receiver set below
+  // must include its selected day; no extra slot is reserved here.
   let appConditioningBudget = Math.max(
     0,
     overlay.conditioningTarget.min
       - anchorConditioningDays
-      - deliveredAppDays.size
-      // A combined speed + interval session occupies ONE conditioning slot.
-      // Only a standalone sprint needs a reserved slot outside the existing
-      // conditioning receivers. A primary sprint replaces one of those slots.
-      - (sprintUpperDay !== null || plannedSprintDay === null
-        || (preseasonSprintRidesHardDay && hardQuality !== null)
-        || (noClubGameWeek && hardQuality !== null && overlay.sprintExposureRequired)
-        ? 0 : 1),
+      - deliveredAppDays.size,
   );
 
 
@@ -1147,11 +1129,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
       return [
-        // A Speed component on an upper-strength day replaces one selected
-        // conditioning receiver. If selection omits that day, Speed becomes an
-        // additive fifth day after this budget has already been spent.
-        plannedSprintDay !== null && sprintUpperDay !== null
-          && !days.includes(plannedSprintDay) ? 1 : 0,
+        // Speed must occupy one selected conditioning receiver. If selection
+        // omits that day, it becomes additive after this budget is spent.
+        plannedSprintDay !== null && !days.includes(plannedSprintDay) ? 1 : 0,
+        // If hard work is required, keep a later legal receiver available so
+        // Speed does not get pushed onto it merely to consolidate intensity.
+        hardQuality !== null && plannedSprintDay !== null
+          && !days.some((day) => orderIndex(day) > orderIndex(plannedSprintDay)
+            && day !== plannedSprintDay && !isGameMinusTwo(day, inputs)
+            && !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs)) ? 1 : 0,
         Math.max(0, cyclicStreak([
           ...deliveredAppDays, ...days,
           ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
@@ -1269,19 +1255,21 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // the job — it is one arm of the single question *"is this a week we may add
   // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
   const hardEligible = conditioningDays.filter((day) => {
-    // In normal Off-season the authored Speed day replaces this receiver's
-    // metabolic category. It cannot also be chosen as the week's hard seat.
-    if (inputs.phase === 'Off-season' && day === plannedSprintDay) return false;
+    // Fresh Speed owns its receiver. Hard conditioning uses another legal day.
+    if (day === plannedSprintDay) return false;
     if (!hasScheduledGame(inputs)) return true;
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
     return !isGamePlusOne(day, inputs);
   });
+  const laterHardEligible = plannedSprintDay === null ? [] : hardEligible.filter((day) =>
+    orderIndex(day) > orderIndex(plannedSprintDay));
+  const hardPool = laterHardEligible.length > 0 ? laterHardEligible : hardEligible;
   const hardDayForSprint = hardQuality === null ? null : (
-    hardEligible.find((day) => {
+    hardPool.find((day) => {
       const purpose = purposeByDay.get(day);
       return purpose === undefined || !PURPOSE_IS_LOWER[purpose];
     })
-    ?? hardEligible[0] ?? null);
+    ?? hardPool[0] ?? null);
   const hardDay = hardDayForSprint;
   const normalOffseasonTempoDay = inputs.phase === 'Off-season'
     && inputs.offseasonBlock === 'normal_build'
@@ -1296,29 +1284,29 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     if (day === normalOffseasonTempoDay) return 'tempo';
     return defaultCategory;
   };
-  // WC-139 — the sprint joins the hard day when the phase asks for that shape,
-  // and only when that day is legal for a sprint (never inside G-3, never a
-  // club night; `hardEligible` has already excluded G-2, G-1 and G+1).
-  // WC-143 consequence 2 — the no-club game week's sprint OPENS the fast
-  // session ("a short sprint workout into ... glycolytic"), the same
-  // one-day consolidation WC-139 gives pre-season. It wins over a standalone
-  // sprint day for this shape: Sam's Q2 sentence authors ONE session, and
-  // WC-139's own rule ("when the sprint rides the hard day it is NOT also
-  // placed elsewhere") already says the ride and the standalone never coexist.
-  const sprintRidesHardDay = preseasonSprintRidesHardDay
-    || (noClubGameWeek && overlay.sprintExposureRequired);
   // P15 uses the existing speed + conditioning component shape. Keeping both
   // on one legal upper day preserves the game-week conditioning/nights caps
   // and does not replace the required metabolic work with speed.
   const clubSpeedCandidates = clubSpeedTopUp ? conditioningDays.filter(day => purposeByDay.has(day)
     && sprintDayIsLegal(day, inputs)) : [];
-  const clubSpeedDay = clubSpeedCandidates.find(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
-    ?? clubSpeedCandidates[0] ?? null;
-  const sprintComponentDay = clubSpeedDay ?? (sprintRidesHardDay
-    && hardDay !== null
-    && sprintDayIsLegal(hardDay, inputs)
-    ? hardDay
-    : null);
+  const clubSpeedDay = selectFreshSpeedDay({
+    inputs,
+    candidates: clubSpeedCandidates.map((day) => ({
+      dayOfWeek: day,
+      role: PURPOSE_IS_LOWER[purposeByDay.get(day)!]
+        ? 'other_strength' as const : 'upper_strength' as const,
+    })),
+    heavyLowerDays: [...purposeByDay]
+      .filter(([, purpose]) => PURPOSE_IS_LOWER[purpose])
+      .map(([day]) => day),
+    hardConditioningDays: hardDay === null ? [] : [hardDay],
+  });
+  // On a strength receiver, Speed is a second, first-in-session component and
+  // retains the day's metabolic work. A standalone receiver becomes Speed
+  // below; the row builder intentionally gives that day one honest identity.
+  const sprintComponentDay = clubSpeedDay ?? (plannedSprintDay !== null
+    && purposeByDay.has(plannedSprintDay)
+    && conditioningDaySet.has(plannedSprintDay) ? plannedSprintDay : null);
 
   // The running floor spends the SAME conditioning budget. Reserve its
   // off-gym slot before materialising gym components; otherwise a three-day
@@ -1327,14 +1315,16 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // a moderate off-leg slot for the required equipment-free running slot.
   const plannedRunningDays = new Set([
     ...inputs.clubNights, ...scheduledGameDays(inputs),
+    // Speed is running exposure even when its standalone receiver replaces the
+    // ordinary running template; this planning count prevents an extra day.
     ...conditioningDays.filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
-    ...((sprintComponentDay ?? plannedSprintDay) !== null ? [sprintComponentDay ?? plannedSprintDay!] : []),
   ]);
   // Unplaced conditioning is already scheduled by the standalone top-up pass
   // below. Count those running slots before exchanging an off-leg gym slot;
   // otherwise a two-day deload with sprint restricted trades both gym slots
   // away and attempts five runs to satisfy a five-exposure conditioning target.
-  const standaloneConditioningBudget = Math.max(0, appConditioningBudget - conditioningDays.length);
+  const standaloneConditioningBudget = Math.max(0,
+    appConditioningBudget - conditioningDays.length);
   let runningSlotsToReserve = inputs.appRunningPermitted === false ||
     (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional')
     ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size - standaloneConditioningBudget);
@@ -1438,7 +1428,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           day, CATEGORY_FOR_CONDITIONING.running,
         ),
         conditioningRole: 'standalone', powerEligible: false,
-        sprintComponent: false, optional: false, clauseId: 'WC-136',
+        sprintComponent: day === sprintComponentDay,
+        ...(day === sprintComponentDay && missingSpeedQualities
+          ? { sprintQualities: missingSpeedQualities } : {}),
+        optional: false, clauseId: 'WC-136',
         clubTraining: false, game: false,
       });
       continue;
@@ -1564,9 +1557,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // for every phase the overlay marks `sprintExposureRequired`.
   // Decided above, before the conditioning budget was spent, so the sprint sits
   // INSIDE the phase target rather than on top of it.
-  // WC-139 — when the sprint rides the hard day it is NOT also placed
-  // elsewhere. Leaving both would give the week two sprints and a Wednesday
-  // session Sam explicitly rejected.
+  // A second-component Speed receiver is not also placed through the primary
+  // slot. That keeps exactly one automatic Speed exposure.
   const sprintDay = sprintComponentDay !== null ? null : plannedSprintDay;
   const withSprint = sprintDay === null ? days : days.map((entry) => {
     if (entry.dayOfWeek !== sprintDay) return entry;
@@ -1587,6 +1579,17 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         conditioningCategory: CATEGORY_FOR_CONDITIONING.sprint_high_speed,
         ...(missingSpeedQualities ? { sprintQualities: missingSpeedQualities } : {}),
         conditioningRole: 'standalone' as const, optional: false,
+        clauseId: 'WC-135' };
+    }
+    // A selected standalone conditioning receiver becomes the Speed exposure;
+    // it stays one budgeted day and the row builder receives one honest identity.
+    if (entry.owner === 'conditioning') {
+      return { ...entry,
+        conditioning: 'sprint_high_speed' as const,
+        conditioningCategory: CATEGORY_FOR_CONDITIONING.sprint_high_speed,
+        ...(missingSpeedQualities ? { sprintQualities: missingSpeedQualities } : {}),
+        conditioningRole: 'standalone' as const,
+        sprintComponent: false,
         clauseId: 'WC-135' };
     }
     return entry;
@@ -1819,16 +1822,6 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  * than restating it.
  */
 /**
- * WC-138. The LAST legal upper strength day for the sprint, or null.
- *
- * Null means "no legal upper day" and sends the caller to `appSprintDay`'s
- * standalone placement — the preference must never become a refusal.
- *
- * The legality is `appSprintDay`'s, asked of a strength day instead of a free
- * one: the phase must require a sprint, club training must be absent, and with
- * a fixture the day must be G-3 or earlier.
- */
-/**
  * WC-135's day legality, asked of one day. Never a club night, never inside G-3.
  *
  * BIBLE_ANCHOR: last_high_stress_g3
@@ -1873,47 +1866,62 @@ function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {
   return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
 }
 
-function upperDayForSprint(
-  inputs: WeeklySchedulerInputs,
-  overlay: PhaseOverlay,
-  purposeByDay: ReadonlyMap<number, SessionPurpose>,
-): number | null {
-  if (!overlay.sprintExposureRequired) return null;
-  if (!appSprintNeedPermitted(inputs)) return null;
-  // ⚠ **OFF-SEASON ONLY, AND PRE-SEASON'S ABSENCE HERE IS A MEASURED REFUSAL,
-  // NOT AN OVERSIGHT.**
-  //
-  // IN-SEASON: Sam approved that week as it stands. Widening this moved its
-  // sprint off its own Wednesday and onto Tuesday's upper session — a week he
-  // had already signed, and its printed output stopped being byte-identical.
-  //
-  // PRE-SEASON: his layout is *"Tuesday: Sprint first → Upper strength →
-  // authored hard conditioning"* — TWO conditioning components on one day. A
-  // `SessionIntention` carries ONE `conditioning` kind and
-  // `materialiseAuthoredSessions` returns ONE `conditioningTemplate` per day,
-  // so the sprint can only take Tuesday's slot by DISPLACING the hard session.
-  // Measured: doing that left the pre-season week with no hard conditioning at
-  // all (`test:conditioning-phase-authorship` 42/42 -> 40/42), which is a
-  // straight loss of the exposure the conditioning work exists to deliver.
-  // **The two-component day is a model change across the scheduler, the
-  // materialisation boundary, the coaching plan and row composition; it is not
-  // a line in this one.**
-  if (inputs.phase !== 'Off-season') return null;
-  const untilGame = (day: number) =>
-    scheduledGameProximity(day, inputs).daysUntilNextGame;
-  const eligible = WEEK_ORDER
-    .filter((day) => purposeByDay.has(day))
-    .filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
-    .filter((day) => !inputs.unavailableDays.includes(day))
-    .filter((day) => !inputs.clubNights.includes(day))
-    .filter((day) => !isScheduledGameDay(day, inputs))
-    .filter((day) => (!hasScheduledGame(inputs) ? true : !isGamePlusOne(day, inputs)))
-    .filter((day) => {
-      if (!hasScheduledGame(inputs)) return true;
-      const until = untilGame(day);
-      return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
-    });
-  return eligible.length === 0 ? null : eligible[eligible.length - 1];
+export interface SpeedPlacementCandidate {
+  readonly dayOfWeek: number;
+  readonly role: 'upper_strength' | 'standalone' | 'other_strength';
+}
+
+export interface FreshSpeedSelectionInput {
+  readonly inputs: WeeklySchedulerInputs;
+  readonly candidates: readonly SpeedPlacementCandidate[];
+  readonly heavyLowerDays?: readonly number[];
+  readonly hardConditioningDays?: readonly number[];
+}
+
+/** R-330. Deterministic automatic Speed receiver selection, preferences only. */
+export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number | null {
+  const { inputs } = selection;
+  const heavyLower = new Set(selection.heavyLowerDays ?? []);
+  const hardConditioning = new Set(selection.hardConditioningDays ?? []);
+  const byDay = new Map<number, SpeedPlacementCandidate>();
+  for (const candidate of selection.candidates) {
+    const existing = byDay.get(candidate.dayOfWeek);
+    const roleRank = (role: SpeedPlacementCandidate['role']) =>
+      role === 'upper_strength' ? 0 : role === 'standalone' ? 1 : 2;
+    if (!existing || roleRank(candidate.role) < roleRank(existing.role)) {
+      byDay.set(candidate.dayOfWeek, candidate);
+    }
+  }
+  const legal = [...byDay.values()].filter((candidate) =>
+    sprintDayIsLegal(candidate.dayOfWeek, inputs));
+  if (legal.length === 0) return null;
+  const previousDay = (day: number): number =>
+    WEEK_ORDER[(orderIndex(day) + WEEK_ORDER.length - 1) % WEEK_ORDER.length];
+  const freshnessCost = (day: number): number => {
+    const previous = previousDay(day);
+    return Number(heavyLower.has(previous))
+      + Number(hardConditioning.has(previous))
+      + Number(inputs.clubNights.includes(previous));
+  };
+  const laterFreshExists = (day: number): boolean => legal.some((candidate) =>
+    orderIndex(candidate.dayOfWeek) > orderIndex(day)
+    && freshnessCost(candidate.dayOfWeek) === 0);
+  const score = (candidate: SpeedPlacementCandidate): readonly number[] => {
+    const day = candidate.dayOfWeek;
+    const isGPlusTwo = scheduledGameProximity(day, inputs).daysSincePreviousGame === 2;
+    const role = candidate.role === 'upper_strength' ? 0
+      : candidate.role === 'standalone' ? 1 : 2;
+    return [isGPlusTwo && laterFreshExists(day) ? 1 : 0,
+      freshnessCost(day), role, orderIndex(day)];
+  };
+  legal.sort((left, right) => {
+    const a = score(left); const b = score(right);
+    for (let index = 0; index < a.length; index += 1) {
+      if (a[index] !== b[index]) return a[index] - b[index];
+    }
+    return left.dayOfWeek - right.dayOfWeek;
+  });
+  return legal[0]?.dayOfWeek ?? null;
 }
 
 export function appSprintDay(
@@ -1947,33 +1955,11 @@ export function appSprintDay(
   // placement rule below (G-3 or earlier) is what keeps that safe.
   if (!overlay.sprintExposureRequired) return null;
   if (!appSprintNeedPermitted(inputs)) return null;
-  // LATEST legal day first: a sprint sits as close to G-3 as the week allows, so
-  // it does not crowd the start of the week away from the game.
-  //
-  // "G-3 or earlier" is a distance from the NEXT game, so it is cyclic like the
-  // rest: `daysUntilNextGame >= 3`. The old form compared raw week positions,
-  // which for a Sunday fixture called every day eligible — including G+1.
-  const untilGame = (day: number) =>
-    scheduledGameProximity(day, inputs).daysUntilNextGame;
-  const eligible = WEEK_ORDER
-    .filter((day) => !inputs.unavailableDays.includes(day))
-    .filter((day) => !occupiedDays.has(day))
-    .filter((day) => !isScheduledGameDay(day, inputs))
-    .filter((day) => !inputs.clubNights.includes(day))
-    // A NO-GAME WEEK HAS NO PROXIMITY TO RESPECT, so every free day is legal and
-    // the ordering below is a no-op. Guarding the whole function on a fixture —
-    // which the in-season-only version did — is what left a bye week, and every
-    // off-season week, with no sprint owner at all.
-    .filter((day) => (!hasScheduledGame(inputs) ? true : !isGamePlusOne(day, inputs)))
-    .filter((day) => {
-      if (!hasScheduledGame(inputs)) return true;
-      const until = untilGame(day);
-      return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
-    })
-    // Closest to the game last, so `eligible[last]` is still the latest legal day.
-    .sort((a, b) => (untilGame(b) ?? 0) - (untilGame(a) ?? 0));
-  if (eligible.length === 0) return null;
-  return eligible[eligible.length - 1];
+  return selectFreshSpeedDay({
+    inputs,
+    candidates: WEEK_ORDER.filter((day) => !occupiedDays.has(day))
+      .map((day) => ({ dayOfWeek: day, role: 'standalone' as const })),
+  });
 }
 
 /** Re-exported so readers take the budget from the contract, never a literal. */

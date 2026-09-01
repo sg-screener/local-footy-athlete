@@ -429,7 +429,7 @@
     "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts",
     "test:travel-zero-equipment": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedTravelZeroEquipmentTests.ts",
     "test:offseason-generation-continuity": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedOffseasonContinuityTests.ts",
-    "test:weekly-scheduler": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklySchedulerTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/fortnightlyCodDoseTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/generatedSchedulerFixtureTests.ts && npm run test:travel-zero-equipment && npm run test:offseason-generation-continuity && npm run test:spare-day-options",
+    "test:weekly-scheduler": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklySchedulerTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/freshSpeedPlacementTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/freshSpeedPersistenceTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/fortnightlyCodDoseTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/generatedSchedulerFixtureTests.ts && npm run test:travel-zero-equipment && npm run test:offseason-generation-continuity && npm run test:spare-day-options",
     "test:spare-day-options": "TZ=Australia/Melbourne sucrase-node src/__tests__/spareDayOptionalSessionsTests.ts",
     "test:anchor-survival": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekAnchorSurvivalTests.ts",
     "test:weekday-index": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekdayIndexOwnershipTests.ts",

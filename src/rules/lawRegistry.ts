@@ -548,6 +548,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-fresh-automatic-speed-placement',
+    law: 'R-330: an already-required automatic Speed exposure uses the earliest genuinely fresh legal receiver. G+1, G-2, G-1 and game day remain prohibited; G+2 loses to a later fresh legal day. Days after heavy lower strength, hard conditioning or Team Training lose to fresh alternatives; upper strength then standalone then the safest legal fallback decide the remaining rank. Speed remains first, consumes an existing conditioning exposure, and hard conditioning may move later. Requirement, quality, safety, dose, persistence and athlete-edit owners remain unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-330',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `speedfresh`. TWO OPTIONS COMPARED: reverse the old last-upper lookup, or replace the phase shortcuts with one pure ranked selector in the canonical scheduler. The one-owner ranking landed. Focused behavioral cells cover freshness, proximity, upper/standalone/fallback order, first-in-session typing, later hard work, unchanged counts and delivered-quality credit; a real onboarding/restart/Add/Add/Undo/Undo/restart tape covers durable and accumulated state. Restoring last-upper ordering kills the focused selector cells. Full receipt and NOT COVERED: docs/STATUS_SPEEDFRESH.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

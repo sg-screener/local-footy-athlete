@@ -8236,3 +8236,27 @@ rule.
 Guard: `LAW-fortnightly-cod-outside-team-training` through chained
 `test:weekly-scheduler`. Red-first, 14-coordinate behavior tape and NOT COVERED
 receipt: `docs/STATUS_MOVEMENTPLANE.md`.
+
+**R-330** · Automatic Speed uses the earliest genuinely fresh legal day,
+2026-09-02.
+
+Owner: speedfresh. This changes only the placement of an already-required
+automatic Speed exposure. G+1, G-2, G-1 and game day remain prohibited. G+2 is
+legal only when a later fresh legal day is unavailable. A day immediately after
+heavy lower strength, hard conditioning or Team Training loses to a fresh
+alternative. Among the remaining days, upper-body strength wins, then a legal
+standalone day, then the safest existing legal fallback; Monday-first week order
+breaks the final tie. Candidate input order never affects the result.
+
+Speed remains first inside a combined session and consumes one existing weekly
+conditioning exposure. Hard conditioning may move to a later legal receiver
+instead of forcing same-day consolidation. The weekly session and conditioning
+counts do not increase. A delivered Team Training or game Speed quality still
+prevents a duplicate exposure. All existing requirement, missing-quality,
+game-proximity, injury, illness, fatigue, deload, readiness, prescription,
+save/restart, Undo and athlete-added-session rules remain with their current
+owners.
+
+Guard: `LAW-fresh-automatic-speed-placement` through chained
+`test:weekly-scheduler`. Focused behavior, real persistence/Undo tape, mutation
+and NOT COVERED receipt: `docs/STATUS_SPEEDFRESH.md`.
