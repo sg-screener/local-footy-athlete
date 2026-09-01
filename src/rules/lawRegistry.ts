@@ -427,6 +427,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-systemic-automatic-weekly-exercise-selection',
+    law: 'R-318: every non-Mobility/non-Prehab automatic exercise identity appears at most once per athlete-week. Real catalogue classification owns the six weekly main families, including all squat, hinge and equivalent upper variations; role relabelling cannot bypass a spent family. Dedicated Lower Squat owns single-leg knee work and dedicated Lower Hinge owns single-leg hip/hamstring/glute/lower-back work. Fallback order is unused same-category exercise, suitable unused same-area accessory, genuine prehab, then empty. Prehab never satisfies a main seat. Athlete additions remain unrestricted and do not trigger automatic refill.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-318',
+    guard: {
+      state: 'guarded',
+      by: 'test:full-body-balance',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `weeklyselector`. TEST FIRST: 200 final composer-declared athlete-weeks across 50 real generated profile worlds produced 12 repeated exact identities, 52 repeated real anchor-family findings and 44 dedicated Lower Hinge findings containing single-leg knee work. TWO OPTIONS COMPARED: clean final sessions after selection, or give the existing whole-week composer one selector that judges canonical delivered identities and real catalogue movement classification before authorship. The selection-time owner landed and later source-fact remainder/injury compilation consumes the same state. Its focused boundary is 13/13 across required squat/hinge/upper examples, dedicated-day ownership, the complete fallback ladder, Mobility/Prehab semantics, 50 generated worlds, a bodyweight generation, mid-week delivered history, athlete additions and exact restart. The complete 104-athlete-week working diagnostic has zero exact, real-family or dedicated-day findings and 104/104 successful restart reconstructions. Annual and mutation receipts plus NOT COVERED live in docs/STATUS_WEEKLYSELECTOR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

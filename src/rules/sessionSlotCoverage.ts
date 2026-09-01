@@ -140,12 +140,12 @@ export const LOWER_SLOTS: readonly SessionSlot[] = [
  * The combined lower shape remains available for a compressed one-day week.
  */
 export const LOWER_SQUAT_SLOTS: readonly SessionSlot[] = [
-  'squat', 'single_leg_knee', 'single_leg_hip', 'football_robustness',
+  'squat', 'single_leg_knee', 'football_robustness', 'football_robustness',
   'football_robustness',
 ];
 
 export const LOWER_HINGE_SLOTS: readonly SessionSlot[] = [
-  'hinge', 'single_leg_hip', 'single_leg_knee', 'football_robustness',
+  'hinge', 'single_leg_hip', 'football_robustness', 'football_robustness',
   'football_robustness',
 ];
 

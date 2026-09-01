@@ -587,6 +587,15 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
        * The composer never reads a store. Boot and rollover reach this same
        * argument, so every path feeds the selector the same history. */
       blockStartISO: blockState.blockStart,
+      ...(boundary ? { automaticSelectionHistory: {
+        governedFromISO: boundary.governedFromISO,
+        identities: boundary.pinnedHistoryWorkouts
+          .filter((workout) =>
+            dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
+          .flatMap((workout) => workout.exercises
+            .filter((row) => row.section18Evidence?.provenance === 'composer_declaration')
+            .map((row) => row.exercise?.name ?? '').filter(Boolean)),
+      } } : {}),
       // Later weeks in a newly authored block must see the same accepted seat
       // choices that restart will read. Otherwise a changed weekly layout can
       // re-pick core/accessory seats before their first week's record is saved.

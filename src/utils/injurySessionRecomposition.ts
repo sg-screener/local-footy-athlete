@@ -61,6 +61,12 @@ import type { Workout } from '../types/domain';
 import { diffSemanticDays, type SemanticDaySnapshot } from './programSemanticSnapshot';
 import { exerciseSessionFamily } from '../rules/exerciseSessionFamily';
 import {
+  automaticExerciseRouteForIdentity,
+  createAutomaticWeeklyExerciseSelector,
+  realMovementSlotsForAutomaticExercise,
+} from '../rules/automaticWeeklyExerciseSelection';
+import { slotDayKindForPatterns, type SessionSlot } from '../rules/sessionSlotCoverage';
+import {
   injuryRequiresChange,
   getTapSwapChoices,
   type TapSwapChoice,
@@ -210,6 +216,8 @@ export function planInjuryRecomposition(args: {
   workout: Workout | null | undefined;
   environment: TapSwapEnvironment;
   primaryInjury: TapSwapPrimaryInjury | null;
+  /** Automatic rows already delivered elsewhere in this athlete-week. */
+  existingAutomaticExerciseNames?: readonly string[];
 }): InjuryRecompositionPlan {
   const rows = sessionRowNames(args.workout);
   const unsafeRows = unsafeRowsForInjury({
@@ -218,10 +226,39 @@ export function planInjuryRecomposition(args: {
   });
   const substitutions: InjurySubstitution[] = [];
   const pausedRows: string[] = [];
+  const automaticOnDay = (args.workout?.exercises ?? [])
+    .filter((row) => row.section18Evidence?.provenance === 'composer_declaration')
+    .map((row) => row.exercise?.name ?? '').filter(Boolean);
+  const automaticElsewhere = [...(args.existingAutomaticExerciseNames ?? [])];
+  for (const name of automaticOnDay) {
+    const index = automaticElsewhere.indexOf(name);
+    if (index >= 0) automaticElsewhere.splice(index, 1);
+  }
+  const keptAutomaticOnDay = automaticOnDay.filter((name) => !unsafeRows.includes(name));
+  const weeklySelector = createAutomaticWeeklyExerciseSelector([
+    ...automaticElsewhere, ...keptAutomaticOnDay,
+  ]);
+  const dayKind = slotDayKindForPatterns(
+    args.workout?.strengthIntent?.plannedPatterns ?? [],
+  );
   // Every row that is staying, so the ladder cannot offer something the session
   // already has — and so an earlier substitution's choice cannot be chosen twice.
   const taken = rows.filter((name) => !unsafeRows.includes(name));
   for (const name of unsafeRows) {
+    const originalRow = args.workout?.exercises.find((row) => row.exercise?.name === name);
+    const realOriginalSlot = realMovementSlotsForAutomaticExercise(name)[0];
+    const requestedSlot = (originalRow?.section18Evidence?.slot
+      ?? realOriginalSlot ?? 'lower_accessory') as SessionSlot;
+    const requestedAsMain = originalRow?.section18Evidence?.role === 'main_strength';
+    const automaticOriginal = originalRow?.section18Evidence?.provenance
+      === 'composer_declaration';
+    const weeklyCandidate = (identity: string) => ({
+      identity,
+      requestedSlot,
+      dayKind,
+      route: automaticExerciseRouteForIdentity(identity),
+      requestedAsMain,
+    } as const);
     const choice = getTapSwapChoices({
       originalExercise: name,
       reason: 'injury_or_pain',
@@ -270,7 +307,9 @@ export function planInjuryRecomposition(args: {
         // Filtering here rather than inside the ladder keeps the fallback's job
         // ("what is safe") separate from this one's ("what does THIS session
         // still need").
-        && !taken.some((name) => name.toLowerCase() === candidate.name!.toLowerCase()));
+        && !taken.some((name) => name.toLowerCase() === candidate.name!.toLowerCase())
+        && (!automaticOriginal
+          || weeklySelector.canUse(weeklyCandidate(candidate.name!))));
     /* ⚠ **THE TIER IS THE WHOLE TEST NOW.** A rung-5 or rung-6 answer is still
      * a perfectly safe thing for this athlete to do today — it is simply not a
      * replacement FOR THIS ROW, and writing it into `{ from, to }` is what drew
@@ -280,6 +319,7 @@ export function planInjuryRecomposition(args: {
     if (choice?.name && isPerExerciseReplacementTier(choice.hierarchyTier)) {
       substitutions.push({ from: name, to: choice });
       taken.push(choice.name);
+      if (automaticOriginal) weeklySelector.accept(weeklyCandidate(choice.name));
       continue;
     }
     pausedRows.push(name);

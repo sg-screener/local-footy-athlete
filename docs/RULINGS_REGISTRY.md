@@ -7967,3 +7967,32 @@ rule. Guard: `LAW-automatic-weekly-main-strength-budget` through chained
 `test:full-body-balance`, which invokes `test:weekly-strength-budget` and
 `test:weekly-strength-variety`. Full red-first, mutation, annual audit and NOT
 COVERED evidence: `docs/STATUS_WEEKLYBUDGET.md`.
+
+**R-318** · Final automatic exercise identities obey one systemic weekly selector,
+2026-09-01.
+
+Owner: weeklyselector. Every non-Mobility/non-Prehab exercise identity appears
+at most once in one automatically programmed athlete-week. The exercise
+catalogue's real classification, never a composer role, owns the six weekly
+main families. Squat, hinge and equivalent upper push/pull variations share
+their real family, so relabelling an anchor as support cannot bypass a spent
+seat.
+
+Dedicated `Lower Squat` owns bilateral squat and single-leg knee work;
+dedicated `Lower Hinge` owns bilateral hinge and single-leg hip, hamstring,
+glute and lower-back work. Compressed full-body weeks may combine categories
+without exceeding the same weekly identity or family limits. Fallback order is
+unused legal same-category work, unused suitable same-movement/muscle
+accessory, suitable genuine prehab, then empty. Prehab and Mobility may repeat
+but never inherit or satisfy a main-strength slot. Upper work uses the same
+hierarchy. Athlete additions stay unrestricted and do not refill automatic
+work.
+
+This extends R-317 from typed main-seat roles to the final delivered exercise
+names and supersedes repeated-strength fallback or dedicated-day expectations
+that contradict that boundary. Guard:
+`LAW-systemic-automatic-weekly-exercise-selection` through chained
+`test:full-body-balance`, which invokes the focused
+`test:automatic-weekly-selection`. Red-first, generated-world, durable restart,
+mutation, annual audit and NOT COVERED evidence:
+`docs/STATUS_WEEKLYSELECTOR.md`.

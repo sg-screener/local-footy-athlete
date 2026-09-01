@@ -22,6 +22,7 @@ interface InjurySessionInput {
   exclusions: Parameters<typeof applyExclusionsToAuthoredDay>[0]['exclusions'];
   recordedLoads: ReturnType<typeof readBlockHistory>['lastRecordedLoadByExercise'];
   weekExerciseNames: readonly string[];
+  weekAutomaticExerciseNames: readonly string[];
   otherMainStrengthPatterns?: readonly MainStrengthPattern[];
 }
 
@@ -37,7 +38,8 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
     activeConstraints: [...args.constraints], primaryInjury });
   const visible = applyExclusionsToAuthoredDay({ workout: args.workout, dateISO: args.dateISO,
     exclusions: args.exclusions }) ?? args.workout;
-  const plan = planInjuryRecomposition({ workout: visible, environment, primaryInjury });
+  const plan = planInjuryRecomposition({ workout: visible, environment, primaryInjury,
+    existingAutomaticExerciseNames: args.weekAutomaticExerciseNames });
   let workout = args.workout;
   for (const substitution of plan.substitutions) {
     if (!substitution.to.name) continue;
@@ -73,10 +75,20 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
     if (index >= 0) substitutedWeekNames.splice(index, 1);
   }
   substitutedWeekNames.push(...substitutedVisible.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
+  const substitutedWeekAutomaticNames = [...args.weekAutomaticExerciseNames];
+  for (const row of visible.exercises.filter(item =>
+    item.section18Evidence?.provenance === 'composer_declaration')) {
+    const index = substitutedWeekAutomaticNames.indexOf(row.exercise?.name ?? '');
+    if (index >= 0) substitutedWeekAutomaticNames.splice(index, 1);
+  }
+  substitutedWeekAutomaticNames.push(...substitutedVisible.exercises
+    .filter(row => row.section18Evidence?.provenance === 'composer_declaration')
+    .map(row => row.exercise?.name ?? '').filter(Boolean));
   const adjustment = deriveInjurySessionAdjustment({ workout: substitutedVisible, environment,
     profile: args.profile, bodyPart: stage.bodyPart,
     redFlag: isRedFlagInjurySeverity(stage.seriousSymptoms, stage.severity),
     weekExerciseNames: substitutedWeekNames,
+    weekAutomaticExerciseNames: substitutedWeekAutomaticNames,
     otherMainStrengthPatterns: args.otherMainStrengthPatterns,
     excludedByAthlete: args.exclusions.map(entry => entry.exercise),
     pausedRowNames: plan.pausedRows, dateISO: args.dateISO });
@@ -118,7 +130,7 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
   return { workout, plan, adjustment, constraintId: stage.id };
 }
 
-export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'workout' | 'dateISO' | 'weekExerciseNames' | 'otherMainStrengthPatterns'> & {
+export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'workout' | 'dateISO' | 'weekExerciseNames' | 'weekAutomaticExerciseNames' | 'otherMainStrengthPatterns'> & {
   workoutsByDate: Readonly<Record<string, Workout>>;
 }) {
   const stages = args.constraints.filter((constraint): constraint is ActiveInjuryConstraint =>
@@ -135,12 +147,17 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
       if (stages[index].startDate.slice(0, 10) > dateISO) continue;
       const weekExerciseNames = Object.values(workoutsByDate).flatMap(day =>
         day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
+      const weekAutomaticExerciseNames = Object.values(workoutsByDate).flatMap(day =>
+        day.exercises.filter(row =>
+          row.section18Evidence?.provenance === 'composer_declaration')
+          .map(row => row.exercise?.name ?? '').filter(Boolean));
       const otherMainStrengthPatterns = Object.entries(workoutsByDate).flatMap(([date, day]) =>
         date === dateISO ? [] : day.exercises.flatMap(row =>
           row.section18Evidence?.role === 'main_strength' && row.section18Evidence.mainStrengthPattern
             ? [row.section18Evidence.mainStrengthPattern] : []));
       const result = compileCanonicalInjuryStage({ ...args, workout, dateISO,
-        weekExerciseNames, otherMainStrengthPatterns, stage: stages[index],
+        weekExerciseNames, weekAutomaticExerciseNames, otherMainStrengthPatterns,
+        stage: stages[index],
         constraints: [...args.constraints.filter(constraint => constraint.type !== 'injury'),
           ...stages.slice(0, index + 1)] });
       workoutsByDate[dateISO] = result.workout;

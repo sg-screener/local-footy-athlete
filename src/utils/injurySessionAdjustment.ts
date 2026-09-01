@@ -20,6 +20,13 @@ import { mainPatternForExerciseMovement, type MainStrengthPattern } from '../rul
 import { getSessionComponentRows } from './sessionComponents';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 import { stableDecisionOrder } from '../rules/stableDecisionDiversity';
+import {
+  automaticExerciseRouteForIdentity,
+  automaticMainFamilyForExercise,
+  createAutomaticWeeklyExerciseSelector,
+  realMovementSlotsForAutomaticExercise,
+} from '../rules/automaticWeeklyExerciseSelection';
+import { slotDayKindForPatterns, type SessionSlot } from '../rules/sessionSlotCoverage';
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
@@ -169,6 +176,8 @@ export function chooseInjurySessionAdditions(args: {
   pausedRowNames: readonly string[];
   /** Every exercise name anywhere in the athlete's week, this session included. */
   weekExerciseNames: readonly string[];
+  /** Automatic-only names for R-318; athlete additions do not spend its state. */
+  weekAutomaticExerciseNames?: readonly string[];
   otherMainStrengthPatterns?: readonly MainStrengthPattern[];
   /**
    * ⚠ **THE ATHLETE'S OWN "LEAVE THIS OUT" DECISIONS — NEVER OFFERED BACK.**
@@ -206,6 +215,7 @@ export function chooseInjurySessionAdditions(args: {
    * across the week. Absent, the pool order stands as before.
    */
   dateISO?: string;
+  dayKind?: ReturnType<typeof slotDayKindForPatterns>;
 }): InjurySessionAddition[] {
   /**
    * ⚠ **THREE CAPS, AND THE SMALLEST WINS.** Sam: *"Cap newly added work at
@@ -230,15 +240,36 @@ export function chooseInjurySessionAdditions(args: {
   ].map(normalise));
   const chosen: InjurySessionAddition[] = [];
   let sets = args.keptSets;
+  const automaticDelivered = [...(args.weekAutomaticExerciseNames ?? args.weekExerciseNames)];
+  for (const paused of args.pausedRowNames) {
+    const index = automaticDelivered.indexOf(paused);
+    if (index >= 0) automaticDelivered.splice(index, 1);
+  }
+  const weeklySelector = createAutomaticWeeklyExerciseSelector(automaticDelivered);
 
   const take = (candidate: InjurySessionAddition | undefined): boolean => {
     if (!candidate) return false;
     if (chosen.length >= roomForRows) return false;
     if (sets + setsOf(candidate) > SET_CEILING) return false;
     if (isVariantOfAlreadyChosen(candidate.name, chosen)) return false;
+    const requestedAsMain = !!candidate.mainStrengthPattern;
+    const route = automaticExerciseRouteForIdentity(candidate.name);
+    const realSlots = realMovementSlotsForAutomaticExercise(candidate.name);
+    const requestedSlot = (automaticMainFamilyForExercise(candidate.name, {
+      route, requestedAsMain,
+    }) ?? realSlots[0] ?? 'core') as SessionSlot;
+    const weeklyCandidate = {
+      identity: candidate.name,
+      requestedSlot,
+      dayKind: args.dayKind ?? null,
+      route,
+      requestedAsMain,
+    } as const;
+    if (!weeklySelector.canUse(weeklyCandidate)) return false;
     chosen.push(candidate);
     inTheWeek.add(normalise(candidate.name));
     sets += setsOf(candidate);
+    weeklySelector.accept(weeklyCandidate);
     return true;
   };
 
@@ -460,6 +491,7 @@ export interface InjurySessionAdjustmentInputs {
   redFlag: boolean;
   /** Every exercise name in the athlete's authored week, this day included. */
   weekExerciseNames: readonly string[];
+  weekAutomaticExerciseNames?: readonly string[];
   otherMainStrengthPatterns?: readonly MainStrengthPattern[];
   /** Exercises the athlete has removed. Never offered back — see the field of
    *  the same name on `chooseInjurySessionAdditions`. */
@@ -516,6 +548,7 @@ export function deriveInjurySessionAdjustment(
     profile: args.profile,
     keptRowNames,
     weekExerciseNames: args.weekExerciseNames,
+    weekAutomaticExerciseNames: args.weekAutomaticExerciseNames,
     otherMainStrengthPatterns: args.otherMainStrengthPatterns,
     excludedByAthlete: args.excludedByAthlete,
     pausedRowNames: args.pausedRowNames,
@@ -524,6 +557,7 @@ export function deriveInjurySessionAdjustment(
     injuredHalf: pausedRegion,
     keptSets,
     dateISO: args.dateISO,
+    dayKind: slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []),
   });
 
   return {

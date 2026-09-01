@@ -95,6 +95,12 @@ import {
   createWeeklyStrengthBudget,
   isWeeklyMainStrengthSlot,
 } from './weeklyStrengthBudget';
+import {
+  asComposedIdentity,
+  automaticExerciseRouteForIdentity,
+  automaticPrehabFallbacksForSlot,
+  createAutomaticWeeklyExerciseSelector,
+} from './automaticWeeklyExerciseSelection';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -216,6 +222,16 @@ export interface ComposerInputs {
    * feed the same history explicitly and the composer stays pure.
    */
   readonly selectionHistory: readonly BlockExerciseSelection[];
+  /**
+   * A mid-week remainder keeps these already delivered automatic rows fixed.
+   * They seed weekly identity/family state only when composition reaches the
+   * governed date; re-authored history before that date is later replaced by
+   * the accepted rows and must not spend the remainder's choices.
+   */
+  readonly automaticSelectionHistory?: {
+    readonly governedFromISO: string;
+    readonly identities: readonly string[];
+  };
   /** The athlete's four Progress choices are strength-programming inputs. */
   readonly trackedLiftChoices?: TrackedLiftChoices;
 }
@@ -1195,6 +1211,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Dedicated sessions reserve their purpose; full-body days may spend only
   // seats that the rest of the week has not reserved or spent.
   const weeklyStrengthBudget = createWeeklyStrengthBudget(inputs.plannedDays);
+  const weeklyExerciseSelector = createAutomaticWeeklyExerciseSelector();
+  const deliveredSelectorCheckpoint = inputs.automaticSelectionHistory
+    ? createAutomaticWeeklyExerciseSelector(
+      inputs.automaticSelectionHistory.identities,
+    ).checkpoint() : null;
+  let deliveredSelectionRestored = false;
   /* What this block chose, per weekly slot occurrence — handed back so
    * generation can RECORD it. */
   const selectionsThisBlock: BlockExerciseSelection[] = [];
@@ -1361,6 +1383,27 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
 
   for (const planned of inputs.plannedDays) {
     if (!composedDayIsStrength(planned.strengthIntent)) continue;
+    const plannedDateISO = addComposerDaysISO(
+      mondayISO(inputs.todayISO), (planned.dayOfWeek + 6) % 7,
+    );
+    if (deliveredSelectorCheckpoint && !deliveredSelectionRestored
+      && plannedDateISO >= inputs.automaticSelectionHistory!.governedFromISO) {
+      weeklyExerciseSelector.restore(deliveredSelectorCheckpoint);
+      usedThisWeek.clear();
+      for (const raw of inputs.automaticSelectionHistory!.identities) {
+        const identity = composedIdentityFor(raw);
+        if (automaticExerciseRouteForIdentity(identity) === 'strength') {
+          usedThisWeek.add(identity);
+        }
+      }
+      footballRobustnessCovered.clear();
+      for (const identity of inputs.automaticSelectionHistory!.identities) {
+        for (const category of footballRobustnessCategoriesForExercise(identity)) {
+          footballRobustnessCovered.add(category);
+        }
+      }
+      deliveredSelectionRestored = true;
+    }
     // Every legality question below asks the DAY's set, never the week's, so a
     // dated exclusion applies to its own day and to no other.
     const excludedToday = excludedOn(planned.dayOfWeek);
@@ -1551,6 +1594,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           daysToGame: planned.daysToGame,
           route: 'automatic',
         })));
+    // A strength card may be removed below when none of its reserved main work
+    // survives. Its unshipped support choices must disappear from every weekly
+    // selection input too; otherwise a row the athlete never receives can block
+    // a later legal fallback and make restart depend on invisible history.
+    const selectorBeforeDay = weeklyExerciseSelector.checkpoint();
+    const usedBeforeDay = new Set(usedThisWeek);
+    const footballBeforeDay = new Set(footballRobustnessCovered);
+    const seatCountsBeforeDay = new Map(seatCountBySlot);
+    const selectionsBeforeDay = selectionsThisBlock.length;
+    const tracesBeforeDay = selectionTraces.length;
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
     // ordinary week took the else arm: its lower rows came out accessories
@@ -1588,6 +1641,80 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       seatCountBySlot.set(slot, seatIndex + 1);
       const isMainLift = !!pattern
         && weeklyStrengthBudget.canSpend(slot, planned.planEntryId);
+      const weeklyCandidate = (identity: ComposedExerciseIdentity) => ({
+        identity,
+        requestedSlot: slot,
+        dayKind: kind,
+        route: automaticExerciseRouteForIdentity(identity),
+        requestedAsMain: isMainLift,
+      } as const);
+      /* The final rung is real prehab, authored as prehab. It does not inherit
+       * the missing strength slot, spend a main-family seat, or enter the exact
+       * strength-identity ledger. The existing strength pool supplies the first
+       * two rungs (same category, then accessory); this helper is reached only
+       * after those legal benches are empty. */
+      const authorPrehabFallback = (): boolean => {
+        const prehab = automaticPrehabFallbacksForSlot(slot)
+          .map(asComposedIdentity)
+          .filter((identity) => !excludedToday.has(identity)
+            && !identitiesThisDay.has(identity)
+            && composedRowIsLegal(identity, kitToday)
+            && exerciseProgrammingAllows(identity, {
+              experienceLevel: inputs.profile.experienceLevel,
+              daysToGame: planned.daysToGame,
+              route: 'automatic',
+            }));
+        const fallback = weeklyExerciseSelector.chooseFallback({
+          sameCategory: [],
+          accessories: [],
+          prehab,
+          requestedSlot: slot,
+          dayKind: kind,
+          requestedAsMain: isMainLift,
+        });
+        if (!fallback) return false;
+        const identity = asComposedIdentity(fallback.identity);
+        const fallbackSlot = fallback.requestedSlot;
+        const authoredFallback = doseFor(kind, fallbackSlot, rows.length);
+        const selectedPoolSlot = poolSlotForSelectedRow(fallbackSlot, identity);
+        const dose = resolveComposedDose({
+          identity,
+          isMainLift: false,
+          poolSlot: selectedPoolSlot,
+          selectionSlot: fallbackSlot,
+          seasonPhase: inputs.seasonPhase,
+          offseasonSubphase: inputs.offseasonSubphase,
+          authoredFallback,
+        });
+        weeklyExerciseSelector.accept(fallback);
+        identitiesThisDay.add(identity);
+        required.push(fallbackSlot);
+        rows.push({
+          identity,
+          slot: fallbackSlot,
+          role: 'strength_accessory',
+          mainStrengthPattern: null,
+          doseCategory: dose.category,
+          sets: dose.sets,
+          repsMin: dose.repsMin,
+          repsMax: dose.repsMax,
+          ...(dose.restSeconds !== undefined ? { restSeconds: dose.restSeconds } : {}),
+          ...(dose.notes ? { notes: dose.notes } : {}),
+          load: resolveComposedLoad({
+            identity,
+            isMainLift: false,
+            poolSlot: selectedPoolSlot,
+            seasonPhase: inputs.seasonPhase,
+            offseasonSubphase: inputs.offseasonSubphase,
+            profile: inputs.profile,
+            kit: kitToday,
+          }),
+          ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
+          ...(dose.prescriptionType ? { prescriptionType: dose.prescriptionType } : {}),
+          ...(dose.perSide ? { perSide: true } : {}),
+        });
+        return true;
+      };
       const ordinaryPool = (isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
         .filter((identity) => !displacedTrackedDefaults.has(identity));
       const trackedSeat = pattern
@@ -1689,10 +1816,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const baseLegalBeforeDayFamily = legalUnder(excluded, inputs.kit);
       const baseLegal = preferMissingFootballCategory(
         withoutUsedVariationFamily(baseLegalBeforeDayFamily),
-      );
+      ).filter((identity) => weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
       const legalBeforeDayIdentity = preferMissingFootballCategory(withoutUsedVariationFamily(
         withoutRdlFamily(legalUnder(excludedToday, kitToday)),
-      ));
+      )).filter((identity) => weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
       const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));
@@ -1700,6 +1827,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */
       if (baseLegal.length === 0) {
+        authorPrehabFallback();
         if (baseLegalBeforeDayFamily.length > 0) {
           gaps.push({ dayOfWeek: planned.dayOfWeek, slot, cause: 'already_on_day', wouldNeed: null });
           continue;
@@ -1884,6 +2012,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * the slot is NOT pushed to `required`, because a slot nothing filled must
        * not be counted as owed-and-met by the judge. */
       if (legal.length === 0) {
+        authorPrehabFallback();
         if (legalBeforeDayIdentity.length > 0) {
           gaps.push({ dayOfWeek: planned.dayOfWeek, slot, cause: 'already_on_day', wouldNeed: null });
         } else if (!planeChoice) {
@@ -2015,6 +2144,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           ? `temporary_substitution:${substitutionReason?.cause}`
           : selection.reason,
       });
+      weeklyExerciseSelector.accept(weeklyCandidate(identity));
       usedThisWeek.add(identity);
       if (isMainLift) {
         if (!weeklyStrengthBudget.spend(slot, planned.planEntryId)) {
@@ -2093,6 +2223,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     if (expectedMainSeatHere && mainSeatsComposedForDay.size === 0) {
       rows.splice(0, rows.length);
       required.splice(0, required.length);
+      weeklyExerciseSelector.restore(selectorBeforeDay);
+      usedThisWeek.clear(); usedBeforeDay.forEach((identity) => usedThisWeek.add(identity));
+      footballRobustnessCovered.clear();
+      footballBeforeDay.forEach((category) => footballRobustnessCovered.add(category));
+      seatCountBySlot.clear();
+      seatCountsBeforeDay.forEach((count, slot) => seatCountBySlot.set(slot, count));
+      selectionsThisBlock.splice(selectionsBeforeDay);
+      selectionTraces.splice(tracesBeforeDay);
     }
     if (rows.length === 0) {
       // Clause (d): requested, and nothing lawful could fill it. Said out loud
