@@ -67,7 +67,9 @@ shared rule did not exist. Green receipts:
   remains inherited red because the starting checkpoint already carries 21
   unrelated `UNENFORCED` registry rows.
 
-Mutation receipt: pending until the section implementation checkpoint is saved.
+Mutation receipt: after checkpoint `81e1e38e`, restoring the old weekly-style
+behaviour by removing the complete-14-day-window gate made the phase/window cell
+red (12/13). Restoring the gate returned 13/13 green.
 
 ## Sections 3–5
 
