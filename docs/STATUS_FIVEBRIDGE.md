@@ -94,7 +94,10 @@ after relaunch, not only its title and modality. The wider session-template
 suite is 87/88: its one numeric-index source-shape failure is inherited and
 unrelated to this work.
 
-Mutation receipt: pending the path-scoped implementation checkpoint.
+Mutation receipt: after checkpoint `8fb37118`, disabling typed
+conditioning-block ownership made all three conditioning-card cells red while
+the ordinary-Recovery control stayed green (1/4). Restoring the owner returned
+the focused suite to 4/4.
 
 ## Sections 4–5
 
