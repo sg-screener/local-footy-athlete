@@ -13,10 +13,12 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import {
   auditFinalAutomaticWeek,
   automaticExerciseRouteForIdentity,
+  automaticIsolationSupportCandidatesForSlot,
   automaticMainFamilyForExercise,
   createAutomaticWeeklyExerciseSelector,
   type FinalAutomaticSelectionDay,
 } from '../rules/automaticWeeklyExerciseSelection';
+import { strengthExerciseClassification } from '../data/exerciseTags';
 import { slotDayKindForPatterns } from '../rules/sessionSlotCoverage';
 import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { coldStartThroughOnboarding, quietAsync, relaunchApp } from './support/athleteJourney';
@@ -116,7 +118,7 @@ run('repeated Single-Leg RDL falls to an unused hip/hamstring accessory', () => 
     prehab: ['Nordic Lower'],
     requestedSlot: 'single_leg_hip', dayKind: 'lower_hinge', requestedAsMain: false,
   });
-  assert(selected?.identity === 'Hip Thrusts' && selected.tier === 'accessory',
+  assert(selected?.identity === 'Hamstring Curl' && selected.tier === 'accessory',
     JSON.stringify(selected));
 });
 
@@ -125,11 +127,13 @@ run('repeated upper main work falls to unused upper accessory before prehab', ()
   selector.accept({ identity: 'Bench Press', requestedSlot: 'horizontal_push',
     dayKind: 'upper_full', route: 'strength', requestedAsMain: true });
   const selected = selector.chooseFallback({
-    sameCategory: ['Bench Press'], accessories: ['Dips', 'Push-ups'],
+    sameCategory: ['Bench Press'],
+    accessories: automaticIsolationSupportCandidatesForSlot('push_accessory_1'),
     prehab: ['Banded External Rotation'], requestedSlot: 'horizontal_push',
     dayKind: 'upper_split_push', requestedAsMain: false,
   });
-  assert(selected?.identity === 'Dips' && selected.tier === 'accessory',
+  assert(selected && strengthExerciseClassification(selected.identity) === 'isolation'
+    && selected.tier === 'accessory',
     JSON.stringify(selected));
 });
 

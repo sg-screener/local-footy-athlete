@@ -48,7 +48,7 @@ import {
   type SelectionRole,
 } from './blockExerciseSelection';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
-import { preferAutomaticCurlCandidates } from '../data/exercisePools';
+import { POOL_REGISTRY, preferAutomaticCurlCandidates } from '../data/exercisePools';
 import {
   ladderLevelForProfile,
   visibleGatesForLadderLevel,
@@ -98,6 +98,7 @@ import {
 import {
   asComposedIdentity,
   automaticExerciseRouteForIdentity,
+  automaticIsolationSupportCandidatesForSlot,
   automaticPrehabFallbacksForSlot,
   createAutomaticWeeklyExerciseSelector,
 } from './automaticWeeklyExerciseSelection';
@@ -1410,6 +1411,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // …and the same is now true of the KIT. `inputs.kit` stays the PERMANENT
     // answer and decides what gets RECORDED; this decides what ships today.
     const kitToday = kitOn(planned.dayOfWeek);
+    weeklyExerciseSelector.beginSession();
     // ── WHICH LADDER THIS DAY OWES ──────────────────────────────────────────
     //
     // Three cases, in this order: R-093's fixed pair, then R-087's coverage day,
@@ -1664,10 +1666,21 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
               daysToGame: planned.daysToGame,
               route: 'automatic',
             }));
+        const coreOrRobustness = POOL_REGISTRY.trunk_anti_rotation
+          .map((entry) => asComposedIdentity(entry.name))
+          .filter((identity) => !excludedToday.has(identity)
+            && !identitiesThisDay.has(identity)
+            && composedRowIsLegal(identity, kitToday)
+            && exerciseProgrammingAllows(identity, {
+              experienceLevel: inputs.profile.experienceLevel,
+              daysToGame: planned.daysToGame,
+              route: 'automatic',
+            }));
         const fallback = weeklyExerciseSelector.chooseFallback({
           sameCategory: [],
           accessories: [],
           prehab,
+          coreOrRobustness,
           requestedSlot: slot,
           dayKind: kind,
           requestedAsMain: isMainLift,
@@ -1715,7 +1728,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         });
         return true;
       };
-      const ordinaryPool = (isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
+      const ordinaryPool = (OPTIONAL_UPPER_SUPPORT_SLOTS.has(slot)
+        ? automaticIsolationSupportCandidatesForSlot(slot).map(asComposedIdentity)
+        : isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
         .filter((identity) => !displacedTrackedDefaults.has(identity));
       const trackedSeat = pattern
         ? selectedTrackedLiftProgrammingSeat(

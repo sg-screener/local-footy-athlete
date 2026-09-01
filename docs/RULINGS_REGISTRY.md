@@ -7996,3 +7996,26 @@ that contradict that boundary. Guard:
 `test:automatic-weekly-selection`. Red-first, generated-world, durable restart,
 mutation, annual audit and NOT COVERED evidence:
 `docs/STATUS_WEEKLYSELECTOR.md`.
+
+**R-319** · Automatic strength sessions contain at most four compound exercises,
+2026-09-02.
+
+Owner: compoundcap. Governed strength and accessory exercises carry one optional
+canonical metadata answer: `compound` or `isolation`. Power, plyometric, carry,
+core, robustness, prehab, mobility and conditioning work remain unclassified;
+`Face Pull` and `Cable Face Pull` remain distinct isolation identities. The
+classification completeness guard derives its required scope from the selectable
+strength and governed support pools, rather than keeping a second name list.
+
+An automatic compound may fill only an uncovered genuine strength direction and
+each automatically programmed strength session may contain no more than four.
+Support then tries a legal direction-matched isolation, genuine prehab,
+core/robustness, and finally an empty slot. No fifth or sixth compound is added
+as volume. Equipment, injury, weekly identity/family, accepted block selection
+and restart rules continue to apply. Athlete-added work remains unrestricted.
+
+Guard: `LAW-automatic-strength-session-compound-limit` through chained
+`test:full-body-balance`, which invokes focused
+`test:compound-session-selection`. Red-first, classification-removal, deliberate
+fifth-compound and representative generated-world receipts plus NOT COVERED:
+`docs/STATUS_COMPOUNDCAP.md`.

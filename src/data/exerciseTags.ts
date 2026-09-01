@@ -87,6 +87,9 @@ export type NordicCurlVariant =
   | 'full_unassisted_eccentric'
   | 'assisted_or_substantially_regressed';
 
+/** Sam's optional strength-only exercise classification (R-319). */
+export type StrengthExerciseClassification = 'compound' | 'isolation';
+
 export interface ExerciseProgramming {
   strengthRole?: 'none' | 'accessory' | 'secondary';
   automaticMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
@@ -102,6 +105,8 @@ export interface ExerciseProgramming {
 }
 
 export interface ExerciseTag {
+  /** Unset for power, plyometrics, carries, core, prehab, mobility and conditioning. */
+  strengthClassification?: StrengthExerciseClassification;
   movement: MovementPattern;
   region: Region;
   load: LoadLevel;
@@ -344,6 +349,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
   'SL 45° Back Extension': {
+    strengthClassification: 'isolation',
     movement: 'hinge', region: 'lower', load: 'moderate',
     fatigue: 'moderate', doms: 'moderate', stability: 'moderate',
     unilateral: true, eccentric: 'moderate', lateWeek: 'caution',
@@ -475,6 +481,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Back Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid',
@@ -500,6 +507,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // squats (Front/Box/High Box) now match Back Squat's own shoulder: 'caution'
   // — the sheet's existing convention for a bar carried on the shoulders.
   'Front Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid',
@@ -521,6 +529,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Box Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'high', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -545,6 +554,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Goblet Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -567,6 +577,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Bodyweight Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -588,6 +599,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'High Box Squat': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'high', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -610,6 +622,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Bulgarian Split Squats': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'high',
     doms: 'high', stability: 'moderate', unilateral: true,
     eccentric: 'high', lateWeek: 'avoid',
@@ -631,6 +644,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Walking Lunges': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'high',
     doms: 'high', stability: 'low', unilateral: true,
     eccentric: 'high', lateWeek: 'avoid',
@@ -652,6 +666,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Reverse Lunges': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -673,6 +688,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Step Ups': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -719,6 +735,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Cossack Squat': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -740,6 +757,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Lateral Lunge': {
+    strengthClassification: 'compound',
     movement: 'lunge', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -761,6 +779,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Leg Squat (to Box)': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'low', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -783,6 +802,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Leg Press': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -805,6 +825,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Leg Leg Press': {
+    strengthClassification: 'compound',
     movement: 'squat', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -830,6 +851,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Deadlift': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'high', fatigue: 'high',
     doms: 'high', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid',
@@ -851,6 +873,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Trap Bar Deadlift': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid',
@@ -872,6 +895,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'RDLs': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'high', stability: 'moderate', unilateral: false,
     eccentric: 'high', lateWeek: 'avoid',
@@ -893,6 +917,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Leg RDL': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -914,6 +939,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Hip Thrusts': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -936,6 +962,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Glute Bridge': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -957,6 +984,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Leg Hip Thrust': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -978,6 +1006,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Back Extension': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'good',
@@ -1001,6 +1030,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Nordic Lower': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'high',
     doms: 'high', stability: 'low', unilateral: false,
     eccentric: 'high', lateWeek: 'avoid',
@@ -1028,6 +1058,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Kettlebell Swings': {
+    strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -1057,6 +1088,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Leg Extension': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1079,6 +1111,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Calf Raises': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1100,6 +1133,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Tib Raises': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1121,6 +1155,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Leg Calf Raise': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'moderate', lateWeek: 'good',
@@ -1142,6 +1177,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Seated Calf Raise': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1172,6 +1208,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
    */
 
   'Groin Squeeze': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1236,6 +1273,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Copenhagen Plank (Half)': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -1258,6 +1296,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
 
 
   'Long-Lever Copenhagen': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -1280,6 +1319,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
 
 
   'Hamstring Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'moderate', lateWeek: 'good',
@@ -1589,6 +1629,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Bench Press': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1610,6 +1651,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'DB Bench Press': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1631,6 +1673,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Incline Bench': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1652,6 +1695,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Incline DB Bench': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1673,6 +1717,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Close Grip Bench': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1694,6 +1739,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Push-ups': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1715,6 +1761,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Dips': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'high', lateWeek: 'caution',
@@ -1736,6 +1783,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Arm DB Floor Press': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -1757,6 +1805,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Arm DB Bench Press': {
+    strengthClassification: 'compound',
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'low', lateWeek: 'caution',
@@ -1839,6 +1888,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Overhead Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'high', fatigue: 'high',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -1860,6 +1910,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'DB Shoulder Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -1881,6 +1932,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Landmine Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1924,6 +1976,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Z-Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'low', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1945,6 +1998,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Seated DB Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -1966,6 +2020,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Half-Kneeling Single-Arm Overhead Press': {
+    strengthClassification: 'compound',
     movement: 'vertical_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -1991,6 +2046,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Barbell Row': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'high', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
@@ -2012,6 +2068,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Chest Supported Row': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2033,6 +2090,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Chest-Supported DB Row': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2054,6 +2112,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Seated Cable Row': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2075,6 +2134,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Arm DB Row': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -2096,6 +2156,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Inverted Row (Bodyweight)': {
+    strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2121,6 +2182,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Pull-Ups': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'high', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: false,
     eccentric: 'moderate', lateWeek: 'good',
@@ -2142,6 +2204,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Chin-Ups': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'high', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: false,
     eccentric: 'moderate', lateWeek: 'good',
@@ -2163,6 +2226,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Lat Pulldown': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2184,6 +2248,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Neutral-Grip Pulldown': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2205,6 +2270,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Arm Lat Pulldown': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -2749,6 +2815,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Lateral Raise': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2770,6 +2837,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Face Pull': {
+    strengthClassification: 'isolation',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2791,6 +2859,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Cable Face Pull': {
+    strengthClassification: 'isolation',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2812,6 +2881,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Rear Delt Fly': {
+    strengthClassification: 'isolation',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2833,6 +2903,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Band Pull-Apart': {
+    strengthClassification: 'isolation',
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2875,6 +2946,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Shrugs': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2896,6 +2968,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Single-Arm Shrug': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -2917,6 +2990,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Incline Y Raise': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2942,6 +3016,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Bicep Curl (Barbell)': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2963,6 +3038,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Bicep Curl (Dumbbell)': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -2984,6 +3060,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Hammer Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3005,6 +3082,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Chin-Up Negative (Slow)': {
+    strengthClassification: 'compound',
     movement: 'vertical_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'moderate', stability: 'low', unilateral: false,
     eccentric: 'moderate', lateWeek: 'good',
@@ -3026,6 +3104,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Incline Dumbbell Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -3047,6 +3126,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Lying Dumbbell Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3068,6 +3148,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Banded Bicep Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3089,6 +3170,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Concentration Curl': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -3114,6 +3196,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // ═══════════════════════════════════════════════════════════════
 
   'Tricep Pushdown': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3135,6 +3218,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Banded Tricep Pushdown': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3156,6 +3240,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Skull Crushers': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'moderate', fatigue: 'low',
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -3177,6 +3262,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Dumbbell Skull Crusher': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'caution',
@@ -3198,6 +3284,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Overhead Tricep Extension': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3219,6 +3306,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Dumbbell Kickback': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
@@ -3240,6 +3328,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Tricep Circuit (Dirty 30)': {
+    strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -3762,6 +3851,13 @@ export function getExerciseTags(name: string): ExerciseTag | undefined {
     canonicalExerciseName: (raw: string) => string;
   };
   return EXERCISE_TAGS[canonicalExerciseName(name)];
+}
+
+/** The one canonical answer consumed by selection, auditing and completeness gates. */
+export function strengthExerciseClassification(
+  name: string,
+): StrengthExerciseClassification | undefined {
+  return getExerciseTags(name)?.strengthClassification;
 }
 
 /** Get all tagged exercise names. */

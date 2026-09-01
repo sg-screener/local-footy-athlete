@@ -438,6 +438,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-automatic-strength-session-compound-limit',
+    law: 'R-319: governed strength and accessory identities carry one canonical compound/isolation metadata answer. Every automatically programmed strength session contains at most four compounds, used only for uncovered genuine strength directions. Support falls through legal direction-matched isolation, genuine prehab, core/robustness and empty; it never adds fifth or sixth compound volume. Equipment, injury, weekly identity/family, accepted block selection and restart rules remain in force, while athlete-added work is unrestricted.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-319',
+    guard: {
+      state: 'guarded',
+      by: 'test:full-body-balance',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `compoundcap`. TEST FIRST: the seven-cell focused tape was 0/7 because canonical classification, completeness, session state, fallback and the final cap audit did not exist; a real full-upper generation delivered Bench Press, Chest-Supported DB Row, Seated DB Press, Pull-Ups, Push-ups and Lat Pulldown as six compounds. TWO OPTIONS COMPARED: trim final rows after their choices had already changed weekly and durable state, or classify once in exercise metadata and refuse illegal support at the existing selection boundary. The selection-time owner landed. The canonical governed scope contains 84 distinct identities: 49 compounds and 35 isolations, with zero missing. AFTER: the focused tape is 7/7; the founding upper case delivers four compounds followed by Tricep Pushdown and Face Pull isolation support. Removing Back Squat classification and injecting a fifth automatic compound each kill their named cell, while an athlete-authored fifth remains legal. Focused compiler, restart and NOT COVERED receipts: docs/STATUS_COMPOUNDCAP.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

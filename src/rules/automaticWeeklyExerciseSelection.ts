@@ -7,7 +7,12 @@
  * as support. Athlete-authored work never enters this state.
  */
 import { POOL_REGISTRY } from '../data/exercisePools';
-import { findPoolEntry } from '../data/exercisePoolsStrength';
+import {
+  STRENGTH_POOLS,
+  findPoolEntry,
+  type PoolSlotKey,
+} from '../data/exercisePoolsStrength';
+import { strengthExerciseClassification } from '../data/exerciseTags';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import {
@@ -18,7 +23,65 @@ import {
 import type { WeeklyMainStrengthSlot } from './weeklyStrengthBudget';
 
 export type AutomaticExerciseRoute = 'strength' | 'mobility' | 'prehab';
-export type AutomaticFallbackTier = 'same_category' | 'accessory' | 'prehab';
+export type AutomaticFallbackTier =
+  | 'same_category'
+  | 'accessory'
+  | 'prehab'
+  | 'core_or_robustness';
+
+export const MAX_AUTOMATIC_COMPOUNDS_PER_STRENGTH_SESSION = 4;
+
+const CLASSIFIED_STRENGTH_POOL_SLOTS: readonly PoolSlotKey[] = [
+  'squat', 'hinge',
+  'horizontal_push', 'vertical_push',
+  'horizontal_pull', 'vertical_pull',
+  'isolation_upper', 'isolation_lower',
+];
+
+const CLASSIFIED_SUPPORT_POOL_CATEGORIES: readonly (keyof typeof POOL_REGISTRY)[] = [
+  'biceps', 'groin_adductors', 'calves',
+];
+
+/** Pool scope asks which identities require the field; exercise tags own its value. */
+export function requiredStrengthClassificationIdentities(): readonly string[] {
+  return [...new Set([
+    ...CLASSIFIED_STRENGTH_POOL_SLOTS.flatMap((slot) => [
+      ...STRENGTH_POOLS[slot].anchor.entries,
+      ...STRENGTH_POOLS[slot].accessory.entries,
+    ].map((entry) => canonicalExerciseName(entry.name))),
+    ...CLASSIFIED_SUPPORT_POOL_CATEGORIES.flatMap((category) =>
+      POOL_REGISTRY[category].map((entry) => canonicalExerciseName(entry.name))),
+  ])];
+}
+
+export function missingRequiredStrengthClassifications(): readonly string[] {
+  return requiredStrengthClassificationIdentities()
+    .filter((identity) => strengthExerciseClassification(identity) === undefined);
+}
+
+/**
+ * Direction-matched upper support comes only from isolation metadata. Pool
+ * groups target the area; no exercise-name classification or fallback list is
+ * maintained here.
+ */
+export function automaticIsolationSupportCandidatesForSlot(
+  slot: SessionSlot,
+): readonly string[] {
+  const upper = [
+    ...STRENGTH_POOLS.isolation_upper.anchor.entries,
+    ...STRENGTH_POOLS.isolation_upper.accessory.entries,
+  ].filter((entry) => strengthExerciseClassification(entry.name) === 'isolation');
+  if (slot === 'push_accessory_1' || slot === 'push_accessory_2') {
+    return upper.filter((entry) => entry.group === 'tricep' || entry.group === 'shoulder')
+      .map((entry) => canonicalExerciseName(entry.name));
+  }
+  if (slot === 'pull_accessory_1' || slot === 'pull_accessory_2') {
+    return upper.filter((entry) => entry.group === 'bicep'
+      || entry.group === 'shoulder' || entry.group === 'trap')
+      .map((entry) => canonicalExerciseName(entry.name));
+  }
+  return [];
+}
 
 function poolIdentitySet(categories: readonly (keyof typeof POOL_REGISTRY)[]): ReadonlySet<string> {
   return new Set(categories.flatMap((category) => POOL_REGISTRY[category]
@@ -82,6 +145,7 @@ export interface AutomaticFallbackRequest {
   readonly sameCategory: readonly string[];
   readonly accessories: readonly string[];
   readonly prehab: readonly string[];
+  readonly coreOrRobustness?: readonly string[];
   readonly requestedSlot: SessionSlot;
   readonly dayKind: SlotDayKind | null;
   readonly requestedAsMain: boolean;
@@ -100,6 +164,7 @@ function violatesDedicatedDayOwnership(candidate: AutomaticWeeklySelectionCandid
 }
 
 export interface AutomaticWeeklyExerciseSelector {
+  beginSession(): void;
   canUse(candidate: AutomaticWeeklySelectionCandidate): boolean;
   accept(candidate: AutomaticWeeklySelectionCandidate): void;
   chooseFallback(request: AutomaticFallbackRequest): AutomaticFallbackChoice | null;
@@ -107,18 +172,28 @@ export interface AutomaticWeeklyExerciseSelector {
   restore(checkpoint: AutomaticWeeklySelectionCheckpoint): void;
   usedIdentities(): readonly string[];
   spentMainFamilies(): readonly WeeklyMainStrengthSlot[];
+  sessionCompoundCount(): number;
 }
 
 export interface AutomaticWeeklySelectionCheckpoint {
   readonly usedIdentities: readonly string[];
   readonly spentMainFamilies: readonly WeeklyMainStrengthSlot[];
+  readonly sessionCompoundIdentities?: readonly string[];
+  readonly coveredCompoundSlots?: readonly SessionSlot[];
 }
+
+const COMPOUND_DIRECTION_SLOTS: ReadonlySet<SessionSlot> = new Set([
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+  'horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull',
+]);
 
 export function createAutomaticWeeklyExerciseSelector(
   initialDelivered: readonly string[] = [],
 ): AutomaticWeeklyExerciseSelector {
   const used = new Set<string>();
   const spent = new Set<WeeklyMainStrengthSlot>();
+  const sessionCompounds = new Set<string>();
+  const coveredCompoundSlots = new Set<SessionSlot>();
 
   for (const raw of initialDelivered) {
     const identity = canonicalExerciseName(raw);
@@ -137,6 +212,15 @@ export function createAutomaticWeeklyExerciseSelector(
     }
     const identity = canonicalExerciseName(candidate.identity);
     if (used.has(identity) || violatesDedicatedDayOwnership(candidate)) return false;
+    const strengthClassification = strengthExerciseClassification(identity);
+    if (strengthClassification === 'compound') {
+      if (!COMPOUND_DIRECTION_SLOTS.has(candidate.requestedSlot)
+        || coveredCompoundSlots.has(candidate.requestedSlot)
+        || sessionCompounds.size >= MAX_AUTOMATIC_COMPOUNDS_PER_STRENGTH_SESSION) return false;
+    } else if (candidate.requestedAsMain) {
+      // Isolation and unlabelled support may never inherit a missing main seat.
+      return false;
+    }
     const family = automaticMainFamilyForExercise(identity, candidate);
     if (!family) return !candidate.requestedAsMain;
     // A real anchor is never smuggled into a support request. When a constrained
@@ -152,6 +236,10 @@ export function createAutomaticWeeklyExerciseSelector(
     if (candidate.route === 'mobility' || candidate.route === 'prehab') return;
     const identity = canonicalExerciseName(candidate.identity);
     used.add(identity);
+    if (strengthExerciseClassification(identity) === 'compound') {
+      sessionCompounds.add(identity);
+      coveredCompoundSlots.add(candidate.requestedSlot);
+    }
     const family = automaticMainFamilyForExercise(identity, candidate);
     if (family) spent.add(family);
   };
@@ -164,13 +252,17 @@ export function createAutomaticWeeklyExerciseSelector(
       requestedAsMain: boolean,
     ): AutomaticFallbackChoice | null => {
       for (const identity of identities) {
+        const semanticSupportSlot = tier === 'core_or_robustness'
+          ? (realMovementSlotsForAutomaticExercise(identity).find((slot) =>
+              slot === 'football_robustness' || slot === 'core') ?? 'core')
+          : null;
         const candidate: AutomaticFallbackChoice = {
           identity,
           tier,
           requestedSlot: route === 'prehab'
             ? (request.requestedSlot.includes('push') || request.requestedSlot.includes('pull')
               ? 'shoulder_prehab' : 'football_robustness')
-            : request.requestedSlot,
+            : semanticSupportSlot ?? request.requestedSlot,
           dayKind: request.dayKind,
           route,
           requestedAsMain,
@@ -181,20 +273,35 @@ export function createAutomaticWeeklyExerciseSelector(
     };
     return choose(request.sameCategory, 'same_category', 'strength', request.requestedAsMain)
       ?? choose(request.accessories, 'accessory', 'strength', request.requestedAsMain)
-      ?? choose(request.prehab, 'prehab', 'prehab', false);
+      ?? choose(request.prehab, 'prehab', 'prehab', false)
+      ?? choose(request.coreOrRobustness ?? [], 'core_or_robustness', 'strength', false);
   };
 
   return {
+    beginSession() {
+      sessionCompounds.clear();
+      coveredCompoundSlots.clear();
+    },
     canUse,
     accept,
     chooseFallback,
-    checkpoint: () => ({ usedIdentities: [...used], spentMainFamilies: [...spent] }),
+    checkpoint: () => ({
+      usedIdentities: [...used],
+      spentMainFamilies: [...spent],
+      sessionCompoundIdentities: [...sessionCompounds],
+      coveredCompoundSlots: [...coveredCompoundSlots],
+    }),
     restore(checkpoint) {
       used.clear(); checkpoint.usedIdentities.forEach((identity) => used.add(identity));
       spent.clear(); checkpoint.spentMainFamilies.forEach((family) => spent.add(family));
+      sessionCompounds.clear();
+      checkpoint.sessionCompoundIdentities?.forEach((identity) => sessionCompounds.add(identity));
+      coveredCompoundSlots.clear();
+      checkpoint.coveredCompoundSlots?.forEach((slot) => coveredCompoundSlots.add(slot));
     },
     usedIdentities: () => [...used],
     spentMainFamilies: () => [...spent],
+    sessionCompoundCount: () => sessionCompounds.size,
   };
 }
 
@@ -203,6 +310,28 @@ export interface FinalAutomaticSelectionExercise {
   readonly authorship: 'automatic' | 'athlete';
   readonly route: AutomaticExerciseRoute;
   readonly requestedAsMain: boolean;
+  readonly requestedSlot?: SessionSlot;
+}
+
+export interface FinalAutomaticSessionAudit {
+  readonly compoundCount: number;
+  readonly compoundIdentities: readonly string[];
+  readonly overLimitIdentities: readonly string[];
+}
+
+/** Final delivered-session guard. Power and athlete-added rows do not count. */
+export function auditFinalAutomaticSession(
+  exercises: readonly FinalAutomaticSelectionExercise[],
+): FinalAutomaticSessionAudit {
+  const compoundIdentities = exercises
+    .filter((row) => row.authorship === 'automatic')
+    .map((row) => canonicalExerciseName(row.identity))
+    .filter((identity) => strengthExerciseClassification(identity) === 'compound');
+  return {
+    compoundCount: compoundIdentities.length,
+    compoundIdentities,
+    overLimitIdentities: compoundIdentities.slice(MAX_AUTOMATIC_COMPOUNDS_PER_STRENGTH_SESSION),
+  };
 }
 
 export interface FinalAutomaticSelectionDay {
@@ -287,7 +416,14 @@ export function automaticPrehabFallbacksForSlot(slot: SessionSlot): readonly str
   if (slot === 'squat' || slot === 'single_leg_knee' || slot === 'lower_accessory') {
     return POOL_REGISTRY.lower_prehab.map((entry) => entry.name);
   }
-  return POOL_REGISTRY.trunk_anti_rotation.map((entry) => entry.name);
+  if (slot === 'football_robustness') {
+    return [
+      ...POOL_REGISTRY.lower_prehab.map((entry) => entry.name),
+      ...POOL_REGISTRY.hamstring_light.map((entry) => entry.name),
+    ];
+  }
+  // Core/robustness is the next rung and has its own typed candidate list.
+  return [];
 }
 
 export function asComposedIdentity(identity: string): ComposedExerciseIdentity {

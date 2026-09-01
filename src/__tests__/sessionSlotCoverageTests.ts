@@ -159,10 +159,12 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ok('[SAM] required split uppers declare no direct arm or delt-pump seat',
     [...UPPER_SPLIT_PUSH_SLOTS, ...UPPER_SPLIT_PULL_SLOTS].every((slot) =>
       !['biceps', 'triceps', 'shoulders', 'traps', 'arm_or_shoulder'].includes(slot)));
-  ok('[SAM] shoulder isolation is not misused as a pull accessory',
-    !slotsFilledByRow(row('Band Pull-Apart')).includes('pull_accessory_1')
-      && slotsFilledByRow(row('Band Pull-Apart')).includes('shoulders'),
-    JSON.stringify(slotsFilledByRow(row('Band Pull-Apart'))));
+  ok('[SAM] isolation support fills support while a compound press does not',
+    slotsFilledByRow(row('Band Pull-Apart')).includes('pull_accessory_1')
+      && slotsFilledByRow(row('Band Pull-Apart')).includes('shoulders')
+      && !slotsFilledByRow(row('Dips')).includes('push_accessory_1'),
+    JSON.stringify({ isolation: slotsFilledByRow(row('Band Pull-Apart')),
+      compound: slotsFilledByRow(row('Dips')) }));
 }
 
 console.log('\n[4] Power and conditioning ride on top — they fill NO slot');

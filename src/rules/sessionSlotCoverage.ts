@@ -514,6 +514,19 @@ function appendUpperGroupSlot(out: SessionSlot[], group: string | null | undefin
   if (group === 'trap') out.push('traps');
 }
 
+/** Isolation support direction comes from its authored muscle group, never its name. */
+function appendIsolationSupportSlots(
+  out: SessionSlot[],
+  group: string | null | undefined,
+): void {
+  if (group === 'tricep' || group === 'shoulder') {
+    out.push('push_accessory_1', 'push_accessory_2');
+  }
+  if (group === 'bicep' || group === 'shoulder' || group === 'trap') {
+    out.push('pull_accessory_1', 'pull_accessory_2');
+  }
+}
+
 export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   // Power, conditioning, team training and mobility are not strength slots.
   // They are exempt from counting for the same reason they cannot fill a slot.
@@ -622,16 +635,9 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
     case 'vertical_pull': {
       const plane = tag.movement as SessionSlot;
       out.push(plane);
-      if (isUpperAccessory(name)) {
+      if (isUpperAccessory(name) && tag.strengthClassification === 'isolation') {
         out.push('arm_or_shoulder');
-        if (strengthMembership?.role === 'accessory'
-          && (strengthMembership.slot === 'horizontal_push' || strengthMembership.slot === 'vertical_push')) {
-          out.push('push_accessory_1', 'push_accessory_2');
-        }
-        if (strengthMembership?.role === 'accessory'
-          && (strengthMembership.slot === 'horizontal_pull' || strengthMembership.slot === 'vertical_pull')) {
-          out.push('pull_accessory_1', 'pull_accessory_2');
-        }
+        appendIsolationSupportSlots(out, strengthMembership?.group);
         appendUpperGroupSlot(out, strengthMembership?.group);
       }
       break;
@@ -639,6 +645,7 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
     case 'isolation_upper': {
       out.push('arm_or_shoulder');
       const group = authoredPoolMembership(name)?.group;
+      appendIsolationSupportSlots(out, group);
       appendUpperGroupSlot(out, group);
       break;
     }
