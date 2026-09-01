@@ -122,7 +122,7 @@ Primer in all four weeks.
 
 Green receipts:
 
-- `test:automatic-weekly-selection`: 16/16, including zero exact repeats over
+- `test:automatic-weekly-selection`: 17/17, including zero exact repeats over
   50 real generated worlds × four weeks, the two named failures, unrestricted
   athlete additions, and identical automatic history after restart.
 - `test:power-pool`: 104/104; `test:primer-session`: 25/25;
@@ -187,6 +187,37 @@ Mutation receipt after checkpoint `47055f39`:
   cell red (5/6).
 
 After each mutation the source was restored. The final focused result is 6/6.
+
+## Final verification and inherited reds
+
+Final focused results at the completed tree:
+
+- movement planes and shared 14-day rule: 13/13;
+- fortnightly COD generation: 19/19, with unchanged day/conditioning counts;
+- conditioning workbook/template equality: 170/170, plus modality 5/5;
+- standalone flush final card and restart: 4/4;
+- automatic weekly selection across all families, injury rebuild and restart:
+  17/17;
+- accepted final-year audit assumptions: 6/6.
+
+The exact starting checkpoint was separately mounted and rerun. These wider
+reds are byte-for-byte inherited rather than caused by this work:
+
+- typecheck: product 0, dev tools 0, tests 7 errors in
+  `sessionWorkOwnershipJourneyTests.ts`;
+- pools: 482/486 on four rotation/pin expectations;
+- fixture mutation: 17/20 on three Practice Match cells;
+- session template: 87/88 on the numeric-index source-shape cell;
+- injury recomposition reaches its real-onboarding step then throws
+  `required_minimum_shortfall:main_strength:2`;
+- Christmas break fails its existing non-vacuity cell then reaches the existing
+  missing `weekIdentityForWeekForTest` export; and
+- the broader weekly scheduler reaches its existing travel-zero-equipment
+  mutation failure at 9/10 after all scheduler/COD cells pass.
+
+The law registry recognises every new/edited guarded row and chain link. Its
+only remaining red is the starting checkpoint's 21 unrelated `UNENFORCED`
+laws.
 
 ## NOT COVERED
 
