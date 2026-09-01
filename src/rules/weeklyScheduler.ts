@@ -50,7 +50,10 @@ import {
 } from './weeklyProgrammingContract';
 import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
 import type { AthleteGender, SprintExposure, WeekKind } from '../types/domain';
-import { reportedMissingSpeedQualities, type RequestedSpeedQuality } from './sprintExposureGate';
+import {
+  requiredRunningSpeedQualities,
+  type RequestedSpeedQuality,
+} from './sprintExposureGate';
 import { BIBLE_WEEKLY_CAPS } from './weeklyExposureCounts';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
@@ -873,14 +876,19 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     inputs.phase === 'Pre-season' && hasScheduledGame(inputs) ? 'In-season' : inputs.phase,
     inputs.offseasonBlock,
   );
-  const missingSpeedQualities = reportedMissingSpeedQualities(inputs.sprintExposure);
+  const missingSpeedQualities = requiredRunningSpeedQualities({
+    phase: inputs.phase,
+    offseasonBlock: inputs.offseasonBlock,
+    teamTrainingDays: inputs.clubNights,
+    sprintExposure: inputs.sprintExposure,
+  });
   const overlay = inputs.appSprintPermitted === false
-    || (inputs.clubNights.length > 0 && missingSpeedQualities !== null
+    || (inputs.clubNights.length > 0
       && (inputs.readiness.lowReadiness || inputs.weekKind === 'deload'))
     ? { ...phaseOverlay, sprintExposureRequired: false }
     : phaseOverlay;
   const clubSpeedTopUp = inputs.clubNights.length > 0 && overlay.sprintExposureRequired
-    && missingSpeedQualities !== null && appSprintNeedPermitted(inputs);
+    && missingSpeedQualities.length > 0 && appSprintNeedPermitted(inputs);
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -1700,8 +1708,13 @@ function appSprintNeedPermitted(inputs: WeeklySchedulerInputs): boolean {
   // Their game proximity and weekly ceilings remain in force.
   if (inputs.appSprintPermitted === false) return false;
   if (inputs.clubNights.length === 0) return true;
-  const missing = reportedMissingSpeedQualities(inputs.sprintExposure);
-  if (!missing?.length || inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
+  const missing = requiredRunningSpeedQualities({
+    phase: inputs.phase,
+    offseasonBlock: inputs.offseasonBlock,
+    teamTrainingDays: inputs.clubNights,
+    sprintExposure: inputs.sprintExposure,
+  });
+  if (missing.length === 0 || inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
   // P15 does not relax the existing nights ceiling, even for a missing quality.
   const anchorNights = new Set([...inputs.clubNights, ...scheduledGameDays(inputs)]).size;
   return inputs.phase !== 'In-season' || anchorNights < BIBLE_WEEKLY_CAPS.sprintCodExposures.max;

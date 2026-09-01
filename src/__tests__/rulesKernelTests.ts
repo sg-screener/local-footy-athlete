@@ -882,13 +882,12 @@ try {
 
   ok('[C4] a 0-sprint week is flagged when no exemption is claimed',
     sprintUnder(validateProgramWeek({ days: zeroRunningWeek })));
-  ok('[C4] early off-season lifts the SPRINT floor too',
-    !sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
+  ok('[C4] early off-season now retains the running-Speed floor',
+    sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
 
-  // THE TWO FLOORS DO NOT SHARE ESCAPES. Sam lifts the RUNNING floor in bye
-  // recovery; his sprint sentence names early off-season only. One shared type
-  // would quietly grant each the other's exemptions, so this cell is the
-  // discriminator that keeps them apart.
+  // THE TWO FLOORS DO NOT SHARE ESCAPES. The ordinary running-volume floor may
+  // lift in early Off-season or bye recovery; the small running-Speed exposure
+  // remains unless an explicit safety reduction authorises its removal.
   ok('[C4] bye recovery lifts the RUNNING floor but NOT the sprint floor',
     !runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'bye_recovery' }))
     && sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'bye_recovery' })));

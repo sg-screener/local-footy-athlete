@@ -11,6 +11,31 @@ export type SprintExposureGatePhase = 'Off-season' | 'Pre-season' | 'In-season';
 
 export type RequestedSpeedQuality = 'acceleration' | 'top_end_speed';
 
+/**
+ * Qualities the app still has to programme as real running Speed.
+ *
+ * A team night may supply acceleration under the existing anchor-credit rule,
+ * but its frequency-only onboarding answer never proves maximum velocity. An
+ * Off-season week has no team anchor, so the phase progression owns the ask.
+ */
+export function requiredRunningSpeedQualities(args: {
+  readonly phase: SprintExposureGatePhase;
+  readonly offseasonBlock?: 'early_optional' | 'transition' | 'normal_build' | null;
+  readonly teamTrainingDays?: readonly number[];
+  readonly sprintExposure?: SprintExposure;
+}): readonly RequestedSpeedQuality[] {
+  const reportedMissing = reportedMissingSpeedQualities(args.sprintExposure);
+  if (reportedMissing !== null) return reportedMissing;
+  if (args.phase === 'Off-season') {
+    return args.offseasonBlock === 'normal_build'
+      ? ['acceleration', 'top_end_speed']
+      : ['acceleration'];
+  }
+  return (args.teamTrainingDays?.length ?? 0) > 0
+    ? ['top_end_speed']
+    : ['acceleration', 'top_end_speed'];
+}
+
 /** P15: a reported missing quality is not satisfied by a generic club-night count.
  * Frequency-only answers make no per-quality claim. Null retains that uncertainty
  * and the existing floor policy rather than inventing what happened at training.

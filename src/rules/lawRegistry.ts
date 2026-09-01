@@ -350,6 +350,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-real-running-speed-development',
+    law: 'R-311: only run-modality acceleration or maximum-velocity work with full recovery may be written as automatic true Speed. Bike/Air Bike acceleration and incomplete-recovery repeat sprint remain conditioning. A no-team-training Off-season progresses from 10-20 m accelerations, through alternating acceleration and progressive build-ups, to small Fly 20/Fly 30 exposures. In Pre-season and In-season, team training may supply acceleration but never silently proves top speed; an app top-up is running top-speed only when availability, fixture proximity, accumulated anchor load and reduced-week state permit it. The early-Off-season sprint-floor exception is superseded; the separate ordinary-running-volume exception remains.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-311',
+    guard: {
+      state: 'guarded',
+      by: 'test:offseason-deload-conditioning + test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The current 52-week artifact and first focused tape reproduced all three defects: weeks 1-4 had no Speed, weeks 5-8 could publish Air Bike Accelerations as Speed, and a Pre-season week could publish 30 m Repeats as Speed. The final generated-week gate is 12/12 across six Off-season phase steps, a Pre-season team week, an available In-season team week, congested fixture omission, final owned rows and two factory refusals. Phase authorship is 42/42, sprint-credit evidence is 14/14 and weekly scheduler is green. LIVENESS: before production changes the focused tape was 2/10; withholding phase-week provenance left it 8/10; removing the factory modality/quality refusals made it 10/12. The focused gate is nested in chained `test:offseason-deload-conditioning`. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

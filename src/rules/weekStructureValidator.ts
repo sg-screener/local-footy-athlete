@@ -480,11 +480,10 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
     : input.subphase === 'bye_recovery' ? 'bye_recovery'
     : flags.byeWeek ? 'bye_recovery'
     : null;
-  // THE SPRINT FLOOR HAS ITS OWN, NARROWER ESCAPE — early off-season only. Bye
-  // recovery lifts the RUNNING floor and not this one, which is why the two
-  // vocabularies stay separate rather than sharing a type.
-  const sprintFloorExemption: SprintFloorExemption | null =
-    input.subphase === 'early_offseason' ? 'early_off_season' : null;
+  // R-311 keeps the small running-Speed floor in early Off-season. Bye recovery
+  // still lifts only the ordinary RUNNING-volume floor; a future sprint-floor
+  // reduction must arrive as its own explicit authorised reason.
+  const sprintFloorExemption: SprintFloorExemption | null = null;
   for (const cf of auditWeekAgainstCaps(counts, {
     runningFloorExemption,
     sprintFloorExemption,

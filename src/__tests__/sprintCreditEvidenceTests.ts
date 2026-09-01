@@ -77,6 +77,7 @@ function build(): TrainingProgram | null {
   console.warn = () => undefined; console.log = () => undefined;
   try {
     return generateProgramLocally({
+      gender: 'male',
       seasonPhase: 'Pre-season',
       trainingDaysPerWeek: 4,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],

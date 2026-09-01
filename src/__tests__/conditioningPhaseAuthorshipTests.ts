@@ -72,6 +72,8 @@ interface Built {
   clubNights: number[];
   /** Days carrying a strength session, by purpose-ish name. */
   strengthDays: number[];
+  speedTemplates: string[];
+  speedDays: Array<{ dayOfWeek: number; templateName: string }>;
 }
 
 const DAY_NUM: Record<string, number> = {
@@ -90,6 +92,7 @@ function build(args: {
   lowReadiness?: boolean;
 }): Built {
   const profile = {
+    gender: 'male',
     trainingLocation: 'Commercial gym',
     equipmentSelectionCompleteness: 'complete',
     recentTrainingLoad: 'Pretty consistent',
@@ -130,7 +133,14 @@ function build(args: {
     const week = program.microcycles?.[0]?.workouts ?? [];
     const exposures: Exposure[] = [];
     const strengthDays: number[] = [];
+    const speedTemplates: string[] = [];
+    const speedDays: Array<{ dayOfWeek: number; templateName: string }> = [];
     for (const w of week) {
+      if ((w as any).speedBlock?.templateName) {
+        speedTemplates.push(String((w as any).speedBlock.templateName));
+        speedDays.push({ dayOfWeek: w.dayOfWeek,
+          templateName: String((w as any).speedBlock.templateName) });
+      }
       const cat = (w as any).conditioningCategory;
       // BOTH, ALWAYS. A category with no block is the ghost this suite exists for.
       if (cat && (w as any).conditioningBlock) {
@@ -170,6 +180,8 @@ function build(args: {
       strengthDays,
       gameDay: fixtureDay ? fixtureDay.dayOfWeek : null,
       clubNights: (args.clubNights ?? []).map((d) => DAY_NUM[d]),
+      speedTemplates,
+      speedDays,
     };
   } catch (err: any) {
     return {
@@ -179,6 +191,8 @@ function build(args: {
       strengthDays: [],
       gameDay: args.gameDay ? DAY_NUM[args.gameDay] : null,
       clubNights: (args.clubNights ?? []).map((d) => DAY_NUM[d]),
+      speedTemplates: [],
+      speedDays: [],
     };
   }
 }
@@ -224,14 +238,15 @@ const noClubGameWeek = build({
 });
 ok('[non-vacuity] the no-club in-season game week BUILDS',
   noClubGameWeek.built, noClubGameWeek.refusal);
-const sprints = noClubGameWeek.exposures.filter((e) => e.category === 'sprint');
+const sprints = noClubGameWeek.speedDays;
 ok('[shape 2] a no-club in-season game week DOES get its sprint',
   sprints.length === 1, JSON.stringify(noClubGameWeek.exposures));
 ok('[shape 2] ...placed G-3 or earlier',
   sprints.every((e) => (gOffset(e.dayOfWeek, noClubGameWeek.gameDay) ?? -99) <= -3),
   sprints.map((e) => `day=${e.dayOfWeek} gOffset=${gOffset(e.dayOfWeek, noClubGameWeek.gameDay)}`).join(', '));
-ok('[shape 2] ...and every OTHER exposure stays easy/controlled',
-  noClubGameWeek.exposures.filter((e) => e.category !== 'sprint').every((e) => !e.hard),
+ok('[shape 2] ...opens the one ruled fast conditioning session rather than creating another hard day',
+  noClubGameWeek.exposures.filter((e) => e.hard).length === 1
+  && noClubGameWeek.exposures.some((e) => e.hard && e.dayOfWeek === sprints[0]?.dayOfWeek),
   JSON.stringify(noClubGameWeek.exposures));
 
 // ── SHAPE 3: the healthy bye / no-game week ────────────────────────────────
@@ -443,9 +458,10 @@ ok('[early off-season] weeks 1-2 author NO hard conditioning at all',
   earlyOff.exposures.every((e) => !e.hard), JSON.stringify(earlyOff.exposures));
 ok('[early off-season] ...and no app-authored running exposure is required of them',
   earlyOff.exposures.length === 0, JSON.stringify(earlyOff.exposures));
-ok('[early off-season] ...and no sprint/high-speed either',
-  earlyOff.exposures.every((e) => e.category !== 'sprint'),
-  JSON.stringify(earlyOff.exposures));
+ok('[early off-season] ...and one short running acceleration is retained',
+  earlyOff.speedTemplates.length === 1
+  && /^(10|20) m Acceleration Reps$/.test(earlyOff.speedTemplates[0]),
+  JSON.stringify(earlyOff.speedTemplates));
 
 const lateOff = build({
   phase: 'Off-season', phaseWeek: 6,
@@ -474,6 +490,7 @@ for (const world of WORLDS) {
   for (const clubNights of [[], ['Tuesday'], ['Tuesday', 'Thursday']]) {
     for (const gameDay of ['Saturday', null]) {
       const profile = {
+        gender: 'male',
         trainingLocation: 'Commercial gym',
         equipmentSelectionCompleteness: 'complete',
         recentTrainingLoad: 'Pretty consistent',

@@ -71,7 +71,7 @@ export const BIBLE_WEEKLY_CAPS = {
    * an authorised typed reduction reason. Unchanged by the 2026-07-27 law.
    */
   minRunningExposures: 2,
-  /** One genuine weekly exposure from mid off-season onward; 2-3 remains the usual maximum. */
+  /** One genuine weekly running-Speed exposure; 2-3 remains the usual maximum. */
   sprintCodExposures: { min: 1, max: 3 },
   /**
    * Hard days (Sam's clarified intent, 2026-07-08):
@@ -98,25 +98,14 @@ export const BIBLE_WEEKLY_CAPS = {
 export type RunningFloorExemption = 'early_off_season_weeks_1_2' | 'bye_recovery';
 
 /**
- * THE SPRINT FLOOR'S OWN EXEMPTION, WHICH ITS SENTENCE HAS ALWAYS ADVERTISED
- * AND THE CODE HAS NEVER HAD.
- *
- * The shipped detail reads *"zero is valid only in early off-season or with an
- * authorised reduction"* — two named cases, in the athlete's own message, with
- * no parameter behind them. Found 2026-08-13 while measuring census C4's step 2:
- * raising the floor's severity would have nagged an early-off-season week for a
- * rule that same week's message says does not apply to it.
- *
- * Typed rather than boolean for the reason `RunningFloorExemption` already
- * gives: a caller must say WHICH case it is claiming, so the build can check the
- * reason still holds. The two vocabularies are deliberately NOT merged — the
- * running floor is lifted by bye recovery and this one is not, and one shared
- * type would quietly grant each the other's escapes.
+ * The sprint floor's only remaining exemption. R-311 withdrew the old early-
+ * Off-season exception for the small running-Speed dose; ordinary running
+ * volume may still use its separate early/bye exemptions. A typed authorised
+ * safety reduction remains distinct from both.
  */
-export type SprintFloorExemption = 'early_off_season' | 'authorised_reduction';
+export type SprintFloorExemption = 'authorised_reduction';
 
 export const SPRINT_FLOOR_EXEMPTIONS: readonly SprintFloorExemption[] = [
-  'early_off_season',
   'authorised_reduction',
 ];
 
@@ -411,7 +400,7 @@ export function auditWeekAgainstCaps(
     findings.push({
       cap: 'sprintCodExposures', kind: 'under',
       observed: counts.sprintCodExposures, limit: caps.sprintCodExposures.min,
-      detail: `${counts.sprintCodExposures} sprint/COD exposures (Bible target ≥ ${caps.sprintCodExposures.min}; zero is valid only in early off-season or with an authorised reduction)`,
+      detail: `${counts.sprintCodExposures} sprint/COD exposures (target ≥ ${caps.sprintCodExposures.min}; zero requires an authorised reduction)`,
     });
   }
 

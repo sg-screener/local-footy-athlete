@@ -1285,6 +1285,8 @@ exposure per week except early off-season… Any reduction below the floor
 requires an explicit typed authorised reason."* · THE SPRINT FLOOR — one per
 week, year-round, early off-season excepted, and a reduction must carry a typed
 reason. ·
+**SUPERSEDED IN PART BY R-311:** early Off-season now retains one small running-
+Speed exposure. Its separate ordinary-running-volume floor exemption remains.
 `BUILT` — `test:rules-kernel` [C4] + `test:preseason-exposure`, 2026-08-13, seat
 `readiness` (item 53). **⚠ THE ROW WAS WRONG, NOT THE APP — and it was wrong in
 the specific way it warned about: the floor IS asserted, in a suite nobody had
@@ -7791,4 +7793,29 @@ Clear/Undo door restores the prior sessions.
 Guard: `LAW-genuine-deload-reduces-the-whole-visible-week` through chained
 `test:deload-law + test:deload-week + test:offseason-deload-conditioning +
 test:temporary-source-facts + test:fatigue-sequence`. Verification status,
+mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-311** · Real running-speed development, 2026-09-01.
+
+Owner: yearrepair. A Speed requirement means running. Bike/Air Bike acceleration
+is conditioning and cannot satisfy it. Repeat-sprint work performed on incomplete
+recovery is conditioning and cannot be written as pure Speed. The canonical
+`speedBlock` writer accepts only run-modality acceleration or top-end-speed
+templates; the visible rows it owns carry the same authored identity.
+
+A no-team-training Off-season carries a low-volume progression: short 10-20 m
+accelerations in weeks 1-4; acceleration alternating with longer progressive
+build-ups in weeks 5-8; then small Fly 20/Fly 30 exposures with full recovery.
+This supersedes R-062 only where it exempted early Off-season from the Speed
+floor. The separate exemption from the ordinary running-volume floor remains.
+
+In Pre-season and In-season, team training may satisfy acceleration under the
+existing anchor-credit rule. A frequency-only team-training answer never proves
+maximum velocity. The app adds a run-only top-speed exposure when a legal day and
+the weekly anchor/load budget permit it. Genuine fixture proximity, multi-anchor
+congestion, injury or a reduced week may omit or reduce that top-up.
+
+Guard: `LAW-real-running-speed-development` through chained
+`test:offseason-deload-conditioning + test:weekly-scheduler`. The former invokes
+the 12/12 `test:real-running-speed` final-week gate. Verification status,
 mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

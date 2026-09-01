@@ -512,6 +512,7 @@ export function buildInitialGeneratedCoachingPlan(args: {
     materialisation: {
       weekStartISO,
       miniCycleNumber: firstState?.miniCycleNumber,
+      phaseWeekNumber: firstState?.phaseWeekNumber,
       powerGoalNudge: false,
       runOnly: false,
       phase: inputs.seasonPhase as never,

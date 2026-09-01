@@ -410,6 +410,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         materialisation: {
           weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
+          phaseWeekNumber: blockState.phaseWeekNumber,
           conditioningSelectionContext: { blockStartISO: args.blockStartISO,
             history: args.conditioningSelectionHistory ?? [] },
           powerGoalNudge: false,

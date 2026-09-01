@@ -40,6 +40,50 @@ export interface SpeedTemplateSelectionContext {
 }
 
 /**
+ * The one phase progression for automatic running Speed.
+ *
+ * The scheduler asks for qualities; this specialist names an authored row.
+ * Phase weeks 5-8 alternate acceleration and longer progressive build-ups so
+ * both are delivered without lengthening a session. Week 9 onward alternates
+ * the two small flying exposures. Competitive phases alternate missing
+ * qualities when both are genuinely absent.
+ */
+export function runningSpeedTemplatePreference(args: {
+  readonly phase: SeasonPhase;
+  readonly phaseWeekNumber?: number | null;
+  readonly offseasonSubphase?: OffseasonSubphase | null;
+  readonly requestedQualities: readonly ('acceleration' | 'top_end_speed')[];
+}): string {
+  const explicitPhaseWeek = positiveInteger(args.phaseWeekNumber);
+  const phaseWeek = explicitPhaseWeek ?? 1;
+  if (args.phase === 'Off-season') {
+    if (explicitPhaseWeek === undefined) {
+      if (args.offseasonSubphase === 'early_offseason') return '10 m Acceleration Reps';
+      if (args.offseasonSubphase === 'mid_offseason') return '20 m Acceleration Reps';
+      return 'Progressive Sprint Exposure';
+    }
+    if (phaseWeek <= 2) {
+      return '10 m Acceleration Reps';
+    }
+    if (phaseWeek <= 4) {
+      return '20 m Acceleration Reps';
+    }
+    if (phaseWeek <= 8) {
+      return phaseWeek % 2 === 1
+        ? '20 m Acceleration Reps'
+        : 'Progressive Sprint Exposure';
+    }
+    return phaseWeek % 2 === 1 ? 'Fly 20 (20+20)' : 'Fly 30 (30+30)';
+  }
+  if (args.requestedQualities.length === 1) {
+    return args.requestedQualities[0] === 'acceleration'
+      ? '20 m Acceleration Reps'
+      : phaseWeek % 2 === 1 ? 'Fly 20 (20+20)' : 'Fly 30 (30+30)';
+  }
+  return phaseWeek % 2 === 1 ? '20 m Acceleration Reps' : 'Fly 20 (20+20)';
+}
+
+/**
  * ACCELERATIONS SPECIFICALLY, NOT TOP-SPEED (Sam's ruling 0, 2026-07-30).
  *
  * The progression's third step is the reintroduction of flying work — the
@@ -96,6 +140,12 @@ export function speedBlockForTemplate(
     ? template.permittedModalities[0]
     : template.permittedModalities.includes('run') ? 'run' : template.permittedModalities[0];
   if (!modality) throw new Error(`speed_template_has_no_modality:${template.name}`);
+  if (modality !== 'run') {
+    throw new Error(`running_speed_template_must_run:${template.name}:${modality}`);
+  }
+  if (template.quality !== 'acceleration' && template.quality !== 'top_end_speed') {
+    throw new Error(`running_speed_template_wrong_quality:${template.name}:${template.quality}`);
+  }
   return {
     id: `${idPrefix}-${speedBlockIdSlug(template.name)}-${placement}`,
     title: template.name,

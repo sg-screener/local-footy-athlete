@@ -49,6 +49,7 @@ import type { CapacityBand } from '../types/domain';
 import type { SessionIntention, WeeklySchedule } from './weeklyScheduler';
 import type { SessionPurpose } from './weeklyProgrammingContract';
 import type { AutomaticProgrammingSelectionTrace } from './programmingSelectionTrace';
+import { runningSpeedTemplatePreference } from './speedTemplates';
 
 /** Why a specialist could not serve an authorised request. Typed, never silent. */
 export type UnmaterialisedReason =
@@ -96,6 +97,7 @@ export interface MaterialisedSession {
 export interface MaterialisationFacts {
   readonly weekStartISO: string;
   readonly miniCycleNumber?: number;
+  readonly phaseWeekNumber?: number;
   readonly capacity: CapacityBand;
   readonly isBeginner: boolean;
   readonly experienced: boolean;
@@ -186,6 +188,15 @@ export function materialiseAuthoredSessions(args: {
         : {}),
       clauseId: intention.clauseId,
     };
+    const requestedSpeedQualities = intention.sprintQualities ?? [];
+    const speedPreference = requestedSpeedQualities.length > 0
+      ? runningSpeedTemplatePreference({
+          phase: facts.phase,
+          phaseWeekNumber: facts.phaseWeekNumber,
+          offseasonSubphase: facts.offseasonSubphase,
+          requestedQualities: requestedSpeedQualities,
+        })
+      : undefined;
 
     // ── CONDITIONING: the scheduler named the category, the specialist picks ──
     let conditioningTemplate: ConditioningTemplate | null = null;
@@ -205,7 +216,10 @@ export function materialiseAuthoredSessions(args: {
           // §3 "Lower + conditioning: prefer off-leg work" — the scheduler already
           // decided that by choosing the category; this passes the same fact on.
           offFeet: base.conditioningOffFeet,
-          runOnly: availableMachines?.length === 0 || facts.runOnly,
+          runOnly: intention.conditioningCategory === 'sprint'
+            ? true : availableMachines?.length === 0 || facts.runOnly,
+          preferredTemplateName: intention.conditioningCategory === 'sprint'
+            ? speedPreference : undefined,
           availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: intention.conditioningRole as ConditioningRole,
@@ -240,7 +254,8 @@ export function materialiseAuthoredSessions(args: {
           miniCycleNumber: facts.miniCycleNumber,
           seatIndex,
           selectionContext: selectionContext(),
-          runOnly: facts.runOnly,
+          runOnly: true,
+          preferredTemplateName: speedPreference,
           availableMachines: facts.availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: 'component',

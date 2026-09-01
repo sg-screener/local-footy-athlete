@@ -463,25 +463,25 @@ export interface PhaseOverlay {
 export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> = {
   early_optional: {
     clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.75,
-    runningRequired: false, sprintExposureRequired: false, maxRestDays: 3,
+    runningRequired: false, sprintExposureRequired: true, maxRestDays: 3,
     conditioningTarget: { min: 0, max: 3 },
     // §8: *"No running is required. Conditioning is light aerobic/off-leg work
     // only."* The one overlay where a hard session is forbidden outright.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
-    statement: 'Off-season weeks 1-2: every session optional, zero completed is '
-      + 'valid, 75% load, no required running, light aerobic/off-leg only, up to '
-      + 'three full rest days.',
+    statement: 'Off-season weeks 1-2: every strength session remains optional, '
+      + '75% load, light aerobic/off-leg work only, plus one short low-volume '
+      + 'running-acceleration exposure, with up to three full rest days.',
   },
   transition: {
     clauseId: 'WC-131', sessionsRequired: true, loadAdjustment: 0.90,
-    runningRequired: true, sprintExposureRequired: false, maxRestDays: 2,
+    runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
     conditioningTarget: { min: 3, max: 4 },
     // §8: *"Conditioning returns progressively through aerobic-base and
     // controlled capacity work."* Capacity, named as capacity — not yet hard.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     statement: 'Off-season weeks 3-4: the normal strength skeleton becomes '
-      + 'required again, 90% load, conditioning returns progressively. Week 4 is '
-      + 'not automatically a deload.',
+      + 'required again, 90% load, conditioning returns progressively and short '
+      + 'running acceleration remains. Week 4 is not automatically a deload.',
   },
   normal_build: {
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,

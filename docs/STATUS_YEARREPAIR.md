@@ -369,6 +369,65 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 4 — real running-speed development
+
+The older PDF findings all reproduced against final current-checkpoint data.
+The existing 52-week artifact carries no Speed in Off-season weeks 1-4, labels
+`Air Bike Accelerations` as Speed in weeks 5-8, and later labels incomplete-
+recovery `30 m Repeats` as Speed in Pre-season. The first focused final-week
+tape was 2/10: only fixture-congestion omission and the incidental no-bike
+control passed. This is production evidence, not a selector scan.
+
+Two designs were compared. Adding name filters to generation, validation and
+the audit would create several partial definitions of Speed. The chosen design
+keeps the existing typed boundary: the scheduler owns the quality still owed,
+the Speed specialist chooses one existing authored template for the phase, and
+the sole `speedBlock` writer refuses anything off-feet or repeat-sprint. Final
+rows and audit evidence continue to consume that same block.
+
+The Off-season progression is explicit and low-volume. Weeks 1-4 use authored
+10 m or 20 m acceleration repetitions; weeks 5-8 alternate 20 m acceleration
+with `Progressive Sprint Exposure`; week 9 onward alternates Fly 20 and Fly 30.
+The final gate samples phase weeks 1, 3, 5, 6, 9 and 10 and verifies that each
+block owns real visible rows. Early Off-season retains the small Speed floor;
+its different exemption from the ordinary running-volume floor is untouched.
+
+For Pre-season and In-season, a team night may supply acceleration but its
+frequency-only profile answer does not prove maximum velocity. An otherwise
+legal one-team-night week therefore receives a run-only Fly top-up. Two club
+nights plus a Saturday fixture may omit it because the three anchor exposures
+already spend the existing sprint-night ceiling; reduced weeks retain their
+existing suppression.
+
+`test:real-running-speed` is 12/12 and is invoked by the chained
+`test:offseason-deload-conditioning`, whose own deload half remains 11/11.
+`test:conditioning-phase-authorship` is 42/42, `test:sprint-credit-evidence` is
+14/14, the complete `test:weekly-scheduler` chain is green and TypeScript is
+green. `test:rules-kernel` is 121/122: its amended early-Off-season Speed-floor
+cell passes; the sole red is the inherited classification of three visible Rest
+days as `other` in its unrelated live sample. `test:preseason-exposure` retains
+its existing broader placement/reduction reds and is not used as an R-311 guard.
+
+Liveness was demonstrated three ways. Before the fix, the final tape was 2/10.
+Passing no phase-week provenance improved it only to 8/10 and left middle/late
+progression red. Removing the sole writer's run-modality and quality refusals
+made the two direct factory mutations survive, dropping 12/12 to 10/12; source
+was restored and the tape returned to 12/12.
+
+R-311 is born guarded by chained `test:offseason-deload-conditioning +
+test:weekly-scheduler`.
+
+### NOT COVERED
+
+- The complete 52-week journeys have not yet been regenerated after this
+  section; final regeneration remains Addendum Section 8 acceptance work.
+- The existing team-training credit is frequency/anchor typed, not GPS-derived;
+  this section deliberately refuses to infer true maximum velocity from it.
+- Physical-iPhone visuals and execution were not run, and no Release build was
+  made, as instructed.
+- Section 7's accumulated return-home spacing defect remains open, PDFs remain
+  withheld, and Addendum Sections 5-8 remain open.
+
 ## Section 7 — fresh exact-year acceptance, first red run
 
 The exact `038f07ed` full-commercial journey completed for both athletes and
