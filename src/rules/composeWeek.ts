@@ -77,6 +77,13 @@ import {
   sameExerciseVariationFamily,
   type ExerciseVariationFamily,
 } from './exerciseVariationFamily';
+import {
+  TRACKED_LIFTS,
+  displacedTrackedLiftDefaults,
+  selectedTrackedLiftForPattern,
+  type TrackedLiftChoices,
+  type TrackedLiftProgrammingPattern,
+} from './estimatedOneRepMax';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -198,6 +205,8 @@ export interface ComposerInputs {
    * feed the same history explicitly and the composer stays pure.
    */
   readonly selectionHistory: readonly BlockExerciseSelection[];
+  /** The athlete's four Progress choices are strength-programming inputs. */
+  readonly trackedLiftChoices?: TrackedLiftChoices;
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -1127,6 +1136,19 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     }) };
   }
   const excluded = new Set(inputs.injuries.excludedIdentities.map(composedIdentityFor));
+  const trackedAnchorByPattern = new Map<TrackedLiftProgrammingPattern, ComposedExerciseIdentity>(
+    (['push', 'pull', 'squat', 'hinge'] as const).map((pattern) => {
+      const selected = selectedTrackedLiftForPattern(inputs.trackedLiftChoices, pattern);
+      return [pattern, composedIdentityFor(TRACKED_LIFTS[selected].names[0])];
+    }),
+  );
+  // Choosing an alternative replaces its default throughout automatic
+  // programming. The default does not become a secondary/accessory route that
+  // quietly reappears later in the same week.
+  const displacedTrackedDefaults = new Set(
+    displacedTrackedLiftDefaults(inputs.trackedLiftChoices)
+      .map((id) => composedIdentityFor(TRACKED_LIFTS[id].names[0])),
+  );
   /**
    * THE DAY'S OWN EXCLUSION SET — week-wide answers PLUS whatever this one day
    * carries. Built per day, from the week Monday and the day's own weekday, so a
@@ -1569,7 +1591,17 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         && plannedPatterns.has(pattern)
         && !patternHasItsMainLift.has(pattern)
         && (desiredMainPlane === null || desiredMainPlane === slot);
-      const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
+      const ordinaryPool = (isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
+        .filter((identity) => !displacedTrackedDefaults.has(identity));
+      const trackedAnchor = isMainLift
+        && pattern && trackedAnchorByPattern.has(pattern as TrackedLiftProgrammingPattern)
+        ? trackedAnchorByPattern.get(pattern as TrackedLiftProgrammingPattern) ?? null
+        : null;
+      const pool = trackedAnchor && !ordinaryPool.includes(trackedAnchor)
+        ? [trackedAnchor, ...ordinaryPool]
+        : trackedAnchor
+          ? [trackedAnchor, ...ordinaryPool.filter((identity) => identity !== trackedAnchor)]
+          : ordinaryPool;
       /* ── LEGALITY, IN THE CONTRACT'S OWN ORDER ────────────────────────────
        * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
        * equipment and experience legality outrank pins."* Experience is applied
@@ -1778,19 +1810,36 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           ? distinctSplitAccessoryCandidates
           : seatCandidates)
         : baseLegal.filter((id) => basePreferred.includes(id) || basePreferred.length === 0);
-      const selection = decideExerciseForBlock({
-        phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
-        blockNumber: inputs.blockNumber,
-        slot,
-        group: null,
-        role,
-        legalCandidates: baseCandidates.length > 0 ? baseCandidates : baseLegal,
-        previousSelection: slotHistory[0] ?? null,
-        currentBlockSelection: recordedForThisBlock,
-        recentSelections: slotHistory,
-        progressedIdentities: inputs.progressedIdentities,
-        pinnedIdentities: inputs.pinnedIdentities,
-      });
+      const selectionCandidates = trackedAnchor && baseLegal.includes(trackedAnchor)
+        ? baseLegal
+        : baseCandidates.length > 0 ? baseCandidates : baseLegal;
+      // A tracked lift is an anchor, not a rotating pin. It wins whenever it is
+      // legal for this pattern; an injury, removal, or missing equipment removes
+      // it from `selectionCandidates` before this branch and the ordinary typed
+      // fallback owns the day. Ignoring the current-block record here is what
+      // lets a live athlete choice replace the already-authored default.
+      const selection = trackedAnchor && selectionCandidates.includes(trackedAnchor)
+        ? {
+            identity: trackedAnchor,
+            decisionKind: slotHistory[0]?.identity === trackedAnchor
+              ? 'retained' as const : 'first_selection' as const,
+            reason: 'athlete_preference' as const,
+            previousIdentity: slotHistory[0]?.identity ?? null,
+            consideredCandidates: selectionCandidates,
+          }
+        : decideExerciseForBlock({
+            phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+            blockNumber: inputs.blockNumber,
+            slot,
+            group: null,
+            role,
+            legalCandidates: selectionCandidates,
+            previousSelection: slotHistory[0] ?? null,
+            currentBlockSelection: recordedForThisBlock,
+            recentSelections: slotHistory,
+            progressedIdentities: inputs.progressedIdentities,
+            pinnedIdentities: inputs.pinnedIdentities,
+          });
       /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**
        * *"A temporary injury/constraint substitution must not become the
        * athlete's new permanent rotation history merely because boot occurred."*

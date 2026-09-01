@@ -66,6 +66,7 @@ import {
   type ReversibleAdjustmentCreationInput,
 } from '../store/acceptedStateTransaction';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { useProfileStore } from '../store/profileStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
 import { todayISOLocal } from './appDate';
@@ -404,6 +405,7 @@ export function generateProgramForProfileFromStore(args: {
     // the list moved. (Integrator, 2026-08-20, merging the Coach extraction onto
     // the settings/persistence owner.)
     progressionHistory: statedProgressionInputs(persistedState),
+    trackedLiftChoices: useProfileStore.getState().trackedLiftChoices,
   });
 }
 
@@ -433,6 +435,8 @@ export function generateProgramForProfile(args: {
     typeof resolveProfileTargetWeekAvailability>[0]['activeConstraints'];
   progressionHistory: NonNullable<
     Parameters<typeof generateProgramLocally>[1]>['progressionHistory'];
+  trackedLiftChoices: NonNullable<
+    Parameters<typeof generateProgramLocally>[1]>['trackedLiftChoices'];
 }): TrainingProgram {
   const targetWeekAvailability = resolveProfileTargetWeekAvailability({
     profile: args.profile,
@@ -465,6 +469,7 @@ export function generateProgramForProfile(args: {
     // caller that owns the grid states them; `...FromStore` above is the one
     // adapter that reads them off it.
     progressionHistory: args.progressionHistory,
+    trackedLiftChoices: args.trackedLiftChoices,
   });
 }
 

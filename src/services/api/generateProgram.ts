@@ -166,6 +166,8 @@ export interface GenerateProgramFromProfileOptions {
    * the domain selector ever reaching for one.
    */
   selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
+  /** The four athlete-selected programming anchors. Absent reads Profile once at the service boundary. */
+  trackedLiftChoices?: import('../../rules/estimatedOneRepMax').TrackedLiftChoices;
   conditioningSelectionHistory?: readonly import('../../rules/conditioningSelection').BlockConditioningSelection[];
   powerSelectionHistory?: readonly import('../../rules/powerExercisePool').BlockPowerSelection[];
   /** Optional observer for the actual canonical compiler's automatic choices. */
@@ -822,6 +824,8 @@ export function canonicalProgramInputFromProfile(
    * the world instead of depending on ambient state. */
   const selectionHistoryForBuild = options.selectionHistory
     ?? require('../../store/blockSelectionHistoryStore').blockSelectionHistory();
+  const trackedLiftChoicesForBuild = options.trackedLiftChoices
+    ?? require('../../store/profileStore').useProfileStore.getState().trackedLiftChoices;
   /**
    * THE ATHLETE'S PREFS AS THEY ACTUALLY ARE, CAPTURED BEFORE THEY ARE NARROWED.
    *
@@ -850,6 +854,7 @@ export function canonicalProgramInputFromProfile(
     ),
     progressedIdentities,
     selectionHistory: selectionHistoryForBuild,
+    trackedLiftChoices: trackedLiftChoicesForBuild,
     conditioningSelectionHistory: options.conditioningSelectionHistory
       ?? require('../../store/blockSelectionHistoryStore').blockConditioningSelectionHistory(),
     powerSelectionHistory: options.powerSelectionHistory

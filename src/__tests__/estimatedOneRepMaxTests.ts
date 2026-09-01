@@ -27,8 +27,8 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { displayReps } from '../rules/prescriptionDisplay';
 armTotalsOrRed();
 let passed = 0, failed = 0;
-function check(label: string, value: unknown) {
-  if (value) passed++; else { failed++; console.error(`FAIL ${label}`); }
+function check(label: string, value: unknown, detail?: unknown) {
+  if (value) passed++; else { failed++; console.error(`FAIL ${label}${detail === undefined ? '' : `\n     ${JSON.stringify(detail)}`}`); }
 }
 const basis: LastSetEstimateInput = { method: RIR_ESTIMATE_METHOD, liftId: 'bench_press',
   exerciseId: 'bench', workoutExerciseId: 'bench-row', setId: 'last', setNumber: 3,
@@ -115,7 +115,9 @@ async function main() {
     for (const [dayOffset, alternatives] of [[0, false], [2, true], [7, false]] as const) {
       const day = plusDays(date, dayOffset); setJourneyClock(day);
       for (const slot of Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]) {
-        useProfileStore.getState().setTrackedLiftChoice(slot, TRACKED_LIFT_PAIRS[slot][alternatives ? 1 : 0]);
+        quiet(() => useProfileStore.getState().setTrackedLiftChoice(
+          slot, TRACKED_LIFT_PAIRS[slot][alternatives ? 1 : 0],
+        ));
       }
       let target = quiet(() => resolveSessionOutcomeTarget(day))!;
       check(`${gender}/${day}: real session`, !!target);
@@ -199,9 +201,21 @@ async function main() {
     const sessions = Object.entries(useProgramStore.getState().sessionFeedback).map(([date, feedback]) => ({ date, strength: feedback.strength ?? [] }));
     const histories = buildProgressMainLiftHistories({ weekStart: date, sessions });
     check(`${gender}: defaults preserved after alternative logging`, histories.every(h => h.points.length === 1));
-    const programBefore = JSON.stringify(useProgramStore.getState().currentProgram);
-    for (const slot of Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]) useProfileStore.getState().setTrackedLiftChoice(slot, TRACKED_LIFT_PAIRS[slot][1]);
-    check(`${gender}: chart switches never write program`, JSON.stringify(useProgramStore.getState().currentProgram) === programBefore);
+    for (const slot of Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]) {
+      quiet(() => useProfileStore.getState().setTrackedLiftChoice(slot, TRACKED_LIFT_PAIRS[slot][1]));
+    }
+    check(`${gender}: live chart choices persist the compiler's alternative-anchor input`,
+      (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).every(slot =>
+        useProfileStore.getState().trackedLiftChoices[slot] === TRACKED_LIFT_PAIRS[slot][1]));
+    const liveAlternativeNames = new Set(useProgramStore.getState().currentProgram?.microcycles
+      .flatMap(week => week.workouts).flatMap(workout => workout.exercises)
+      .map(row => row.exercise?.name ?? '') ?? []);
+    check(`${gender}: the live Progress choice immediately displaces defaults in the rebuilt week`,
+      (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).every(slot =>
+        !liveAlternativeNames.has(TRACKED_LIFTS[slot].names[0]))
+      && (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).some(slot =>
+        liveAlternativeNames.has(TRACKED_LIFTS[TRACKED_LIFT_PAIRS[slot][1]].names[0])),
+      [...liveAlternativeNames]);
     const pull = histories.find(h => h.id === 'pull_up');
     check(`${gender}: today's BW does not change historical estimate`, JSON.stringify(pull) === JSON.stringify(buildProgressMainLiftHistories({ weekStart: date, sessions, bodyWeightKg: 125 }).find(h => h.id === 'pull_up')));
     const prior = JSON.stringify(useProgramStore.getState().sessionFeedback);
@@ -223,6 +237,15 @@ async function main() {
     check(`${gender}: open-ended 5+ actually persisted, never numeric five`, reopenedInputs.some(input => input.rir === '5+') && reopenedInputs.every(input => (input.rir as unknown) !== 5));
     check(`${gender}: explicit Skip and unanswered both persisted`, reopenedInputs.some(input => input.skipped && input.rir === null) && reopenedInputs.some(input => !input.skipped && input.rir === null));
     check(`${gender}: non-default selections survive accepted edits and restart`, JSON.stringify(useProfileStore.getState().trackedLiftChoices) === choicesBefore);
+    const reopenedAlternativeNames = new Set(useProgramStore.getState().currentProgram?.microcycles
+      .flatMap(week => week.workouts).flatMap(workout => workout.exercises)
+      .map(row => row.exercise?.name ?? '') ?? []);
+    check(`${gender}: restart keeps defaults displaced in the rebuilt week`,
+      (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).every(slot =>
+        !reopenedAlternativeNames.has(TRACKED_LIFTS[slot].names[0]))
+      && (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).some(slot =>
+        reopenedAlternativeNames.has(TRACKED_LIFTS[TRACKED_LIFT_PAIRS[slot][1]].names[0])),
+      [...reopenedAlternativeNames]);
     check(`${gender}: alternative histories reopen separately`, buildProgressMainLiftHistories({ weekStart: date, sessions,
       choices: useProfileStore.getState().trackedLiftChoices }).every(history => history.points.length === 1));
     const log = sessions.flatMap(s => s.strength).find(l => l.lastSetEstimate?.liftId === 'bench_press')!;

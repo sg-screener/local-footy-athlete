@@ -131,10 +131,89 @@ remains red only on the repo's measured 21 earlier `UNENFORCED` rows.
 
 ## Current step
 
-Section 3: reproduce default and alternative main-lift identity across
-generation, athlete choice, save and restart before changing selection.
+Section 3 implementation and verification complete; checkpoint pending commit.
+
+## Section 3 — selected tracked lifts are programming anchors
+
+Two designs were compared. Preserving the block selector as the identity owner
+and increasing the four defaults' rotation scores would leave Progress choices
+as a competing preference, permit a prior block record to defeat a live choice,
+and require four parallel exceptions to displace the defaults. Instead, the
+Progress choice is now the typed pattern anchor input. Legality filters run
+first; if the selected lift survives, it owns the main-strength seat. A selected
+alternative removes its default from every automatic pool, while injury,
+equipment, athlete removal, fixture proximity and recovery constraints keep
+their existing priority.
+
+The red-first focused tape began at 11 passing and 21 failing anchor cells. The
+final gate is 34/34: 32 cells across male and female athletes, all four defaults, all four
+alternatives, repeated four-week observations, full default displacement, a
+live alternative replacing an already-authored default block, exact restart
+reconstruction and an athlete-removal exception, plus two cells proving that
+overlapping live/restart traces collapse to one final decision and never report
+a delivered fallback as ineligible. The wider Estimated 1RM chain
+is also green: 177 prediction/history/live-rebuild cells, 48 Progress ownership
+cells, 37 workout-log wiring cells and 54 effort-scale cells. Generated-week
+assembly is 30/30, anchor survival 12/12, block-selection authority 5/5, and
+TypeScript compilation is green.
+
+One full-kit annual artifact was regenerated for each gender from the exact
+production driver. Each artifact contains 52 weeks, 364 dated athlete-days and
+52 successful restart comparisons. The final visible-row instrument reports
+the same four results for male and female athletes: Pull-Ups on 54 distinct
+dates across 52 distinct weeks; Bench Press on 53 dates/51 weeks; RDLs on 77
+dates/51 weeks; and Back Squat on 55 dates/51 weeks. Every lift appears in
+Off-season, Pre-season and In-season. These are final visible row/date/week
+counts, not compiler decisions.
+
+The separate annual decision-trace instrument deduplicates by compiler
+decision id. Per athlete it reports Pull-Up 60 distinct eligible dates and 60
+delivered, Bench 64/64, RDL 59/59 and Back Squat 58/58. It also records three
+Bench withhold traces typed `weekly_spacing`; those are later in-week compiler
+decisions, not three missing final rows, so they are deliberately reported
+separately rather than added to the visible-row counts. The integrated
+compiler-year cells require every selected lift either to have no eligible
+opportunity or to be delivered on every eligible date, and require at least two
+distinct delivered dates whenever it is eligible.
+
+The first complete eight-athlete compiler-year run reached all 416 required
+athlete-weeks and exposed one new evidence defect rather than a programming
+loss: the novice home athlete reported Pull-Up as 0 eligible dates but 50
+delivered dates. The cause was twofold. A selected experience fallback retained
+the trace's discarded preference reason, and the year harness accumulated
+already-projected evidence from overlapping live/rebuild/restart compiler calls.
+The evidence owner now treats a selected final row as an eligible opportunity,
+and the year harness projects once from raw traces so `decisionId` deduplication
+can keep the final answer. Two focused liveness cells hold both cases. The exact
+52-week novice-home rerun reaches 52/52 weeks and both annual tracked-lift cells
+are green; Pull-Up now reports 50 distinct eligible and 50 distinct delivered
+dates. The suite remains globally red on inherited non-anchor failures, so this
+is not reported as a whole-app pass.
+
+The final complete rerun again reached 416/416 athlete-weeks across eight
+distinct archetypes. All 16 annual tracked-lift checks are green: two checks per
+athlete, one for eligible/delivered equality and one for repeated observations.
+The year gate remains red with 66 distinct inherited failure keys in other
+domains; the earlier run had 67 because the now-fixed novice-home tracked
+evidence contradiction was one of them.
+
+Liveness was proved by the red-first baseline itself: without the anchor branch,
+21 of the 32 anchor cells fail, including every alternative-displacement and
+live/restart claim. R-304 is born guarded by the chained
+`test:estimated-1rm + test:compiler-year` gates.
+
+The older `test:composer-b1` suite remains 50/54. All four reds reproduce
+unchanged from the Section-2 checkpoint: one bodyweight arm-slot gap is typed
+`already_on_day` rather than `kit`; the anti-overfit source scan matches its own
+historical `Pre-season` fixture prose; the canonical restore scan expects the
+opposite token ordering from the existing guard; and a retired `phaseClock`
+rotation assertion expects an input the block selector deliberately stopped
+reading. Their denominator is 54 cells and none is attributed to R-304.
 
 ## NOT COVERED
 
-- Sections 3–7 and both addenda are not yet claimed.
+- Sections 4–7 and both addenda are not yet claimed.
+- Restricted-kit/injury/illness/fatigue annual scenario artifacts have not yet
+  been regenerated; their typed legality paths are covered by focused gates and
+  remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.

@@ -98,6 +98,7 @@ export function coachWeeklyCommitmentInputs(state: {
   sessionFeedback: ProgramState['sessionFeedback'];
   acceptedBlocks: ProgramState['acceptedBlocks'];
   onboardingData: ReturnType<typeof useProfileStore.getState>['onboardingData'];
+  trackedLiftChoices?: ReturnType<typeof useProfileStore.getState>['trackedLiftChoices'];
   ledgerEntries: ReturnType<typeof useDecisionLedgerStore.getState>['entries'];
   todayISO: string;
   /**
@@ -229,6 +230,7 @@ export function coachWeeklyCommitmentInputs(state: {
             blockState: state.blockState ?? null,
             acceptedBlocks: state.acceptedBlocks,
           },
+          trackedLiftChoices: state.trackedLiftChoices ?? {},
         });
       } catch {
         // ⚠ SWALLOWED, AND ONLY HERE. A refusal means there is no week to show,
@@ -270,6 +272,7 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const acceptedMaterialContext = useProgramStore((s) => s.acceptedMaterialContext);
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  const trackedLiftChoices = useProfileStore((s) => s.trackedLiftChoices);
   const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
   const todayISO = todayISOLocal();
 
@@ -281,6 +284,7 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
       sessionFeedback,
       acceptedBlocks,
       onboardingData,
+      trackedLiftChoices,
       ledgerEntries,
       todayISO,
       weightOverrides,
@@ -288,7 +292,7 @@ export function useCoachWeeklyCommitment(): CoachWeeklyCommitment {
       markedDays: acceptedMaterialContext.markedDays,
       activeConstraints: acceptedMaterialContext.activeConstraints,
     })),
-    [currentProgram, blockState, sessionFeedback, acceptedBlocks, onboardingData,
+    [currentProgram, blockState, sessionFeedback, acceptedBlocks, onboardingData, trackedLiftChoices,
       ledgerEntries, todayISO, weightOverrides, acceptedMaterialContext],
   );
 

@@ -273,6 +273,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-selected-tracked-lift-is-program-anchor',
+    law: 'R-304: the athlete-selected tracked lift is the automatic main-strength anchor whenever its push, pull, squat or hinge pattern is programmed and the lift is legal. Bench Press, Pull-Up, Back Squat and RDL are the defaults; Overhead Press, Lat Pulldown, Bulgarian Split Squat and Trap Bar Deadlift are their exact alternatives. An alternative fully displaces its default from automatic programming. Injury, equipment, athlete removal, fixture and recovery legality outrank the anchor. Live rebuild, later generation and restart consume the same persisted choice, and annual evidence reports distinct eligible and delivered dates plus typed withholding reasons.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-304',
+    guard: {
+      state: 'guarded',
+      by: 'test:estimated-1rm + test:compiler-year',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. Red-first, the focused four-week compiler tape had 11 passing and 21 failing anchor cells: alternatives did not own their patterns, defaults still appeared after alternative selection, and a prior block record beat the live choice. One typed anchor owner now enters the composer through every canonical generation and reconstruction route; the selector applies legality first, then makes the legal anchor win, while a chosen alternative removes its default from all automatic pools. The final tape is 34/34: 32 anchor cells across both genders, all eight lift identities, pre-authored-block replacement, restart equality and an athlete-removal exception, plus two final-decision evidence/dedup cells. The exact full-kit 52-week artifact contains 52 weeks, 364 athlete-dates and 52 successful restart comparisons per gender. Its final visible-row instrument counts Pull-Ups on 54 distinct dates/52 weeks, Bench Press on 53/51, RDLs on 77/51 and Back Squat on 55/51 for each gender, across all three phases. The separate decision-trace instrument reports distinct eligible/delivered opportunities of 60/60, 64/64, 59/59 and 58/58 respectively, with three separately typed weekly-spacing withhold traces for Bench; traces are compiler decisions and are not misreported as final visible rows. Full receipts and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

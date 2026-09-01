@@ -27,6 +27,8 @@ import { sourceFactLifecycle, compilerOwnsVisibleInjuryRows } from './sourceFact
 import { clearFactLifecycle } from './clearFacts';
 import { observeProgramDose, distinctDoseReceipts, type DoseReceipt } from './dose';
 import { buildGuidedInjuryConstraint } from '../../utils/guidedInjuryControl';
+import { trackedLiftProgrammingEvidence } from '../../rules/trackedLiftProgrammingEvidence';
+import type { AutomaticProgrammingSelectionTrace } from '../../rules/programmingSelectionTrace';
 
 const compilerModule = require('../../rules/canonicalWeeklyCompiler') as typeof import('../../rules/canonicalWeeklyCompiler');
 const progressionModule = require('../../rules/canonicalWeeklyProgressionCompiler') as typeof import('../../rules/canonicalWeeklyProgressionCompiler');
@@ -57,6 +59,11 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
   const originalProgression = progressionModule.compileCanonicalProgramProgression;
   const originalProgram = programCompilerModule.compileCanonicalProgram;
   const repeatedPhases = new Set<string>();
+  // Keep the raw decisions and project ONCE at year end. Compiler calls overlap
+  // during live rebuild, preview and restart; accumulating their already-
+  // projected arrays counted the same withholding hundreds of times. The
+  // evidence owner deduplicates by decisionId and keeps the final answer.
+  const trackedTraces: AutomaticProgrammingSelectionTrace[] = [];
   programCompilerModule.compileCanonicalProgram = (input) => {
     const numeric = observeProgramDose(input, candidate => {
       const observed = observeFinalRows(candidate, originalProgram);
@@ -64,6 +71,17 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
       return observed.output;
     });
     const observed = numeric;
+    trackedTraces.push(...observed.output.selectionTraces);
+    for (const evidence of trackedLiftProgrammingEvidence(
+      observed.output.selectionTraces,
+      input.weeks.trackedLiftChoices ?? {},
+    )) {
+      observations.push({
+        id: 'tracked_lift_anchor_eligible',
+        ok: evidence.eligibleDates.every((date) => evidence.deliveredDates.includes(date)),
+        detail: JSON.stringify(evidence),
+      });
+    }
     doseReceipts.push(...numeric.receipts);
     observations.push(...observed.checks);
     observations.push({ id: 'final_compilation_reached', ok: true });
@@ -313,6 +331,28 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
       const census = quiet(() => takeCensus(plusDays(YEAR_START, Math.max(0, result.weeks.filter((w) => w.status === 'measured').length * 7 - 1))));
       result.checks.push({ id: 'real_history', ok: census.progressionHistoryEntries > 0, detail: JSON.stringify(census) });
     }
+    const trackedReceipt = trackedLiftProgrammingEvidence(
+      trackedTraces,
+      useProfileStore.getState().trackedLiftChoices,
+    ).map((evidence) => ({
+      liftId: evidence.liftId,
+      eligibleDistinctDates: evidence.eligibleDates.length,
+      deliveredDistinctDates: evidence.deliveredDates.length,
+      withheld: evidence.withheld,
+    }));
+    result.checks.push({
+      id: 'annual_tracked_lift_eligible_delivery',
+      ok: trackedReceipt.every((item) => item.eligibleDistinctDates === item.deliveredDistinctDates),
+      detail: JSON.stringify(trackedReceipt),
+    });
+    result.checks.push({
+      id: 'annual_tracked_lift_repeated_observations',
+      // Zero means the athlete was never eligible (for example, no bar or
+      // pull-up station); one isolated eligible date is not a useful series.
+      ok: trackedReceipt.every((item) => item.eligibleDistinctDates === 0
+        || item.eligibleDistinctDates >= 2),
+      detail: JSON.stringify(trackedReceipt),
+    });
     if (observations.some((c) => !c.ok)) result.checks.push({ id: 'compiler_refusal', ok: false,
       detail: observations.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail ?? ''}`).join(' | ') });
   } finally {

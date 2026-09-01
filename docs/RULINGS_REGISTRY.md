@@ -7638,3 +7638,26 @@ and representative club-night coordinates. The annual evidence validator is
 date-based, so it catches both a fifth day and a consecutive triple spanning a
 week boundary. Verification status and NOT COVERED:
 `docs/STATUS_YEARREPAIR.md`.
+
+**R-304** · The selected tracked lift is the programmed pattern anchor, 2026-09-01.
+
+Owner: yearrepair. Bench Press, Pull-Up, Back Squat and RDL are the four default
+tracked lifts and automatic main-strength anchors for push, pull, squat and
+hinge. The athlete's corresponding alternatives are Overhead Press, Lat
+Pulldown, Bulgarian Split Squat and Trap Bar Deadlift. Selecting an alternative
+fully removes its default from automatic programming; the default does not
+return later in the week as an accessory.
+
+The anchor applies whenever its pattern is programmed and the exercise is
+legal. Injury, unavailable equipment, athlete removal, G-1, fixture and genuine
+recovery constraints still win. The saved Profile choice is an explicit input
+to live re-derivation, future generation, Coach preview and cold restart, so
+those routes cannot silently author different lift identities.
+
+Annual evidence reports distinct eligible dates, distinct delivered dates and
+typed reasons for every withheld opportunity. Repeated observations—not an
+arbitrary injury-blind annual quota—are the graph-usefulness contract.
+
+Guard: `LAW-selected-tracked-lift-is-program-anchor` through chained
+`test:estimated-1rm + test:compiler-year`. Verification status and NOT COVERED:
+`docs/STATUS_YEARREPAIR.md`.

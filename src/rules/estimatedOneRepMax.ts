@@ -9,6 +9,7 @@ export type TrackedLiftId = 'pull_up' | 'bench_press' | 'rdl' | 'back_squat'
   | 'lat_pulldown' | 'overhead_press' | 'trap_bar_deadlift' | 'bulgarian_split_squat';
 export type TrackedLiftSlot = 'pull_up' | 'bench_press' | 'rdl' | 'back_squat';
 export type TrackedLiftChoices = Partial<Record<TrackedLiftSlot, TrackedLiftId>>;
+export type TrackedLiftProgrammingPattern = 'push' | 'pull' | 'squat' | 'hinge';
 export const TRACKED_LIFT_PAIRS: Readonly<Record<TrackedLiftSlot, readonly TrackedLiftId[]>> = {
   pull_up: ['pull_up', 'lat_pulldown'],
   bench_press: ['bench_press', 'overhead_press'],
@@ -36,6 +37,37 @@ export function selectedTrackedLifts(choices: TrackedLiftChoices = {}): TrackedL
   return (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).map((slot) => {
     const chosen = choices?.[slot];
     return chosen && TRACKED_LIFT_PAIRS[slot].includes(chosen) ? chosen : slot;
+  });
+}
+
+const TRACKED_LIFT_SLOT_FOR_PATTERN: Readonly<Record<
+  TrackedLiftProgrammingPattern, TrackedLiftSlot
+>> = {
+  push: 'bench_press', pull: 'pull_up', squat: 'back_squat', hinge: 'rdl',
+};
+
+/**
+ * One validated owner of the lift that anchors each programming pattern. The
+ * Progress selector stores a partial answer; absent or invalid values retain
+ * the four published defaults instead of creating an unprogrammable state.
+ */
+export function selectedTrackedLiftForPattern(
+  choices: TrackedLiftChoices | null | undefined,
+  pattern: TrackedLiftProgrammingPattern,
+): TrackedLiftId {
+  const slot = TRACKED_LIFT_SLOT_FOR_PATTERN[pattern];
+  const selected = choices?.[slot];
+  return selected && TRACKED_LIFT_PAIRS[slot].includes(selected) ? selected : slot;
+}
+
+/** When an athlete chooses the alternative, its default leaves automatic work. */
+export function displacedTrackedLiftDefaults(
+  choices: TrackedLiftChoices | null | undefined,
+): TrackedLiftId[] {
+  return (Object.keys(TRACKED_LIFT_PAIRS) as TrackedLiftSlot[]).flatMap((slot) => {
+    const selected = choices?.[slot];
+    return selected && selected !== slot && TRACKED_LIFT_PAIRS[slot].includes(selected)
+      ? [slot] : [];
   });
 }
 

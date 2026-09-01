@@ -39,8 +39,8 @@ export interface OnboardingCompletionOutcome {
 }
 
 interface ProfileState {
-  /** Display choice only; never part of onboarding/programming inputs.
-   * Writer: Progress; readers: Progress + feedback; guard: estimatedOneRepMaxTests. */
+  /** Progress identity and canonical strength-programming anchor.
+   * Writer: Progress; readers: compiler + Progress + feedback; guard: test:estimated-1rm. */
   trackedLiftChoices: TrackedLiftChoices;
   setTrackedLiftChoice: (slot: TrackedLiftSlot, lift: TrackedLiftId) => void;
   onboardingData: OnboardingData;
@@ -313,7 +313,20 @@ export const useProfileStore = create<ProfileState>()(
       trackedLiftChoices: {},
       setTrackedLiftChoice: (slot, lift) => {
         if (!TRACKED_LIFT_PAIRS[slot]?.includes(lift)) return;
-        set({ trackedLiftChoices: { ...get().trackedLiftChoices, [slot]: lift } });
+        const previous = get().trackedLiftChoices;
+        if ((previous[slot] ?? slot) === lift) return;
+        set({ trackedLiftChoices: { ...previous, [slot]: lift } });
+        if (!get().isOnboardingComplete) return;
+        try {
+          // The choice changes the visible program now. Boot and later-week
+          // generation use this same persisted input, so there is no UI-only
+          // selection that the compiler learns about later.
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          require('./quiescentBoot').rebuildDerivedWorldNow();
+        } catch (error) {
+          set({ trackedLiftChoices: previous });
+          throw error;
+        }
       },
       onboardingData: initialOnboardingData,
       isOnboardingComplete: false,

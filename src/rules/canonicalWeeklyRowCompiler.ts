@@ -218,6 +218,7 @@ export interface CanonicalProgramWeeksInput {
    * selector performs no hidden store read and boot/rollover feed it explicitly.
    */
   selectionHistory?: readonly import('../rules/blockExerciseSelection').BlockExerciseSelection[];
+  trackedLiftChoices?: import('./estimatedOneRepMax').TrackedLiftChoices;
   conditioningSelectionHistory?: readonly import('./conditioningSelection').BlockConditioningSelection[];
   powerSelectionHistory?: readonly import('./powerExercisePool').BlockPowerSelection[];
   availableEquipmentTags: readonly EquipmentTag[];
@@ -564,6 +565,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       // choices that restart will read. Otherwise a changed weekly layout can
       // re-pick core/accessory seats before their first week's record is saved.
       selectionHistory: [...(args.selectionHistory ?? []), ...selections],
+      trackedLiftChoices: args.trackedLiftChoices ?? {},
     });
     selectionTraces.push(...composedWeek.selectionTraces);
     /* What this block chose, carried out so the caller can RECORD it. The
