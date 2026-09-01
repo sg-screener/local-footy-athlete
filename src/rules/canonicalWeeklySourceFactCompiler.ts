@@ -22,6 +22,7 @@ import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { composedRowIsLegal } from './composedRowLegality';
 import { fatiguePoliciesForWeek, resolveFatigueDayPolicy } from './fatigueSequencePolicy';
 import { compileCanonicalLighterDayWorkout } from './canonicalWeeklyLighterDayCompiler';
+import { preserveAcceptedFixtureRelativeOffer } from './fixtureRelativePlannerOffer';
 
 export function sourceFactRequiresCompilation(fact: TemporarySourceFact): boolean {
   if (!isInjurySourceFact(fact) && fact.factKind === 'fatigue') return true;
@@ -114,6 +115,18 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         });
         overlay = compileWeekOverlay({ program: compiled.program, weekStart,
           anchorDate: null, reason: 'readiness_reduction', authoredAtISO: fact.updatedAt });
+        // Fixture actions and dated source facts are independent accepted
+        // decisions. The source-fact compiler starts from the recorded block,
+        // so its healthy plan may still contain the block's old G-1 offer even
+        // though `effective` already reflects a later fixture Move/Remove.
+        // Rebase this fixture-relative class before any fact-specific merge.
+        overlay = { ...overlay, workoutsByDate: Object.fromEntries(
+          Object.entries(overlay.workoutsByDate).map(([date, planned]) => {
+            const accepted = effective.visibleWorkouts.find(workout =>
+              isoDateForWeekday(weekStart, workout.dayOfWeek) === date);
+            return [date, preserveAcceptedFixtureRelativeOffer(accepted, planned) ?? null];
+          }),
+        ) };
         if ('factKind' in fact && READINESS_FACT_KINDS.has(fact.factKind)) {
           // R-034 holds load on a readiness/illness reduction. Recompiling the
           // reduced dose skips progression, so its starting estimates are NOT

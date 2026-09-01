@@ -45,6 +45,9 @@ import {
 } from './athleteActionDiagnostics';
 import { powerRows } from '../rules/sessionRowCounting';
 import { storedGameAnchor } from '../rules/gameAnchor';
+import { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
+
+export { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
@@ -387,19 +390,6 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
  * training order, so it takes the core slot and Saturday falls through to the
  * offer — the same week inverted. The two rulings only hold together.
  */
-/**
- * The scheduler owns these fixture-relative offers. A fixture edit must
- * re-derive them from the target week, while a manually added Gunshow or Primer
- * remains an athlete decision and therefore has no `sched:` allocation id.
- */
-export function isAutomaticFixtureRelativePlannerOffer(
-  workout: Pick<Workout, 'composedOptionalKind' | 'planEntryId'>,
-): boolean {
-  return (workout.composedOptionalKind === 'gunshow'
-      || workout.composedOptionalKind === 'primer')
-    && workout.planEntryId?.startsWith('sched:') === true;
-}
-
 function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
   return workouts.flatMap((workout) => {
     if (isAutomaticFixtureRelativePlannerOffer(workout)) return [];
@@ -968,6 +958,7 @@ function optionalDisplacementVariants(
   const available = new Set(args.availability.effectiveAvailableDayNumbers);
   const removable = source.filter((workout) =>
     available.has(workout.dayOfWeek) && isOptional(workout) &&
+    !isAutomaticFixtureRelativePlannerOffer(workout) &&
     !isTeamTraining(workout) && workout.workoutType !== 'Game');
   return [
     source,

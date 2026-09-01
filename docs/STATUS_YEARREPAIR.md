@@ -455,8 +455,8 @@ source-of-truth boundary already strips an old fixture-relative flush and
 reconsiders only the target compiler's offer. Generated Gunshow/Primer now join
 that typed class through their `sched:` allocation identity. Athlete-added
 options do not have that identity and remain accepted decisions. The target
-compiler therefore supplies no option for a bye and relocates a Sunday game's
-offer to Saturday G-1.
+compiler therefore supplies no option for a bye, removes the stale Friday from
+a Sunday-game move, and alone decides whether the target G-1 has a legal offer.
 
 The repaired canonical fixture boundary proves generated-versus-athlete-owned
 classification, male and female removal, exact cold reconstruction and one
@@ -471,10 +471,37 @@ R-309's guard now includes chained `test:canonical-weekly-compiler`. Fresh
 exact-revision year generation and replacement every-page PDF review follow
 this repair checkpoint; no artifact from `7153ec70` will be delivered.
 
+The first exact post-checkpoint year at `bf6731ad` then reduced the bad optional
+dates from seven per sex to one per sex, but the audit stayed red at 22/24. Week
+39 began as a correct bye on Monday; accepting a 4/10 knee injury on Tuesday
+resurrected the old Friday Gunshow/Primer. This proved the fixture transaction
+was repaired and exposed a second compiler path: dated source facts compile
+from the recorded healthy block, then merge safe content onto the accepted
+week. On a date absent from the accepted bye, that merge took the old block's
+automatic option.
+
+Two more designs were compared. An injury-only exception would fix the observed
+event while leaving illness, fatigue and equipment source facts able to repeat
+it. The shared rebase now treats scheduler-authored Gunshow/Primer as one typed
+fixture-relative class before any fact-specific merge. The accepted fixture
+week owns whether that class exists; athlete-added options remain decisions.
+The fixture repair's optional-displacement search also cannot discard a newly
+compiled target offer merely because the source week did not have it, so moving
+a fixture away and back restores the original G-1 week exactly.
+
+The canonical boundary is now 10,571 passing and 36 inherited failing cells.
+The new cells prove generated-versus-athlete ownership, source-fact rebase,
+move-back exactness, male/female fixture Remove, later knee injury, restart and
+Undo. The 36 named reds are unchanged historical conditioning/restart and
+template-selection findings outside this repair. `test:temporary-source-facts`
+is 90/90; `test:weekly-scheduler` remains 128/128 plus green continuations.
+Product and dev-tool TypeScript remain zero-error; the test scope retains the
+same 11 unrelated errors and no baseline allowance was added.
+
 ### NOT COVERED
 
-- Fresh exact-commit annual acceptance and replacement PDF rendering are not
-  yet run.
+- Fresh exact-commit annual acceptance after the source-fact rebase and
+  replacement PDF rendering are not yet run.
 - Physical iPhone acceptance, native onboarding taps and a clean Release
   installation remain unrun as instructed.
 - Clinical validation and competition/team metadata beyond accepted fixture

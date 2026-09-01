@@ -1864,11 +1864,18 @@ async function main(): Promise<void> {
     'reason' in restoredFixture ? restoredFixture.reason : restoredFixture.outcome);
   ok('moving the fixture back restores the visible week exactly',
     fixtureSignature(quiet(() =>
-      resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature);
+      resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY))) === fixtureBaselineSignature,
+    JSON.stringify({
+      before: JSON.parse(fixtureBaselineSignature),
+      after: JSON.parse(fixtureSignature(quiet(() =>
+        resolvedDays(fixtureInstall.blockOneStart, INSTALL_DAY)))),
+    }));
 
   console.log('\n[fixture durability] Add, Move and Remove compile across restart and Undo');
   const { isAutomaticFixtureRelativePlannerOffer } =
     require('../utils/fixtureMinimalReplan') as typeof import('../utils/fixtureMinimalReplan');
+  const { preserveAcceptedFixtureRelativeOffer } =
+    require('../rules/fixtureRelativePlannerOffer') as typeof import('../rules/fixtureRelativePlannerOffer');
   ok('fixture-relative generated Gunshow and Primer are planner offers',
     isAutomaticFixtureRelativePlannerOffer({
       composedOptionalKind: 'gunshow', planEntryId: 'sched:2026-07-13:5:gunshow',
@@ -1880,12 +1887,24 @@ async function main(): Promise<void> {
       && !isAutomaticFixtureRelativePlannerOffer({
         composedOptionalKind: 'primer', planEntryId: 'athlete:accepted-add',
       }));
+  const staleGeneratedGunshow = {
+    id: 'stale-gunshow', composedOptionalKind: 'gunshow' as const,
+    planEntryId: 'sched:2026-07-13:5:gunshow',
+  } as Workout;
+  const athleteAddedGunshow = {
+    id: 'athlete-gunshow', composedOptionalKind: 'gunshow' as const,
+  } as Workout;
+  ok('a later source fact cannot resurrect an automatic offer removed by the accepted fixture week',
+    preserveAcceptedFixtureRelativeOffer(null, staleGeneratedGunshow) == null);
+  ok('the same source-fact rebase preserves an athlete-added option',
+    preserveAcceptedFixtureRelativeOffer(null, athleteAddedGunshow) === athleteAddedGunshow);
   const runFixtureRestartWitness = async (
     action: 'add' | 'move' | 'remove',
     gender: 'male' | 'female' = 'male',
+    injuryAfterRemove = false,
   ): Promise<{
     landed: boolean; changed: boolean; restarted: boolean; exact: boolean;
-    undoOnlyLast: boolean; reachedAutomaticOption: boolean;
+    undoOnlyLast: boolean; sourceFactLanded: boolean; reachedAutomaticOption: boolean;
     noStaleAutomaticOption: boolean; detail: string;
   }> => {
     localStorageData.clear();
@@ -1927,7 +1946,7 @@ async function main(): Promise<void> {
       if (prerequisite.outcome !== 'accepted') {
         return {
           landed: false, changed: false, restarted: false, exact: false,
-          undoOnlyLast: false, reachedAutomaticOption: false,
+          undoOnlyLast: false, sourceFactLanded: false, reachedAutomaticOption: false,
           noStaleAutomaticOption: false,
           detail: JSON.stringify(prerequisite),
         };
@@ -1947,6 +1966,23 @@ async function main(): Promise<void> {
         action: 'remove', sourceDate: saturdayDate,
         commandId: 'compiler-fixture:remove',
       });
+    }
+    let sourceFactLanded = !injuryAfterRemove;
+    if (injuryAfterRemove) {
+      const injuryDate = '2026-07-14';
+      setJourneyClock(injuryDate);
+      const constraint = buildGuidedInjuryConstraint({
+        region: 'lower_body', area: 'knee', severity: 4,
+        severityBand: 'slight', adjustmentLevel: 'slight',
+        triggers: ['running'], seriousSymptoms: false,
+      }, { todayISO: injuryDate });
+      const injury = await quietAsync(() => executeProgramControlActionDurably({
+        type: 'set_injury_modifier',
+        source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+        scope: 'current_and_future', payload: { constraint },
+        requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+      }, { todayISO: injuryDate }));
+      sourceFactLanded = injury.ok === true;
     }
     const reachedAutomaticOption = action !== 'remove'
       || beforeLast.some((day) => day.sessionName === expectedOption);
@@ -1970,6 +2006,7 @@ async function main(): Promise<void> {
       changed: afterSignature !== fixtureSignature(beforeLast),
       restarted: restarted.ok,
       exact: fixtureSignature(afterRestart) === afterSignature,
+      sourceFactLanded,
       reachedAutomaticOption,
       noStaleAutomaticOption,
       undoOnlyLast: activeAdjustments > 0 && undo.outcome === 'undone' &&
@@ -1977,6 +2014,8 @@ async function main(): Promise<void> {
       detail: JSON.stringify({
         action,
         gender,
+        injuryAfterRemove,
+        sourceFactLanded,
         reachedAutomaticOption,
         resultOutcome: result.outcome,
         acceptedEffect: decisionLedgerEntries().find((entry) =>
@@ -2009,6 +2048,14 @@ async function main(): Promise<void> {
       && femaleRemoveWitness.undoOnlyLast && femaleRemoveWitness.reachedAutomaticOption
       && femaleRemoveWitness.noStaleAutomaticOption,
     femaleRemoveWitness.detail);
+  for (const gender of ['male', 'female'] as const) {
+    const overlap = await runFixtureRestartWitness('remove', gender, true);
+    ok(`fixture remove plus a later knee-injury recompile keeps the ${gender} bye option-free`,
+      overlap.landed && overlap.changed && overlap.sourceFactLanded
+        && overlap.restarted && overlap.exact && overlap.reachedAutomaticOption
+        && overlap.noStaleAutomaticOption,
+      overlap.detail);
+  }
 
   console.log('\n[fixture composition] accumulated Add, Move and Remove keep ledger order');
   localStorageData.clear();
