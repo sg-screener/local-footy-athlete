@@ -7819,3 +7819,28 @@ Guard: `LAW-real-running-speed-development` through chained
 `test:offseason-deload-conditioning + test:weekly-scheduler`. The former invokes
 the 12/12 `test:real-running-speed` final-week gate. Verification status,
 mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-312** · Automatic Nordic prescriptions are typed and realistic, 2026-09-01.
+
+Owner: yearrepair. Hamstring Nordic Curl regression status is typed exercise
+data, not wording inferred from the exercise name or coaching notes. A full
+unassisted eccentric Nordic uses 2–3 sets of 4–6 repetitions. An assisted or
+substantially regressed Nordic uses 2–3 sets of 6–8. The automatic owner chooses
+the low end of those set bands and no automatic route may turn a full
+unassisted lower into 2×15 or 3×10 hypertrophy work.
+
+Automatic full Nordics are excluded from G-2 through game day, and the low
+automatic band prevents a large Nordic dose beside demanding running elsewhere
+in the delivered week. `Reverse Nordic Curl` remains a separate quad-dominant
+exercise and is never classified as a hamstring Nordic because its name happens
+to contain the same word.
+
+The automatic dose owner does not rewrite an athlete-entered prescription.
+Manual Add remains available through the existing legality and safety boundary;
+its exact accepted sets and reps survive durable save and restart, while Undo
+reverses the athlete's decision rather than leaving a re-dosed automatic row.
+
+Guard: `LAW-automatic-nordic-prescriptions-are-typed-and-realistic` through
+chained `test:offseason-deload-conditioning`, which invokes the 12/12
+`test:nordic-prescriptions` final-week/action boundary. Verification status,
+mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

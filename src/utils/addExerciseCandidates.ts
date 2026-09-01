@@ -53,6 +53,7 @@ import {
 } from '../data/selectableExerciseVocabulary';
 import { assessTapSwapCandidateSafety, type TapSwapEnvironment } from './tapSwapHierarchy';
 import { resolveExerciseName, startingWeightForAthlete } from './loadEstimation';
+import { automaticNordicPrescriptionForIdentity } from '../rules/nordicPrescription';
 import { CONDITIONING_META, getExerciseTags, type ConditioningTier } from '../data/exerciseTags';
 import { SECTION_LABELS, type SessionExecutionSectionId } from './sessionExecutionChecklist';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
@@ -369,6 +370,8 @@ function loadFor(name: string, profile: OnboardingData | null | undefined): numb
  * answer. So the band comes off the movement's own tags.
  */
 function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax' | 'prescriptionType' | 'perSide' | 'restSeconds' | 'notes'> {
+  const nordic = automaticNordicPrescriptionForIdentity(name);
+  if (nordic) return { ...nordic };
   const tags = getExerciseTags(resolveExerciseName(name));
   if (tags?.prescription) return { ...tags.prescription };
   if (!tags) return { sets: 2, repsMin: 8, repsMax: 12 };

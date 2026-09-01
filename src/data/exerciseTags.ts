@@ -76,6 +76,17 @@ export interface AuthoredExercisePrescription {
   notes: string;
 }
 
+/**
+ * A hamstring Nordic's regression status changes the realistic automatic rep
+ * band. Keep that distinction on the exercise identity itself: neither the
+ * composer nor a final-week audit should have to infer assistance from notes.
+ * `Reverse Nordic Curl` is a different, quad-dominant movement and therefore
+ * deliberately carries no value from this type.
+ */
+export type NordicCurlVariant =
+  | 'full_unassisted_eccentric'
+  | 'assisted_or_substantially_regressed';
+
 export interface ExerciseProgramming {
   strengthRole?: 'none' | 'accessory' | 'secondary';
   automaticMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
@@ -99,6 +110,7 @@ export interface ExerciseTag {
   eccentric: EccentricLevel;
   lateWeek: LateWeekRating;
   power?: boolean;
+  nordicCurlVariant?: NordicCurlVariant;
   prescription?: AuthoredExercisePrescription;
   programming?: ExerciseProgramming;
   injury: InjuryProfile;
@@ -1011,6 +1023,12 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'high',
     doms: 'high', stability: 'low', unilateral: false,
     eccentric: 'high', lateWeek: 'avoid',
+    nordicCurlVariant: 'full_unassisted_eccentric',
+    programming: {
+      automaticMinimum: 'developing', manualMinimum: 'new',
+      automaticExcludeWithinDaysOfGame: 2,
+      warmup: false, primer: false,
+    },
     injury: {
       'groin': 'caution',
       'hip': 'caution',

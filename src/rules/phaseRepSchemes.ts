@@ -171,7 +171,6 @@ export interface AccessoryGuideline {
 export const ACCESSORY_REP_GUIDELINES: Record<string, AccessoryGuideline> = {
   general: { setsMin: 2, setsMax: 3, min: 8, max: 15, unit: 'reps', note: 'Standard accessory range; ~6-7/10, pump not soreness.' },
   pump: { setsMin: 2, setsMax: 3, min: 10, max: 20, unit: 'reps', note: 'Low-soreness arms/delts pump; stop with 3 reps in reserve.' },
-  nordics: { setsMin: 2, setsMax: 3, min: 3, max: 5, unit: 'reps', note: 'Keep Nordics low rep — high soreness cost.' },
   timedHold: { setsMin: 2, setsMax: 3, min: 30, max: 60, unit: 'seconds', note: 'Planks/isometrics; groin/knee holds 20-45s.' },
   carries: { setsMin: 2, setsMax: 4, min: 20, max: 60, unit: 'metres', note: 'Or 30-60 seconds per carry.' },
 };

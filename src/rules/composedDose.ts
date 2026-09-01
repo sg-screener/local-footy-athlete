@@ -38,6 +38,7 @@ import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { getExerciseTags } from '../data/exerciseTags';
 import { SHOULDER_HEALTH_POOL } from '../data/exercisePools';
 import type { SessionSlot } from './sessionSlotCoverage';
+import { automaticNordicPrescriptionForIdentity } from './nordicPrescription';
 
 export interface ComposedDose {
   readonly restSeconds?: number;
@@ -178,6 +179,10 @@ export interface ComposedDoseInput {
  * and the same movement supporting one takes U-1's loaded band.
  */
 export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
+  const nordic = automaticNordicPrescriptionForIdentity(input.identity);
+  if (nordic && !input.isMainLift) {
+    return { ...nordic, category: 'authored_exercise' };
+  }
   const authored = getExerciseTags(input.identity)?.prescription;
   if (authored && !input.isMainLift) return { ...authored, category: 'authored_exercise' };
   if (input.selectionSlot === 'shoulder_prehab' && !input.isMainLift) {

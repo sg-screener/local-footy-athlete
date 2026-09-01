@@ -369,6 +369,67 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 5 — realistic Nordic Curl prescriptions
+
+The exact two-athlete annual artifact reproduced the review defect in final
+sessions. Its unit is final row placements: male carries 32 `Nordic Lower`
+placements and female 34, all at 2×10. Two additional female team-night
+placements are 2×15. `Reverse Nordic Curl` appears separately at its already-
+authored 2×5 quad prescription and is not evidence about hamstring Nordic dose.
+
+Two designs were compared. Extending the old `/nordic/i` branch and patching
+each 2×10/2×15 producer would leave assistance status in prose and create more
+partial dose owners. The chosen design adds one typed hamstring-Nordic variant
+to exercise data and one pure prescription owner. Full unassisted eccentrics
+resolve to 2×4–6; the typed assisted/substantially-regressed arm resolves to
+2×6–8. The canonical composer, legacy phase applicator and athlete Add-menu
+default all consume that same owner. The unused generic Nordic guideline was
+removed. `Reverse Nordic Curl` carries no hamstring-Nordic variant and therefore
+cannot be captured by a name match.
+
+`Nordic Lower` also declares an automatic G-2-through-game-day exclusion while
+manual selection remains legal under the existing safety boundary. Every
+automatic full Nordic is already in the low-volume range, so a demanding-
+running neighbour cannot turn it into a large high-rep exposure. No session was
+lengthened and no separate final-session repair was added.
+
+The new final boundary is 12/12. It builds male and female final weeks across
+Off-season, Pre-season and In-season; reaches automatic Nordics in all three
+phases; requires every delivered unassisted row to be exactly 2×4–6; rejects
+2×15 and 3×10; proves the assisted 2×6–8 arm and explicit Reverse Nordic
+separation; checks automatic versus manual G-2/G-1/game-day legality; and reads
+both final congested game weeks. Its real athlete action witness selects a safe
+Nordic through the production Add hierarchy, deliberately enters 3×10, saves,
+restarts with the exact row byte-for-byte, then Undo removes the Add. That proves
+the automatic owner does not normalise an accepted manual prescription.
+
+Liveness was demonstrated against production and restored. Mutating the full
+unassisted owner from 2×4–6 to 2×10 made the focused boundary 10/12: the exact
+final-dose cell and congested-week low-volume cell both died. Restoration
+returned it to 12/12. The gate is nested in chained
+`test:offseason-deload-conditioning`.
+
+Adjacent verification is green: TypeScript; programming final composition 6/6;
+generated-week assembly 30/30; and conditioning phase authorship 42/42. The
+broader composer-severance and pool suites retain their previously measured
+selection/ownership reds; exercise intake retains its Reverse-Nordic reachability
+reds. None guards R-312 and none was changed to hide its inherited baseline.
+
+R-312 is born guarded.
+
+### NOT COVERED
+
+- There is no currently selectable assisted hamstring-Nordic identity; the
+  typed 2×6–8 arm is ready for one but this section does not invent an exercise.
+- The 48-hour automatic exclusion is forward game proximity (G-2 through game
+  day). Post-game soreness/readiness continues to belong to the existing
+  accumulated fatigue and deload owners.
+- The full 52-week audit will be regenerated only at final acceptance. Its old
+  2×10/2×15 rows are reproduction evidence, not a post-fix artifact.
+- Addendum Sections 6–8, Section 7's accumulated return-home spacing defect and
+  the final PDFs remain open. No simulator, Release build or physical phone work
+  ran.
+
 ## Addendum Section 4 — real running-speed development
 
 The older PDF findings all reproduced against final current-checkpoint data.

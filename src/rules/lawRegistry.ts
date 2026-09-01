@@ -361,6 +361,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-automatic-nordic-prescriptions-are-typed-and-realistic',
+    law: 'R-312: automatic hamstring Nordic Curl prescriptions distinguish full unassisted eccentrics from assisted or substantially regressed variants in typed exercise data. Full unassisted work uses 2-3 sets of 4-6; assisted/regressed work uses 2-3 sets of 6-8. Automatic full Nordics are excluded at G-2 through game day and no automatic route emits high-rep 2x15 or 3x10 unassisted lowers. Reverse Nordic Curl remains a distinct quad exercise. Athlete-entered prescriptions are not re-dosed by the automatic owner; durable save, restart and Undo preserve that decision.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-312',
+    guard: {
+      state: 'guarded',
+      by: 'test:offseason-deload-conditioning',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The prior exact two-athlete year contains 32 male and 34 female final Nordic Lower placements at 2x10, plus two female team-night placements at 2x15. One typed Nordic variant field and one automatic prescription owner replace the old name-regex/generic accessory fallthrough. The final generated-week boundary is 12/12 across both sexes and all phases, the assisted band, explicit Reverse Nordic separation, G-2/G-1/game-day automatic exclusion, congested game weeks and a real durable athlete Add. A custom manual 3x10 survives restart exactly and Undo removes the Add rather than leaving an automatically re-dosed row. LIVENESS: mutating the unassisted owner to 2x10 killed the exact final-dose and congested-week cells (10/12), then restoration returned 12/12. TypeScript, programming final composition, generated-week assembly and phase authorship are green. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',

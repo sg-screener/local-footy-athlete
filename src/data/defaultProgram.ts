@@ -77,6 +77,7 @@ import {
   type AccessoryGuideline,
   type RepScheme,
 } from '../rules/phaseRepSchemes';
+import { automaticNordicPrescriptionForIdentity } from '../rules/nordicPrescription';
 import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
@@ -564,7 +565,17 @@ function accessoryGuidelineForExercise(
   isLowerSecondary: boolean,
 ): AccessoryGuideline {
   const text = `${exerciseName} ${context.workoutName ?? ''} ${context.planEntry?.focus ?? ''}`;
-  if (/nordic/i.test(exerciseName)) return ACCESSORY_REP_GUIDELINES.nordics;
+  const nordic = automaticNordicPrescriptionForIdentity(exerciseName);
+  if (nordic) {
+    return {
+      setsMin: nordic.sets,
+      setsMax: nordic.sets,
+      min: nordic.repsMin,
+      max: nordic.repsMax,
+      unit: 'reps',
+      note: nordic.notes,
+    };
+  }
   if (slot === 'isolation_upper' || /gunshow|pump|arms?|bicep|tricep|curl|pushdown|lateral raise|rear delt|face pull/i.test(text)) {
     return ACCESSORY_REP_GUIDELINES.pump;
   }
