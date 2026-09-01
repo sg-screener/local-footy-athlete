@@ -92,6 +92,10 @@ export interface WeeklySchedulerInputs {
   readonly mildSorenessDays?: readonly number[];
   /** Off-season only; decides the §8 overlay. */
   readonly offseasonBlock: OffseasonBlock | null;
+  /** Current week within the selected season phase. Null means not known. */
+  readonly phaseWeekNumber?: number | null;
+  /** One-based week inside an accepted Christmas club shutdown. */
+  readonly christmasBreakWeekNumber?: number | null;
   /**
    * Days the athlete can reach a gym or their usual strength equipment.
    * Day-of-week numbers, 0 = Sunday. **Not total active days** (contract §2).
@@ -183,6 +187,8 @@ export interface SessionIntention {
    * it. Null when the day carries no conditioning.
    */
   readonly conditioningCategory: ContractConditioningCategory | null;
+  /** A scheduler-authored specialist preference; the specialist still validates it. */
+  readonly conditioningTemplatePreference?: string;
   /** Standalone, or riding on this day's strength session (§3 doubles). */
   readonly conditioningRole: ContractConditioningRole | null;
   /**
@@ -419,6 +425,26 @@ export function scheduledGameDays(inputs: WeeklySchedulerInputs): readonly numbe
 
 function hasScheduledGame(inputs: WeeklySchedulerInputs): boolean {
   return scheduledGameDays(inputs).length > 0;
+}
+
+/**
+ * Sam, 2026-09-02: a small app COD dose is fortnightly in late off-season and
+ * during the Christmas shutdown. Team training already supplies COD, and an
+ * unknown week number never guesses that this is the due week.
+ */
+export function fortnightlyCodDoseDue(inputs: WeeklySchedulerInputs): boolean {
+  if (inputs.clubNights.length > 0 || hasScheduledGame(inputs)) return false;
+  if (inputs.appRunningPermitted === false || inputs.appSprintPermitted === false) return false;
+  if (inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
+  if (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'normal_build') {
+    const phaseWeek = inputs.phaseWeekNumber ?? 0;
+    return phaseWeek >= 5 && (phaseWeek - 5) % 2 === 0;
+  }
+  if (inputs.phase === 'Pre-season') {
+    const breakWeek = inputs.christmasBreakWeekNumber ?? 0;
+    return breakWeek >= 1 && (breakWeek - 1) % 2 === 0;
+  }
+  return false;
 }
 
 function isScheduledGameDay(day: number, inputs: WeeklySchedulerInputs): boolean {
@@ -1603,14 +1629,37 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       optional: entry.owner === 'strength' ? entry.optional : !required,
       clauseId: 'R-265' };
   });
+  // R-329 — exchange one existing easy/moderate conditioning component for a
+  // small COD dose. This does not create a session, change a weekday or increase
+  // the conditioning count. Prefer an upper/standalone receiver so COD is not
+  // stacked onto lower strength when another existing seat is available.
+  const withFortnightlyCod = (() => {
+    if (!fortnightlyCodDoseDue(inputs)) return withFlush;
+    const isReceiver = (entry: SessionIntention) =>
+      entry.conditioningRole !== null
+      && (entry.conditioningCategory === 'aerobic_base'
+        || entry.conditioningCategory === 'tempo')
+      && !entry.clubTraining && !entry.game;
+    const preferred = withFlush.find(entry => isReceiver(entry)
+      && (entry.purpose === null || !PURPOSE_IS_LOWER[entry.purpose]));
+    const receiver = preferred ?? withFlush.find(isReceiver);
+    if (!receiver) return withFlush;
+    return withFlush.map((entry): SessionIntention => entry !== receiver ? entry : ({
+      ...entry,
+      conditioning: 'running',
+      conditioningCategory: 'cod_decel',
+      conditioningTemplatePreference: 'Low-Intensity Deceleration Drills',
+      clauseId: 'R-329',
+    }));
+  })();
   const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
     if (inputs.phase !== 'Off-season' && !weekIsReduced && fixtureDays.length === 1) {
       const gameIdx = orderIndex(fixtureDays[0]);
-      if (gameIdx <= 0) return withFlush;
+      if (gameIdx <= 0) return withFortnightlyCod;
       const g1Day = WEEK_ORDER[gameIdx - 1];
-      return withFlush.map((entry) => (
+      return withFortnightlyCod.map((entry) => (
         entry.dayOfWeek === g1Day
           && entry.owner === 'rest_or_recovery'
           && !entry.clubTraining
@@ -1619,7 +1668,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           : entry
       ));
     }
-    return withFlush;
+    return withFortnightlyCod;
   })();
 
   const intended = new Set<MovementPattern>();

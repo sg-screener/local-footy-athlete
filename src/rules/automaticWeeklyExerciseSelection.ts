@@ -13,6 +13,7 @@ import {
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
 import { strengthExerciseClassification } from '../data/exerciseTags';
+import type { MovementPlane } from '../data/exerciseMovementPlaneMetadata';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import {
@@ -22,6 +23,7 @@ import {
 } from './sessionSlotCoverage';
 import type { WeeklyMainStrengthSlot } from './weeklyStrengthBudget';
 import {
+  exerciseSuppliesGymTransverseOrMultiplanar,
   exerciseSuppliesLowerBodyFrontal,
   preferredMovementPlaneCohort,
   type MovementPlaneTieBreakContext,
@@ -270,10 +272,17 @@ export function createAutomaticWeeklyExerciseSelector(
         identity,
         automaticExerciseRouteForIdentity(identity) === 'prehab' ? 'prehab' : 'strength',
       ));
+    const gymTransverseOrMultiplanarPresent = [...planeDelivered].some((identity) =>
+      exerciseSuppliesGymTransverseOrMultiplanar(
+        identity,
+        automaticExerciseRouteForIdentity(identity) === 'prehab' ? 'prehab' : 'strength',
+      ));
+    const missingUsefulPlanes: MovementPlane[] = [];
+    if (lowerSlots.has(requestedSlot) && !lowerFrontalPresent) missingUsefulPlanes.push('frontal');
+    if (!gymTransverseOrMultiplanarPresent) missingUsefulPlanes.push('transverse');
     return {
       ...(referenceIdentity ? { referenceIdentity } : {}),
-      missingUsefulPrimaryPlanes: lowerSlots.has(requestedSlot) && !lowerFrontalPresent
-        ? ['frontal'] : [],
+      missingUsefulPlanes,
     };
   };
 

@@ -1309,6 +1309,15 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     flagged: false,
   },
   {
+    exercise: 'Banded 90/90 External Rotation',
+    pool: 'Shoulder health',
+    primary: ['Shoulders'],
+    secondary: [],
+    experienceGate: 'everyone',
+    note: 'Band resistance. 2 × 15–20 per arm with 20 seconds rest. Automatic in Shoulder health and upper-body warm-up slots; manual Add/Swap; not automatic in Primer. All phases and suitable at G-1 when pain-free.',
+    flagged: false,
+  },
+  {
     exercise: 'Bottoms-Up KB Press',
     pool: 'Shoulder health',
     primary: ['Shoulders'],

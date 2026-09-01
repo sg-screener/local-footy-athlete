@@ -8181,16 +8181,58 @@ rotation/history. Planes do not chase equal percentages and sagittal work may
 remain the majority.
 
 Weekly and annual checks require one meaningful primary-frontal lower-body
-strength/prehab/power contribution and one typed athletic transverse or
-multiplanar exposure. Upper-body, Mobility, stretching, tissue quality and
-breathing do not satisfy the first. The second accepts typed rotational
-medicine-ball work, COD, cutting, curved running, angled deceleration or Team
-Training; straight-line acceleration does not count, and conditioning names or
-descriptions are never inferred. Trunk rotation/anti-rotation is a softer 7–14
-day check using Band Pallof Press, both Woodchops or Side Plank Row rather than
-a weekly quota.
+strength/prehab/power contribution. They separately require at least one
+meaningful gym strength/prehab/power/trunk exercise whose primary plane is
+transverse or multiplanar, or whose secondary plane includes transverse. Team
+Training never earns this gym credit. Athletic transverse/COD exposure remains
+typed separately: Team Training counts, as do rotational medicine-ball work,
+COD, cutting, curved running and angled deceleration; straight-line acceleration
+does not count, and conditioning names or descriptions are never inferred.
+Trunk rotation/anti-rotation is a softer 7–14 day check using Band Pallof Press,
+both Woodchops or Side Plank Row rather than a weekly quota.
 
 Guard: `LAW-typed-exercise-movement-planes` through chained
 `test:full-body-balance`, which invokes `test:movement-planes`. Red-first,
 workbook equality, selector ordering, annual audit and NOT COVERED receipt:
 `docs/STATUS_MOVEMENTPLANE.md`.
+
+**R-328** · Banded 90/90 External Rotation joins the existing Shoulder health
+catalogue, 2026-09-02.
+
+Owner: movementplane. The movement is available to everyone, uses the existing
+band equipment answer and band-resistance load control, and records repetitions
+per arm. Its transverse-plane metadata, supplied muscles, cues, injury ratings,
+restrictions and exact video are recorded in
+`docs/EXERCISE_INTAKE_BANDED_90_90_EXTERNAL_ROTATION_2026-09-02.md`.
+
+It inherits Banded External Rotation's 2 × 15–20 repetitions per arm with 20
+seconds rest. It is automatic in Shoulder health and upper-body Movement Prep,
+manual through Add/Swap, and not automatic in Primer. It adds no equipment
+answer, loading unit, exercise role or selector.
+
+Guard: `LAW-banded-90-90-external-rotation-intake` through chained
+`test:exercise-intake`, which invokes `test:banded-90-90-external-rotation`.
+Red-first, exact workbook equality and NOT COVERED receipt:
+`docs/EXERCISE_INTAKE_BANDED_90_90_EXTERNAL_ROTATION_2026-09-02.md`.
+
+**R-329** · Team Training supplies COD; the app adds only a fortnightly small
+dose in late off-season and the Christmas shutdown, 2026-09-02.
+
+Owner: movementplane. A week containing Team Training already has its
+change-of-direction exposure and receives no app-authored COD. In late
+off-season and during an accepted Christmas club shutdown, a no-team, no-game,
+healthy build week receives one small dose every second week. The Christmas
+counter starts on the first Monday on or after the shutdown begins, so club
+nights before a weekend closure do not consume the first dose.
+
+The app exchanges an existing easy/moderate conditioning component for the
+authored `Low-Intensity Deceleration Drills` template (2–4 controlled reps,
+about 3–5 minutes). It does not add a day, change the weekly conditioning count
+or overload the existing conditioning-dose field with an exercise identity.
+Early/mid off-season, ordinary clubless pre-season, in-season, deload,
+low-readiness and running-restricted weeks receive no automatic dose from this
+rule.
+
+Guard: `LAW-fortnightly-cod-outside-team-training` through chained
+`test:weekly-scheduler`. Red-first, 14-coordinate behavior tape and NOT COVERED
+receipt: `docs/STATUS_MOVEMENTPLANE.md`.

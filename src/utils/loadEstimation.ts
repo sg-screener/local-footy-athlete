@@ -608,6 +608,8 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'band external rotation':     'Banded External Rotation',
   'banded external rotation':   'Banded External Rotation',
   'shoulder external rotation': 'Banded External Rotation',
+  'banded 90/90 external rotation': 'Banded 90/90 External Rotation',
+  '90/90 external rotation':    'Banded 90/90 External Rotation',
 
   // ── Prehab / rehab aliases ──
   'tke':                        'Banded TKE',
@@ -808,6 +810,7 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Swiss Ball Hamstring Curl',
   'Band Pallof Press',
   'Banded External Rotation',
+  'Banded 90/90 External Rotation',
   'Banded Bicep Curl',
   'Banded Tricep Pushdown',
   'Chin-Up Negative (Slow)',
@@ -905,6 +908,7 @@ export const BAND_RESISTANCE_EXERCISES = new Set([
   'Banded Dead Bug',
   'Band Pallof Press',
   'Banded External Rotation',
+  'Banded 90/90 External Rotation',
   'Banded Bicep Curl',
   'Banded Tricep Pushdown',
 ]);

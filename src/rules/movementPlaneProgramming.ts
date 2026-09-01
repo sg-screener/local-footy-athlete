@@ -9,8 +9,8 @@ import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
 export interface MovementPlaneTieBreakContext {
   /** The automatic identity being replaced on this date, when there is one. */
   readonly referenceIdentity?: string;
-  /** Useful primary planes the already-filtered week has not supplied yet. */
-  readonly missingUsefulPrimaryPlanes?: readonly MovementPlane[];
+  /** Useful planes the already-filtered week has not supplied yet. */
+  readonly missingUsefulPlanes?: readonly MovementPlane[];
 }
 
 /**
@@ -31,9 +31,19 @@ export function preferredMovementPlaneCohort<T extends string>(
       movementPlaneMetadataFor(candidate)?.primaryPlane === referencePlane);
     if (samePrimary.length > 0) return samePrimary;
   }
-  for (const plane of context.missingUsefulPrimaryPlanes ?? []) {
-    const fillsHole = candidates.filter((candidate) =>
-      movementPlaneMetadataFor(candidate)?.primaryPlane === plane);
+  for (const plane of context.missingUsefulPlanes ?? []) {
+    const fillsHole = candidates.filter((candidate) => {
+      const metadata = movementPlaneMetadataFor(candidate);
+      if (!metadata) return false;
+      // Sam explicitly allows a secondary transverse demand to fill the gym
+      // strength hole. A primary multiplanar exercise fills the same hole.
+      if (plane === 'transverse') {
+        return metadata.primaryPlane === 'transverse'
+          || metadata.primaryPlane === 'multiplanar'
+          || metadata.secondaryPlanes.includes('transverse');
+      }
+      return metadata.primaryPlane === plane;
+    });
     if (fillsHole.length > 0) return fillsHole;
   }
   return [...candidates];
@@ -70,6 +80,7 @@ export interface MovementPlaneAuditInput {
 
 export type MovementPlaneCoverageFinding =
   | { readonly kind: 'missing_lower_body_frontal'; readonly severity: 'required' }
+  | { readonly kind: 'missing_gym_transverse_or_multiplanar'; readonly severity: 'required' }
   | { readonly kind: 'missing_athletic_transverse'; readonly severity: 'required' }
   | { readonly kind: 'trunk_transverse_due'; readonly severity: 'soft' }
   | { readonly kind: 'trunk_transverse_history_unknown'; readonly severity: 'soft' };
@@ -80,6 +91,9 @@ const LOWER_BODY_POOLS = new Set([
 ]);
 const MEANINGFUL_LOWER_CONTRIBUTIONS = new Set<MovementPlaneExerciseContribution>([
   'strength', 'prehab', 'power',
+]);
+const MEANINGFUL_GYM_CONTRIBUTIONS = new Set<MovementPlaneExerciseContribution>([
+  'strength', 'prehab', 'power', 'trunk',
 ]);
 const TRUNK_TRANSVERSE_IDENTITIES = new Set([
   'Band Pallof Press', 'Woodchop (Standing)', 'Woodchop (Half Kneeling)',
@@ -105,8 +119,20 @@ export function exerciseSuppliesTrunkTransverse(identity: string): boolean {
   return TRUNK_TRANSVERSE_IDENTITIES.has(identity);
 }
 
+export function exerciseSuppliesGymTransverseOrMultiplanar(
+  identity: string,
+  contribution: MovementPlaneExerciseContribution,
+): boolean {
+  if (!MEANINGFUL_GYM_CONTRIBUTIONS.has(contribution)) return false;
+  const metadata = movementPlaneMetadataFor(identity);
+  return metadata?.primaryPlane === 'transverse'
+    || metadata?.primaryPlane === 'multiplanar'
+    || metadata?.secondaryPlanes.includes('transverse') === true;
+}
+
 export interface MovementPlaneCoverageAudit {
   readonly lowerBodyFrontalPresent: boolean;
+  readonly gymTransverseOrMultiplanarPresent: boolean;
   readonly athleticTransversePresent: boolean;
   readonly trunkTransversePresent: boolean;
   readonly findings: readonly MovementPlaneCoverageFinding[];
@@ -117,6 +143,9 @@ export function auditMovementPlaneCoverage(
 ): MovementPlaneCoverageAudit {
   const lowerBodyFrontalPresent = input.exerciseRows.some((row) =>
     exerciseSuppliesLowerBodyFrontal(row.identity, row.contribution));
+  const gymTransverseOrMultiplanarPresent = input.exerciseRows.some((row) =>
+    exerciseSuppliesGymTransverseOrMultiplanar(row.identity, row.contribution))
+    || input.athleticExposures.includes('rotational_med_ball');
   const athleticTransversePresent = input.athleticExposures.some((exposure) =>
     ATHLETIC_TRANSVERSE_EXPOSURES.has(exposure));
   const trunkTransversePresent = input.exerciseRows.some((row) =>
@@ -124,6 +153,9 @@ export function auditMovementPlaneCoverage(
   const findings: MovementPlaneCoverageFinding[] = [];
   if (!lowerBodyFrontalPresent) {
     findings.push({ kind: 'missing_lower_body_frontal', severity: 'required' });
+  }
+  if (!gymTransverseOrMultiplanarPresent) {
+    findings.push({ kind: 'missing_gym_transverse_or_multiplanar', severity: 'required' });
   }
   if (!athleticTransversePresent) {
     findings.push({ kind: 'missing_athletic_transverse', severity: 'required' });
@@ -137,6 +169,7 @@ export function auditMovementPlaneCoverage(
   }
   return {
     lowerBodyFrontalPresent,
+    gymTransverseOrMultiplanarPresent,
     athleticTransversePresent,
     trunkTransversePresent,
     findings,

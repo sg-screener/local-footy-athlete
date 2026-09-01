@@ -516,13 +516,35 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-typed-exercise-movement-planes',
-    law: 'R-327: Sam-supplied exercise movement planes live in one typed catalogue equal to the Exercise Master workbook. Unlisted identities remain unanswered questions and are never inferred. Plane preservation and missing-useful-plane tie-breaking run only inside the legal equal cohort after injury, equipment, experience, season/game proximity, purpose/family and weekly limits; accepted current-block history still restores first. Weekly and annual checks require meaningful lower-body primary-frontal work and typed athletic transverse/multiplanar exposure, with a softer 7–14 day trunk rotation/anti-rotation check. No equal-percentage target or athlete-facing plane label is introduced.',
+    law: 'R-327: Sam-supplied exercise movement planes live in one typed catalogue equal to the Exercise Master workbook. Unlisted identities remain unanswered questions and are never inferred. Plane preservation and missing-useful-plane tie-breaking run only inside the legal equal cohort after injury, equipment, experience, season/game proximity, purpose/family and weekly limits; accepted current-block history still restores first. Weekly and annual checks require meaningful lower-body primary-frontal work plus at least one meaningful gym transverse/multiplanar strength, prehab, power or trunk exercise; a secondary transverse plane counts and Team Training never earns gym credit. Athletic COD exposure remains separately typed, with Team Training counting. The trunk rotation/anti-rotation check remains softer at 7–14 days. No equal-percentage target or athlete-facing plane label is introduced.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-327',
     guard: {
       state: 'guarded',
       by: 'test:full-body-balance',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-02 by seat `movementplane`. TEST FIRST: the focused command could not load either the plane catalogue or programming audit. TWO OPTIONS COMPARED: add fields throughout the large exercise-tag objects plus a second workbook parser, or add one typed canonical plane catalogue held equal to two Exercise Master columns and read by the existing selector and annual audit. The single catalogue landed. Its focused tape pins Sam\'s exact named set, metadata invariants, workbook equality in both directions, the complete unanswered-question list, same-plane substitution, accepted-history priority, lower-frontal exclusions, typed athletic credit and the soft trunk window. The existing selector owns the tie-break and the existing annual audit owns findings; no screen reads the fields. Final tests, mutation and NOT COVERED receipt: docs/STATUS_MOVEMENTPLANE.md.',
+    },
+  },
+  {
+    id: 'LAW-banded-90-90-external-rotation-intake',
+    law: 'R-328: Banded 90/90 External Rotation reuses the existing Shoulder health, upper-body Movement Prep, manual Add/Swap, band-equipment and band-resistance owners. It is available to everyone, records repetitions per arm, uses Banded External Rotation\'s 2 × 15–20 per arm with 20 seconds rest, is not automatic in Primer, and adds no equipment answer, loading unit, exercise role or selector. The exact cues, video, transverse plane, injury ratings and restrictions are preserved.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-328',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `movementplane`. The focused tape began 0/6 before the identity existed and now binds the inherited dose, everyone gate, per-arm handling, cues, exact video, transverse plane, all supplied demand/injury ratings, existing band equipment/load control, automatic Shoulder health and upper-body Movement Prep reachability, Primer exclusion, and manual Add/Swap. The Exercise Master workbook and canonical muscle metadata are equal in both directions. No new equipment, unit, role or selector was introduced. Intake and NOT COVERED receipt: docs/EXERCISE_INTAKE_BANDED_90_90_EXTERNAL_ROTATION_2026-09-02.md.',
+    },
+  },
+  {
+    id: 'LAW-fortnightly-cod-outside-team-training',
+    law: 'R-329: Team Training supplies change-of-direction exposure, so the app adds none in a team-training week. In no-team, no-game healthy build weeks, the app exchanges one existing easy/moderate conditioning component for Low-Intensity Deceleration Drills every second late-off-season week and every second accepted Christmas-shutdown week. It never adds a day or conditioning credit. Early/mid off-season, ordinary clubless pre-season, in-season, deload, low-readiness and running-restricted weeks receive no automatic dose from this rule.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-329',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `movementplane`. TEST FIRST: 7/14 focused cells passed because COD never reached the scheduler, no Christmas week identity crossed availability, and the low-dose template was never requested. AFTER: 14/14 cover late-off-season phase weeks 5/6/7, Christmas shutdown weeks 1/2, team-training credit, early/mid/in-season and ordinary clubless pre-season refusal, exact Low-Intensity Deceleration Drills materialisation, stable Christmas week numbering, travel-not-Christmas identity, and unchanged work-day/conditioning counts. LIVENESS: changing the late-off-season modulus from 2 to 3 made the phase-week-7 cell red (13/14), and restoring it returned 14/14. The existing weekly scheduler tape remains 128/128. NOT COVERED and inherited-red receipt: docs/STATUS_MOVEMENTPLANE.md.',
     },
   },
   {

@@ -398,6 +398,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
         exposureContract: null,
         miniCycleNumber: blockState.miniCycleNumber ?? null,
+        phaseWeekNumber: blockState.phaseWeekNumber ?? null,
         weekKind: effectiveWeekKind,
       });
       const agePolicy = resolveTrainingAgePolicy(cutoverInputs.experienceLevel);

@@ -21,9 +21,10 @@ import {
   type ResolvedEquipmentCapabilities,
 } from '../utils/equipmentAvailability';
 import { isoDateForWeekday } from '../utils/appDate';
+import { getMondayISOForDate } from '../utils/programBlockState';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
 import type { WeeklySchedulerInputs } from './weeklyScheduler';
-import { onboardingChristmasBreakClosesDate } from './christmasBreakAsk';
+import { onboardingChristmasBreakClosesDate, onboardingChristmasBreakSpan } from './christmasBreakAsk';
 
 const DAY_NAMES = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
@@ -68,6 +69,8 @@ export interface CanonicalWeeklyAvailabilityState {
   readonly unavailableDayNumbers: readonly number[];
   readonly awayDayNumbers: readonly number[];
   readonly clubClosedDayNumbers: readonly number[];
+  /** One-based week within the accepted Christmas club shutdown, else null. */
+  readonly christmasBreakWeekNumber: number | null;
   readonly permanentEquipment: ResolvedEquipmentCapabilities;
   readonly equipmentByDayOfWeek: Readonly<Record<number, ResolvedEquipmentCapabilities>>;
   readonly reachableEquipmentAcrossWeek: ResolvedEquipmentCapabilities;
@@ -93,6 +96,28 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
   const away = new Set<number>();
   const clubClosed = new Set<number>();
   const temporaryKitByDayOfWeek: Record<number, readonly EquipmentTag[]> = {};
+  const profileChristmasSpan = onboardingChristmasBreakSpan(args.profile);
+  const datedChristmasStarts = schedules
+    .filter(constraint => constraint.scheduleKind === 'no_team_training')
+    .filter(constraint => [0, 1, 2, 3, 4, 5, 6].some(day =>
+      scheduleConstraintAppliesOn(constraint, isoDateForWeekday(weekStartISO, day))))
+    .map(constraint => constraint.startDate.slice(0, 10));
+  if (profileChristmasSpan && [0, 1, 2, 3, 4, 5, 6].some(day =>
+    onboardingChristmasBreakClosesDate(args.profile, isoDateForWeekday(weekStartISO, day)))) {
+    datedChristmasStarts.push(profileChristmasSpan.from);
+  }
+  const christmasStart = datedChristmasStarts.sort()[0] ?? null;
+  const christmasStartMonday = christmasStart === null ? null : getMondayISOForDate(christmasStart);
+  // A break beginning after the week's club nights does not consume the first
+  // fortnightly seat. Count from the first Monday on/after the shutdown begins.
+  const firstClosedWeekStart = christmasStartMonday === null ? null
+    : christmasStartMonday < christmasStart
+      ? new Date(Date.parse(`${christmasStartMonday}T12:00:00Z`) + 7 * 86_400_000)
+        .toISOString().slice(0, 10)
+      : christmasStartMonday;
+  const christmasBreakWeekNumber = firstClosedWeekStart === null ? null : Math.max(1,
+    Math.floor((Date.parse(`${weekStartISO}T12:00:00Z`)
+      - Date.parse(`${firstClosedWeekStart}T12:00:00Z`)) / (7 * 86_400_000)) + 1);
 
   for (let day = 0; day < 7; day += 1) {
     const dateISO = isoDateForWeekday(weekStartISO, day);
@@ -141,6 +166,7 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
     unavailableDayNumbers: [...unavailable].sort((left, right) => left - right),
     awayDayNumbers: [...away].sort((left, right) => left - right),
     clubClosedDayNumbers: [...clubClosed].sort((left, right) => left - right),
+    christmasBreakWeekNumber,
     permanentEquipment,
     equipmentByDayOfWeek,
     reachableEquipmentAcrossWeek,
@@ -166,6 +192,7 @@ export function schedulerInputsWithAvailabilityState(
     .filter((day) => !away.has(day));
   return {
     ...scheduler,
+    christmasBreakWeekNumber: availability.christmasBreakWeekNumber,
     clubNights: scheduler.clubNights.filter((day) => !clubClosed.has(day)),
     gameDays,
     gameDay: gameDays[0] ?? null,

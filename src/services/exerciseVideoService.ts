@@ -197,6 +197,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
 
   // ═══ Prehab — Shoulder Health ═══
   'Banded External Rotation':         'https://youtube.com/shorts/7DqYesMRkzU?si=wR0oLWbHsA41Spm6',
+  'Banded 90/90 External Rotation':   'https://youtube.com/shorts/PTi9pfttH64?si=cfQmGyB75VWotbcg',
   'Scap Push-Up':                     'https://youtube.com/shorts/emB58J1SyXA?si=7qFwI-rqbIoAKdpm',
   'Scap Pull Ups':                    'https://youtube.com/shorts/9M8ylnbriB0?si=8fsAN8Q8njOnH3a8',
   'Bottoms-Up KB Press':              'https://youtube.com/shorts/PDVTbKBXAl4?si=AynipcSYTa7P6Z3p',
@@ -535,6 +536,8 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'band external rotation':           'Banded External Rotation',
   'banded external rotation':         'Banded External Rotation',
   'shoulder external rotation':       'Banded External Rotation',
+  'banded 90/90 external rotation':   'Banded 90/90 External Rotation',
+  '90/90 external rotation':          'Banded 90/90 External Rotation',
   'standing calf raise':              'Calf Raises',
   'standing calf raises':             'Calf Raises',
   'single leg calf raise':            'Single-Leg Calf Raise',

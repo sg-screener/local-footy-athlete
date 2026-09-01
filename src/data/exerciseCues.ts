@@ -250,6 +250,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Elbow at 90 degrees, rotate against the band.',
     secondaryCue: 'Slow and controlled arc.',
   },
+  'Banded 90/90 External Rotation': {
+    primaryCue: 'Keep your elbow level with your shoulder and rotate your forearm upward.',
+    secondaryCue: 'Keep ribs down; avoid shrugging or forcing the range.',
+  },
   'Banded Tricep Pushdown': {
     primaryCue: 'Lock the elbows, press to full extension.',
     secondaryCue: 'Constant tension, no slack.',

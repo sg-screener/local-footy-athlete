@@ -3083,6 +3083,36 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  'Banded 90/90 External Rotation': {
+    movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: true,
+    eccentric: 'low', lateWeek: 'good',
+    prescription: {
+      sets: 2, repsMin: 15, repsMax: 20, restSeconds: 20,
+      prescriptionType: 'reps', perSide: true,
+      notes: 'Use band resistance. Reduce resistance or range if the shoulder shrugs, the ribs lift, the back arches or the front of the shoulder pinches.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+    injury: {
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'good',
+      'calf': 'good',
+      'ankle/foot': 'good',
+      'ribs': 'good',
+      'lowerBack': 'good',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
+    },
+  },
+
   'Shrugs': {
     strengthClassification: 'isolation',
     movement: 'isolation_upper', region: 'upper', load: 'moderate', fatigue: 'low',

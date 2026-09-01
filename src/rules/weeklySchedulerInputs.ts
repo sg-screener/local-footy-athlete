@@ -83,6 +83,8 @@ export function weeklySchedulerInputsFrom(args: {
   readonly exposureContract?: { readonly anchors?: unknown } | null;
   /** WC-136. Rotates the authored hard conditioning quality at the block boundary. */
   readonly miniCycleNumber?: number | null;
+  /** Current week inside the selected phase; used by phase-relative policies. */
+  readonly phaseWeekNumber?: number | null;
   /** WC-136. A scheduled deload week is never authored hard conditioning. */
   readonly weekKind?: 'build' | 'deload' | null;
 }): WeeklySchedulerInputs {
@@ -141,6 +143,7 @@ export function weeklySchedulerInputsFrom(args: {
     unavailableDays: [],
     releasedFixtureDays: [],
     miniCycleNumber: args.miniCycleNumber ?? null,
+    phaseWeekNumber: args.phaseWeekNumber ?? null,
     weekKind: args.weekKind ?? null,
   };
 }

@@ -72,6 +72,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Banded Bicep Curl": ['bands'],
   "Banded Dead Bug": ['bands'],
   "Banded External Rotation": ['bands'],
+  "Banded 90/90 External Rotation": ['bands'],
   "Banded TKE": ['bands'],
   "Banded Tricep Pushdown": ['bands'],
   "Barbell Row": ['barbell'],

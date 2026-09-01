@@ -73,6 +73,7 @@ add(['Shrugs', 'Lateral Raise', 'Single-Arm Shrug'], 'frontal');
 add(['Incline Y Raise'], 'frontal', ['sagittal']);
 add(['Rear Delt Fly', 'Band Pull-Apart'], 'transverse');
 add(['Face Pull', 'Cable Face Pull'], 'transverse', ['frontal']);
+add(['Banded 90/90 External Rotation'], 'transverse');
 add(['Nordic Lower', 'Hamstring Curl', 'Leg Extension', 'Calf Raises', 'Tib Raises',
   'Back Extension', 'Seated Calf Raise'], 'sagittal');
 add(['SL 45° Back Extension', 'Single-Leg Hip Thrust'],
@@ -152,11 +153,11 @@ run('Exercise Master and typed metadata agree in both directions', () => {
 run('the weekly selector exposes frontal as a tie-break until meaningful lower work fills it', () => {
   const selector = createAutomaticWeeklyExerciseSelector();
   assert.deepEqual(selector.movementPlaneContextFor('lower_accessory')
-    .missingUsefulPrimaryPlanes, ['frontal']);
+    .missingUsefulPlanes, ['frontal', 'transverse']);
   selector.accept({ identity: 'Crab Walks', requestedSlot: 'football_robustness',
     dayKind: 'lower_squat', route: 'prehab', requestedAsMain: false });
   assert.deepEqual(selector.movementPlaneContextFor('lower_accessory')
-    .missingUsefulPrimaryPlanes, []);
+    .missingUsefulPlanes, []);
 });
 
 run('same-primary-plane replacement wins only inside the legal equal cohort', () => {
@@ -199,6 +200,31 @@ run('lower frontal coverage counts meaningful lower work, not upper or mobility 
     athleticExposures: [], daysSinceLastTrunkTransverse: 15,
   });
   assert(!filled.findings.some((finding) => finding.kind === 'missing_lower_body_frontal'));
+});
+
+run('gym transverse or multiplanar work is required separately from Team Training', () => {
+  const teamOnly = auditMovementPlaneCoverage({
+    exerciseRows: [{ identity: 'Back Squat', contribution: 'strength' }],
+    athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
+  });
+  assert(teamOnly.athleticTransversePresent);
+  assert(!teamOnly.gymTransverseOrMultiplanarPresent);
+  assert(teamOnly.findings.some((finding) =>
+    finding.kind === 'missing_gym_transverse_or_multiplanar'));
+
+  const secondaryCounts = auditMovementPlaneCoverage({
+    exerciseRows: [{ identity: 'Single-Leg RDL', contribution: 'strength' }],
+    athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
+  });
+  assert(secondaryCounts.gymTransverseOrMultiplanarPresent);
+  assert(!secondaryCounts.findings.some((finding) =>
+    finding.kind === 'missing_gym_transverse_or_multiplanar'));
+
+  const mobilityDoesNotCount = auditMovementPlaneCoverage({
+    exerciseRows: [{ identity: 'Banded 90/90 External Rotation', contribution: 'mobility' }],
+    athleticExposures: ['team_training'], daysSinceLastTrunkTransverse: 4,
+  });
+  assert(!mobilityDoesNotCount.gymTransverseOrMultiplanarPresent);
 });
 
 run('athletic transverse coverage uses typed exposure, never conditioning names', () => {

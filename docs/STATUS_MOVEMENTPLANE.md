@@ -63,7 +63,7 @@ path.
 ## Focused verification
 
 - Red first: `test:movement-planes` could not load either required module.
-- Final focused tape: 9/9, including exact classification membership, metadata
+- Final focused tape: 10/10, including exact classification membership, metadata
   invariants, workbook equality both ways, exact unanswered-question coverage,
   selector state, same-plane substitution, accepted-history priority and all
   three audit rules.
@@ -74,7 +74,7 @@ path.
   pass. Its overall command remains red only on the inherited 21 UNENFORCED
   rows.
 - Liveness mutation: changing Bench Press primary plane from transverse to
-  sagittal made the focused tape 6/9. The exact classification, workbook
+  sagittal made the original focused tape 6/9. The exact classification, workbook
   equality and same-plane substitution cells all died for the intended reason.
   Restoring the catalogue returned 9/9 with a byte-clean source diff.
 
@@ -98,6 +98,61 @@ invented and no extra session was added to make the count green.
 - The ruling registry still reports its pre-existing R-070 dead path, nine old
   unenforced rulings and sixteen old uncited parked questions. Adding `BUILT`
   to R-327's own row prevents the new ruling from expanding that question set.
+
+## Sam's 2026-09-02 clarification
+
+- Gym programming must contain at least one meaningful transverse or
+  multiplanar strength/prehab/power/trunk exercise every week. A secondary
+  transverse plane counts. Team Training never counts toward this gym rule.
+- Team Training does count as the athlete's change-of-direction exposure.
+- With no Team Training, the app uses one small COD dose every second week only
+  in late off-season and the accepted Christmas shutdown.
+- The previous saved-year finding count above predates this clarification and
+  is retained as historical diagnostic evidence, not a current acceptance
+  result.
+
+## Banded 90/90 External Rotation
+
+- Added to the existing Shoulder health pool, upper-body Movement Prep and
+  manual Add/Swap routes for everyone.
+- Reused the existing band answer, band load control and Banded External
+  Rotation dose: 2 × 15–20 per arm with 20 seconds rest.
+- Added exact cues, video, transverse plane, supplied ratings/restrictions and
+  the Exercise Master row. No new equipment, unit, role or selector.
+- Red-first focused tape: 0/6. Final: 6/6. Workbook/muscle equality: 97/97.
+
+## Fortnightly COD implementation
+
+- The scheduler exchanges an existing easy/moderate conditioning component for
+  `Low-Intensity Deceleration Drills` (2–4 controlled reps, about 3–5 minutes).
+  It does not add a training day or increase the conditioning count.
+- Late off-season phase weeks 5, 7, 9… are due. Christmas shutdown weeks 1, 3,
+  5… are due, counted from the first Monday on/after the accepted closure begins.
+- Weeks with Team Training, a game, low readiness, a deload or a running safety
+  restriction receive no automatic COD from this rule. Travel is not mistaken
+  for Christmas.
+- Red-first focused tape: 7/14. Final: 14/14. The existing weekly scheduler tape
+  remains 128/128.
+- Liveness mutation: changing the late-off-season cadence from every 2 weeks to
+  every 3 weeks killed the phase-week-7 cell (13/14); restoration returned 14/14.
+
+## Current inherited reds
+
+- `test:weekly-scheduler` reaches and passes both scheduler tapes, then remains
+  red in the older `generatedTravelZeroEquipmentTests` mutation: the broken week
+  is correctly refused, but that test expects a different refusal clause.
+- `test:compile` reports zero product and dev-tool errors and zero errors in this
+  task's new tests; it remains red on seven errors in unrelated
+  `sessionWorkOwnershipJourneyTests.ts`.
+- `test:authored-cues` reaches all new cue/video checks, then remains red on the
+  unchanged Tib Raises and Copenhagen Plank (Half) load-profile expectations.
+
+## NOT COVERED (clarification and new exercise)
+
+- No simulator, Release build or physical-phone acceptance run.
+- No fresh exact-checkpoint annual programme was generated after the clarified
+  weekly gym and fortnightly COD rules.
+- External playback of the supplied YouTube video was not checked.
 
 ## NOT COVERED (starting state)
 

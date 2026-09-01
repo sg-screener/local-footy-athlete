@@ -219,7 +219,7 @@ export function materialiseAuthoredSessions(args: {
           runOnly: intention.conditioningCategory === 'sprint'
             ? true : availableMachines?.length === 0 || facts.runOnly,
           preferredTemplateName: intention.conditioningCategory === 'sprint'
-            ? speedPreference : undefined,
+            ? speedPreference : intention.conditioningTemplatePreference,
           availableMachines,
           noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
           role: intention.conditioningRole as ConditioningRole,

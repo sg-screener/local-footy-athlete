@@ -78,6 +78,7 @@ add(['Shrugs', 'Lateral Raise', 'Single-Arm Shrug'], 'frontal');
 add(['Incline Y Raise'], 'frontal', ['sagittal']);
 add(['Rear Delt Fly', 'Band Pull-Apart'], 'transverse');
 add(['Face Pull', 'Cable Face Pull'], 'transverse', ['frontal']);
+add(['Banded 90/90 External Rotation'], 'transverse');
 add(['Nordic Lower', 'Hamstring Curl', 'Leg Extension', 'Calf Raises', 'Tib Raises',
   'Back Extension', 'Seated Calf Raise'], 'sagittal');
 add(['SL 45° Back Extension', 'Single-Leg Hip Thrust'],

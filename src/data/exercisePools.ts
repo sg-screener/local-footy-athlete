@@ -347,6 +347,7 @@ export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
 export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
   ex('band-pull-apart-sh','Band Pull-Apart',            3, 15, 20, 20, 'Squeeze shoulder blades together at the top.', ['bands'],     [],          'low', { prescriptionType: 'reps' }),
   ex('band-ext-rot',      'Banded External Rotation',   2, 15, 20, 20, 'Elbow at 90°. Rotate out against band.',     ['bands'],     ['shoulder'],'low', { prescriptionType: 'reps' }),
+  ex('band-90-90-ext-rot','Banded 90/90 External Rotation', 2, 15, 20, 20, 'Keep the elbow level with the shoulder. Rotate the forearm upward.', ['bands'], ['shoulder'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('bottoms-up-press',  'Bottoms-Up KB Press',        2, 6,  8,  45, 'Bell inverted. Wrist stacked, ribs down.',    ['kettlebell'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('scap-push-up',      'Scap Push-Up',               2, 10, 15, 30, 'Elbows locked. Glide the shoulder blades.',   ['bodyweight'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps' }),
   // Sam's authored addition (2026-07-28). Equipment-gated on the bar, so
