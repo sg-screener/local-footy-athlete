@@ -80,11 +80,13 @@ Face Pull as isolation support.
 
 - Red first: the new focused tape was 0/7 before the metadata, session owner and
   final audit existed.
-- Final chained boundary: `test:full-body-balance` is 40/40 across balance,
+- Final chained boundary after the grouping correction: `test:full-body-balance`
+  is 41/41 across balance,
   weekly variety, weekly main budget, automatic weekly selection and the new
   compound-session tape. Its 13/13 durable arm includes exact save/restart and
   unrestricted athlete-added duplicate work.
-- New tape: 7/7, including the exact founding six identities, dedicated lower
+- New tape: 8/8, including the corrected 13-name lower-accessory grouping, the
+  exact founding six identities, dedicated lower
   behavior, a two-week slice from four real generated worlds, commercial and
   bodyweight kit, male/female, all three phases, and a 6/10 shoulder injury.
   Every reached automatic row remained legal for its kit and every classified
@@ -108,6 +110,20 @@ Face Pull as isolation support.
   tables and current football-foundation composition. This repair does not
   change those contracts or widen into them.
 - Physical-device acceptance remains open under L10.
+
+## Classification grouping correction — 2026-09-02
+
+Sam moved SL 45° Back Extension plus the five calf/groin isolations into the
+same `Lower Accessories — Isolation` heading as the seven existing lower
+isolation-pool exercises. Their canonical `isolation` values were already
+correct, so production metadata and programming did not change. The guarded
+contract now derives the complete 13-name grouping from the existing hinge,
+lower-isolation, groin and calf pools and checks it against Sam's exact set.
+No exercise pool, calf/groin/muscle tag or selection route changed.
+Temporarily changing Copenhagen Plank (Half) from isolation to compound made the
+focused tape 5/8: the corrected grouping, exact classification boundary and
+49/35 classification-split cells all failed. Restoring its existing value
+returned 8/8.
 
 ## NOT COVERED (final)
 

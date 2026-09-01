@@ -50,21 +50,28 @@ function quiet<T>(body: () => T): T {
   try { return body(); } finally { console.log = log; console.warn = warn; console.error = error; }
 }
 
-run('canonical classification keeps the approved boundary and distinct face-pull identities', () => {
-  const strengthNames = (slot: PoolSlotKey): string[] => [
+function strengthPoolNames(slot: PoolSlotKey): string[] {
+  return [
     ...STRENGTH_POOLS[slot].anchor.entries,
     ...STRENGTH_POOLS[slot].accessory.entries,
   ].map((entry) => entry.name);
-  const allAre = (names: readonly string[], expected: 'compound' | 'isolation'): void => {
-    const wrong = names.filter((name) => strengthExerciseClassification(name) !== expected);
-    assert(wrong.length === 0, `expected ${expected}: ${wrong.join(', ')}`);
-  };
-  allAre(strengthNames('squat'), 'compound');
-  allAre(['horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull']
-    .flatMap((slot) => strengthNames(slot as PoolSlotKey)), 'compound');
-  allAre(strengthNames('hinge').filter((name) => name !== 'SL 45° Back Extension'), 'compound');
-  allAre(['SL 45° Back Extension', ...strengthNames('isolation_upper'),
-    ...strengthNames('isolation_lower')], 'isolation');
+}
+
+function assertAllClassifiedAs(
+  names: readonly string[],
+  expected: 'compound' | 'isolation',
+): void {
+  const wrong = names.filter((name) => strengthExerciseClassification(name) !== expected);
+  assert(wrong.length === 0, `expected ${expected}: ${wrong.join(', ')}`);
+}
+
+run('canonical classification keeps the approved boundary and distinct face-pull identities', () => {
+  assertAllClassifiedAs(strengthPoolNames('squat'), 'compound');
+  assertAllClassifiedAs(['horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull']
+    .flatMap((slot) => strengthPoolNames(slot as PoolSlotKey)), 'compound');
+  assertAllClassifiedAs(strengthPoolNames('hinge')
+    .filter((name) => name !== 'SL 45° Back Extension'), 'compound');
+  assertAllClassifiedAs(strengthPoolNames('isolation_upper'), 'isolation');
   for (const name of POOL_REGISTRY.biceps.map((entry) => entry.name)) {
     assert(strengthExerciseClassification(name)
       === (name === 'Chin-Up Negative (Slow)' ? 'compound' : 'isolation'),
@@ -75,7 +82,6 @@ run('canonical classification keeps the approved boundary and distinct face-pull
       === (name === 'Cossack Squat' || name === 'Lateral Lunge' ? 'compound' : 'isolation'),
     `wrong groin classification: ${name}`);
   }
-  allAre(POOL_REGISTRY.calves.map((entry) => entry.name), 'isolation');
   assert(strengthExerciseClassification('Face Pull') === 'isolation', 'Face Pull is not isolation');
   assert(strengthExerciseClassification('Cable Face Pull') === 'isolation',
     'Cable Face Pull is not isolation');
@@ -84,6 +90,36 @@ run('canonical classification keeps the approved boundary and distinct face-pull
   assert(strengthExerciseClassification('Dead Bug') === undefined, 'core was classified');
   assert(strengthExerciseClassification('Banded External Rotation') === undefined,
     'prehab was classified');
+});
+
+run('Lower Accessories — Isolation is the corrected 13-name grouping without a new pool', () => {
+  const fromExistingPools = [...new Set([
+    'SL 45° Back Extension',
+    ...strengthPoolNames('isolation_lower'),
+    ...POOL_REGISTRY.groin_adductors
+      .map((entry) => entry.name)
+      .filter((name) => strengthExerciseClassification(name) === 'isolation'),
+    ...POOL_REGISTRY.calves.map((entry) => entry.name),
+  ])];
+  const approved = [
+    'SL 45° Back Extension',
+    'Nordic Lower',
+    'Hamstring Curl',
+    'Leg Extension',
+    'Calf Raises',
+    'Tib Raises',
+    'Single-Leg Hip Thrust',
+    'Back Extension',
+    'Copenhagen Plank (Half)',
+    'Long-Lever Copenhagen',
+    'Groin Squeeze',
+    'Single-Leg Calf Raise',
+    'Seated Calf Raise',
+  ];
+  assert(fromExistingPools.length === approved.length
+    && approved.every((name) => fromExistingPools.includes(name)),
+  `lower accessory grouping changed: ${fromExistingPools.join(', ')}`);
+  assertAllClassifiedAs(fromExistingPools, 'isolation');
 });
 
 run('every selectable governed strength/accessory identity has one classification', () => {

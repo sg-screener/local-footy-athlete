@@ -8007,6 +8007,13 @@ core, robustness, prehab, mobility and conditioning work remain unclassified;
 classification completeness guard derives its required scope from the selectable
 strength and governed support pools, rather than keeping a second name list.
 
+Correction, 2026-09-02: `Lower Accessories — Isolation` contains SL 45° Back
+Extension, Nordic Lower, Hamstring Curl, Leg Extension, Calf Raises, Tib Raises,
+Single-Leg Hip Thrust, Back Extension, Copenhagen Plank (Half), Long-Lever
+Copenhagen, Groin Squeeze, Single-Leg Calf Raise and Seated Calf Raise. This is
+only the Compound/Isolation grouping. Their existing pools and calf, groin and
+muscle tags remain unchanged.
+
 An automatic compound may fill only an uncovered genuine strength direction and
 each automatically programmed strength session may contain no more than four.
 Support then tries a legal direction-matched isolation, genuine prehab,
