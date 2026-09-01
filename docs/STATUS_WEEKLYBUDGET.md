@@ -77,12 +77,24 @@ law registry now state the same contract.
 
 ## Current step
 
-Create a path-scoped checkpoint, then run a fresh exact-source male/female
-machine-readable annual audit. PDFs remain withheld until that audit is clean.
+Product checkpoint `e05491f7c3043ebcd6907315d30c42d95bf81c9f` is saved. A
+fresh exact-source male/female year now passes the established 24/24 acceptance
+gate and the new strength-budget audit. Across 104 athlete-weeks and 728
+athlete-days, both athletes retained 52/52 byte-equivalent restart signatures.
+The new audit found zero duplicate weekly main seats, zero dedicated-lower
+ownership clashes, zero repeated tracked lifts within an athlete-week, zero
+session skeletons above the five-use ceiling and zero recurring purposes below
+six distinct skeletons. The audit names occurrences, athlete-weeks and exact
+slot/signature keys rather than reporting one ambiguous total.
+
+The reusable annual acceptance instrument is
+`scripts/weekly-strength-budget-year-audit.cjs`; its first exact receipt is
+`output/full-year-audit-weeklybudget-e05491f7/weekly-strength-budget-audit.json`.
+PDF serialization and every-page visual review are next, now that both machine
+audits are clean.
 
 ## NOT COVERED — current boundary
 
-- Fresh exact-source annual male/female results and year-skeleton thresholds.
-- Final male/female PDFs, withheld until the machine audit is clean.
+- Final male/female PDFs and every-page visual review.
 - Simulator, Release build, physical-device acceptance, remote persistence and
   true OS process death. Neither phone was touched.
