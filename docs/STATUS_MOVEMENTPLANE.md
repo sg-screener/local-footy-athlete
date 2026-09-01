@@ -73,6 +73,10 @@ path.
 - Law registry structure, guard name, chain membership and R-327 resolution all
   pass. Its overall command remains red only on the inherited 21 UNENFORCED
   rows.
+- Liveness mutation: changing Bench Press primary plane from transverse to
+  sagittal made the focused tape 6/9. The exact classification, workbook
+  equality and same-plane substitution cells all died for the intended reason.
+  Restoring the catalogue returned 9/9 with a byte-clean source diff.
 
 ## Annual finding — existing saved year, not silently repaired
 
