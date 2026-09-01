@@ -259,6 +259,12 @@ run('50 real generated worlds have no non-prehab identity, family or ownership b
 run('male Gunshow accessories do not repeat an earlier automatic upper-session exercise', () => {
   const program = worlds.find((world) => world.id === 'male/In-season/5d/noclub')?.program;
   assert(program, 'male one-game world missing');
+  const gunshowRows = program.microcycles.flatMap((week) => week.workouts
+    .filter((workout) => workout.composedOptionalKind === 'gunshow')
+    .flatMap((workout) => workout.exercises)
+    .filter((row) => automaticExerciseRouteForIdentity(row.exercise?.name ?? '') === 'strength'));
+  assert(gunshowRows.length > 0 && gunshowRows.every((row) => row.automaticSelection === true),
+    `automatic Gunshow rows lost typed authorship: ${JSON.stringify(gunshowRows)}`);
   const failures = allAutomaticGymDays(program).flatMap((days, weekIndex) => {
     const finding = audit(days).repeatedExact;
     return finding.length ? [{ week: weekIndex + 1, finding }] : [];
@@ -269,6 +275,13 @@ run('male Gunshow accessories do not repeat an earlier automatic upper-session e
 run('female Primer power does not repeat automatic power used earlier in the week', () => {
   const program = worlds.find((world) => world.id === 'female/In-season/5d/noclub')?.program;
   assert(program, 'female one-game world missing');
+  const primerGymRows = program.microcycles.flatMap((week) => week.workouts
+    .filter((workout) => workout.composedOptionalKind === 'primer')
+    .flatMap((workout) => workout.exercises)
+    .filter((row) => row.role === 'power'
+      || automaticExerciseRouteForIdentity(row.exercise?.name ?? '') === 'strength'));
+  assert(primerGymRows.length > 0 && primerGymRows.every((row) => row.automaticSelection === true),
+    `automatic Primer rows lost typed authorship: ${JSON.stringify(primerGymRows)}`);
   const failures = allAutomaticGymDays(program).flatMap((days, weekIndex) => {
     const finding = audit(days).repeatedExact;
     return finding.length ? [{ week: weekIndex + 1, finding }] : [];

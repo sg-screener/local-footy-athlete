@@ -139,7 +139,12 @@ Green receipts:
 - `test:pools` remains inherited red at 482/486 on four existing rotation/pin
   expectations; no pool selection policy was changed by this section.
 
-Mutation receipt: pending the path-scoped implementation checkpoint.
+Mutation receipt: after checkpoint `da0759b7`, disconnecting the shared
+selector from the optional-session adapter first survived because the repeat
+counter could no longer see rows whose automatic marker had disappeared. The
+guard was strengthened to prove typed automatic authorship before counting.
+The same mutation then made the Gunshow and Primer authorship cells red
+(14/16); restoring the selector returned the focused boundary to 16/16.
 
 ## Section 5
 
