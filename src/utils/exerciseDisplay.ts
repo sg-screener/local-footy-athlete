@@ -16,6 +16,7 @@ const KNOWN_EXERCISE_TERMS: Record<string, string> = {
   kbs: 'KBs',
   mas: 'MAS',
   ohp: 'OHP',
+  ql: 'QL',
   rdl: 'RDL',
   rdls: 'RDLs',
   rom: 'ROM',

@@ -1,7 +1,7 @@
 /**
- * R-311 integration receipt: the authored early Off-season Running Speed floor
- * must cross the real cold-onboarding install gate. A generator-only check is
- * insufficient because Section 18 rejects at `seedOnboardingProgram`.
+ * The authored first-four-weeks no-Speed rule must cross the real cold-
+ * onboarding install gate. A generator-only check is insufficient because
+ * Section 18 can reject at `seedOnboardingProgram`.
  *
  * NOT COVERED: later phase transitions and the 52-week lived-year sequence;
  * those are owned by the final-year audit.
@@ -70,8 +70,8 @@ async function main(): Promise<void> {
   const firstFour = installed?.program.microcycles.slice(0, 4) ?? [];
   const speedCounts = firstFour.map(microcycle => microcycle.workouts.filter(workout =>
     workout.speedBlock?.kind === 'true_speed' && workout.speedBlock.modality === 'run').length);
-  check('all four accepted early Off-season weeks retain one real running-Speed exposure',
-    firstFour.length === 4 && speedCounts.every(count => count === 1),
+  check('all four accepted opening Off-season weeks contain zero running-Speed exposures',
+    firstFour.length === 4 && speedCounts.every(count => count === 0),
     { microcycles: firstFour.length, speedCounts });
 
   const total = passed + failures.length;

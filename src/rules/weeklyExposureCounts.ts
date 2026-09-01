@@ -98,14 +98,13 @@ export const BIBLE_WEEKLY_CAPS = {
 export type RunningFloorExemption = 'early_off_season_weeks_1_2' | 'bye_recovery';
 
 /**
- * The sprint floor's only remaining exemption. R-311 withdrew the old early-
- * Off-season exception for the small running-Speed dose; ordinary running
- * volume may still use its separate early/bye exemptions. A typed authorised
- * safety reduction remains distinct from both.
+ * The authored cases where the sprint floor is lifted. Off-season weeks 1-4
+ * deliberately contain no Speed; a typed safety reduction remains distinct.
  */
-export type SprintFloorExemption = 'authorised_reduction';
+export type SprintFloorExemption = 'off_season_weeks_1_4' | 'authorised_reduction';
 
 export const SPRINT_FLOOR_EXEMPTIONS: readonly SprintFloorExemption[] = [
+  'off_season_weeks_1_4',
   'authorised_reduction',
 ];
 

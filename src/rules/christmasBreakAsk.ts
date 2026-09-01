@@ -1,5 +1,6 @@
 import type { OnboardingData } from '../types/domain';
 import { phaseHasClubTraining } from './clubSeasonScope';
+import { addDaysISO } from '../utils/programBlockState';
 
 /**
  * WHEN THE APP ASKS ABOUT THE CHRISTMAS BREAK — SEAT_INBOX item 31 part 5,
@@ -62,6 +63,38 @@ export interface ChristmasBreakAskInputs {
   answeredBreakFromISOs: readonly string[];
   /** `coachUpdatesStore.dismissedCoachNoteIds`. */
   dismissedIds: readonly string[];
+  /** New setup already collected the yes/no answer and, when needed, both dates. */
+  setupAnswered?: boolean;
+}
+
+export interface OnboardingChristmasBreakSpan {
+  readonly from: string;
+  readonly until: string;
+}
+
+/**
+ * The accepted pre-season setup dates expressed as the actual closed window.
+ * The last training day remains present; the return day is present again.
+ */
+export function onboardingChristmasBreakSpan(
+  profile: Pick<OnboardingData,
+    'teamTrainingStopsOverChristmas' | 'christmasLastTeamTrainingDate'
+    | 'christmasTeamTrainingReturnDate'>,
+): OnboardingChristmasBreakSpan | null {
+  if (profile.teamTrainingStopsOverChristmas !== true) return null;
+  const last = profile.christmasLastTeamTrainingDate?.slice(0, 10);
+  const returns = profile.christmasTeamTrainingReturnDate?.slice(0, 10);
+  if (!last || !returns || returns <= last) return null;
+  return { from: addDaysISO(last, 1), until: addDaysISO(returns, -1) };
+}
+
+export function onboardingChristmasBreakClosesDate(
+  profile: Parameters<typeof onboardingChristmasBreakSpan>[0],
+  dateISO: string,
+): boolean {
+  const span = onboardingChristmasBreakSpan(profile);
+  const date = dateISO.slice(0, 10);
+  return !!span && date >= span.from && date <= span.until;
 }
 
 /**
@@ -98,6 +131,10 @@ export function decideChristmasBreakAsk(
   inputs: ChristmasBreakAskInputs,
 ): ChristmasBreakAsk | null {
   const today = inputs.todayISO.slice(0, 10);
+
+  // New athletes answer this during pre-season setup. The dated accepted
+  // profile is now the source, so the later Home prompt must not ask again.
+  if (inputs.setupAnswered === true) return null;
 
   // ── THE JANUARY QUESTION — the one that must always be answerable ──
   // NOT GATED ON THE CLUB ANSWER, and not dismissible anywhere in the app. The

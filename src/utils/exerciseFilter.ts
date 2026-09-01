@@ -21,7 +21,11 @@ import {
   injurySeverityReducesAffectedWork,
   onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
-import { ladderLevelForProfile, meetsTrainingAgeMinimum } from '../rules/experienceCrosswalk';
+import {
+  ladderLevelForProfile,
+  meetsTrainingAgeMinimum,
+  TRAINING_AGE_LEVELS,
+} from '../rules/experienceCrosswalk';
 import type { ExperienceLevel } from '../types/domain';
 import type { EquipmentTag } from '../data/exercisePools';
 import {
@@ -41,8 +45,12 @@ export function exerciseProgrammingAllows(name: string, context: {
       context.selectedImplement, context.experienceLevel)) return false;
   const policy = getExerciseTags(name)?.programming;
   if (!policy) return true;
-  if (!meetsTrainingAgeMinimum(ladderLevelForProfile(context.experienceLevel),
+  const athleteLevel = ladderLevelForProfile(context.experienceLevel);
+  if (!meetsTrainingAgeMinimum(athleteLevel,
     context.route === 'manual' ? policy.manualMinimum : policy.automaticMinimum)) return false;
+  if (context.route !== 'manual' && policy.automaticMaximum
+    && TRAINING_AGE_LEVELS.indexOf(athleteLevel)
+      > TRAINING_AGE_LEVELS.indexOf(policy.automaticMaximum)) return false;
   if (context.route === 'warmup' && !policy.warmup) return false;
   if (context.route === 'primer' && !policy.primer) return false;
   const limit = context.route === 'manual' ? policy.excludeWithinDaysOfGame

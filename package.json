@@ -25,6 +25,8 @@
     "test:weekly-writer-zero": "node scripts/test-weekly-writer-census.js && npm run test:dev-seed-actions && node scripts/weekly-writer-census.js",
     "test:dev-seed-actions": "TZ=Australia/Melbourne sucrase-node src/__tests__/devE2ESeedActionTests.ts",
     "test:compiler-year": "node scripts/test-compiler-year.js && node scripts/run-compiler-year.js",
+    "test:eleven-items": "TZ=Australia/Melbourne sucrase-node src/__tests__/elevenItemProgrammingRegressionTests.ts && npm run test:early-offseason-speed-cold-acceptance",
+    "test:eleven-year": "node scripts/validate-eleven-item-year.cjs",
     "test:qa:local": "npm run test:qa",
     "test:preference-shape": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekPreferenceShapeTests.ts",
     "test:bounds": "sucrase-node src/__tests__/blockBoundsTests.js",

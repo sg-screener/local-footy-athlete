@@ -548,6 +548,25 @@ function scoreAssignment(
   const byOrder = [...assignment].sort((a, b) => orderIndex(a.day) - orderIndex(b.day));
   let score = 0;
 
+  // Four strength sessions have one deliberate delivery order. Permuting the
+  // authored purposes is still necessary to find legal fixture-safe weeks, but
+  // when two lower and two upper sessions can alternate, the final chronological
+  // sequence is Lower -> Upper -> Lower -> Upper. The large preference is safe:
+  // legality has already run, so this can never buy past a game or unavailable
+  // day. It only breaks ties between valid layouts and prevents L/L or U/U from
+  // sitting beside each other when an alternating arrangement exists.
+  if (byOrder.length === 4) {
+    const family = byOrder.map((slot) => PURPOSE_IS_LOWER[slot.purpose]);
+    const twoLower = family.filter(Boolean).length === 2;
+    if (twoLower) {
+      const alternating = family.every((value, index) => value !== family[(index + 1) % 4]);
+      if (alternating) score += 160;
+      if (family.every((value, index) => value === [true, false, true, false][index])) {
+        score += 40;
+      }
+    }
+  }
+
   // WC-043 / P10: compare recurring weekly gaps, not only gaps inside the
   // printed Monday–Sunday page. Upper push/pull are different planes but still
   // comparable upper stresses. This is a preference among LEGAL assignments;

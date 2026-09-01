@@ -332,10 +332,10 @@ export const BASE_LAYOUTS: readonly BaseLayout[] = [
   },
   {
     clauseId: 'WC-113', phase: 'Pre-season', gymDays: [4, 5, 6], weekendAvailable: null,
-    purposes: ['upper_pull', 'lower_squat', 'upper_push', 'lower_hinge'],
+    purposes: ['lower_squat', 'upper_pull', 'lower_hinge', 'upper_push'],
     setBudget: DEFAULT_SET_BUDGET,
-    statement: 'Upper x2 + Lower x2. Pair running/top-end with Upper and off-leg '
-      + 'conditioning with Lower. Extra gym availability does not create a fifth.',
+    statement: 'Lower then Upper then Lower then Upper, spread as far apart as the '
+      + 'available week permits. Extra gym availability does not create a fifth.',
   },
   {
     clauseId: 'WC-120', phase: 'Off-season', gymDays: [2], weekendAvailable: null,
@@ -450,25 +450,25 @@ export interface PhaseOverlay {
 export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> = {
   early_optional: {
     clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.75,
-    runningRequired: false, sprintExposureRequired: true, maxRestDays: 3,
+    runningRequired: false, sprintExposureRequired: false, maxRestDays: 3,
     conditioningTarget: { min: 0, max: 3 },
     // §8: *"No running is required. Conditioning is light aerobic/off-leg work
     // only."* The one overlay where a hard session is forbidden outright.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     statement: 'Off-season weeks 1-2: every strength session remains optional, '
-      + '75% load, light aerobic/off-leg work only, plus one short low-volume '
-      + 'running-acceleration exposure, with up to three full rest days.',
+      + '75% load, light aerobic/off-leg work only, zero Speed work, with up to '
+      + 'three full rest days.',
   },
   transition: {
     clauseId: 'WC-131', sessionsRequired: true, loadAdjustment: 0.90,
-    runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
+    runningRequired: true, sprintExposureRequired: false, maxRestDays: 2,
     conditioningTarget: { min: 3, max: 4 },
     // §8: *"Conditioning returns progressively through aerobic-base and
     // controlled capacity work."* Capacity, named as capacity — not yet hard.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     statement: 'Off-season weeks 3-4: the normal strength skeleton becomes '
-      + 'required again, 90% load, conditioning returns progressively and short '
-      + 'running acceleration remains. Week 4 is not automatically a deload.',
+      + 'required again, 90% load and conditioning returns progressively, while '
+      + 'Speed remains at zero. Week 4 is not automatically a deload.',
   },
   normal_build: {
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,

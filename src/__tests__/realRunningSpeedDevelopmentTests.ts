@@ -2,8 +2,8 @@
  * R-311 — real running-speed development, read from final generated weeks.
  *
  * The founding annual artifact showed three distinct failures:
- *   - Off-season weeks 1-4 carried no Speed at all;
- *   - weeks 5-8 called `Air Bike Accelerations` Speed;
+ *   - R-311 incorrectly added Speed to Off-season weeks 1-4;
+ *   - later Off-season could call `Air Bike Accelerations` Speed;
  *   - a Pre-season week called incomplete-recovery `30 m Repeats` Speed.
  *
  * This tape reads only the final `Workout.speedBlock` and the exact rows it
@@ -110,12 +110,12 @@ const offseason = [1, 3, 5, 6, 9, 10].map(phaseWeek => ({
   detail: speedDetail(build({ phase: 'Off-season', phaseWeek })),
 }));
 ok('[non-vacuity] every sampled Off-season phase step builds',
-  offseason.every(sample => sample.detail.workout !== null),
+  offseason.every(sample => sample.phaseWeek <= 4
+    ? sample.detail.workout === null
+    : sample.detail.workout !== null),
   offseason.map(sample => [sample.phaseWeek, sample.detail.block?.templateName ?? null]));
-ok('early Off-season uses only short 10-20 m acceleration templates',
-  offseason.filter(sample => sample.phaseWeek <= 4).every(sample =>
-    sample.detail.template?.quality === 'acceleration'
-    && /^(10|20) m Acceleration Reps$/.test(sample.detail.template.name)),
+ok('Off-season weeks 1-4 contain zero automatic Speed',
+  offseason.filter(sample => sample.phaseWeek <= 4).every(sample => sample.detail.workout === null),
   offseason.slice(0, 2).map(sample => sample.detail.block?.templateName ?? null));
 ok('middle Off-season retains acceleration and adds progressive build-ups',
   new Set(offseason.filter(sample => sample.phaseWeek >= 5 && sample.phaseWeek <= 8)
@@ -131,7 +131,7 @@ ok('late Off-season uses small Fly 20/Fly 30 exposures',
   offseason.filter(sample => sample.phaseWeek >= 9)
     .map(sample => sample.detail.block?.templateName ?? null));
 ok('every delivered Off-season Speed component is run-only and owns real rows',
-  offseason.every(sample => sample.detail.block?.modality === 'run'
+  offseason.filter(sample => sample.phaseWeek >= 5).every(sample => sample.detail.block?.modality === 'run'
     && sample.detail.ownedRows.length > 0
     && sample.detail.ownedRows.some(row => row.exercise?.name === sample.detail.block?.templateName)),
   offseason.map(sample => ({ week: sample.phaseWeek, modality: sample.detail.block?.modality,

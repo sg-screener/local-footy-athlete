@@ -744,7 +744,9 @@ export function buildMidOffseasonExposureContract(
     mode: 'mid_offseason', subphase: 'mid_offseason',
     strength: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.mainStrength },
     conditioning: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.coreConditioning },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
+    // Off-season weeks 3-4 are the transition block, but still carry zero
+    // automatic Speed. The late-Off-season builder below starts the floor.
+    sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: selected.sprintHighSpeed },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,

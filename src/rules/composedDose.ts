@@ -206,7 +206,14 @@ export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
       };
     }
   }
-  if (input.isMainLift && input.poolSlot) {
+  // Bible Section 5's in-season lower-main band applies to bilateral RDLs
+  // wherever the automatic composer seats them. Treating an RDL selected into
+  // a support seat as generic lower-secondary work produced 6-8 reps, even
+  // though the Bible explicitly keeps this familiar hinge low-rep in season.
+  // Single-Leg RDL remains on its separately ruled 5-10-rep path.
+  const inSeasonBilateralRdl = input.seasonPhase === 'In-season'
+    && composedIdentityFor(input.identity) === composedIdentityFor('RDLs');
+  if ((input.isMainLift || inSeasonBilateralRdl) && input.poolSlot) {
     const scheme = mainLiftSchemeForSlot(input.poolSlot, input.seasonPhase, input.offseasonSubphase);
     if (scheme) {
       return {

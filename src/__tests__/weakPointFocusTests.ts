@@ -234,10 +234,11 @@ console.log('\n[4] Ruling 4 — the no-weakness DEFAULT ORDER is law, not coinci
     mid.sprintHighSpeed >= early.sprintHighSpeed &&
     late.sprintHighSpeed >= mid.sprintHighSpeed,
     { early: early.sprintHighSpeed, mid: mid.sprintHighSpeed, late: late.sprintHighSpeed });
-  // R-311 keeps one short running-Speed exposure from the first Off-season
-  // week; weak-point focus may change the selected drill, never erase the floor.
-  ok('early off-season retains the one-exposure running-Speed floor', early.sprintHighSpeed === 1,
-    { early: early.sprintHighSpeed });
+  ok('Off-season weeks 1-4 retain zero automatic Speed',
+    early.sprintHighSpeed === 0 && mid.sprintHighSpeed === 0,
+    { early: early.sprintHighSpeed, mid: mid.sprintHighSpeed });
+  ok('Speed starts only in late Off-season', late.sprintHighSpeed === 1,
+    { late: late.sprintHighSpeed });
 }
 
 console.log('\n[5] Ruling 0 — the power lean reaches its TWO real consumers');

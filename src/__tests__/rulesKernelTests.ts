@@ -882,8 +882,12 @@ try {
 
   ok('[C4] a 0-sprint week is flagged when no exemption is claimed',
     sprintUnder(validateProgramWeek({ days: zeroRunningWeek })));
-  ok('[C4] early off-season now retains the running-Speed floor',
-    sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
+  ok('[C4] Off-season weeks 1-2 lift the Speed floor',
+    !sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
+  ok('[C4] Off-season weeks 3-4 also lift the Speed floor',
+    !sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'mid_offseason' })));
+  ok('[C4] late Off-season restores the Speed floor',
+    sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'late_offseason' })));
 
   // THE TWO FLOORS DO NOT SHARE ESCAPES. The ordinary running-volume floor may
   // lift in early Off-season or bye recovery; the small running-Speed exposure

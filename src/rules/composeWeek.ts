@@ -28,6 +28,7 @@
 import {
   FULL_BODY_DAY_SIZE,
   SLOTS_FOR_KIND,
+  OPTIONAL_UPPER_SUPPORT_SLOTS,
   WEEKLY_COVERAGE_SET,
   slotsForExerciseName,
   slotsForKind,
@@ -1539,8 +1540,17 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       && squatBench.length > 0 && squatBench.every(id => id === 'Leg Press')
       && authoredShapeSlots.includes('single_leg_knee') && !prohibited.has('single_leg_knee')
       && slotCandidates('single_leg_knee').some(id => !excludedToday.has(id) && composedRowIsLegal(id, kitToday));
-    const shapeSlots = singleLegOwnsLowerWork
+    const shapeSlotsBeforeOptionalSupport = singleLegOwnsLowerWork
       ? authoredShapeSlots.filter(slot => slot !== 'squat') : authoredShapeSlots;
+    const shapeSlots = shapeSlotsBeforeOptionalSupport.filter((slot) =>
+      !OPTIONAL_UPPER_SUPPORT_SLOTS.has(slot)
+      || slotCandidates(slot).some((identity) => !excludedToday.has(identity)
+        && composedRowIsLegal(identity, kitToday)
+        && exerciseProgrammingAllows(identity, {
+          experienceLevel: inputs.profile.experienceLevel,
+          daysToGame: planned.daysToGame,
+          route: 'automatic',
+        })));
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
     // ordinary week took the else arm: its lower rows came out accessories

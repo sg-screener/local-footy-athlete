@@ -93,7 +93,7 @@ console.log('\n[1] Every selectable exercise resolves a NAMED authority');
   // added 2026-07-28 for exercises that prescribe the lightest loadable weight
   // rather than a ratio. What must NOT grow is the set of ways an answer can be
   // reached without an authored source, which is what [2] pins.
-  const KINDS = ['bodyweight', 'athlete_chosen', 'prescribed', 'equipment_minimum', 'unauthored'];
+  const KINDS = ['bodyweight', 'unloaded', 'athlete_chosen', 'prescribed', 'equipment_minimum', 'unauthored'];
   const badKind = names.filter((n) => !KINDS.includes(resolveLoadAuthority(n).kind));
   okEmpty('every exercise resolves to a known authority kind', badKind, KINDS.join(' | '));
 
@@ -166,6 +166,11 @@ console.log('\n[4] The render seam formats from the AUTHORITY, not from a weight
 
   ok('an unauthored exercise never reads BW even when a weight exists',
     formatLoadLabel({ kind: 'unauthored' }, 12) === '12kg');
+
+  ok('Crab Hold is canonically unloaded and never renders BW',
+    resolveLoadAuthority('Crab Hold').kind === 'unloaded'
+    && resolveLoadControlMode('Crab Hold') === 'none'
+    && formatLoadLabel(resolveLoadAuthority('Crab Hold'), null) === '-');
 }
 
 console.log('\n[5] The invention channels are GONE from the module');

@@ -43,6 +43,7 @@ export interface SpeedTemplateSelectionContext {
  * The one phase progression for automatic running Speed.
  *
  * The scheduler asks for qualities; this specialist names an authored row.
+ * Weeks 1-4 have no automatic Speed and therefore never call this selector.
  * Phase weeks 5-8 alternate acceleration and longer progressive build-ups so
  * both are delivered without lengthening a session. Week 9 onward alternates
  * the two small flying exposures. Competitive phases alternate missing
@@ -62,11 +63,8 @@ export function runningSpeedTemplatePreference(args: {
       if (args.offseasonSubphase === 'mid_offseason') return '20 m Acceleration Reps';
       return 'Progressive Sprint Exposure';
     }
-    if (phaseWeek <= 2) {
-      return '10 m Acceleration Reps';
-    }
     if (phaseWeek <= 4) {
-      return '20 m Acceleration Reps';
+      return phaseWeek <= 2 ? '10 m Acceleration Reps' : '20 m Acceleration Reps';
     }
     if (phaseWeek <= 8) {
       return phaseWeek % 2 === 1

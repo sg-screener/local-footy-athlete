@@ -129,7 +129,7 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ok('[SAM] an upper day covering both planes and directions is COMPLETE',
     upperCov.missing.length === 0
       && upperCov.filled.length === UPPER_FULL_SLOTS.filter(
-        (slot) => slot !== 'football_robustness').length,
+        (slot) => !['football_robustness', 'push_accessory_1', 'pull_accessory_1'].includes(slot)).length,
     `missing=${JSON.stringify(upperCov.missing)}`);
 
   const completePush = [
@@ -141,7 +141,7 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ok('[SAM] split PUSH is horizontal + vertical + core before weekly robustness allocation',
     pushCov.missing.length === 0
       && pushCov.filled.length === 3
-      && UPPER_SPLIT_PUSH_SLOTS.length === 5,
+      && UPPER_SPLIT_PUSH_SLOTS.length === 6,
     `missing=${JSON.stringify(pushCov.missing)} filled=${JSON.stringify(pushCov.filled)}`);
 
   const completePull = [
@@ -153,7 +153,7 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   ok('[SAM] split PULL is horizontal + vertical + core before weekly robustness allocation',
     pullCov.missing.length === 0
       && pullCov.filled.length === 3
-      && UPPER_SPLIT_PULL_SLOTS.length === 5,
+      && UPPER_SPLIT_PULL_SLOTS.length === 6,
     `missing=${JSON.stringify(pullCov.missing)} filled=${JSON.stringify(pullCov.filled)}`);
 
   ok('[SAM] required split uppers declare no direct arm or delt-pump seat',

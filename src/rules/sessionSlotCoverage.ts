@@ -149,10 +149,10 @@ export const LOWER_HINGE_SLOTS: readonly SessionSlot[] = [
   'football_robustness',
 ];
 
-/** A full upper day: both planes, both directions, plus arm/shoulder work. */
+/** A full upper day: both main planes, then one push and one pull accessory and core. */
 export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
-  'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'football_robustness',
 ];
 
 /**
@@ -180,13 +180,18 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  */
 export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'core', 'football_robustness', 'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
 ];
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'core', 'football_robustness', 'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
 ];
+
+/** Extra upper-session variety is expected when the athlete's kit and safety allow it. */
+export const OPTIONAL_UPPER_SUPPORT_SLOTS: ReadonlySet<SessionSlot> = new Set([
+  'push_accessory_1', 'pull_accessory_1',
+]);
 
 /**
  * ── SAM'S FULL-BODY SHAPE, 2026-08-14, verbatim ───────────────────────────
@@ -239,17 +244,17 @@ export const FEMALE_LOWER_SLOTS: readonly SessionSlot[] = [
 
 export const FEMALE_UPPER_FULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
-  'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'core',
 ];
 
 export const FEMALE_UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'core', 'football_robustness', 'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
 ];
 
 export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'core', 'football_robustness', 'football_robustness',
+  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
 ];
 
 /**
@@ -750,7 +755,8 @@ export function sessionSlotCoverage(
   // cannot honestly infer which of the week's missing robustness categories
   // this one day owed.
   const declared = declaredSlots
-    ?? SLOTS_FOR_KIND[kind].filter((slot) => slot !== 'football_robustness');
+    ?? SLOTS_FOR_KIND[kind].filter((slot) =>
+      slot !== 'football_robustness' && !OPTIONAL_UPPER_SUPPORT_SLOTS.has(slot));
   // R-084: a slot the kit cannot train is not owed, so it is removed from the
   // requirement BEFORE assignment rather than subtracted from `missing` after —
   // otherwise it would still soak up a row in the matching step.
@@ -801,8 +807,14 @@ export function sessionSlotCoverage(
   // duplicate of the row. Accessory and arm slots are exempt as before, because
   // two accessory rows are normal and are not what his sentence is about.
   const onlySlotCounts = new Map<SessionSlot, number>();
-  for (const slots of candidates) {
+  for (let index = 0; index < candidates.length; index += 1) {
+    const slots = candidates[index];
     if (slots.length !== 1) continue;
+    // An upper accessory still carries its movement plane. When a caller is
+    // judging only the main ladder (no declared composer slots), do not turn
+    // that deliberate variety row back into a duplicate main movement.
+    const allRowSlots = slotsFilledByRow(rows[index]);
+    if (allRowSlots.some((slot) => OPTIONAL_UPPER_SUPPORT_SLOTS.has(slot))) continue;
     onlySlotCounts.set(slots[0], (onlySlotCounts.get(slots[0]) ?? 0) + 1);
   }
   // ── A SLOT MAY BE OWED TWICE, AND THEN TWO ROWS ARE NOT A DUPLICATE ───────
@@ -825,6 +837,10 @@ export function sessionSlotCoverage(
   for (const slot of required) declaredCounts.set(slot, (declaredCounts.get(slot) ?? 0) + 1);
   const duplicated = [...new Set(required)].filter((slot) =>
     slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder'
+    && !(declaredSlots && (slot === 'horizontal_push' || slot === 'vertical_push')
+      && declaredSlots.includes('push_accessory_1'))
+    && !(declaredSlots && (slot === 'horizontal_pull' || slot === 'vertical_pull')
+      && declaredSlots.includes('pull_accessory_1'))
     && (onlySlotCounts.get(slot) ?? 0) > (declaredCounts.get(slot) ?? 1));
   return { kind, required, filled, missing, duplicated, unavailable };
 }

@@ -13,6 +13,10 @@ import { DayGrid } from '../../components/onboarding/DayGrid';
 import { SelectableTile } from '../../components/common/SelectableTile';
 import { useProfileStore } from '../../store/profileStore';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
+import { DateCalendarPicker } from '../../components/calendar/DateCalendarPicker';
+import { addDaysISO } from '../../utils/programBlockState';
+import { christmasBreakSeasonKey } from '../../rules/christmasBreakAsk';
+import { todayISOLocal } from '../../utils/appDate';
 
 type TeamTrainingDaysScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
@@ -34,6 +38,17 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
       ? [...(saved.teamTrainingDays ?? [])] : null);
   const selectedDays = answer ?? [];
   const noTeamTraining = answer !== null && answer.length === 0;
+  const asksChristmasBreak = saved.seasonPhase === 'Pre-season' && selectedDays.length > 0;
+  const [stopsOverChristmas, setStopsOverChristmas] = useState<boolean | null>(() =>
+    typeof saved.teamTrainingStopsOverChristmas === 'boolean'
+      ? saved.teamTrainingStopsOverChristmas : null);
+  const [lastTrainingDate, setLastTrainingDate] = useState<string | null>(
+    saved.christmasLastTeamTrainingDate ?? null,
+  );
+  const [returnDate, setReturnDate] = useState<string | null>(
+    saved.christmasTeamTrainingReturnDate ?? null,
+  );
+  const christmasYear = Number(christmasBreakSeasonKey(todayISOLocal()));
   const { label: stepLabel, progressPercent } = useOnboardingProgress('TeamTrainingDays');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
@@ -46,13 +61,28 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
     }
   };
 
-  const isValid = answer !== null;
+  const christmasValid = !asksChristmasBreak
+    || stopsOverChristmas === false
+    || (stopsOverChristmas === true && !!lastTrainingDate && !!returnDate
+      && returnDate > lastTrainingDate);
+  const isValid = answer !== null && christmasValid
+    && (!asksChristmasBreak || stopsOverChristmas !== null);
 
   const handleContinue = () => {
     if (isValid) {
+      const christmasPatch = saved.seasonPhase === 'Pre-season'
+        ? {
+            teamTrainingStopsOverChristmas: noTeamTraining ? false : stopsOverChristmas ?? false,
+            christmasLastTeamTrainingDate:
+              !noTeamTraining && stopsOverChristmas ? lastTrainingDate ?? undefined : undefined,
+            christmasTeamTrainingReturnDate:
+              !noTeamTraining && stopsOverChristmas ? returnDate ?? undefined : undefined,
+          }
+        : {};
       void commitAndAdvance({
         teamTrainingDaysPerWeek: selectedDays.length,
         teamTrainingDays: selectedDays,
+        ...christmasPatch,
       }, () => navigation.navigate('TrainingCommitment'));
     }
   };
@@ -110,6 +140,70 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
           {feedbackForCount(selectedDays.length)}
         </Text>
       )}
+
+      {asksChristmasBreak && (
+        <View style={styles.christmasSection} testID="onboarding-christmas-break">
+          <Text variant="h2" color={colors.text.primary}>
+            Does team training stop over Christmas?
+          </Text>
+          <View style={styles.answerRow}>
+            <SelectableTile
+              isSelected={stopsOverChristmas === true}
+              onPress={() => setStopsOverChristmas(true)}
+              disabled={saving}
+              accessibilityLabel="Yes, team training stops over Christmas"
+            >
+              <Text variant="bodyEmphasis">Yes</Text>
+            </SelectableTile>
+            <SelectableTile
+              isSelected={stopsOverChristmas === false}
+              onPress={() => {
+                setStopsOverChristmas(false);
+                setLastTrainingDate(null);
+                setReturnDate(null);
+              }}
+              disabled={saving}
+              accessibilityLabel="No, team training continues over Christmas"
+            >
+              <Text variant="bodyEmphasis">No</Text>
+            </SelectableTile>
+          </View>
+
+          {stopsOverChristmas === true && (
+            <>
+              <Text variant="bodyEmphasis" style={styles.dateHeading}>
+                Last team training date
+              </Text>
+              <DateCalendarPicker
+                onPick={(dateISO) => {
+                  setLastTrainingDate(dateISO);
+                  if (returnDate && returnDate <= dateISO) setReturnDate(null);
+                }}
+                minISO={`${christmasYear}-11-01`}
+                maxISO={`${christmasYear}-12-31`}
+                initialMonthISO={`${christmasYear}-12-01`}
+                selectedISO={lastTrainingDate}
+                testIDPrefix="onboarding-christmas-last-training"
+              />
+              {lastTrainingDate && (
+                <>
+                  <Text variant="bodyEmphasis" style={styles.dateHeading}>
+                    Team training return date
+                  </Text>
+                  <DateCalendarPicker
+                    onPick={setReturnDate}
+                    minISO={addDaysISO(lastTrainingDate, 1)}
+                    maxISO={`${christmasYear + 1}-03-31`}
+                    initialMonthISO={`${christmasYear + 1}-01-01`}
+                    selectedISO={returnDate}
+                    testIDPrefix="onboarding-christmas-return"
+                  />
+                </>
+              )}
+            </>
+          )}
+        </View>
+      )}
     </OnboardingLayout>
   );
 };
@@ -144,5 +238,16 @@ const styles = StyleSheet.create({
   },
   noTeamTraining: {
     marginTop: spacing.lg,
+  },
+  christmasSection: {
+    marginTop: spacing.xl,
+    gap: spacing.md,
+  },
+  answerRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dateHeading: {
+    marginTop: spacing.md,
   },
 });

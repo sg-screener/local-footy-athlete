@@ -73,6 +73,18 @@ eq(
   'SL 45° Back Extension Hold',
 );
 
+eq(
+  'preserves QL in the canonical back-extension name',
+  formatExerciseDisplayName('QL Back Extension'),
+  'QL Back Extension',
+);
+
+eq(
+  'preserves several approved abbreviations in one title',
+  formatExerciseDisplayName('sl ql db rdl iso hold'),
+  'SL QL DB RDL ISO Hold',
+);
+
 eq('handles null defensively', formatExerciseDisplayName(null), '');
 eq('handles blank defensively', formatExerciseDisplayName('   '), '');
 

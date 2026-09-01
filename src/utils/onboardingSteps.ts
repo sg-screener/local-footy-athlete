@@ -149,10 +149,23 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     name: 'TeamTrainingDays',
     answerLabel: 'your team training days',
-    collects: ['teamTrainingDaysPerWeek', 'teamTrainingDays'],
+    collects: [
+      'teamTrainingDaysPerWeek', 'teamTrainingDays', 'teamTrainingStopsOverChristmas',
+      'christmasLastTeamTrainingDate', 'christmasTeamTrainingReturnDate',
+    ],
     visible: preOrInSeason,
-    satisfied: (data) => filled(data.teamTrainingDays) ||
-      (data.teamTrainingDaysPerWeek === 0 && Array.isArray(data.teamTrainingDays) && data.teamTrainingDays.length === 0),
+    satisfied: (data) => {
+      const teamDaysAnswered = filled(data.teamTrainingDays) ||
+        (data.teamTrainingDaysPerWeek === 0 && Array.isArray(data.teamTrainingDays)
+          && data.teamTrainingDays.length === 0);
+      if (!teamDaysAnswered) return false;
+      if (data.seasonPhase !== 'Pre-season' || data.teamTrainingDays?.length === 0) return true;
+      if (typeof data.teamTrainingStopsOverChristmas !== 'boolean') return false;
+      if (!data.teamTrainingStopsOverChristmas) return true;
+      return filled(data.christmasLastTeamTrainingDate)
+        && filled(data.christmasTeamTrainingReturnDate)
+        && data.christmasTeamTrainingReturnDate! > data.christmasLastTeamTrainingDate!;
+    },
   },
   {
     name: 'TrainingCommitment',

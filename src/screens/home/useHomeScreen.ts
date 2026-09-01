@@ -450,6 +450,7 @@ export function useHomeScreen() {
         .filter((fact) => !isOpenHorizon(fact))
         .map(({ effectiveFrom }) => effectiveFrom),
       dismissedIds: dismissedCoachNoteIds,
+      setupAnswered: typeof onboardingData?.teamTrainingStopsOverChristmas === 'boolean',
     });
   }, [temporarySourceFacts, onboardingData, dismissedCoachNoteIds]);
   const { modifiers: coachNotes, count: modifierCount } = useActiveModifiers({

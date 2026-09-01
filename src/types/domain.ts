@@ -245,6 +245,12 @@ export interface OnboardingData {
   usualGameDay?: DayOfWeek;
   teamTrainingDaysPerWeek?: number;
   teamTrainingDays?: DayOfWeek[];
+  /** Pre-season setup answer. False means the club trains through Christmas. */
+  teamTrainingStopsOverChristmas?: boolean;
+  /** The athlete's final club session before the Christmas closure (YYYY-MM-DD). */
+  christmasLastTeamTrainingDate?: string;
+  /** The first club session/date back after the Christmas closure (YYYY-MM-DD). */
+  christmasTeamTrainingReturnDate?: string;
   /** Legacy read-ingress only (R-152). No onboarding or programming writer remains. */
   teamTrainingDuration?: TeamTrainingDuration;
   /** Legacy read-ingress only (R-152). Completed-session feedback owns real intensity. */

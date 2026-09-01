@@ -23,6 +23,7 @@ import {
 import { isoDateForWeekday } from '../utils/appDate';
 import { awaySpansFromConstraints, dateIsInsideAwaySpan } from './awaySpans';
 import type { WeeklySchedulerInputs } from './weeklyScheduler';
+import { onboardingChristmasBreakClosesDate } from './christmasBreakAsk';
 
 const DAY_NAMES = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
@@ -98,6 +99,9 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
     const isAway = dateIsInsideAwaySpan(dateISO, awaySpans);
     if (isAway) {
       away.add(day);
+      clubClosed.add(day);
+    }
+    if (onboardingChristmasBreakClosesDate(args.profile, dateISO)) {
       clubClosed.add(day);
     }
     for (const constraint of schedules) {

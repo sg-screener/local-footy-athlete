@@ -90,6 +90,8 @@ export type NordicCurlVariant =
 export interface ExerciseProgramming {
   strengthRole?: 'none' | 'accessory' | 'secondary';
   automaticMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
+  /** Highest training-age tier this exercise may be selected for automatically. */
+  automaticMaximum?: import('../rules/experienceCrosswalk').TrainingAgeLevel;
   manualMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
   excludeWithinDaysOfGame?: number;
   automaticExcludeWithinDaysOfGame?: number;
@@ -1323,6 +1325,12 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
+    // A useful regression for less-experienced athletes, but never an
+    // automatic advanced-athlete choice. Manual Add remains unrestricted.
+    programming: {
+      automaticMinimum: 'new', automaticMaximum: 'consistent',
+      manualMinimum: 'new', warmup: false, primer: false,
+    },
     injury: {
       'groin': 'caution',
       'hip': 'caution',

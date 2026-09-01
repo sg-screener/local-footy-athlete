@@ -108,7 +108,6 @@ export interface ExerciseLoadProfile {
 export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Seated Single-Leg Pike Lift',
   'Standing Knee Extension',
-  'Crab Hold',
   'Horse Stance Hold',
   'Seated Good Morning',
   'SL 45° Back Extension',
@@ -791,6 +790,7 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   // Sam's locked list (2026-07-24): band / mobility additions — no external
   // load, so no fake precision on the card.
   'Crab Walks',
+  'Crab Hold',
   'Side Plank Row',
   'QL Back Extension',
   'Elephant Walks',
@@ -987,7 +987,8 @@ export function roundToEquipment(weight: number, equipment: EquipmentClass): num
 
 /** Where a load claim came from. `unauthored` is a real answer, not a failure. */
 export type LoadAuthority =
-  | { kind: 'bodyweight'; source: 'TRUE_BODYWEIGHT_EXERCISES' | 'PREHAB_NO_LOAD_EXERCISES' }
+  | { kind: 'bodyweight'; source: 'TRUE_BODYWEIGHT_EXERCISES' }
+  | { kind: 'unloaded'; source: 'PREHAB_NO_LOAD_EXERCISES' }
   | { kind: 'athlete_chosen'; source: 'ATHLETE_CHOSEN_LOAD_EXERCISES' }
   | { kind: 'prescribed'; source: 'EXERCISE_LOAD_MAP'; profile: ExerciseLoadProfile }
   | { kind: 'equipment_minimum'; source: 'EQUIPMENT_MINIMUM_PRESCRIPTIONS'; equipment: EquipmentKind }
@@ -999,7 +1000,7 @@ export type LoadAuthority =
  * Order matters and mirrors the authored precedence:
  *   1. athlete-chosen — real external load, nothing honest to prescribe
  *   2. true bodyweight — ruled unloaded
- *   3. prehab / no-load — ruled unloaded, different reason
+ *   3. prehab / no-load — ruled unloaded and intentionally has no load label
  *   4. the ruled ratio map
  *   5. nothing — say so
  */
@@ -1013,7 +1014,7 @@ export function resolveLoadAuthority(exerciseName: string): LoadAuthority {
     return { kind: 'bodyweight', source: 'TRUE_BODYWEIGHT_EXERCISES' };
   }
   if (PREHAB_NO_LOAD_EXERCISES.has(resolved)) {
-    return { kind: 'bodyweight', source: 'PREHAB_NO_LOAD_EXERCISES' };
+    return { kind: 'unloaded', source: 'PREHAB_NO_LOAD_EXERCISES' };
   }
   const minimumEquipment = EQUIPMENT_MINIMUM_PRESCRIPTIONS[resolved];
   if (minimumEquipment) {
@@ -1107,6 +1108,7 @@ export function formatLoadLabel(authority: LoadAuthority, weightKg: number | nul
   if (authority.kind === 'bodyweight') {
     return weightKg && weightKg > 0 ? `BW + ${weightKg}kg` : 'BW';
   }
+  if (authority.kind === 'unloaded') return '-';
   // athlete_chosen, prescribed and unauthored all render the number if there
   // is one and a dash if there is not. None of them may claim "BW": for
   // athlete_chosen that is the Pullovers defect, and for unauthored it would

@@ -480,10 +480,12 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
     : input.subphase === 'bye_recovery' ? 'bye_recovery'
     : flags.byeWeek ? 'bye_recovery'
     : null;
-  // R-311 keeps the small running-Speed floor in early Off-season. Bye recovery
-  // still lifts only the ordinary RUNNING-volume floor; a future sprint-floor
-  // reduction must arrive as its own explicit authorised reason.
-  const sprintFloorExemption: SprintFloorExemption | null = null;
+  // The first four Off-season weeks (early + transition subphases) deliberately
+  // carry no Speed. This is the canonical floor rule, not a generated-row patch.
+  const sprintFloorExemption: SprintFloorExemption | null =
+    input.subphase === 'early_offseason' || input.subphase === 'mid_offseason'
+      ? 'off_season_weeks_1_4'
+      : null;
   for (const cf of auditWeekAgainstCaps(counts, {
     runningFloorExemption,
     sprintFloorExemption,

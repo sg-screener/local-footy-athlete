@@ -262,10 +262,15 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
     label: 'Team Training',
     step: 'TeamTrainingDays',
     value: (data) =>
-      formatDays(data.teamTrainingDays as DayOfWeek[] | undefined)
+      (formatDays(data.teamTrainingDays as DayOfWeek[] | undefined)
       ?? (data.teamTrainingDaysPerWeek
         ? `${data.teamTrainingDaysPerWeek} days per week`
-        : 'Not selected'),
+        : 'Not selected'))
+      + (data.seasonPhase === 'Pre-season' && data.teamTrainingDays?.length
+        ? data.teamTrainingStopsOverChristmas
+          ? `; Christmas break ${data.christmasLastTeamTrainingDate ?? '?'} to ${data.christmasTeamTrainingReturnDate ?? '?'}`
+          : '; trains through Christmas'
+        : ''),
   },
   {
     section: 'Training',
