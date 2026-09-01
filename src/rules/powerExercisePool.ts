@@ -213,6 +213,17 @@ export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
     reducedTakeoverOnly: false,
     authoredCueIntent: 'Start on knees, explode up to feet in one smooth motion',
   },
+  {
+    name: 'RFE Split Squat Jump',
+    family: 'lower',
+    equipmentRequired: ['Bench'],
+    minTrainingAge: 'consistent',
+    phaseGate: 'off_and_pre_season_only',
+    inSeasonSafe: false,
+    reducedTakeoverOnly: false,
+    authoredCueIntent:
+      'Back foot on bench, slight lean forward, jump straight up off the front leg.',
+  },
 ];
 
 /* ── Selection ── */

@@ -306,7 +306,7 @@ Merge survivors, for completeness: **Vertical Jump**, **Explosive Push-up**,
 **Inverted Row (Bodyweight)**, **Seated DB Press**, **Bulgarian Split Squats**,
 **Trap Bar Deadlift**, **Pull-Ups** (all five already curated and pooled).
 
-## POWER — PLACED (2026-07-27), three still staged
+## POWER — PLACED (2026-07-27), two still staged
 
 Per Sam's note: wire per `docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md` where it
 is built, else stage with pointers — do not invent placement. **That spec is now
@@ -330,6 +330,7 @@ shipped could not be cued.
 | Lateral Jump | yes | yes | spec "New entries", no training-age minimum |
 | Depth Jumps | yes | yes | spec "New entries", min `developing`, needs a Box |
 | Lateral Bounds | yes | yes | spec "New entries", min `developing` |
+| RFE Split Squat Jump | yes (Sam 2026-07-27) | yes (Sam 2026-09-02) | added to lower Power pool by Sam 2026-09-02; min `consistent`, needs a Bench, off/pre-season only |
 
 Wiring the pool turned `Vertical Jump` and `Explosive Push-up` into pool
 exercises, which exposed a video gap that `power_pool_pending` had been hiding by
@@ -345,9 +346,8 @@ curated cue and a real demo video with no exemption of any kind.
 |---|---|---|---|
 | Speed Trap Bar Deadlift | yes | yes | NOT in the spec — barbell speed lift, see below |
 | Speed Bench | yes | yes | NOT in the spec — pre-existing `power`-classified lift |
-| RFE Split Squat Jump | yes (Sam 2026-07-27) | no — none pinned | spec-adjacent; kept per merge ruling |
 
-These three carry a curated cue and lack only a POOL, so `power_pool_pending`
+These two carry a curated cue and lack only a POOL, so `power_pool_pending`
 now waives placement for a much smaller set than when it was written.
 
 **Open for the power unit** (recorded, not invented here): the spec's pool has a

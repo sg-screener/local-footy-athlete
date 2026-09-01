@@ -44,6 +44,7 @@
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
+  "Sleeper Stretch": [],
   "Bench Thoracic Extension": [["bench", "plyo_box"]],
   "Rotational Medicine-Ball Slam": ["medicine_ball"],
   "Medicine-Ball Slam": ["medicine_ball"],
@@ -168,7 +169,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   // here — so they carry one answer or the oracle contradicts itself by spelling.
   "RDLs": [['barbell', 'dumbbells']],
   "Romanian Deadlift": [['barbell', 'dumbbells']],
-  "RFE Split Squat Jump": [],
+  "RFE Split Squat Jump": ['bench'],
   "Rear Delt Fly": ['dumbbells'],
   "Reverse Lunges": [],
   "Scap Pull Ups": ['pullup_bar'],

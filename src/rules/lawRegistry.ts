@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-sleeper-stretch-intake',
+    law: 'R-322: Sleeper Stretch uses the existing no-equipment Mobility path, supplied per-side duration, cues, muscles, injury ratings and video. It is eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including gentle G-1 use, but is excluded from automatic Primer selection.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-322',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `sleeperstretch`. The exercise-intake suite binds the source intake to catalogue metadata, dose, cues, video, empty equipment requirement, injury ratings, upper Movement Prep, Mobility, Recovery, manual Add/Swap, Primer exclusion and G-1 eligibility. Red-first, mutation and final receipts plus NOT COVERED: docs/STATUS_SLEEPERSTRETCH.md.',
+    },
+  },
+  {
     id: 'LAW-bench-thoracic-extension-intake',
     law: 'R-321: Bench Thoracic Extension uses the existing bodyweight Mobility path, bench-or-plyo-box equipment choice, supplied dose, cues, muscles, injury ratings and video. It remains eligible for upper-body Movement Prep, Mobility, Recovery and manual Add/Swap in every phase, including comfortable G-1 use.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-321',

@@ -179,7 +179,7 @@ function parseFinalNames(): { entry: string; ships: string; pool: string; placem
  */
 function parsePowerStaged(): string[] {
   const names: string[] = [];
-  const powerSection = section('## POWER — PLACED (2026-07-27), three still staged');
+  const powerSection = section('## POWER — PLACED (2026-07-27), two still staged');
   const stagedTable = powerSection.split('**Still STAGED')[1] ?? '';
   for (const line of stagedTable.split('\n')) {
     if (!line.startsWith('| ')) continue;
@@ -311,7 +311,7 @@ function main(): void {
       `table rows=${finalNames.length} additions=${additions.length}; `
         + `missing: ${additions.filter((a) => !shipsAs.has(a.entry)).map((a) => a.entry).join(', ')}`);
     // Was 8 before the pool was built; five of those are now really placed.
-    ok('the power staging table parsed', powerStaged.length === 3, `parsed ${powerStaged.length}`);
+    ok('the power staging table parsed', powerStaged.length === 2, `parsed ${powerStaged.length}`);
     ok('the ruled-load table parsed', loadRulings.length === 7, `parsed ${loadRulings.length}`);
   }
 

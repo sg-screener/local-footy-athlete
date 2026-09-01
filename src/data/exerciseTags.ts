@@ -496,6 +496,27 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       warmup: true, primer: false,
     },
   },
+  'Sleeper Stretch': {
+    movement: 'isolation_upper', region: 'upper', load: 'low',
+    fatigue: 'low', doms: 'low', stability: 'low',
+    unilateral: true, eccentric: 'low', lateWeek: 'caution',
+    injury: {
+      groin: 'good', hip: 'good', quad: 'good',
+      hamstring: 'good', knee: 'good', calf: 'good',
+      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'good',
+      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'wrist/hand': 'caution',
+    },
+    prescription: {
+      sets: 2, repsMin: 30, repsMax: 30,
+      restSeconds: 15, prescriptionType: 'duration', perSide: true,
+      notes: 'Gentle pressure from the opposite hand; no external loading or bouncing. Use short, comfortable holds near games and avoid aggressive holds before throwing, pressing or contact.',
+    },
+    programming: {
+      strengthRole: 'none', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+  },
 
   // ═══════════════════════════════════════════════════════════════
   // LOWER BODY — SQUAT / LUNGE

@@ -59,6 +59,9 @@ if (mutation === 'duration') EXERCISE_TAGS['Horse Stance Hold'].prescription!.pr
 if (mutation === 'bench_dose') EXERCISE_TAGS['Bench Thoracic Extension'].prescription!.repsMax = 6;
 if (mutation === 'bench_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Bench Thoracic Extension'] = [];
 if (mutation === 'bench_route') EXERCISE_TAGS['Bench Thoracic Extension'].programming!.warmup = false;
+if (mutation === 'sleeper_dose') EXERCISE_TAGS['Sleeper Stretch'].prescription!.repsMax = 45;
+if (mutation === 'sleeper_equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Sleeper Stretch'] = ['bands'];
+if (mutation === 'sleeper_primer') EXERCISE_TAGS['Sleeper Stretch'].programming!.primer = true;
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -78,6 +81,7 @@ const submitted = [
   ['Rotational Medicine-Ball Slam', 'M9ryqecCLf0'],
   ['Horse Stance Hold', '4P9w2Kvgl0A'],
   ['Bench Thoracic Extension', 'xE5ZaEKAx1g'],
+  ['Sleeper Stretch', 'clqjaMIRWfM'],
 ];
 const vocabulary = new Set(selectableVocabularyGroups().flatMap(group => group.names));
 // Independent dose expectations transcribed from the signed intake, including
@@ -90,6 +94,7 @@ const doses = [
   [3, 4, 6, 60, 'reps', false], [3, 4, 6, 60, 'reps', true],
   [2, 60, 60, 30, 'duration', false],
   [2, 5, 5, 30, 'reps', false],
+  [2, 30, 30, 15, 'duration', true],
 ];
 const powerSubmitted = submitted.filter(([name]) => !!EXERCISE_TAGS[name]?.power);
 submitted.forEach(([name], index) => {
@@ -101,6 +106,7 @@ submitted.forEach(([name], index) => {
 const intake = [
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_2026-08-28.md'), 'utf8'),
   readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_BENCH_THORACIC_EXTENSION_2026-09-02.md'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_SLEEPER_STRETCH_2026-09-02.md'), 'utf8'),
 ].join('\n');
 for (const [name, video] of submitted) {
   check(`${name}: selectable`, vocabulary.has(name));
@@ -216,7 +222,7 @@ async function main() {
       originalExercise: name }).some(c => c.name === name));
     check(`${name}: explicit kit allows`, exerciseIsAvailableWith(name, kit));
   }
-  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Bench Thoracic Extension']) {
+  for (const name of ['Crab Hold', 'Horse Stance Hold', 'Seated Good Morning', 'Bench Thoracic Extension', 'Sleeper Stretch']) {
     check(`${name}: not a main strength seat`, slotsForExerciseName(name).length === 0);
   }
   check('Horse Stance Hold: bodyweight loading and no equipment gate',
@@ -226,6 +232,8 @@ async function main() {
     && formatLoadLabel(resolveLoadAuthority('Horse Stance Hold'), 4) === 'BW + 4kg');
   check('Bench Thoracic Extension: bodyweight-only loading has no load control',
     resolveLoadAuthority('Bench Thoracic Extension').kind === 'unloaded');
+  check('Sleeper Stretch: bodyweight-only loading has no load control',
+    resolveLoadAuthority('Sleeper Stretch').kind === 'unloaded');
   for (const name of ['Rotational Medicine-Ball Throw', 'Medicine-Ball Slam', 'Rotational Medicine-Ball Slam']) {
     check(`${name}: athlete chooses total ball load`, resolveLoadAuthority(name).kind === 'athlete_chosen' && estimateStartingWeight(name, profile) === null);
   }
@@ -259,12 +267,18 @@ async function main() {
     && !assessTapSwapCandidateSafety('Bench Thoracic Extension', {
       ...environment, availableEquipmentTags: ['bodyweight'],
     }).safe);
+  check('Sleeper Stretch needs no equipment and manual Add/Swap agrees',
+    JSON.stringify(equipmentRequiredFor('Sleeper Stretch')) === '[]'
+    && exerciseIsAvailableWith('Sleeper Stretch', ['bodyweight'])
+    && assessTapSwapCandidateSafety('Sleeper Stretch', {
+      ...environment, availableEquipmentTags: ['bodyweight'],
+    }).safe);
   for (const [name] of submitted) {
     const policy = EXERCISE_TAGS[name]?.programming;
     const novice = { ...athlete, onboardingData: { ...profile, experienceLevel: 'Complete beginner' as const } };
     check(`${name}: automatic novice boundary`, exerciseProgrammingAllows(name, { route: 'automatic', experienceLevel: novice.onboardingData.experienceLevel, daysToGame: null }) === [
       'Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Seated Good Morning', 'Medicine-Ball Slam',
-      'Horse Stance Hold', 'Bench Thoracic Extension',
+      'Horse Stance Hold', 'Bench Thoracic Extension', 'Sleeper Stretch',
     ].includes(name));
     for (const daysToGame of [1, 2, 3, null]) {
       if (!policy) {
@@ -291,7 +305,11 @@ async function main() {
         route: 'warmup', experienceLevel: '5+ years', daysToGame: undefined,
       }));
   }
-  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Bench Thoracic Extension', 'Shoulder', 6], ['Reverse Nordic Curl', 'Knee'],
+  check('Sleeper Stretch is allowed at G-1 but never automatically selected for Primer',
+    exerciseProgrammingAllows('Sleeper Stretch', { route: 'automatic', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && exerciseProgrammingAllows('Sleeper Stretch', { route: 'warmup', experienceLevel: 'Complete beginner', daysToGame: 1 })
+    && !exerciseProgrammingAllows('Sleeper Stretch', { route: 'primer', experienceLevel: 'Complete beginner', daysToGame: 1 }));
+  for (const [name, bodyArea, suppliedSeverity] of [['Crab Hold', 'Shoulder'], ['Horse Stance Hold', 'Groin', 6], ['Bench Thoracic Extension', 'Shoulder', 6], ['Sleeper Stretch', 'Shoulder', 6], ['Reverse Nordic Curl', 'Knee'],
     ['Rotational Medicine-Ball Throw', 'Lower back'], ['Medicine-Ball Slam', 'Shoulder'], ['Rotational Medicine-Ball Slam', 'Wrist/hand']] as const) {
     const severity = suppliedSeverity ?? 5;
     const constraint = buildGuidedInjuryConstraint({ area: bodyArea, region: 'upper_body', severity,
@@ -304,7 +322,7 @@ async function main() {
       check(`${name}: injury excludes it from the actual lower-prehab pool`, !filterPoolForAthlete('lower_prehab', injuredAthlete).some(row => row.name === name));
       continue;
     }
-    const type = ['Crab Hold', 'Horse Stance Hold', 'Bench Thoracic Extension'].includes(name) ? 'mobility' : 'primer';
+    const type = ['Crab Hold', 'Horse Stance Hold', 'Bench Thoracic Extension', 'Sleeper Stretch'].includes(name) ? 'mobility' : 'primer';
     let healthySeed: string | undefined;
     for (let seed = 0; seed < 120 && !healthySeed; seed++) {
       const seedDate = plusDays(date, seed);
@@ -322,6 +340,7 @@ async function main() {
   const powerReached = new Set<string>();
   const mobilityReached = new Set<string>();
   const recoveryReached = new Set<string>();
+  const primerReached = new Set<string>();
   const horseRouteSeed: Partial<Record<'mobility' | 'recovery', string>> = {};
   for (let block = 1; block <= 80; block++) {
     const row = buildPowerRow({ family: 'upper', kind: 'primer', reduced: false,
@@ -342,6 +361,7 @@ async function main() {
         reached.add(row.exercise.name);
         if (type === 'mobility') mobilityReached.add(row.exercise.name);
         if (type === 'recovery') recoveryReached.add(row.exercise.name);
+        if (type === 'primer') primerReached.add(row.exercise.name);
         if (row.exercise.name === 'Horse Stance Hold' && (type === 'mobility' || type === 'recovery')) {
           horseRouteSeed[type] ??= plusDays(date, day);
         }
@@ -384,7 +404,7 @@ async function main() {
       }
     }
   }
-  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold', 'Bench Thoracic Extension']) {
+  for (const name of ['Seated Single-Leg Pike Lift', 'Standing Knee Extension', 'Crab Hold', 'Horse Stance Hold', 'SL 45° Back Extension Hold', 'Bench Thoracic Extension', 'Sleeper Stretch']) {
     check(`${name}: approved warm-up route actually selects it`, warmupsReached.has(name));
   }
   for (const name of ['Seated Good Morning']) {
@@ -398,6 +418,10 @@ async function main() {
     reached.has('Seated Good Morning') && !reached.has('Seated Good Morning (Barbell)'));
   check('Bench Thoracic Extension reaches both automatic Mobility and Recovery sessions',
     mobilityReached.has('Bench Thoracic Extension') && recoveryReached.has('Bench Thoracic Extension'));
+  check('Sleeper Stretch reaches both automatic Mobility and Recovery sessions',
+    mobilityReached.has('Sleeper Stretch') && recoveryReached.has('Sleeper Stretch'));
+  check('Sleeper Stretch never enters an automatically composed Primer',
+    !primerReached.has('Sleeper Stretch'));
   const context = getCoachRevisionTemplateContext(date);
   check('reachability crosses actual generated strength sessions', program.microcycles[0].workouts.some(w => !!w.strengthIntent));
   const lowerDays = program.microcycles[0].workouts.filter(w => w.strengthIntent?.plannedPatterns.some(p => p === 'hinge' || p === 'squat'));
@@ -532,6 +556,9 @@ async function main() {
     ['bench_dose', /Bench Thoracic Extension: signed dose, rest, unit and side/],
     ['bench_equipment', /Bench Thoracic Extension accepts either support and refuses neither/],
     ['bench_route', /Bench Thoracic Extension: approved warm-up route actually selects it/],
+    ['sleeper_dose', /Sleeper Stretch: signed dose, rest, unit and side/],
+    ['sleeper_equipment', /Sleeper Stretch needs no equipment and manual Add\/Swap agrees/],
+    ['sleeper_primer', /Sleeper Stretch is allowed at G-1 but never automatically selected for Primer/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

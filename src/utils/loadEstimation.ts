@@ -817,6 +817,7 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Foam Roll — Calves & Outer Shins',
   'Lacrosse Ball Glute Release',
   // Mobility
+  'Sleeper Stretch',
   'Bench Thoracic Extension',
   'Hip 90/90 Stretch',
   "World's Greatest Stretch",

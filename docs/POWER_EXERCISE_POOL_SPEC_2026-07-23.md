@@ -51,6 +51,7 @@ New entries (Sam, 2026-07-23):
 | Lateral Jump | lower | — | no training-age minimum (beginner friendly); lateral power; any phase where power allowed | Jump sideways off one leg, land on two |
 | Lateral Bounds | lower | — | off/pre-season only; min training age `developing`; lateral power and control | Jump sideways off one leg, land on the other leg straight into next bound; can do while moving forward |
 | Kneeling Jump | lower | — | off/pre-season only; min training age `consistent` (Sam's words: "consistent or advanced") | Start on knees, explode up to feet in one smooth motion |
+| RFE Split Squat Jump | lower | Bench | off/pre-season only; min training age `consistent`; avoid close to games | Back foot on bench, slight lean forward, jump straight up off the front leg |
 
 Experience gating standard (Sam, 2026-07-23): ONE ladder — the existing
 `TrainingAgeLevel` from `resolveTrainingAgePolicy` (new → developing →

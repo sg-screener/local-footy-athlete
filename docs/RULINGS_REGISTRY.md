@@ -8064,3 +8064,18 @@ abdominals to Midline. No new equipment answer is introduced.
 Guard: `LAW-bench-thoracic-extension-intake` through chained
 `test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
 receipt: `docs/STATUS_BENCHTHORACIC.md`.
+
+**R-322** · Sleeper Stretch joins the existing mobility catalogue, 2026-09-02.
+
+Owner: sleeperstretch. Sleeper Stretch is a bodyweight Mobility exercise for
+everyone, prescribed as 2 × 30 seconds per side with 15 seconds rest. It is
+eligible for automatic upper-body Movement Prep, Mobility and Recovery plus
+manual Add/Swap, but is not automatically selected in Primer. It remains
+available in all phases and at G-1 as a short, gentle hold; its near-game rating
+is Caution. Its supplied muscles, cues, injury ratings, restrictions and video
+are recorded in `docs/EXERCISE_INTAKE_SLEEPER_STRETCH_2026-09-02.md`. No new
+equipment answer or special selection system is introduced.
+
+Guard: `LAW-sleeper-stretch-intake` through chained `test:exercise-intake`.
+Red-first, mutation, final execution and NOT COVERED receipt:
+`docs/STATUS_SLEEPERSTRETCH.md`.

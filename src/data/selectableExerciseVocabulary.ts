@@ -189,12 +189,11 @@ export const POWER_POOL_PENDING = new Set<string>([
   // Sam authored the two missing cues (2026-07-27) and the completeness gates
   // now cover them like any other selectable exercise.
   //
-  // These three are NOT in the spec's pool tables. They are speed-lift and
+  // These two are NOT in the spec's pool tables. They are speed-lift and
   // contrast entries whose placement the spec does not decide, so they stay
   // pending. Each HAS a curated cue and video; what they still lack is a pool.
   'Speed Trap Bar Deadlift',
   'Speed Bench',
-  'RFE Split Squat Jump',
 ]);
 
 /**

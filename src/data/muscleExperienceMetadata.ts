@@ -208,10 +208,6 @@ export const METADATA_WITHOUT_SELECTABLE_EXERCISE: readonly MetadataWithoutSelec
   { exercise: 'Lateral Jump', reason: 'POWER_POOL_PENDING — becomes selectable in Stage A.3.' },
   { exercise: 'Kneeling Jump', reason: 'POWER_POOL_PENDING — becomes selectable in Stage A.3.' },
   {
-    exercise: 'RFE Split Squat Jump',
-    reason: 'POWER_POOL_PENDING — becomes selectable in Stage A.3.',
-  },
-  {
     exercise: 'Explosive Push-up',
     reason: 'POWER_POOL_PENDING — becomes selectable in Stage A.3.',
   },
@@ -238,6 +234,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
   {"exercise": "Seated Single-Leg Pike Lift", "pool": "Lower prehab", "primary": ["Hip flexors"], "secondary": ["Quads", "Midline"], "experienceGate": "everyone", "note": "Hold each rep for 2 seconds. Bodyweight.", "flagged": false},
   {"exercise": "Horse Stance Hold", "pool": "Mobility", "primary": ["Groin", "Quads", "Glutes"], "secondary": [], "experienceGate": "everyone", "note": "2 × 60-second total holds. Bodyweight; use a higher or narrower stance as the beginner regression. Progress depth, stance width or duration before optional dumbbell load.", "flagged": false},
   {"exercise": "Bench Thoracic Extension", "pool": "Mobility", "primary": ["Lats", "Upper back"], "secondary": ["Triceps", "Chest", "Midline"], "experienceGate": "everyone", "note": "Slow reps. Pause 3 seconds at the bottom. Bodyweight only; use a comfortable range near games.", "flagged": false},
+  {"exercise": "Sleeper Stretch", "pool": "Mobility", "primary": ["Shoulders"], "secondary": [], "experienceGate": "everyone", "note": "Gentle pressure from the opposite hand; no external loading or bouncing. Use short, comfortable holds near games and avoid aggressive holds before throwing, pressing or contact.", "flagged": false},
   /* ── Lower squat ── */
   {
     exercise: 'Back Squat',
@@ -2029,7 +2026,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     primary: ['Quads', 'Glutes'],
     secondary: ['Hamstrings', 'Calves', 'Midline'],
     experienceGate: 'two_plus_years',
-    note: 'FLAG — gate proposed, confirm',
+    note: 'Auto lower power. Bench; 2+ years. Not in-season or near games.',
     flagged: false,
   },
   {

@@ -43,6 +43,7 @@ export interface ExerciseLookupResult {
 // Populate manually — do NOT use search URLs.
 
 export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
+  "Sleeper Stretch": "https://youtube.com/shorts/clqjaMIRWfM?si=GbVzhQVqIB8JTLBs",
   "Bench Thoracic Extension": "https://youtube.com/shorts/xE5ZaEKAx1g?si=Ylfp3Xa034vjwtZS",
   "Rotational Medicine-Ball Slam": "https://www.youtube.com/shorts/M9ryqecCLf0",
   "Medicine-Ball Slam": "https://youtube.com/shorts/fGLHGiYFIqc?si=nRpguZLephK8ZgMD",
@@ -229,6 +230,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   "Child's Pose with Breathing":      'https://youtube.com/shorts/Ynrg6Wsiapc?si=ONBF8XVx0MvqSitn',
   'Kneeling Jump': 'https://youtube.com/shorts/xaFQGw73peA?si=GiiYoy2aZebpMjtH',
   'Lateral Jump': 'https://youtube.com/shorts/m1JDpuGzCZw?si=alXGCw-wq5sxSuhK',
+  'RFE Split Squat Jump':             'https://youtube.com/shorts/EY3bzgv2SYo?si=niQWD9Thz0mUex1d',
   'Neutral-Grip Pulldown': 'https://youtube.com/shorts/QuSqYj7tFbI?si=5lS2n9Tsohh7LPBP',
   'Overhead Carry': 'https://youtube.com/shorts/_f17ljGZWq0?si=AFi4XzPiPtMbxS3P',
   'Vertical Jump':                    'https://youtube.com/shorts/ML2Rl3KE-Gc?si=0TYIQTJsvm8XF8O6',

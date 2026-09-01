@@ -188,6 +188,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   "Seated Single-Leg Pike Lift": {"primaryCue": "Lean slightly forward, lock the knee, and lift the heel.", "secondaryCue": "Pause at the top."},
   "Horse Stance Hold": {"primaryCue": "Take a wide stance and sink straight down between your feet.", "secondaryCue": "Push knees over toes and keep your torso tall."},
   "Bench Thoracic Extension": {"primaryCue": "Place elbows on the bench and sit your hips back.", "secondaryCue": "Sink your chest without arching through the lower back."},
+  "Sleeper Stretch": {"primaryCue": "Lie on the target shoulder and gently lower the forearm.", "secondaryCue": "Stop at a mild stretch behind the shoulder, never the front."},
   '90/90 Breathing': {
     primaryCue: 'Knees and hips at 90, exhale fully.',
     secondaryCue: 'Pause at the bottom of each breath.',

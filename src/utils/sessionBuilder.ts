@@ -782,8 +782,12 @@ function pickAcrossRegions(
     taken.add(chosen.id);
   });
 
-  // The remainder — "one extra" — from anything not already taken.
-  const rest = pool.filter((entry) => !taken.has(entry.id));
+  // The remainder — "one extra" — comes from outside the two named regions.
+  // Adding another hip or upper exercise used to change the seeded index and
+  // quietly turn this into two hips or two uppers. If no other region remains,
+  // shrink rather than pad from a region Sam already named.
+  const rest = pool.filter((entry) =>
+    !taken.has(entry.id) && !spread.includes(mobilityRegionOf(entry)!));
   for (let index = 0; picks.length < count && index < rest.length; index++) {
     picks.push(rest[(seed + index * 17) % rest.length]);
     taken.add(rest[(seed + index * 17) % rest.length].id);

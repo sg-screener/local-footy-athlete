@@ -243,6 +243,7 @@ function workoutsFor(
   data: OnboardingData,
   weekKind?: 'deload',
   weekInBlock: number = 4,
+  phaseEntryISO: string = '2026-07-06',
 ) {
   // ── SAME INSTRUMENT DEFECT AS THE INJURY SUITE ──────────────────────────
   //
@@ -253,7 +254,7 @@ function workoutsFor(
   // than the suite deleted: it drives the real generator, in production's order.
   // No expectation is rebased and no product code changes.
   const phaseWeek = weekKind === 'deload' ? 8 : weekInBlock;
-  const phaseEntry = new Date('2026-07-06T12:00:00');
+  const phaseEntry = new Date(`${phaseEntryISO}T12:00:00`);
   const targetWeek = new Date(phaseEntry);
   targetWeek.setDate(targetWeek.getDate() + ((phaseWeek - 1) * 7));
   const program = generateProgramLocally(data, {
@@ -486,7 +487,10 @@ function workoutsFor(
 //      work, not the structure, and `reduced` (the niggle flag that hands the
 //      lower slot to Pogo Hops) is deliberately not set by the shrink.
 {
-  const normal = workoutsFor(profile(), undefined, 7);
+  // Compare the SAME target week under a build clock and a deload clock.
+  // Comparing phase weeks 7 and 8 from one clock compares two different
+  // calendar blocks, where power identity is deliberately allowed to rotate.
+  const normal = workoutsFor(profile(), undefined, 7, '2026-07-13');
   const deload = workoutsFor(profile(), 'deload');
   const normalBlocks = normal.filter((w) => powerRows(w).length > 0);
   const deloadBlocks = deload.filter((w) => powerRows(w).length > 0);

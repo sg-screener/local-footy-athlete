@@ -83,6 +83,7 @@ const AUTHORED_ENTRIES: ReadonlyArray<
   ['Lateral Jump', 'lower', null, []],
   ['Lateral Bounds', 'lower', 'developing', []],
   ['Kneeling Jump', 'lower', 'consistent', []],
+  ['RFE Split Squat Jump', 'lower', 'consistent', ['Bench']],
   ['Box Jumps', 'lower', null, ['Box']],
   ['Broad Jumps', 'lower', null, []],
   ['Jump Squats', 'lower', null, []],
@@ -142,7 +143,7 @@ ok(
 
 console.log('\n[2] P1 — experience and phase gating');
 
-const HARDER = ['Depth Jumps', 'Lateral Bounds', 'Kneeling Jump'];
+const HARDER = ['Depth Jumps', 'Lateral Bounds', 'Kneeling Jump', 'RFE Split Squat Jump'];
 
 const newAthleteNames = eligiblePowerExercises(ctx({ trainingAge: 'new' })).map((e) => e.name);
 ok(
@@ -163,11 +164,29 @@ ok(
   `saw: ${developingNames.join(', ')}`,
 );
 
-const consistentNames = eligiblePowerExercises(ctx({ trainingAge: 'consistent' })).map((e) => e.name);
+const consistentNames = eligiblePowerExercises(ctx({
+  trainingAge: 'consistent',
+  availableEquipment: ['Box', 'Bench'],
+})).map((e) => e.name);
 ok(
   'a `consistent` athlete sees Kneeling Jump',
-  consistentNames.includes('Kneeling Jump'),
+  consistentNames.includes('Kneeling Jump')
+    && consistentNames.includes('RFE Split Squat Jump'),
   `saw: ${consistentNames.join(', ')}`,
+);
+
+ok(
+  'RFE Split Squat Jump needs a bench',
+  !eligiblePowerExercises(ctx({
+    trainingAge: 'advanced',
+    availableEquipment: [],
+  })).some((entry) => entry.name === 'RFE Split Squat Jump'),
+);
+
+ok(
+  'RFE Split Squat Jump uses Sam\'s pinned video',
+  lookupExerciseDemo('RFE Split Squat Jump').url
+    === 'https://youtube.com/shorts/EY3bzgv2SYo?si=niQWD9Thz0mUex1d',
 );
 
 // In-season = familiar / low-impact only (rule 4).
