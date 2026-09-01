@@ -418,6 +418,77 @@ fixture/team/speed/conditioning totals are separate semantic day counts.
 - Addendum Sections 1–8 and the in-season arm/foundation addendum remain open.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 3 — deload the whole week
+
+The current checkpoint reproduced one live defect and several stale test
+assumptions. `test:deload-week` initially reported 48/57, but eight cells were
+old phase-cadence or cross-week-load comparisons and the ninth was a paid
+declared gap that correctly stopped reddening. The live programming defect was
+different: the conditioning reducer halved `prescribedDurationMinutes`, a field
+the real catalogue rows mostly do not carry. Athlete-visible rounds and work
+minutes therefore stayed full. Standalone Speed returned before that pass, and
+pre-lift Speed was composed after it.
+
+Two designs were compared. Adding special reductions in the standalone,
+combined and Speed builders would leave three dose owners. The simpler
+source-of-truth design keeps the existing weekly deload election and makes its
+one row transformer own stored counts, visible count lines and one-set
+continuous minutes. Every builder route now passes its conditioning/Speed rows
+through that owner. The weekly `easy_aerobic` role also carries a shorter 0.35
+dose for readiness/illness: without it, a 13-minute hard block became a
+28-minute steady template and then halved to 14 minutes, so the supposed deload
+increased the remaining-week estimate. Scheduled rows retain the signed
+half-work rule.
+
+The no-club, no-fixture late-Off-season final-week tape is now 11/11. It reads
+Speed from canonical `speedBlock.exerciseIds`, not `conditioningCategory`, and
+therefore measures the athlete's actual separately typed Speed component. One
+genuine Speed exposure survives with the same template at lower volume, no
+proper hard metabolic conditioning survives, and the complete estimated
+conditioning dose falls from 84.0 minutes in the relevant build week to 39.7
+minutes in the deload (47.2% retained, a 52.8% reduction after discrete authored
+dose rounding). Session exposure count remains unchanged; the work shrinks.
+
+The accumulated action boundary is 90/90. It reaches depth two through two real
+dated fatigue reports rather than installing a low-readiness snapshot. In the
+male in-season game world, the second report changes the remaining visible week
+and a normal six-row Friday Gunshow is removed or shortened. In a separate
+conditioning-bearing male Pre-season world, remaining programmed conditioning
+work decreases. Both results reconstruct byte-equivalently after a genuine
+restart, and resolving the exact second report through the readiness
+Clear/Undo reversal restores the pre-trigger final sessions. This follows the
+repo's existing ownership: readiness persists in its accepted source-fact
+slice and is reversed by exact Clear; it is intentionally not duplicated into
+the general decision ledger.
+
+`test:deload-law` is 78/78 and now pins the actual visible result: stored rounds
+fall, the `Rounds:` line falls with them, a one-set continuous session changes
+`Work: 40 min` to `Work: 20 min`, the readiness-demoted easy remainder is short,
+and high-eccentric accessory work is reduced or removed. `test:deload-week` is
+50/50 with explicit phase clocks and no stale declared gap. `test:fatigue-sequence`
+is 35/35 plus 18/18 plumbing. Conditioning equality is 170/170 plus 5/5
+modality compatibility, and TypeScript is green.
+
+Liveness was demonstrated against production, then restored. Replacing
+`prescribedSets: nextSets` with the original count made `test:deload-law` fall
+from 78/78 to 76/78 and the scheduled final-week tape from 11/11 to 9/11. The
+named deaths were stored count, readiness easy remainder, Speed volume and
+complete-week duration; this distinguishes a live gate from a mutation that
+missed its subject.
+
+R-310 is born guarded. `test:offseason-deload-conditioning` is now explicitly
+in `test:bible`; the other guards were already chained.
+
+### NOT COVERED
+
+- Physical-iPhone visuals and execution were not run; no Release build was
+  made, as instructed.
+- Exact session-duration estimation remains a test/report projection over the
+  reviewed template plus final stored dose; the product still does not store a
+  single aggregate duration number for every interval shape.
+- Section 7's accumulated return-home spacing defect remains open and PDFs
+  remain withheld. Addendum Sections 4–8 remain open.
+
 ## Addendum Section 2 + in-season arm/foundation refinement
 
 The previous required-session structures did not satisfy the refinement. Male

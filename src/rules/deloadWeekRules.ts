@@ -47,6 +47,12 @@ export const DELOAD_LAW = {
   accessoryKeepMultiplier: 0.5,
   /** "Conditioning: half the total work." */
   conditioningWorkMultiplier: 0.5,
+  /**
+   * A hard row demoted to a longer easy template needs a smaller row dose so
+   * the complete week still falls roughly 30-50%, rather than preserving or
+   * increasing duration through the template swap.
+   */
+  easyAerobicWorkMultiplier: 0.35,
   /** "One quality exposure max, the rest easy aerobic." */
   maxQualityConditioningExposures: 1,
   /** "Power/speed: keep a small sharp dose." Not removed. */
@@ -555,6 +561,40 @@ function isQualityConditioningRow(exercise: WorkoutExercise): boolean {
     .test(`${name} ${authoredNotesOnly(exercise.notes)}`);
 }
 
+function reduceVisibleMinutes(line: string, multiplier: number): string {
+  return line.replace(/^(Work|Total):\s*(\d+(?:\.\d+)?)\s+min\b/im,
+    (_whole, label: string, raw: string) => {
+      const minutes = Number(raw);
+      if (!Number.isFinite(minutes) || minutes <= 1) return _whole;
+      return `${label}: ${Math.max(1, Math.round(minutes * multiplier))} min`;
+    });
+}
+
+/**
+ * Reduce the numbers the athlete actually reads.
+ *
+ * Conditioning rows persist the reviewed prescription in `notes`; most do not
+ * carry `prescribedDurationMinutes`. The former reducer therefore halved a
+ * field that was absent on the real catalogue and left `Rounds: 8` or
+ * `Work: 40 min continuous` unchanged. Counts are the preferred lever. A
+ * one-round continuous session instead halves its visible work minutes.
+ */
+function deloadVisibleConditioningCopy(
+  notes: string | undefined,
+  fullSets: number,
+  deloadSets: number,
+  multiplier: number,
+): string | undefined {
+  if (!notes) return notes;
+  if (deloadSets < fullSets) {
+    return notes.replace(
+      /^(Reps|Rounds|Sets|Blocks):\s*\d+(?:\.\d+)?\b/im,
+      (_whole, label: string) => `${label}: ${deloadSets}`,
+    );
+  }
+  return reduceVisibleMinutes(notes, multiplier);
+}
+
 /**
  * Apply the deload law to a session's CONDITIONING rows.
  *
@@ -587,17 +627,45 @@ export function applyConditioningDeloadToExercises(
       prescribedDurationMinutes?: number;
       deloadQualityExposure?: boolean;
     };
+    // A quality row retains half its work. A row already demoted to the
+    // week's easy-aerobic remainder is shorter again: changing a 13-minute
+    // hard block into a 28-minute steady template and then halving that new
+    // template does not deload the athlete at all. The weekly owner carries
+    // this role, so the compensation is made here rather than guessed from a
+    // template name.
+    const workMultiplier = role === 'easy_aerobic' && policy.door !== 'scheduled'
+      ? DELOAD_LAW.easyAerobicWorkMultiplier
+      : DELOAD_LAW.conditioningWorkMultiplier;
     const minutes = durationCarrier.prescribedDurationMinutes;
     const halved = typeof minutes === 'number' && minutes > 0
-      ? Math.round(minutes * DELOAD_LAW.conditioningWorkMultiplier)
+      ? Math.round(minutes * workMultiplier)
       : minutes;
+
+    const nextSets = Math.max(
+      1,
+      Math.round(exercise.prescribedSets * workMultiplier),
+    );
+    const visibleCopy = deloadVisibleConditioningCopy(
+      exercise.notes,
+      exercise.prescribedSets,
+      nextSets,
+      workMultiplier,
+    );
+    const nextNotes = appendSignedNote(
+      visibleCopy,
+      conditioningDeloadNote(policy, keepAsQuality),
+    );
 
     return {
       ...exercise,
       exerciseOrder: index + 1,
+      prescribedSets: nextSets,
       ...(typeof halved === 'number' ? { prescribedDurationMinutes: halved } : {}),
       deloadQualityExposure: keepAsQuality,
-      notes: appendSignedNote(exercise.notes, conditioningDeloadNote(policy, keepAsQuality)),
+      notes: nextNotes,
+      ...(exercise.exercise ? {
+        exercise: { ...exercise.exercise, description: nextNotes ?? exercise.exercise.description },
+      } : {}),
     } as WorkoutExercise;
   });
 }

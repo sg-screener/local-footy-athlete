@@ -2038,7 +2038,7 @@ export function buildWorkoutsFromCoach(
           offFeet: planEntry.conditioningOffFeet === true || undefined,
           availableMachines,
         }).name;
-      const condExercises = isStandaloneSpeed
+      let condExercises = isStandaloneSpeed
         ? composeSpeedRows(planEntry.speedBlock?.templateName, dateStr)
         : resolved?.exercises
         ?? buildConditioningTemplate(exerciseName, dateStr, {
@@ -2050,6 +2050,14 @@ export function buildWorkoutsFromCoach(
       // Stamp workoutId on all exercises
       for (const ex of condExercises) {
         ex.workoutId = workoutId;
+      }
+      const standaloneDeloadPolicy = deloadPolicyForDayOfWeek(cw.dayOfWeek);
+      if (standaloneDeloadPolicy) {
+        condExercises = applyConditioningDeloadToExercises(
+          condExercises,
+          standaloneDeloadPolicy,
+          planEntry.deloadConditioningRole,
+        );
       }
 
       // If the run-load guard shifted this session, reflect that in the
@@ -2486,7 +2494,15 @@ export function buildWorkoutsFromCoach(
     let resolvedSpeedBlock: SpeedBlock | undefined;
     if (planEntry?.speedWorkKind === 'true_speed' && planEntry.speedPlacement === 'pre_lift') {
       const dateStr = syntheticDateStr(cw.dayOfWeek);
-      const speedExercises = composeSpeedRows(planEntry.speedBlock?.templateName, dateStr);
+      const authoredSpeedExercises = composeSpeedRows(planEntry.speedBlock?.templateName, dateStr);
+      const speedDeloadPolicy = deloadPolicyForDayOfWeek(cw.dayOfWeek);
+      const speedExercises = speedDeloadPolicy
+        ? applyConditioningDeloadToExercises(
+          authoredSpeedExercises,
+          speedDeloadPolicy,
+          planEntry.deloadConditioningRole,
+        )
+        : authoredSpeedExercises;
       for (let i = 0; i < speedExercises.length; i++) {
         speedExercises[i].workoutId = workoutId;
         speedExercises[i].exerciseOrder = i + 1;

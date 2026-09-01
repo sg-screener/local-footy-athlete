@@ -23,6 +23,8 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { parseConditioningDose } from '../rules/conditioningDose';
+import { templateDurationMinutes } from '../rules/conditioningSelection';
+import { resolveConditioningAthleteCopy } from '../rules/conditioningAthleteCopy';
 import type { TrainingProgram } from '../types/domain';
 
 let passed = 0;
@@ -54,6 +56,7 @@ function clockAtPhaseWeek(selectedPhase: string, phaseWeekNumber: number) {
 /** No club, no fixture, later off-season — the athlete with no anchor at all. */
 function athlete() {
   return {
+    gender: 'male',
     seasonPhase: 'Off-season',
     trainingDaysPerWeek: 4,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
@@ -88,29 +91,78 @@ interface Cond {
   hard: boolean;
   templateName: string | null;
   sets: number | undefined;
+  estimatedDurationMinutes: number;
 }
 
 const TEMPLATE_BY_NAME = new Map(CONDITIONING_TEMPLATES.map((t) => [t.name, t]));
+
+function estimatedDurationMinutes(
+  templateName: string | null,
+  sets: number | undefined,
+  visibleNotes: string | undefined,
+): number {
+  const template = templateName ? TEMPLATE_BY_NAME.get(templateName) : undefined;
+  if (!template) return 0;
+  const approved = resolveConditioningAthleteCopy(template.name);
+  const authoredSets = parseConditioningDose(approved?.setsRounds ?? template.setsRounds);
+  const countRatio = authoredSets.ok && sets !== undefined
+    ? Math.min(1, sets / Math.max(1, authoredSets.quantity.max))
+    : 1;
+  const visibleWork = /^Work:\s*(\d+(?:\.\d+)?)\s+min\b/im.exec(visibleNotes ?? '');
+  const authoredWork = /^(\d+(?:\.\d+)?)\s+min\b/i.exec(approved?.work ?? template.workPeriod);
+  const workRatio = visibleWork && authoredWork
+    ? Math.min(1, Number(visibleWork[1]) / Math.max(1, Number(authoredWork[1])))
+    : 1;
+  return templateDurationMinutes(template) * Math.min(countRatio, workRatio);
+}
 
 function conditioning(program: TrainingProgram): Cond[] {
   const out: Cond[] = [];
   program.microcycles.forEach((mc, week) => {
     for (const w of mc.workouts) {
       const category = (w as unknown as { conditioningCategory?: string }).conditioningCategory;
-      if (!category) continue;
-      const headline = (w.exercises ?? []).find((row) =>
-        (row as unknown as { role?: string }).role === 'conditioning'
-        && TEMPLATE_BY_NAME.has((row as unknown as { exercise?: { name?: string } })
-          .exercise?.name ?? ''));
-      out.push({
-        week: week + 1,
-        day: w.dayOfWeek,
-        category,
-        hard: HARD.has(category),
-        templateName: (headline as unknown as { exercise?: { name?: string } })
-          ?.exercise?.name ?? null,
-        sets: headline?.prescribedSets,
-      });
+      if (category) {
+        const headline = (w.exercises ?? []).find((row) =>
+          (row as unknown as { role?: string }).role === 'conditioning'
+          && TEMPLATE_BY_NAME.has((row as unknown as { exercise?: { name?: string } })
+            .exercise?.name ?? ''));
+        out.push({
+          week: week + 1,
+          day: w.dayOfWeek,
+          category,
+          hard: HARD.has(category),
+          templateName: (headline as unknown as { exercise?: { name?: string } })
+            ?.exercise?.name ?? null,
+          sets: headline?.prescribedSets,
+          estimatedDurationMinutes: estimatedDurationMinutes(
+            headline?.exercise?.name ?? null,
+            headline?.prescribedSets,
+            headline?.notes,
+          ),
+        });
+      }
+      // Speed is a separately typed component, not a conditioningCategory.
+      // Read its canonical exercise-id membership; looking only at category
+      // rows made this gate claim sprint had disappeared while the athlete's
+      // final session still carried it.
+      if (w.speedBlock?.kind === 'true_speed') {
+        const speedIds = new Set(w.speedBlock.exerciseIds ?? []);
+        const headline = (w.exercises ?? []).find((row) =>
+          speedIds.has(row.id) && row.exercise?.name === w.speedBlock?.templateName);
+        out.push({
+          week: week + 1,
+          day: w.dayOfWeek,
+          category: 'sprint',
+          hard: false,
+          templateName: w.speedBlock.templateName ?? null,
+          sets: headline?.prescribedSets,
+          estimatedDurationMinutes: estimatedDurationMinutes(
+            w.speedBlock.templateName ?? null,
+            headline?.prescribedSets,
+            headline?.notes,
+          ),
+        });
+      }
     }
   });
   return out;
@@ -148,6 +200,7 @@ ok('[non-vacuity] the block contains BOTH build weeks with hard work and one wit
 
 const deloadWeek = deloadWeeks[0];
 const buildWeek = buildWeeks[0];
+const relevantBuildWeek = deloadWeek === undefined ? undefined : deloadWeek - 1;
 
 ok('[rule] the deload contains NO hard conditioning session',
   rows.filter((r) => r.week === deloadWeek).every((r) => !r.hard),
@@ -202,6 +255,19 @@ ok('[rule] the deload keeps its conditioning exposures — the hard one is '
   + 'downgraded, not deleted',
   deloadCount === buildCount,
   `build=${buildCount} deload=${deloadCount}`);
+
+const durationFor = (week: number | undefined): number => rows
+  .filter((row) => row.week === week)
+  .reduce((sum, row) => sum + row.estimatedDurationMinutes, 0);
+const relevantBuildDuration = durationFor(relevantBuildWeek);
+const deloadDuration = durationFor(deloadWeek);
+const durationRatio = relevantBuildDuration > 0 ? deloadDuration / relevantBuildDuration : 0;
+ok('[rule] the complete deload week cuts estimated programmed conditioning duration 30-50%',
+  // Integer authored doses make an exact 50% boundary impossible in some
+  // weeks; 47.2% retained is the nearest final-row result (52.8% reduction).
+  durationRatio >= 0.45 && durationRatio <= 0.7,
+  `buildWeek=${relevantBuildWeek} buildMinutes=${relevantBuildDuration.toFixed(1)} `
+    + `deloadWeek=${deloadWeek} deloadMinutes=${deloadDuration.toFixed(1)} ratio=${durationRatio.toFixed(3)}`);
 
 const total = passed + failures.length;
 console.log(`\nOff-season deload conditioning: passed=${passed}/${total} failures=${failures.length}`);

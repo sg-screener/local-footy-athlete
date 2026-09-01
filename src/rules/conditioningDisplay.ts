@@ -306,7 +306,7 @@ export function conditioningAthletePrescription(
 ): ConditioningAthletePrescription {
   const approved = resolveConditioningAthleteCopy(template.name, doseContext);
   const authoredCount = approved?.setsRounds ?? stripAuthoringNotes(template.setsRounds ?? '');
-  const simpleCount = /^(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)\s+(reps?|rounds?|blocks?)(?:\s*\([^)]*\))?$/i
+  const simpleCount = /^(\d+(?:\.\d+)?)(?:\s*[–-]\s*(\d+(?:\.\d+)?))?\s+(reps?|rounds?|sets?|blocks?)(?:\s*\([^)]*\))?$/i
     .exec(authoredCount);
   const parsedCount = parseConditioningDose(authoredCount);
   const chosenCount = resolvedSetsRounds

@@ -105,6 +105,9 @@ ok('accessories also halve — whichever is LESS',
 ok('conditioning halves its total work',
   DELOAD_LAW.conditioningWorkMultiplier === 0.5,
   `got ${DELOAD_LAW.conditioningWorkMultiplier}`);
+ok('readiness-demoted easy aerobic work is shorter than the retained quality dose',
+  DELOAD_LAW.easyAerobicWorkMultiplier === 0.35,
+  `got ${DELOAD_LAW.easyAerobicWorkMultiplier}`);
 ok('at most one quality conditioning exposure survives',
   DELOAD_LAW.maxQualityConditioningExposures === 1,
   `got ${DELOAD_LAW.maxQualityConditioningExposures}`);
@@ -243,6 +246,47 @@ console.log('\n[4] CONDITIONING — half the work, one quality exposure max (NEW
   ok('at most ONE quality exposure survives', qualityLeft <= 1, `got ${qualityLeft}`);
   ok('the others become easy aerobic rather than disappearing',
     after.length === threeQuality.length, `${after.length} of ${threeQuality.length} rows`);
+}
+
+{
+  const visible = row('Steady Blocks (3×8 min or 4×6 min)', 8, {
+    notes: 'Work: 6 min steady\nRecovery: 2 min easy\nRounds: 8\nIntensity: 65–75% MAS',
+  } as Partial<WorkoutExercise>);
+  const scheduled = applyConditioningDeloadToExercises([visible], policy)[0];
+  ok('the stored conditioning count itself decreases',
+    scheduled.prescribedSets === 4, `${visible.prescribedSets} -> ${scheduled.prescribedSets}`);
+  ok('the athlete-visible Rounds line decreases with the stored count',
+    scheduled.notes?.includes('Rounds: 4') && !scheduled.notes?.includes('Rounds: 8'),
+    scheduled.notes);
+
+  const readiness = resolveDoorDeloadPolicy({
+    door: 'readiness', seasonPhase: 'In-season', preserveExerciseSelection: true,
+  })!;
+  const easyRemainder = applyConditioningDeloadToExercises(
+    [visible], readiness, 'easy_aerobic',
+  )[0];
+  ok('a readiness-demoted easy remainder is short enough to reduce the whole week',
+    easyRemainder.prescribedSets === 3 && easyRemainder.notes?.includes('Rounds: 3'),
+    `${easyRemainder.prescribedSets}; ${easyRemainder.notes}`);
+}
+
+{
+  const continuous = row('Continuous Aerobic Run', 1, {
+    notes: 'Work: 40 min continuous\nRecovery: No recovery\nSets: 1\nIntensity: 65–80% MAS',
+  } as Partial<WorkoutExercise>);
+  const after = applyConditioningDeloadToExercises([continuous], policy)[0];
+  ok('a one-set continuous session reduces its visible minutes instead',
+    after.prescribedSets === 1 && after.notes?.includes('Work: 20 min continuous'),
+    after.notes);
+}
+
+{
+  const highEccentric = row('Reverse Nordic Curl', 4);
+  const after = applyStrengthDeloadToExercises([row('Back Squat', 4), highEccentric], policy);
+  const surviving = after.find(entry => entry.exercise?.name === 'Reverse Nordic Curl');
+  ok('high-eccentric accessory work is reduced or removed during a deload',
+    !surviving || surviving.prescribedSets < highEccentric.prescribedSets,
+    surviving ? `${highEccentric.prescribedSets} -> ${surviving.prescribedSets}` : 'removed');
 }
 
 /* ── Power ── */

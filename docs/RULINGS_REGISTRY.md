@@ -7764,3 +7764,31 @@ Guard: `LAW-required-programming-shares-football-robustness-foundation` through
 chained `test:programming-hierarchy + test:mobility-accessory-doors +
 test:weekly-scheduler + test:team-night-content`. Verification status,
 mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-310** · A genuine deload reduces the whole visible week, 2026-09-01.
+
+Owner: yearrepair. Scheduled, readiness-triggered and illness-triggered deloads
+share one transformation. Strength sets fall, and total programmed conditioning
+duration falls roughly 30–50% against the relevant build dose. No more than one
+proper hard metabolic exposure remains; fatigue-based 10/10 metabolic work is
+removed. A tiny, fully recovered Speed exposure may remain, but its volume must
+fall. High-eccentric work is reduced or removed around the reduced week.
+
+The stored prescription and athlete-facing instruction are one result. Reducing
+an absent duration field while leaving `Rounds: 8` or `Work: 40 min` on screen
+does not satisfy this ruling. Counts/rounds decrease together; a continuous
+one-set prescription reduces its visible work minutes. When a hard row is
+demoted into a longer easy-aerobic template during a readiness/illness deload,
+the shorter easy-remainder dose prevents the template swap from preserving or
+increasing the complete week's duration.
+
+A remaining-week fatigue trigger must not leave an automatic six-row Gunshow or
+Primer unchanged. It is suppressed or reduced through the same compiled
+reduced-week state. Accepted fatigue inputs reconstruct the exact same final
+sessions after restart; reversing the exact triggering report through its
+Clear/Undo door restores the prior sessions.
+
+Guard: `LAW-genuine-deload-reduces-the-whole-visible-week` through chained
+`test:deload-law + test:deload-week + test:offseason-deload-conditioning +
+test:temporary-source-facts + test:fatigue-sequence`. Verification status,
+mutation receipts and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

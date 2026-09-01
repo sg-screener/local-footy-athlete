@@ -339,6 +339,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-genuine-deload-reduces-the-whole-visible-week',
+    law: 'R-310: a scheduled, readiness-triggered or illness-triggered deload reduces the complete visible week, not only strength or prose. Programmed conditioning duration falls roughly 30-50% against the relevant build dose, with at most one proper hard metabolic exposure; 10/10 fatigue-based metabolic work is removed, while at most a tiny fully recovered Speed dose may remain. High-eccentric work is reduced or removed. A remaining-week fatigue deload suppresses or shortens automatic Gunshow/Primer work. Stored sets/rounds or continuous-work minutes and their athlete-visible copy decrease together. Accepted source facts reconstruct the same final sessions after restart, and reversing the exact trigger restores the prior sessions.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-310',
+    guard: {
+      state: 'guarded',
+      by: 'test:deload-law + test:deload-week + test:offseason-deload-conditioning + test:temporary-source-facts + test:fatigue-sequence',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The first current-checkpoint run separated nine stale cadence cells from one live dose defect. The existing row reducer halved a mostly absent `prescribedDurationMinutes` field; standalone and pre-lift Speed were composed outside it, so athlete-visible rounds and minutes often did not change. The canonical deload owner now reduces stored counts, matching visible count lines, or visible work minutes for one-set continuous sessions; standalone and pre-lift Speed use the same owner. The scheduled no-anchor Off-season tape is 11/11: one typed Speed survives at lower volume, no proper hard metabolic work survives, the final estimated 84.0-minute build dose becomes 39.7 minutes (47.2% retained), and exposure structure remains. The real accumulated action tape is 90/90: depth-two fatigue facts shorten remaining conditioning, remove or shorten the normal six-row Gunshow, reconstruct exactly after restart, and exact Clear/Undo restores the pre-trigger final sessions in both game-week and conditioning-bearing worlds. `test:deload-law` is 78/78 and pins visible rounds, continuous minutes and high-eccentric reduction. LIVENESS: replacing `prescribedSets: nextSets` with the original count made `test:deload-law` 76/78 and the scheduled tape 9/11, killing the stored count, readiness remainder, Speed-volume and whole-week-duration cells. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
     id: 'LAW-conditioning-athlete-copy-is-complete-and-clock-readable',
     law: 'R-300: every one of the 55 conditioning templates has complete reviewed athlete copy, while every current card resolves ranges before display, uses sets/reps rather than blocks, and keeps its exact selected progression rung through final composition and restart. Current automatic selection excludes the four explicitly retired templates. Run and machine warm-ups are exact and modality-specific; MAS is Run-only.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-300',
