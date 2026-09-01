@@ -104,6 +104,8 @@ export interface PowerPoolEntry {
   readonly reducedTakeoverOnly: boolean;
   /** Sam's authored cue intent, from the spec table. Provenance, not rendering. */
   readonly authoredCueIntent: string;
+  /** Typed weekly-plane credit. Absent means this row earns no such credit. */
+  readonly athleticPlaneExposure?: 'rotational_med_ball';
 }
 
 /** The exercise that takes over the lower slot on a reduced (niggle) day. */
@@ -114,9 +116,9 @@ export const POWER_POOL_REDUCED_TAKEOVER = 'Pogo Hops';
  * than creating exercise-specific programming branches.
  */
 export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
-  {"name": "Rotational Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes, rotate hard, and slam outside the foot."},
+  {"name": "Rotational Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes, rotate hard, and slam outside the foot.", "athleticPlaneExposure": "rotational_med_ball"},
   {"name": "Medicine-Ball Slam", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": null, "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Reach tall onto toes and slam the ball straight down."},
-  {"name": "Rotational Medicine-Ball Throw", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Load the outside hip, rotate hard, and throw through the wall."},
+  {"name": "Rotational Medicine-Ball Throw", "family": "upper", "equipmentRequired": ["medicine_ball"], "minTrainingAge": "developing", "phaseGate": "all_phases", "inSeasonSafe": true, "reducedTakeoverOnly": false, "authoredCueIntent": "Load the outside hip, rotate hard, and throw through the wall.", "athleticPlaneExposure": "rotational_med_ball"},
   {
     name: 'Explosive Landmine Press', family: 'upper', equipmentRequired: ['Barbell'],
     minTrainingAge: 'developing', phaseGate: 'all_phases', inSeasonSafe: true,
@@ -235,6 +237,13 @@ export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
     authoredCueIntent: 'Hop forward from one leg and freeze the landing.',
   },
 ];
+
+/** Exact typed power credit for the weekly athletic-plane audit. */
+export function athleticPlaneExposureForPowerExercise(
+  identity: string,
+): PowerPoolEntry['athleticPlaneExposure'] | undefined {
+  return POWER_EXERCISE_POOL.find((entry) => entry.name === identity)?.athleticPlaneExposure;
+}
 
 /* ── Selection ── */
 

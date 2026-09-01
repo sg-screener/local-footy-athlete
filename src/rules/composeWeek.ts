@@ -2022,6 +2022,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             recentSelections: slotHistory,
             progressedIdentities: inputs.progressedIdentities,
             pinnedIdentities: inputs.pinnedIdentities,
+            movementPlaneContext: weeklyExerciseSelector.movementPlaneContextFor(slot),
           });
       /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**
        * *"A temporary injury/constraint substitution must not become the
@@ -2093,6 +2094,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             recentSelections: [],
             progressedIdentities: [],
             pinnedIdentities: inputs.pinnedIdentities,
+            movementPlaneContext: weeklyExerciseSelector.movementPlaneContextFor(
+              slot,
+              selection.identity,
+            ),
           }).identity
         : selection.identity;
       const changedByDayIdentity = identitiesThisDay.has(selection.identity)

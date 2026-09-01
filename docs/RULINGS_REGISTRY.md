@@ -8158,3 +8158,39 @@ answer, loading unit, exercise role or power-selection path is introduced.
 Guard: `LAW-single-leg-hop-and-stick-intake` through chained
 `test:exercise-intake`. Red-first, mutation, final execution and NOT COVERED
 receipt: `docs/STATUS_INCLINEHOP.md`.
+
+**R-327** · Exercise movement planes are typed metadata and a cautious selector
+tie-break, 2026-09-02.
+
+Owner: movementplane. The Exercise Master workbook and canonical typed metadata
+carry Sam's exact supplied `primaryPlane` and `secondaryPlanes` answers. Primary
+values are sagittal, frontal, transverse, multiplanar or not_applicable;
+secondaries are unique, never repeat the primary and are empty for multiplanar
+or not_applicable. Unlisted exercises remain unanswered and are recorded in
+`docs/MOVEMENT_PLANE_QUESTIONS_2026-09-02.md`; no name, cue, muscle, pool or
+description is used to guess them. No plane label is shown to athletes.
+
+Status: `BUILT`.
+
+The existing automatic selector applies planes only after injury, equipment,
+experience, season/game proximity, session purpose/family and weekly limits.
+An accepted current-block identity still restores first. A legal automatic
+substitute prefers the same primary plane where possible; otherwise useful
+missing-plane coverage may break an equal-candidate tie before stable
+rotation/history. Planes do not chase equal percentages and sagittal work may
+remain the majority.
+
+Weekly and annual checks require one meaningful primary-frontal lower-body
+strength/prehab/power contribution and one typed athletic transverse or
+multiplanar exposure. Upper-body, Mobility, stretching, tissue quality and
+breathing do not satisfy the first. The second accepts typed rotational
+medicine-ball work, COD, cutting, curved running, angled deceleration or Team
+Training; straight-line acceleration does not count, and conditioning names or
+descriptions are never inferred. Trunk rotation/anti-rotation is a softer 7–14
+day check using Band Pallof Press, both Woodchops or Side Plank Row rather than
+a weekly quota.
+
+Guard: `LAW-typed-exercise-movement-planes` through chained
+`test:full-body-balance`, which invokes `test:movement-planes`. Red-first,
+workbook equality, selector ordering, annual audit and NOT COVERED receipt:
+`docs/STATUS_MOVEMENTPLANE.md`.

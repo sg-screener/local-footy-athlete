@@ -21,6 +21,11 @@ import {
   type SlotDayKind,
 } from './sessionSlotCoverage';
 import type { WeeklyMainStrengthSlot } from './weeklyStrengthBudget';
+import {
+  exerciseSuppliesLowerBodyFrontal,
+  preferredMovementPlaneCohort,
+  type MovementPlaneTieBreakContext,
+} from './movementPlaneProgramming';
 
 export type AutomaticExerciseRoute = 'strength' | 'mobility' | 'prehab';
 export type AutomaticFallbackTier =
@@ -168,6 +173,10 @@ export interface AutomaticWeeklyExerciseSelector {
   canUse(candidate: AutomaticWeeklySelectionCandidate): boolean;
   accept(candidate: AutomaticWeeklySelectionCandidate): void;
   chooseFallback(request: AutomaticFallbackRequest): AutomaticFallbackChoice | null;
+  movementPlaneContextFor(
+    requestedSlot: SessionSlot,
+    referenceIdentity?: string,
+  ): MovementPlaneTieBreakContext;
   checkpoint(): AutomaticWeeklySelectionCheckpoint;
   restore(checkpoint: AutomaticWeeklySelectionCheckpoint): void;
   usedIdentities(): readonly string[];
@@ -180,6 +189,7 @@ export interface AutomaticWeeklySelectionCheckpoint {
   readonly spentMainFamilies: readonly WeeklyMainStrengthSlot[];
   readonly sessionCompoundIdentities?: readonly string[];
   readonly coveredCompoundSlots?: readonly SessionSlot[];
+  readonly planeDeliveredIdentities?: readonly string[];
 }
 
 const COMPOUND_DIRECTION_SLOTS: ReadonlySet<SessionSlot> = new Set([
@@ -194,10 +204,12 @@ export function createAutomaticWeeklyExerciseSelector(
   const spent = new Set<WeeklyMainStrengthSlot>();
   const sessionCompounds = new Set<string>();
   const coveredCompoundSlots = new Set<SessionSlot>();
+  const planeDelivered = new Set<string>();
 
   for (const raw of initialDelivered) {
     const identity = canonicalExerciseName(raw);
     const route = automaticExerciseRouteForIdentity(identity);
+    if (route !== 'mobility') planeDelivered.add(identity);
     if (route !== 'strength') continue;
     used.add(identity);
     const family = automaticMainFamilyForExercise(identity, {
@@ -233,8 +245,9 @@ export function createAutomaticWeeklyExerciseSelector(
     if (!canUse(candidate)) {
       throw new Error(`Illegal automatic weekly exercise selection: ${candidate.identity}`);
     }
-    if (candidate.route === 'mobility' || candidate.route === 'prehab') return;
     const identity = canonicalExerciseName(candidate.identity);
+    if (candidate.route !== 'mobility') planeDelivered.add(identity);
+    if (candidate.route === 'mobility' || candidate.route === 'prehab') return;
     used.add(identity);
     if (strengthExerciseClassification(identity) === 'compound') {
       sessionCompounds.add(identity);
@@ -244,6 +257,26 @@ export function createAutomaticWeeklyExerciseSelector(
     if (family) spent.add(family);
   };
 
+  const movementPlaneContextFor = (
+    requestedSlot: SessionSlot,
+    referenceIdentity?: string,
+  ): MovementPlaneTieBreakContext => {
+    const lowerSlots: ReadonlySet<SessionSlot> = new Set([
+      'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+      'lower_accessory', 'football_robustness',
+    ]);
+    const lowerFrontalPresent = [...planeDelivered].some((identity) =>
+      exerciseSuppliesLowerBodyFrontal(
+        identity,
+        automaticExerciseRouteForIdentity(identity) === 'prehab' ? 'prehab' : 'strength',
+      ));
+    return {
+      ...(referenceIdentity ? { referenceIdentity } : {}),
+      missingUsefulPrimaryPlanes: lowerSlots.has(requestedSlot) && !lowerFrontalPresent
+        ? ['frontal'] : [],
+    };
+  };
+
   const chooseFallback = (request: AutomaticFallbackRequest): AutomaticFallbackChoice | null => {
     const choose = (
       identities: readonly string[],
@@ -251,7 +284,10 @@ export function createAutomaticWeeklyExerciseSelector(
       route: AutomaticExerciseRoute,
       requestedAsMain: boolean,
     ): AutomaticFallbackChoice | null => {
-      for (const identity of identities) {
+      for (const identity of preferredMovementPlaneCohort(
+        identities,
+        movementPlaneContextFor(request.requestedSlot),
+      )) {
         const semanticSupportSlot = tier === 'core_or_robustness'
           ? (realMovementSlotsForAutomaticExercise(identity).find((slot) =>
               slot === 'football_robustness' || slot === 'core') ?? 'core')
@@ -285,11 +321,13 @@ export function createAutomaticWeeklyExerciseSelector(
     canUse,
     accept,
     chooseFallback,
+    movementPlaneContextFor,
     checkpoint: () => ({
       usedIdentities: [...used],
       spentMainFamilies: [...spent],
       sessionCompoundIdentities: [...sessionCompounds],
       coveredCompoundSlots: [...coveredCompoundSlots],
+      planeDeliveredIdentities: [...planeDelivered],
     }),
     restore(checkpoint) {
       used.clear(); checkpoint.usedIdentities.forEach((identity) => used.add(identity));
@@ -298,6 +336,8 @@ export function createAutomaticWeeklyExerciseSelector(
       checkpoint.sessionCompoundIdentities?.forEach((identity) => sessionCompounds.add(identity));
       coveredCompoundSlots.clear();
       checkpoint.coveredCompoundSlots?.forEach((slot) => coveredCompoundSlots.add(slot));
+      planeDelivered.clear();
+      checkpoint.planeDeliveredIdentities?.forEach((identity) => planeDelivered.add(identity));
     },
     usedIdentities: () => [...used],
     spentMainFamilies: () => [...spent],

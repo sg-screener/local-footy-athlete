@@ -47,6 +47,10 @@ import type { SessionSlot } from './sessionSlotCoverage';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import { stableDecisionOrder } from './stableDecisionDiversity';
 import { sourceBoundSelectionIdentity } from './sourceBoundExerciseRegression';
+import {
+  preferredMovementPlaneCohort,
+  type MovementPlaneTieBreakContext,
+} from './movementPlaneProgramming';
 
 /** What part a slot plays — it decides which rotation rules apply. */
 export type SelectionRole = 'main_bilateral' | 'single_leg' | 'accessory';
@@ -159,6 +163,8 @@ export interface ExerciseSelectionInputs {
   /** Identities `blockBoundaryProgression.progressedFromOwnHistory` supports. */
   readonly progressedIdentities: readonly ComposedExerciseIdentity[];
   readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
+  /** Plane preference is applied only inside the already-legal, equally suitable cohort. */
+  readonly movementPlaneContext?: MovementPlaneTieBreakContext;
 }
 
 /**
@@ -253,8 +259,9 @@ export function decideExerciseForBlock(
     identity: ComposedExerciseIdentity,
     decisionKind: SelectionDecisionKind,
     reason: SelectionReason,
+    consideredCandidates: readonly ComposedExerciseIdentity[] = phaseOrdered,
   ): ExerciseSelectionDecision => ({
-    identity, decisionKind, reason, previousIdentity, consideredCandidates: phaseOrdered,
+    identity, decisionKind, reason, previousIdentity, consideredCandidates,
   });
 
   // ── RESTORE BEFORE DECIDE ─────────────────────────────────────────────────
@@ -317,12 +324,21 @@ export function decideExerciseForBlock(
     if (!heldTwice) return decide(legalPin, 'retained', 'athlete_preference');
   }
 
+  // Plane metadata narrows only the remaining equal cohort. Current-block
+  // restoration, legality, athlete preference and phase policy have already
+  // answered above; recorded progression can still retain its accepted lift.
+  const planeCohort = preferredMovementPlaneCohort(
+    phaseOrdered,
+    inputs.movementPlaneContext,
+  );
+
   // ── RULE 4 — CONTINUITY ───────────────────────────────────────────────────
   if (previousIdentity !== null && !phaseOrdered.includes(previousIdentity)) {
     return decide(
-      leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
+      leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),
       'rotated',
       'previous_selection_no_longer_legal',
+      planeCohort,
     );
   }
 
@@ -332,18 +348,20 @@ export function decideExerciseForBlock(
       && inputs.recentSelections[1]?.identity === previousIdentity;
     if (heldTwice) {
       return decide(
-        leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
+        leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),
         'rotated',
         'two_block_maximum_reached',
+        planeCohort,
       );
     }
     if (inputs.progressedIdentities.includes(previousIdentity)) {
       return decide(previousIdentity, 'retained', 'progressed_from_own_history');
     }
     return decide(
-      leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
+      leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),
       'rotated',
       'history_does_not_support_retention',
+      planeCohort,
     );
   }
 
@@ -352,7 +370,7 @@ export function decideExerciseForBlock(
   // same-group option used least recently. Never across groups: the caller
   // scopes `legalCandidates` to the slot, so a cross-group option is not here.
   if (previousIdentity === null) {
-    return decide(phaseOrdered[0], 'first_selection', 'no_previous_selection');
+    return decide(planeCohort[0], 'first_selection', 'no_previous_selection', planeCohort);
   }
   /* ⚠ NO `!== previousIdentity` FILTER HERE, AND ITS ABSENCE IS DELIBERATE.
    * An earlier revision filtered the previous identity out before the walk. It
@@ -361,9 +379,10 @@ export function decideExerciseForBlock(
    * candidate exists. A mutation removing the filter reddened nothing, which is
    * how it was found. The one-candidate case is answered far above. */
   return decide(
-    leastRecentlyUsed(phaseOrdered, inputs.recentSelections, decisionIdentity),
+    leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),
     'rotated',
     'structured_variety',
+    planeCohort,
   );
 }
 

@@ -515,6 +515,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-typed-exercise-movement-planes',
+    law: 'R-327: Sam-supplied exercise movement planes live in one typed catalogue equal to the Exercise Master workbook. Unlisted identities remain unanswered questions and are never inferred. Plane preservation and missing-useful-plane tie-breaking run only inside the legal equal cohort after injury, equipment, experience, season/game proximity, purpose/family and weekly limits; accepted current-block history still restores first. Weekly and annual checks require meaningful lower-body primary-frontal work and typed athletic transverse/multiplanar exposure, with a softer 7–14 day trunk rotation/anti-rotation check. No equal-percentage target or athlete-facing plane label is introduced.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-327',
+    guard: {
+      state: 'guarded',
+      by: 'test:full-body-balance',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `movementplane`. TEST FIRST: the focused command could not load either the plane catalogue or programming audit. TWO OPTIONS COMPARED: add fields throughout the large exercise-tag objects plus a second workbook parser, or add one typed canonical plane catalogue held equal to two Exercise Master columns and read by the existing selector and annual audit. The single catalogue landed. Its focused tape pins Sam\'s exact named set, metadata invariants, workbook equality in both directions, the complete unanswered-question list, same-plane substitution, accepted-history priority, lower-frontal exclusions, typed athletic credit and the soft trunk window. The existing selector owns the tie-break and the existing annual audit owns findings; no screen reads the fields. Final tests, mutation and NOT COVERED receipt: docs/STATUS_MOVEMENTPLANE.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',
