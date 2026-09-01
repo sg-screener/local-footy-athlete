@@ -7718,6 +7718,13 @@ Blocks. Reports state both sets separately and include Movement Prep in the
 total athlete-visible row headline. Proper Speed continues to earn exactly one
 weekly energy-system credit through the canonical evidence owner.
 
+The weekly audit also keeps six counting units separate: explicit fixture
+athlete-days, generated-conditioning athlete-days, typed Running Speed
+athlete-days, team-training credit athlete-days, total semantic energy-system
+credits, and the distinct union of app-programmed energy-system athlete-days.
+None is inferred from a display-role spelling, and none is relabelled as another
+merely because one combined session contributes to both semantic breakdowns.
+
 Guard: `LAW-annual-export-uses-final-rows-once-and-separates-categories-from-templates`
 through chained `test:programming-hierarchy + test:canonical-weekly-compiler`.
 Verification status and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
@@ -7891,4 +7898,24 @@ that declaration rather than being trimmed by a screen, exporter or restart.
 Guard: `LAW-required-team-night-gym-is-compact-at-composition` through chained
 `test:team-night-size`, whose first command is the 34/34
 `test:team-night-compact` final-generation matrix. Verification status,
+mutation receipt and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.
+
+**R-315** · Mid-week remainder placement counts delivered energy history, 2026-09-01.
+
+Owner: yearrepair. A remainder rebuild receives the athlete's settled pre-boundary
+energy-system athlete-days before it chooses future conditioning or Speed. It
+separately carries whether each delivered day was app-programmed work, actual
+team/game anchor credit, or Running Speed. Past dates count but are not fresh
+receiver seats, and standing club answers cannot overwrite what the pinned day
+actually contained.
+
+The scheduler may author only the governable remainder. It does not append a
+catch-up exposure when every such placement would create a new run of three
+consecutive app-programmed energy-system days. Clear, restart and final
+projection preserve the same settled-history-plus-remainder result.
+
+Guard: `LAW-midweek-remainder-counts-delivered-energy-history` through chained
+`test:weekly-scheduler`. The exact remainder cell carries four delivered days,
+including Thursday/Friday, two standing club-night answers that the travel week
+did not actually deliver, and Saturday as the first governable day. Verification,
 mutation receipt and NOT COVERED: `docs/STATUS_YEARREPAIR.md`.

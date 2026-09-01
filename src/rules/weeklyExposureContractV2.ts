@@ -1131,7 +1131,10 @@ function policyFor(input: Pick<
       return {
         strength: { required: 0, defaultTarget: 0, preferred: { min: 2, max: 3 }, max: 3 },
         conditioning: { required: 0, defaultTarget: 0, preferred: { min: 1, max: 2 }, max: 3, stress: ['light'], optionalFlush: { min: 1, max: 2 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
-        sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
+        // R-311 replaced the retired no-sprint opening with one short, real
+        // running-Speed exposure from week 1. This is a frequency floor, not a
+        // licence to add repeat-sprint conditioning or high-volume speed work.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 1 },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'early_offseason' },
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
@@ -1150,9 +1153,9 @@ function policyFor(input: Pick<
       return {
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 1 },
-        // R-079 begins off-season sprinting only AFTER the first four weeks.
-        // Mid off-season is weeks 3-4, so the transition block owes none.
-        sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
+        // R-311 keeps the same small running-Speed floor through weeks 3-4;
+        // the authored template progression changes, not the weekly frequency.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 1 },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and

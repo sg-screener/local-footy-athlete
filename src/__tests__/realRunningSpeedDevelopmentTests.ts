@@ -16,6 +16,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import type { SeasonPhase, TrainingProgram, Workout } from '../types/domain';
 import { speedBlockForTemplate } from '../rules/speedTemplates';
+import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
 
 let passed = 0;
 const failures: string[] = [];
@@ -63,6 +64,7 @@ function build(args: {
       trainingLocation: 'Commercial gym',
       equipment: ['Full Gym'],
       equipmentSelectionCompleteness: 'complete',
+      equipmentAnswer: presetEquipmentAnswer('commercial_gym', MONDAY),
       experienceLevel: '2-5 years',
       conditioningLevel: 'Average',
       recentTrainingLoad: 'Pretty consistent',

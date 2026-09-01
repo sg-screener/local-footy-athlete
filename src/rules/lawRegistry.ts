@@ -307,13 +307,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-annual-export-uses-final-rows-once-and-separates-categories-from-templates',
-    law: 'R-307: annual audit, HTML and PDF output display the canonical final day.rows projection exactly once. speedRows is typed evidence only: it must match a final canonical identity and modality and is never appended. Conditioning category means Continuous Aerobic, Tempo, Hard Intervals or Flush; conditioning template means the actual selected authored identity. Reports state both separately and include Movement Prep in total athlete-visible rows. Proper Speed retains one weekly energy-system credit.',
+    law: 'R-307, refined by the final audit addendum: annual audit, HTML and PDF output display the canonical final day.rows projection exactly once. speedRows is typed evidence only: it must match a final canonical identity and modality and is never appended. Conditioning category means Continuous Aerobic, Tempo, Hard Intervals or Flush; conditioning template means the actual selected authored identity. Reports state both separately and include Movement Prep in total athlete-visible rows. Weekly evidence separately names explicit fixture days, generated conditioning days, typed Running Speed days, team-training credit days, total energy-system credits and the distinct union of app-programmed exposure days.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-307',
     guard: {
       state: 'guarded',
       by: 'test:programming-hierarchy + test:canonical-weekly-compiler',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. Three annual consumers concatenated day.rows and speedRows even though the session template had already projected the Speed component. The fresh two-athlete artifact carries 32 Speed-evidence row placements across 16 athlete-dates; the broken concatenation would report 5,363 visible rows instead of the canonical 5,331. One shared projection owner now returns day.rows only and separately validates Speed evidence identity/modality. The repaired final audit exits zero with 0 duplicate, missing or modality-mismatch findings; generated HTML contains Air Bike Accelerations 4 times per athlete-year, not 8. The original 49eb2546 artifact reproduces 4 categories and 24 distinct templates. After R-303, the fresh artifact still reports the same 4 categories and truthfully reports 22 selected templates because two old automatic selections no longer occur. Appending speedRows back into the shared owner changes the focused gate from 5/5 to an immediate 2-versus-1 failure. The existing compiler mutation separately proves ignoring qualifying Speed makes the energy-evidence gate red. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`; REFINED AT ADDENDUM 8. Three annual consumers concatenated day.rows and speedRows even though the session template had already projected the Speed component. One shared projection owner returns day.rows only and validates Speed evidence identity/modality. The addendum found a second instrument defect: the final audit required a final display row whose role literally equalled speed, so every genuine typed Running Speed day reported zero while generated-conditioning inherited the shared app-credit count. `summarizeWeeklyEnergySystemAudit` now owns all six separately named units and the chained scheduler tape distinguishes pure Speed, generated conditioning, team credit, fixture dates, total credits and their app-day union. Full receipt, mutations and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
     },
   },
   {
@@ -391,6 +391,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:team-night-size',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The external-review evidence came from older PDFs and the current checkpoint did not reproduce the defect. The first 14/26 run was an instrument fault: secondary upper rows do not all carry a main-pattern evidence value, so the test initially called Barbell Row and Z-Press “other”. Reading their existing typed movement tags returned the true 26/26, then stronger non-deletion cells made the final boundary 34/34. It drives real final generated workouts for both sexes, Off-season anchor retirement, Pre-season and In-season build, scheduled deload and moderate upper injury. Healthy build nights retain exactly two upper rows plus one or two support rows, at most one power row and five gym rows total; final non-power row counts equal `composedDeclaredSlots`. TWO OPTIONS COMPARED: trim stored/display rows to a count, or preserve and guard the already-correct R-309 composer declaration. The latter is the source-of-truth design and required no production rewrite. LIVENESS: adding three trunk seats to the male pull composer made seven exact cells red (27/34) across build, injury and deload; restoration returned 34/34. Full receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+    },
+  },
+  {
+    id: 'LAW-midweek-remainder-counts-delivered-energy-history',
+    law: 'R-315: a mid-week remainder rebuild counts the athlete\'s settled app energy-system days, Running Speed and actual anchor credit before placing future work. Dates before the governed boundary are history, never fresh receiver seats. The app does not append a catch-up exposure when the only available future placement would create a new three-day app-programmed energy-system run; Clear, restart and final projection preserve the same result.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-315',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`. The exact male and female lived years both reproduced app conditioning on 2027-02-04/05/06 after a Monday-Friday travel fact and Saturday Clear. The compiler pinned Thursday/Friday only after the scheduler authored a fresh whole week, so Saturday was a fifth app day and the third consecutive day. A typed delivered-history snapshot now reaches the scheduler before placement and separates app, Speed and actual anchor credit. The exact remainder cell began red with Saturday present and is now green; ignoring the snapshot restores that red. A fresh two-athlete 52-week working artifact is 21/22 with both energy checks green; only its pre-commit revision pin remains intentionally red. Final exact-commit/PDF receipt and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
     },
   },
   {

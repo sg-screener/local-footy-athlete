@@ -369,6 +369,65 @@ guarded by `test:programming-hierarchy + test:canonical-weekly-compiler`.
   remain due in final acceptance.
 - No simulator, Release build or physical phone work has run.
 
+## Addendum Section 8 + final Section 7 — current-checkpoint audit repair
+
+The first current-checkpoint generation failed before week 1 could install:
+R-311 authored a short Running Speed exposure in early Off-season, while the
+older Section 18 phase contract still declared a zero maximum. A new chained
+cold-onboarding gate began 0/2 with
+`maximum_breach:sprint_high_speed:1`. Aligning the early/mid Off-season contract
+with R-311 returned it to 2/2; the complete Off-season/Speed/Nordic chain and
+TypeScript are green.
+
+The next exact two-athlete year reproduced the remaining Section 7 defect in
+both sexes. The unit is distinct app-programmed energy-system athlete-days:
+Thursday 2027-02-04, Friday 2027-02-05 and Saturday 2027-02-06 formed a
+three-day run after a Monday-Friday travel fact and Saturday Clear. The compiler
+was asking the scheduler for a fresh whole week and pinning Monday-Friday history
+only afterwards. That made the settled days invisible during placement and
+Saturday became an additive catch-up exposure.
+
+Two designs were compared. A post-generation Saturday deletion would conceal
+the scheduler error and leave contract demand, restart and visible rows able to
+disagree. The source-of-truth design landed: before placement, the canonical
+compiler projects each pinned history workout into a typed delivered-history
+snapshot naming app credit, Running Speed and actual anchor credit. The scheduler
+counts those distinct days, excludes past dates from receiver candidates and
+declines a future seat that would create a new three-day run. The focused
+remainder cell began red with Saturday present; ignoring the snapshot restores
+that exact red. The full weekly-scheduler chain is green at 128 focused cells
+plus its generated/travel/continuity/spare-day continuations.
+
+The audit itself also contained a classification defect. It reported zero
+Running Speed days for all 52 weeks because it searched final display rows for a
+literal `role=speed`, even though the canonical row owns a conditioning display
+role and Speed identity is typed separately. One semantic summary owner now
+reports, per week, explicit fixture days, generated conditioning days, Running
+Speed days, team-training credit days, total energy-system credits and distinct
+app-programmed exposure days. The chained unit control proves all six remain
+separate. Categories remain the four programme roles; templates remain actual
+selected identities. No old PDF claim was carried forward as evidence.
+
+The post-fix working artifact at `output/full-year-audit-working-r315/` is
+21/22: both male and female energy-system checks are green, with zero evidence
+findings, zero density findings and maximum four Off-season app days. Its sole
+red is the deliberately dirty `exact_source_revision` pin. Both athletes have
+52 weeks, 364 distinct dates and 52 successful restart occurrences. Male rows
+are 1,473 main-session + 799 Movement Prep = 2,272 athlete-visible placements;
+female rows are 1,489 + 799 = 2,288. Both retain four conditioning categories,
+25 selected template identities, and exact tracked-lift delivery at every
+eligible date (Pull-Up 61, Bench 64, RDL 60, Back Squat 58). R-307 is refined and
+R-315 is born guarded.
+
+### NOT COVERED
+
+- The clean exact-commit regeneration and PDFs follow this checkpoint; they are
+  intentionally not claimed from the dirty working artifact.
+- Physical-iPhone acceptance, native onboarding taps and a clean Release install
+  were not run, per instruction.
+- Clinical validation of prescriptions and competition/team metadata beyond
+  distinct accepted fixture date/kind remain outside this audit.
+
 ## Addendum Section 7 — compact Team Training gym work
 
 The older-PDF concern does not reproduce as a production defect at the current

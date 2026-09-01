@@ -86,6 +86,56 @@ export function isAppProgrammedEnergySystemDay(
   return (evidence?.appProgrammedConditioningCredits ?? 0) > 0;
 }
 
+/** A selected conditioning exposure, distinct from a pure Running Speed seat. */
+export function isGeneratedConditioningDay(
+  evidence: EnergySystemExposureEvidence | null | undefined,
+): boolean {
+  return isAppProgrammedEnergySystemDay(evidence)
+    && evidence?.independentConditioning === true;
+}
+
+/** Typed Running Speed evidence; display-row labels are not an audit source. */
+export function isRunningSpeedDay(
+  evidence: EnergySystemExposureEvidence | null | undefined,
+): boolean {
+  return evidence?.qualifyingSpeed === true
+    && (evidence.sprintHighSpeedCredits ?? 0) > 0;
+}
+
+export interface WeeklyEnergySystemAuditDay {
+  readonly kind?: string | null;
+  readonly type?: string | null;
+  readonly energySystem: EnergySystemExposureEvidence | null | undefined;
+}
+
+export interface WeeklyEnergySystemAuditCounts {
+  readonly explicitFixtureDays: number;
+  readonly generatedConditioningDays: number;
+  readonly runningSpeedDays: number;
+  readonly teamTrainingCreditDays: number;
+  readonly totalEnergySystemCredits: number;
+  readonly appProgrammedExposureDays: number;
+}
+
+/** One semantic owner for the six separately named annual audit units. */
+export function summarizeWeeklyEnergySystemAudit(
+  days: readonly WeeklyEnergySystemAuditDay[],
+): WeeklyEnergySystemAuditCounts {
+  return {
+    explicitFixtureDays: days.filter((day) => day.kind === 'game').length,
+    generatedConditioningDays: days.filter((day) =>
+      isGeneratedConditioningDay(day.energySystem)).length,
+    runningSpeedDays: days.filter((day) =>
+      isRunningSpeedDay(day.energySystem)).length,
+    teamTrainingCreditDays: days.filter((day) => day.type === 'Team Training'
+      && (day.energySystem?.conditioningCredits ?? 0) > 0).length,
+    totalEnergySystemCredits: days.reduce((sum, day) =>
+      sum + (day.energySystem?.conditioningCredits ?? 0), 0),
+    appProgrammedExposureDays: days.filter((day) =>
+      isAppProgrammedEnergySystemDay(day.energySystem)).length,
+  };
+}
+
 /** R-303 weekly cap. Team/game anchors remain separate and do not enter this count. */
 export function validateWeeklyEnergySystemDensity(args: {
   readonly phase: string;

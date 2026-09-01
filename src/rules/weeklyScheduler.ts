@@ -68,6 +68,19 @@ export interface SchedulerReadiness {
 export interface WeeklySchedulerInputs {
   /** Monday of the week being scheduled, ISO. */
   readonly weekStartISO: string;
+  /**
+   * Settled app-authored energy-system work before a mid-week remainder
+   * boundary. These are distinct athlete-days, not rows or credits. The
+   * scheduler may count them but may never move or re-author them.
+   */
+  readonly deliveredEnergySystemDays?: readonly {
+    readonly dayOfWeek: number;
+    readonly appProgrammed: boolean;
+    readonly anchorConditioning: boolean;
+    readonly sprintHighSpeed: boolean;
+  }[];
+  /** Dates before this ISO date are delivered history, not placement seats. */
+  readonly governedFromISO?: string | null;
   readonly phase: ContractPhase;
   /** Compiler-owned injury safety; field participation is a separate athlete fact. */
   readonly appSprintPermitted?: boolean;
@@ -612,6 +625,25 @@ function permutations<T>(items: readonly T[]): T[][] {
 // ─── SCHEDULE ──────────────────────────────────────────────────────────────
 
 export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResult {
+  const deliveredEnergy = inputs.deliveredEnergySystemDays ?? [];
+  const deliveredAppDays = new Set(deliveredEnergy
+    .filter((day) => day.appProgrammed).map((day) => day.dayOfWeek));
+  const deliveredSprintDays = new Set(deliveredEnergy
+    .filter((day) => day.sprintHighSpeed).map((day) => day.dayOfWeek));
+  const deliveredAnchorDays = new Set(deliveredEnergy
+    .filter((day) => day.anchorConditioning).map((day) => day.dayOfWeek));
+  const isDeliveredDay = (day: number): boolean => inputs.governedFromISO != null
+    && dateForDayOfWeek(inputs.weekStartISO, day) < inputs.governedFromISO;
+  const isGovernableEnergyDay = (day: number): boolean => !isDeliveredDay(day);
+  const energyStreak = (days: readonly number[]): number => {
+    const present = new Set(days);
+    let run = 0; let longest = 0;
+    for (const day of [...WEEK_ORDER, ...WEEK_ORDER]) {
+      run = present.has(day) ? run + 1 : 0;
+      longest = Math.max(longest, run);
+    }
+    return Math.min(WEEK_ORDER.length, longest);
+  };
   const usableGymDays = WEEK_ORDER.filter((day) => dayIsUsableForStrength(day, inputs));
   // Weekend availability is a fact about the athlete's gym access, read from the
   // access set itself rather than asked for twice (WC-111 / WC-112).
@@ -857,10 +889,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // The app now supplies only the shortfall. Anchors are counted first, and the
   // budget is spent in day order so the result does not depend on which day the
   // loop happens to reach first.
-  const anchorConditioningDays = new Set<number>([
+  const scheduledAnchorDays = new Set<number>([
     ...inputs.clubNights,
     ...scheduledGameDays(inputs),
-  ]).size;
+  ]);
+  const anchorConditioningDaySet = new Set<number>([
+    ...[...scheduledAnchorDays].filter((day) => !isDeliveredDay(day)),
+    ...deliveredAnchorDays,
+  ]);
+  const anchorConditioningDays = anchorConditioningDaySet.size;
   const purposeByDay = new Map(best.assignment.map((s) => [s.day, s.purpose]));
 
   // ── WC-136: THE PHASE OWNS THE COUNT AND THE QUALITY ─────────────────────
@@ -887,7 +924,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       && (inputs.readiness.lowReadiness || inputs.weekKind === 'deload'))
     ? { ...phaseOverlay, sprintExposureRequired: false }
     : phaseOverlay;
-  const clubSpeedTopUp = inputs.clubNights.length > 0 && overlay.sprintExposureRequired
+  const clubSpeedTopUp = deliveredSprintDays.size === 0
+    && inputs.clubNights.length > 0 && overlay.sprintExposureRequired
     && missingSpeedQualities.length > 0 && appSprintNeedPermitted(inputs);
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
@@ -915,8 +953,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // week's two high-output running exposures sit apart. Taking the first upper
   // day would stack them on Tuesday.
   const sprintUpperDay = upperDayForSprint(inputs, overlay, purposeByDay);
-  const plannedSprintDay = clubSpeedTopUp ? null : sprintUpperDay
+  const unrestrictedPlannedSprintDay = clubSpeedTopUp ? null : sprintUpperDay
     ?? appSprintDay(inputs, overlay, new Set(purposeByDay.keys()));
+  const plannedSprintDay = deliveredSprintDays.size > 0
+    ? null
+    : unrestrictedPlannedSprintDay !== null
+      && isGovernableEnergyDay(unrestrictedPlannedSprintDay)
+      ? unrestrictedPlannedSprintDay
+      : null;
 
   // ── WC-139: PRE-SEASON PUTS THE SPRINT ON THE HARD DAY, AS A SECOND
   //           COMPONENT ─────────────────────────────────────────────────────
@@ -974,6 +1018,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     0,
     overlay.conditioningTarget.min
       - anchorConditioningDays
+      - deliveredAppDays.size
       // A combined speed + interval session occupies ONE conditioning slot.
       // Only a standalone sprint needs a reserved slot outside the existing
       // conditioning receivers. A primary sprint replaces one of those slots.
@@ -1028,7 +1073,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       ? WEEK_ORDER : []),
   ]));
   const legalConditioningCandidates = conditioningCandidates.filter((day) =>
-    !inputs.unavailableDays.includes(day)
+    isGovernableEnergyDay(day)
+    && !inputs.unavailableDays.includes(day)
     && !inputs.clubNights.includes(day)
     && !isScheduledGameDay(day, inputs)
     && !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs));
@@ -1038,7 +1084,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     // remain authoritative. The ordinary case considers complete receiver sets,
     // not a weekday prefix, before spending the same exposure budget.
     if (noClubGameWeek || releasedReceivers.length > 0) return legalConditioningCandidates.slice(0, count);
-    const anchors = [...inputs.clubNights, ...scheduledGameDays(inputs)];
+    const anchors = [...anchorConditioningDaySet];
     const training = [...purposeByDay.keys(), ...anchors];
     const cyclicStreak = (days: readonly number[]) => {
       const present = new Set(days);
@@ -1050,7 +1096,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       return Math.min(7, longest);
     };
     const score = (days: readonly number[]): number[] => {
-      const running = [...anchors, ...days.filter(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
+      const running = [...anchors, ...deliveredSprintDays,
+        ...days.filter(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
         ...(plannedSprintDay === null ? [] : [plannedSprintDay])];
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
@@ -1061,7 +1108,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         plannedSprintDay !== null && sprintUpperDay !== null
           && !days.includes(plannedSprintDay) ? 1 : 0,
         Math.max(0, cyclicStreak([
-          ...days,
+          ...deliveredAppDays, ...days,
           ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
         ]) - 2),
         clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
@@ -1081,13 +1128,28 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         days.filter(day => !purposeByDay.has(day)).length,
       ];
     };
-    const candidates = combinations(legalConditioningCandidates, count);
+    const desiredCandidates = combinations(legalConditioningCandidates, count);
     const compare = (a: readonly number[], b: readonly number[]) => {
       const left = score(a); const right = score(b);
       for (let i = 0; i < left.length; i++) if (left[i] !== right[i]) return left[i] - right[i];
       return 0; // stable enumeration is the final deterministic tie-break.
     };
-    return candidates.sort(compare)[0] ?? [];
+    const baselineStreak = energyStreak([...deliveredAppDays]);
+    for (let candidateCount = count; candidateCount >= 0; candidateCount -= 1) {
+      const candidates = candidateCount === count
+        ? desiredCandidates
+        : combinations(legalConditioningCandidates, candidateCount);
+      const safe = candidates.filter((candidate) => {
+        const candidateStreak = energyStreak([
+          ...deliveredAppDays,
+          ...candidate,
+          ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
+        ]);
+        return candidateStreak <= Math.max(2, baselineStreak);
+      });
+      if (safe.length > 0) return safe.sort(compare)[0] ?? [];
+    }
+    return [];
   })();
   // WC-144 (Sam's Q3 ruling, 2026-08-26 — the pre-season hard runner leaving
   // an all-lower receiver set for a free weekend day) was BUILT HERE and
@@ -1358,8 +1420,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // CLUB TRAINING AND THE GAME COUNT toward the minimum (WC-046), which is why
   // they seed the tally rather than being ignored.
   const runningDays = new Set<number>([
-    ...inputs.clubNights,
-    ...scheduledGameDays(inputs),
+    ...anchorConditioningDaySet,
+    ...deliveredSprintDays,
     ...days.filter((d) => d.conditioning === 'running').map((d) => d.dayOfWeek),
     ...((sprintComponentDay ?? plannedSprintDay) !== null ? [sprintComponentDay ?? plannedSprintDay!] : []),
   ]);
@@ -1405,9 +1467,17 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     || WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b));
 
   if (inputs.phase !== 'Off-season' || inputs.offseasonBlock !== 'early_optional') {
+    const placedEnergyDays = new Set<number>([
+      ...deliveredAppDays,
+      ...conditioningDaySet,
+      ...((sprintComponentDay ?? plannedSprintDay) !== null
+        ? [sprintComponentDay ?? plannedSprintDay!] : []),
+    ]);
+    const baselineEnergyStreak = energyStreak([...deliveredAppDays]);
     for (const day of topUpOrder) {
       if ((inputs.appRunningPermitted === false || runningDays.size >= GLOBAL_RULES.running.min) && outstandingConditioning <= 0) break;
       if (runningDays.has(day)) continue;
+      if (!isGovernableEnergyDay(day)) continue;
       if (inputs.unavailableDays.includes(day)) continue;      // WC-061
       if (isScheduledGameDay(day, inputs)) continue;
       if (purposeByDay.has(day)) continue;                      // already a gym day
@@ -1421,7 +1491,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         longest = Math.max(longest, run);
       }
       if (longest > GLOBAL_RULES.runningStreakMaximum) continue;
+      if (energyStreak([...placedEnergyDays, day]) > Math.max(2, baselineEnergyStreak)) continue;
       runningDays.add(day);
+      placedEnergyDays.add(day);
       outstandingConditioning = Math.max(0, outstandingConditioning - 1);
       runningTopUps.push({
         dateISO: dateForDayOfWeek(inputs.weekStartISO, day), dayOfWeek: day,
@@ -1541,14 +1613,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // Counted from the DATED DAYS, never re-derived from the layout — a demand that
   // disagrees with the week it describes is the exact defect that made §18 judge a
   // composer week against a count nobody built.
-  const anchorConditioning = new Set<number>([
-    ...inputs.clubNights,
-    ...scheduledGameDays(inputs),
-  ]).size;
+  const anchorConditioning = anchorConditioningDaySet.size;
   // R-261: the combined session keeps both qualities but earns one credit.
-  const appConditioningDays = withComposedOptional.filter((day) =>
+  const authoredAppConditioningDays = withComposedOptional.filter((day) =>
     (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush') || day.sprintComponent).length;
-  const runningDayCount = withComposedOptional.filter((day) => day.conditioning === 'running').length;
+  const appConditioningDays = deliveredAppDays.size + authoredAppConditioningDays;
+  const runningDayCount = deliveredSprintDays.size
+    + withComposedOptional.filter((day) => day.conditioning === 'running').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //
   // §3, Sprint/high-speed: *"At least 1 except early off-season. **Games and club
@@ -1563,9 +1634,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // worlds, the dominant refusal at zero legacy executions.
   //
   // The game and every club night carry the credit the contract says they carry.
-  const appSprintDays = withComposedOptional.filter(
-    (day) => day.conditioning === 'sprint_high_speed' || day.sprintComponent).length;
-  const sprintCount = appSprintDays + anchorConditioning;
+  const authoredAppSprintDays = withComposedOptional.filter(
+    (day) => day.conditioning === 'sprint_high_speed' || day.sprintComponent).map((day) => day.dayOfWeek);
+  const sprintCount = new Set([
+    ...deliveredSprintDays,
+    ...authoredAppSprintDays,
+    ...anchorConditioningDaySet,
+  ]).size;
   const hardDaySet = new Set<number>([
     ...withComposedOptional.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
     ...inputs.clubNights,

@@ -234,9 +234,9 @@ console.log('\n[4] Ruling 4 — the no-weakness DEFAULT ORDER is law, not coinci
     mid.sprintHighSpeed >= early.sprintHighSpeed &&
     late.sprintHighSpeed >= mid.sprintHighSpeed,
     { early: early.sprintHighSpeed, mid: mid.sprintHighSpeed, late: late.sprintHighSpeed });
-  // And the early block is the one with no required sprint at all, which is the same
-  // sentence read from its other end.
-  ok('early off-season requires no sprint exposure', early.sprintHighSpeed === 0,
+  // R-311 keeps one short running-Speed exposure from the first Off-season
+  // week; weak-point focus may change the selected drill, never erase the floor.
+  ok('early off-season retains the one-exposure running-Speed floor', early.sprintHighSpeed === 1,
     { early: early.sprintHighSpeed });
 }
 

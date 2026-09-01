@@ -52,6 +52,11 @@ import {
   type WeeklySchedule,
   type WeeklySchedulerInputs,
 } from '../rules/weeklyScheduler';
+import {
+  isGeneratedConditioningDay,
+  isRunningSpeedDay,
+  summarizeWeeklyEnergySystemAudit,
+} from '../rules/energySystemExposureEvidence';
 
 armTotalsOrRed();
 
@@ -420,6 +425,71 @@ console.log('\n[spacing] Lower spacing, planes, hard days and rest');
     `${accepted.filter(({ coordinate, result }) => coordinate.clubNights.length > 0
       && (result.demand.anchorConditioning !== new Set(coordinate.clubNights).size
         || appDays(result).length + result.demand.anchorConditioning > 4)).length} distinct violating coordinates`);
+}
+
+// R-303 remainder liveness: Friday's Clear cannot reinterpret four delivered
+// energy-system days as four fresh seats and append a Thu/Fri/Sat triple.
+{
+  const pureSpeedEvidence = {
+    protocolVersion: 1 as const,
+    source: 'session_classification_adapter' as const,
+    conditioningCredits: 1,
+    appProgrammedConditioningCredits: 1,
+    sprintHighSpeedCredits: 1,
+    qualifyingSpeed: true,
+    independentConditioning: false,
+    speedTemplateName: '20 m Acceleration Reps',
+  };
+  ok('[audit semantics] typed pure Running Speed is not relabelled generated conditioning',
+    ['WC-132'],
+    isRunningSpeedDay(pureSpeedEvidence) && !isGeneratedConditioningDay(pureSpeedEvidence));
+  const independentConditioning = {
+    ...pureSpeedEvidence,
+    sprintHighSpeedCredits: 0,
+    qualifyingSpeed: false,
+    independentConditioning: true,
+    speedTemplateName: null,
+  };
+  const teamEvidence = {
+    ...independentConditioning,
+    appProgrammedConditioningCredits: 0,
+  };
+  const auditCounts = summarizeWeeklyEnergySystemAudit([
+    { kind: 'training', type: 'Mixed', energySystem: pureSpeedEvidence },
+    { kind: 'training', type: 'Conditioning', energySystem: independentConditioning },
+    { kind: 'training', type: 'Team Training', energySystem: teamEvidence },
+    { kind: 'game', type: 'Game', energySystem: teamEvidence },
+  ]);
+  ok('[audit semantics] all six energy-system units remain separate', ['WC-132'],
+    JSON.stringify(auditCounts) === JSON.stringify({
+      explicitFixtureDays: 1,
+      generatedConditioningDays: 1,
+      runningSpeedDays: 1,
+      teamTrainingCreditDays: 1,
+      totalEnergySystemCredits: 4,
+      appProgrammedExposureDays: 2,
+    }), JSON.stringify(auditCounts));
+  const result = built({
+    phase: 'Pre-season',
+    offseasonBlock: null,
+    gymAccessDays: [MON, TUE, WED, THU, FRI, SAT],
+    clubNights: [TUE, THU],
+    governedFromISO: '2026-07-18',
+    deliveredEnergySystemDays: [
+      { dayOfWeek: MON, appProgrammed: true, anchorConditioning: false, sprintHighSpeed: true },
+      { dayOfWeek: TUE, appProgrammed: true, anchorConditioning: false, sprintHighSpeed: false },
+      { dayOfWeek: WED, appProgrammed: false, anchorConditioning: false, sprintHighSpeed: false },
+      { dayOfWeek: THU, appProgrammed: true, anchorConditioning: false, sprintHighSpeed: false },
+      { dayOfWeek: FRI, appProgrammed: true, anchorConditioning: false, sprintHighSpeed: false },
+    ],
+  });
+  const appDays = result.days.filter((day) =>
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush')
+    || day.sprintComponent).map((day) => day.dayOfWeek);
+  ok('[R-303 remainder] delivered Thu/Fri prevents a catch-up exposure on Saturday',
+    ['WC-040', 'WC-132'],
+    !appDays.includes(SAT) && result.demand.coreConditioning === 4,
+    JSON.stringify({ appDays, demand: result.demand }));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

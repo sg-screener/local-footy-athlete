@@ -41,6 +41,7 @@ import { stampPlannerDerivedSessionProvenance } from '../rules/derivedSessionPro
 import { type SeasonPhaseClock } from '../rules/seasonPhaseClock';
 import type { FixtureConditionedAvailability } from '../rules/fixtureConditionedAvailability';
 import type { BlockExerciseSelection } from './blockExerciseSelection';
+import { energySystemExposureEvidenceForWorkout } from './energySystemExposureEvidence';
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
 type AthletePoolPrefsArg = Parameters<typeof buildWorkoutsFromCoach>[5];
@@ -338,6 +339,28 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         : {}),
     });
     const equipment = weeklyAvailability.reachableEquipmentAcrossWeek;
+    // Resolve the mid-week boundary before scheduling. The old order first
+    // authored a fresh whole-week conditioning layout, then pinned history
+    // over it; on return-home Saturday that appended a fifth exposure after
+    // delivered Thu/Fri and created the exact Thu/Fri/Sat triple.
+    const boundary = args.remainderBoundary
+      && args.remainderBoundary.governedFromISO > blockState.weekStart
+      && args.remainderBoundary.governedFromISO <= blockState.weekEnd
+      ? args.remainderBoundary
+      : null;
+    const deliveredEnergySystemDays = boundary?.pinnedHistoryWorkouts
+      .filter((workout) =>
+        dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
+      .map((workout) => {
+        const evidence = energySystemExposureEvidenceForWorkout(workout);
+        return {
+          dayOfWeek: workout.dayOfWeek,
+          appProgrammed: evidence.appProgrammedConditioningCredits > 0,
+          anchorConditioning: evidence.conditioningCredits
+            > evidence.appProgrammedConditioningCredits,
+          sprintHighSpeed: evidence.sprintHighSpeedCredits > 0,
+        };
+      }) ?? [];
     // ── B1-PIVOT: THE COMPOSER IS THE ONLY STRENGTH-CONTENT BUILDER ─────────
     //
     // Sam, 2026-08-14: *"isn't this like the ai? we just realise it's going to
@@ -380,6 +403,8 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       const agePolicy = resolveTrainingAgePolicy(cutoverInputs.experienceLevel);
       const compiled = compileCanonicalWeek({
         scheduler: { ...schedulerInputs,
+          governedFromISO: boundary?.governedFromISO ?? null,
+          deliveredEnergySystemDays,
           mildSorenessDays: [0, 1, 2, 3, 4, 5, 6].filter(day => {
             const date = isoDateForWeekday(blockState.weekStart, day);
             const reported = activeTemporarySourceFacts(args.temporarySourceFacts ?? [], date)
@@ -608,11 +633,6 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     // history: the contract is stamped, pre-boundary anchors keep settled
     // participation, and the candidate pins the athlete's actual days so §18
     // acceptance evaluates the true week (remainder authored AS a remainder).
-    const boundary = args.remainderBoundary &&
-      args.remainderBoundary.governedFromISO > blockState.weekStart &&
-      args.remainderBoundary.governedFromISO <= blockState.weekEnd
-      ? args.remainderBoundary
-      : null;
     if (boundary && exposureContractV2) {
       exposureContractV2 = stampSection18GovernedBoundary({
         contract: exposureContractV2,

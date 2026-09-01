@@ -14,6 +14,7 @@ const revision = childProcess.execFileSync('git', ['rev-parse', 'HEAD'], {
 require(path.join(repo, 'node_modules/sucrase/register'));
 const {
   consecutiveEnergySystemTriples,
+  summarizeWeeklyEnergySystemAudit,
   validateEnergySystemExposureEvidence,
   validateWeeklyEnergySystemDensity,
 } = require(path.join(repo, 'src/rules/energySystemExposureEvidence'));
@@ -77,18 +78,7 @@ for (const athlete of year.athletes) {
   const weeklyEnergySystemCounts = athlete.weeks.map((week) => ({
     week: week.number,
     phase: week.phase,
-    explicitFixtureDays: week.days.filter((day) => day.kind === 'game').length,
-    generatedConditioningDays: week.days.filter((day) =>
-      (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
-    runningSpeedDays: week.days.filter((day) => day.energySystem?.qualifyingSpeed
-      && finalAthleteFacingAuditRows(day).some((row) => row.role === 'speed'
-        && /^(?:run|running|on-leg)$/i.test(row.modalityLabel ?? 'Running'))).length,
-    teamTrainingCreditDays: week.days.filter((day) => day.type === 'Team Training'
-      && (day.energySystem?.conditioningCredits ?? 0) > 0).length,
-    totalEnergySystemCredits: week.days.reduce((sum, day) =>
-      sum + (day.energySystem?.conditioningCredits ?? 0), 0),
-    appProgrammedExposureDays: week.days.filter((day) =>
-      (day.energySystem?.appProgrammedConditioningCredits ?? 0) > 0).length,
+    ...summarizeWeeklyEnergySystemAudit(week.days),
   }));
 
   record(`${label}_calendar_restart_projection`, athlete.weeks.length === 52 && days.length === 364
@@ -252,12 +242,14 @@ const receipt = {
     'canonical compiler-year gate rejects exclusion of qualifying Speed and double-crediting a combined session',
     'programming audit projection gate rejects duplicated final Speed, missing Speed, and Air Bike-to-Running modality reconstruction',
     'year-row summary gate rejects omitting Movement Prep from athlete-visible totals',
+    'weekly energy-system audit gate keeps fixtures, generated conditioning, Running Speed, team credit and total credits in separate typed units',
+    'remainder scheduler mutation that ignores delivered history restores the exact Saturday catch-up exposure and fails the R-303 remainder cell',
   ],
   notCovered: [
     'Physical iPhone acceptance and clean Release installation',
     'Native onboarding taps (separate simulator evidence)',
     'Clinical validation of exercise prescriptions',
-    'Legitimate multiple explicit fixture events in one week (addendum Section 1)',
+    'Competition/team metadata beyond distinct accepted fixture date and kind',
   ],
 };
 fs.writeFileSync(path.join(artifact, 'final-year-acceptance.json'), JSON.stringify(receipt, null, 2));
