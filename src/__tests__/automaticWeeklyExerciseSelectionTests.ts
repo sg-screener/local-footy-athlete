@@ -24,7 +24,7 @@ import {
 } from '../rules/automaticWeeklyExerciseSelection';
 import { minimumUsefulStrengthApplies } from '../rules/minimumUsefulStrengthSession';
 import { strengthExerciseClassification } from '../data/exerciseTags';
-import { slotDayKindForPatterns } from '../rules/sessionSlotCoverage';
+import { slotDayKindForPatterns , slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { coldStartThroughOnboarding, quietAsync, relaunchApp } from './support/athleteJourney';
 import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
@@ -349,6 +349,28 @@ run('50 real generated worlds have no non-prehab identity, family or ownership b
       || result.dedicatedDayOwnership.length) findings.push(`${world.id}/week${index + 1}: ${JSON.stringify(result)}`);
   }
   assert(findings.length === 0, `${findings.length} invalid athlete-weeks\n${findings.slice(0, 20).join('\n')}`);
+});
+
+// Sam, 2026-09-02 (squat-day third seat): "could it not do a different type of
+// knee exercise?" The loaded seat on a Lower Squat day spends its knee-side
+// bench first and takes a posterior isolation only when nothing else is legal.
+run('the loaded seat on a Lower Squat day is knee-side in 50 generated worlds; posterior only when nothing knee-side is legal', () => {
+  const posterior: string[] = [];
+  let squatSeats = 0; let singleLegOrFrontal = 0;
+  for (const world of worlds) for (const [index, week] of world.program.microcycles.entries()) {
+    for (const workout of week.workouts as Workout[]) {
+      if (workout.composedDayShape !== 'lower_squat') continue;
+      const seat = workout.exercises.find((row) => row.section18Evidence?.slot === 'loaded_lower_accessory');
+      if (!seat) continue;
+      squatSeats += 1;
+      const name = seat.exercise?.name ?? '';
+      if (automaticExerciseSuppliesPosteriorChain(name)) posterior.push(`${world.id}/week${index + 1}: ${name}`);
+      if (slotsForExerciseName(name).includes('single_leg_knee')) singleLegOrFrontal += 1;
+    }
+  }
+  assert(squatSeats >= 20, `non-vacuity: only ${squatSeats} squat-day loaded seats`);
+  assert(singleLegOrFrontal >= 1, 'no squat day ever took a second single-leg lift on the loaded seat');
+  assert(posterior.length === 0, `${posterior.length} posterior loaded seats on squat days\n${posterior.slice(0, 10).join('\n')}`);
 });
 
 run('no dedicated Lower Hinge in 50 generated worlds carries knee-dominant automatic work and each stays useful', () => {

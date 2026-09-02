@@ -284,6 +284,12 @@ export interface AutomaticWeeklySelectionCheckpoint {
 const COMPOUND_DIRECTION_SLOTS: ReadonlySet<SessionSlot> = new Set([
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
   'horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull',
+  // Sam, 2026-09-02 ("could it not do a different type of knee exercise?"):
+  // the split lower day's loaded seat is a compound direction of its own, so a
+  // squat day may carry a SECOND single-leg lift there. One compound per seat
+  // and the four-compound session ceiling still hold; the hinge day still
+  // refuses knee-dominant work (R-336).
+  'loaded_lower_accessory',
 ]);
 
 export function createAutomaticWeeklyExerciseSelector(

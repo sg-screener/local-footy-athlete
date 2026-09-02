@@ -634,13 +634,22 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   // slot, which his fill order plainly separates.
   switch (tag.movement) {
     case 'squat':
-      if (unilateral) out.push('single_leg_knee');
-      else out.push('squat');
+      if (unilateral) {
+        out.push('single_leg_knee');
+        // Sam, 2026-09-02 (squat-day third seat): a loaded single-leg knee
+        // lift may also take the split lower day's loaded seat, so a squat
+        // day can carry two different single-leg lifts before it reaches an
+        // isolation. R-336 keeps knee-dominant work off the hinge day.
+        if (automaticRouteFor(name) !== 'prehab') out.push('loaded_lower_accessory');
+      } else {
+        out.push('squat');
+      }
       break;
     case 'lunge':
       // A lunge IS the single-leg knee-dominant slot — that is what the pattern
       // means. It is not a bilateral squat and never fills the squat slot.
       out.push('single_leg_knee');
+      if (automaticRouteFor(name) !== 'prehab') out.push('loaded_lower_accessory');
       break;
     case 'hinge':
       if (unilateral) out.push('single_leg_hip');

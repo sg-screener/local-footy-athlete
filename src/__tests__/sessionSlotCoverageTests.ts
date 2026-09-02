@@ -298,6 +298,16 @@ console.log('\n[7] Dedicated lower shapes and the compressed combined shape');
     !loadedSquat.missing.includes('loaded_lower_accessory')
       && !loadedHinge.missing.includes('loaded_lower_accessory'),
     JSON.stringify({ squat: loadedSquat.missing, hinge: loadedHinge.missing }));
+  // Sam, 2026-09-02 (squat-day third seat): a loaded single-leg knee lift may
+  // take the split lower day's loaded seat; the isolation list still may too.
+  ok('[squat-day seat] loaded single-leg knee lifts and the frontal-plane pair fill the loaded seat',
+    ['Step Ups', 'Reverse Lunges', 'Bulgarian Split Squats', 'Walking Lunges', 'Cossack Squat', 'Lateral Lunge']
+      .every((name) => slotsForExerciseName(name).includes('loaded_lower_accessory')),
+    JSON.stringify(['Step Ups', 'Cossack Squat', 'Lateral Lunge'].map((name) => [name, slotsForExerciseName(name)])));
+  ok('[squat-day seat] a bilateral squat or a knee prehab drill still does not',
+    !slotsForExerciseName('Back Squat').includes('loaded_lower_accessory')
+      && !slotsForExerciseName('Slant Board Step-Down').includes('loaded_lower_accessory')
+      && !slotsForExerciseName('Spanish Squat Hold').includes('loaded_lower_accessory'));
   ok('[R-342] a prehab drill never fills the loaded seat; the female low-fatigue seat still takes it',
     !slotsForExerciseName('Crab Walks').includes('loaded_lower_accessory')
       && !slotsForExerciseName('Bosch Hold').includes('loaded_lower_accessory')
