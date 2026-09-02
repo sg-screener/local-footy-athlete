@@ -106,6 +106,20 @@ replace(
 );
 replace('async function run(gender) {', `async function run(gender) {
   programmingSelectionTraceAthlete = gender;`);
+// Unit 6 (Sam, 2026-09-02: "this is your fault for making the audit identical").
+// The preserved driver gave both athletes the same body, strength answers and
+// 2 km time, so the two years differed only where the female composition
+// rules fire. The female example now answers onboarding as a typical senior
+// women's-league midfielder: 168 cm / 66 kg, squats around bodyweight,
+// benches less than bodyweight, 2 km in 9:00. Everything else stays shared so
+// a difference between the years is still attributable.
+replace("  profile.firstName=gender==='male'?'Male example':'Female example';",
+  `  profile.firstName=gender==='male'?'Male example':'Female example';
+  if (gender==='female') {
+    profile.heightCm=168; profile.weightKg=66;
+    profile.squatStrength='Around bodyweight'; profile.benchStrength='Less than bodyweight';
+    profile.twoKmTimeTrial={...profile.twoKmTimeTrial,seconds:540};
+  }`);
 replace("if(item.kind==='team_training') return {name:'Team training',dose:'Club session',role:'team_training'};",
   "if(item.kind==='team_training') return {name:'Team training',catalogueIdentity:null,mainMuscles:[],dose:'Club session',role:'team_training'};");
 replace("save('year-programs.json',data);", `save('year-programs.json',data);

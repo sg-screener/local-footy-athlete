@@ -409,3 +409,25 @@ the stored block rows.
 
 NOT COVERED: the app screen for the added-load sentence (generation-level
 proof only); a female year for this unit (unit 6 regenerates both).
+
+## Addendum 2026-09-02 — female audit profile (unit 6 of six)
+
+Sam: *"this is your fault for making the audit identical."* Cause: the
+preserved driver's `athleteAnswers` gave both athletes 178 cm / 80 kg, squat
+1.5× and bench 1.25× bodyweight and a 2 km of 8:00; only the composition
+rules (R-130) could differ. Change, in `scripts/programming-remediation-year.cjs`
+only (audit tooling, no product law): the female example answers 168 cm /
+66 kg, squats around bodyweight, benches less than bodyweight, 2 km 9:00; all
+other answers stay shared so a difference is attributable. The profile is
+recorded in `female-year.json`.
+
+Regenerated both 52-week years at 070ae519 + this change, 52/52 restarts
+each. Week 1 / 12 / 27 / 52 loads — male: Back Squat 72.5 / 92.5 / 100 /
+102.5, Bench 62.5 / 77.5 / 85 / 95; female: Back Squat 40 / 52.5 / 60 / 60,
+Bench 30 / 40 / 47.5 / 52.5. Pull-Ups climb BW → +27.5 kg for both because
+the audit robot completes the top of every range (a real athlete's climb is
+her own logs). Split lower days: 4.4–5.0 rows and 10.6–13.2 sets for both.
+
+NOT COVERED: an in-season female squat that does not flatline at 60 (Sam:
+"no not yet" on waving); position, age and conditioning-level differences
+(kept shared on purpose).
