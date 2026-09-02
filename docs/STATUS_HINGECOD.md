@@ -576,3 +576,22 @@ the suite now has three scenarios per sex — cooked (that date rest, other
 days' sets untouched), tired pair (from the second date ≥2 lifts fewer sets,
 first date untouched), illness (reduces) — all holding kilograms: 52/52
 (was 30/32). fatigue-sequence 35/35 + plumbing 18/18. No product code.
+
+## Addendum 2026-09-02 — final full-year audit at `773765a4`
+
+Clean detached checkout, base driver copied in, tools copied from the
+3b902a70 run. Both athletes 52/52 weeks, 364 dates, 52/52 restarts, 0 refused
+actions. Accepted-journey acceptance 24/24 (after correcting the checker's
+pre-R-275 "Very tired" label — an audit-tool mistake, committed on this
+branch), focused composition 24/24, strength-budget PASS/PASS/PASS (0
+repeats, 0 ownership breaches, 16 soft plane findings, 4 accepted injury
+exceptions), 46–47 Lower Hinge days per athlete with 0 knee-dominant rows.
+Two 114-page PDFs, every page auto-verified, zero suspect pages, zero "0 kg"
+labels; pages 60 and 90 inspected by eye. Genuine programming problems in the
+measured surfaces: none. Observations for Sam: in-season hinge days average
+3.5 hamstring/posterior rows of 5; the two-day tired deload turns Wednesday's
+hinge session into Mobility and drops the optional Gunshow; the week box does
+not carry the "two tired days in a row" sentence. Outputs:
+`output/final-full-year-audit-773765a4/` in the main checkout and the audit
+checkout; report `FINAL_FULL_YEAR_AUDIT.md` with the measured deltas against
+3b902a70.

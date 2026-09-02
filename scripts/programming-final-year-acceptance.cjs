@@ -117,7 +117,8 @@ for (const athlete of year.athletes) {
   const eventLabels = athlete.weeks.flatMap((week) => week.events.map((event) => event.label));
   const eventKinds = {
     tired: eventLabels.filter((item) => item === 'Tired today').length,
-    veryTired: eventLabels.filter((item) => item.startsWith('Very tired')).length,
+    // R-275: one "Totally cooked" tap rests its own date; the driver labels it so.
+    cooked: eventLabels.filter((item) => item.startsWith('Totally cooked')).length,
     sick: eventLabels.filter((item) => item === 'Sick').length,
     injuries: eventLabels.filter((item) => item.includes('injury')).length,
     goingAway: eventLabels.filter((item) => item.startsWith('Going Away')).length,
