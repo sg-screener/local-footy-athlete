@@ -1118,3 +1118,122 @@ order — it stops at its first red unit; run individually the current
 picture is 23–24 of 30 green with the census, `canonical-weekly-compiler`
 (54), `injury-fallback-journey` (2 coverage cells), `slot-coverage` (3) and
 `session-section-add` (2) still red, all pre-existing.
+
+## 2026-09-02 (later) — the six-athlete cohort audit (Sam's list), run at `64fbace0` + runner fixes `d4e482ed`
+
+**What Sam asked.** Six athletes through a lived year: a 2-day athlete, a
+normal 3-day athlete, a complete beginner over THREE years whose grade the
+robot raises at each year boundary (Sam: *"for now just let the robot do it
+for him"*), a minimal-kit athlete (rack, barbell, bench, pull-up bar,
+kettlebells, dumbbells, bands, plyo box), an athlete who regularly misses
+sessions, and an athlete whose club-night effort swings week to week.
+
+**The robot.** `scripts/athlete-cohort-year.cjs` (presets, patches the
+preserved pair driver by exact anchors), `scripts/athlete-cohort-summary.cjs`
+(facts per preset + the two generic analyzers), scratch `cohort-tools.sh`
+(acceptance, evidence, PDFs, page QA per preset — copied to
+`scripts/athlete-cohort-tools.sh`). Three robot faults found and fixed on
+the way, none of them app defects: the pair driver THREW on its first failed
+check (so three athletes stopped at their week-8 injury report and nothing
+after it was seen — a refused step is now recorded with its week and the year
+goes on); a skipped session was sent without a reason, which the draft rule
+refuses exactly as the screen does (the journey harness now sends the form's
+own reason); a club night on a gym day ("Team Training + Lower Body
+Strength") was exported with no club row, so the plane audit could not credit
+it (exported now). Worktree `/private/tmp/lfa-cohort-64fbace0`, outputs
+`output/athlete-cohort-64fbace0/<preset>/` in the main checkout (run JSON,
+summary, evidence, PDFs).
+
+**Results — the three that ran clean.**
+
+| athlete | weeks | restarts | refused steps | main-lift arc (year) |
+| --- | --- | --- | --- | --- |
+| 2-day (male, Mon/Thu, commercial) | 52/52 | 52 ok | 0 | Back Squat 72.5→112.5, Bench 62.5→97.5, RDL 60→95 |
+| 3-day (female, Mon/Wed/Fri) | 52/52 | 52 ok | 0 | Back Squat 40→75, Bench 30→62.5, RDL 32.5→67.5 |
+| beginner ×3 years (male, Mon/Wed/Fri) | 156/156 | 156 ok | 0 | see below |
+
+Beginner by year (grade raised by the robot at weeks 53 and 105, accepted):
+year 1 *Complete beginner* — Goblet Squat, Trap Bar Deadlift, DB Bench,
+Band-Assisted Pull-Up, Bodyweight Squat as the mains; year 2 *1-2 years* —
+RDLs 37.5→65, Bench Press 47.5→75, Box/High Box Squat 30→67.5, Pull-Ups
+0→27.5; year 3 *2-5 years* — Back Squat 47.5→75, Bench 75→102.5, RDLs
+65→92.5, Pull-Ups 27.5→55. Loads carry across the year boundary where the
+lift is the same (Bench ends year 2 at 75, starts year 3 at 75). No repeated
+exercise identity in any week for these three; selection and dedicated-day
+ownership clean (0 breaches each).
+
+**Results — the three 4-day athletes (Mon/Tue/Thu/Fri) are BROKEN from
+week 9 to week 30.** Minimal-kit, misses-sessions and club-effort all show
+**22 blank weeks of 52** (weeks 9–30: the whole pre-season and the first four
+in-season weeks — every day empty), 19 pre-season restarts refused with
+`Generated week refused (hard_day_permitted_maximum:6)`, the week-8 shoulder
+report refused ("could not be verified"), and, once weeks resume, repeated
+Back Squat in weeks 41 and 47. Root cause, measured with the ledger printed
+at the refusal (probe, cohort worktree only): in the first pre-season week the
+club's nights move to Monday and Wednesday (the pair driver's assumption,
+ported), so the week is Mon gym+club, Tue gym, Wed club, Thu gym, Fri gym —
+five hard days, the pre-season cap — and the scheduler then ADDS a Saturday
+Speed session (`appSprintNeedPermitted` checks the sprint-exposure ceiling
+in-season only, never the hard-day cap), making six. A forward athlete
+decision publishes such a week and discloses; a routine rollover throws
+`GeneratedWeekRefusedError` and publishes nothing, and every later mutation
+(injury, relaunch) re-verifies the same week and refuses. The 2-day and 3-day
+athletes never reach the cap, which is why they are clean. **Not fixed —
+Sam is cautious of rule-by-rule fixes; the candidate fix is ONE site: the
+scheduler must not place an app speed/conditioning session on a seventh day
+when gym days + separate club nights + game already reach the hard-day cap
+(put it on a gym day or leave it out). A second, smaller safety net: a
+rollover should publish the best achievable week and disclose, as a forward
+decision already does, instead of publishing nothing.** The three athletes'
+in-season halves (weeks 31–52) are otherwise normal: minimal-kit's mains were
+Back Squat, Bench, Pull-Ups, RDLs, Landmine Press, Barbell Row, Overhead
+Press — all inside the declared kit, no cable or machine work.
+
+**Other findings (all six).**
+- *Lower-body frontal plane missing in healthy weeks with no exception
+  written*: 2-day week 15; 3-day weeks 30/36/48 (the in-season weeks where
+  Monday becomes Mobility and the one coverage day carries no Copenhagen or
+  lateral work); beginner 10 of 156 weeks (19, 30, 36, 48 and the same
+  in-season pattern in years 2 and 3). `completeWeeklyLowerBodyFrontal` runs
+  only inside the injury compiler and the fixture replan; a healthy week's
+  frontal plane is whatever the composer happened to pick. Candidate fix: run
+  the same completion (place or write the honest exception) for every
+  canonical week, one call site.
+- *A main lift comes back far lighter than the athlete last lifted it*:
+  DB Shoulder Press 15→9 after a bye week (3-day, week 37) and 15→10 (beginner
+  week 89), Seated DB Press 27.5→10 after a bye week (beginner week 37),
+  Chest-Supported DB Row 20→10 (beginner week 100), Goblet Squat 27.5→12.5 at
+  the in-season start (beginner week 30), Trap Bar Deadlift 50→25 in the
+  shoulder-injury week (beginner week 8, never back above 40 that year). A
+  returning or re-dosed lift re-seeds from scratch instead of from its own
+  history. Candidate fix: the load authority reads the lift's last logged
+  load before the phase/dose seed.
+- *New lift seeded without its family's history*: the beginner's year-3 Back
+  Squat starts at 47.5 kg after a year of High Box Squat at 67.5.
+- The two pair-calendar checks in the focused analyzer
+  (`november_12_lower_hinge_is_useful`, frontal weeks 22/23/35/42) are bound
+  to the pair athletes' dates and are not findings for these six; the budget
+  analyzer's `completeAthletes` gate expects exactly two 52-week athletes, so
+  its verdict is FAIL by construction here — its breach counts are what was
+  read.
+- *Misses athlete*: 34 never-opened sessions and 9 skipped-with-reason were
+  recorded without refusal once the reason travelled; no runaway progression
+  from missed weeks visible (Back Squat 72.5→90 over a year with a fifth of
+  sessions missed, versus 72.5→112.5 for the 2-day athlete who missed none).
+- *Club-effort athlete*: 46 club-night efforts from 3/10 to 10/10 recorded;
+  its year is dominated by the 4-day blank-week defect above, so the effect of
+  effort swings on the app's own days could not be separated and is not claimed.
+
+**Not done / not claimed.** No app rule was changed for these findings. The
+PDFs and page QA per athlete are recorded in the line below once built.
+
+**PDFs and page QA (at `64fbace0`, six athletes).** One PDF per athlete
+built (2-day 107 pages, 3-day 109, beginner 308 for 156 weeks, minimal-kit
+92, misses 92, club-effort 92); every date heading present once (364 or
+1092), no blank pages, nothing outside or touching the page edge. One page
+check is red on five of six: a header-only table (a session table with a
+header and no rows) on 2-day page 85, beginner pages 59/87/91/158/190/289,
+minimal-kit page 51, misses and club-effort pages 51 and 63 — for the three
+4-day athletes that is the blank-week defect above rendered; for the 2-day
+and beginner it is a session whose one table section is empty (recorded, not
+claimed as a separate defect). Copied to `output/athlete-cohort-64fbace0/`.
