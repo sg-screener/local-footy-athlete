@@ -28,6 +28,39 @@
  * blank is the athlete's choice and stays theirs.
  */
 import type { Workout, WorkoutExercise } from '../types/domain';
+import {
+  automaticExerciseRouteForIdentity,
+  workoutExerciseWasAutomaticallySelected,
+} from './automaticWeeklyExerciseSelection';
+
+/**
+ * Item 1 (Sam, 2026-09-02): the accepted week's automatic STRENGTH identities
+ * by weekday, for a one-week rebuild's composer. Power, mobility and prehab
+ * rows are outside the once-per-week rule and are not listed.
+ */
+export function acceptedAutomaticIdentitiesByDay(
+  accepted: readonly Workout[],
+): Readonly<Record<number, readonly string[]>> {
+  const byDay: Record<number, string[]> = {};
+  for (const workout of accepted) {
+    for (const row of workout.exercises ?? []) {
+      const name = row.exercise?.name;
+      if (!name || !workoutExerciseWasAutomaticallySelected(row)) continue;
+      // Power rows are chosen by the block power selection, not the strength
+      // ledger, and sit outside the once-per-week rule.
+      if (row.role === 'power' || row.section18Evidence?.role === 'power') continue;
+      // A MAIN lift follows the block's recorded seat and may land on a
+      // different weekday when the week reshapes (a Sunday game turns Monday
+      // into recovery and the squat moves to Wednesday). Listing it would
+      // block the athlete's own squat on the rebuilt day; the once-per-week
+      // rule for mains is the block record's, not this seed's.
+      if (row.section18Evidence?.role === 'main_strength') continue;
+      if (automaticExerciseRouteForIdentity(name) !== 'strength') continue;
+      (byDay[workout.dayOfWeek] ??= []).push(name);
+    }
+  }
+  return byDay;
+}
 
 function liftKey(row: WorkoutExercise): string | null {
   const name = row.exercise?.name;
@@ -61,19 +94,41 @@ function ownRowInWeek(
   return loads.size === 1 ? matches[0] : undefined;
 }
 
+/**
+ * WHAT A DOOR CARRIES. `'loads'` is the readiness reduction (R-034: the reduced
+ * dose is the compiler's, only the load is the athlete's). `'loads_and_dose'`
+ * is the fixture rebuild (Sam, 2026-09-02, item 1): a bye or a moved game is
+ * not a lighter week, so the same lift keeps its accepted sets and reps too —
+ * the earned extra set, the very-hard-block reduction, the in-block wave.
+ */
+export type AcceptedCarry = 'loads' | 'loads_and_dose';
+
 /** One rebuilt session, given the accepted session on its day and the accepted week. */
 export function carryOwnAcceptedLoadsIntoWorkout(args: {
   readonly rebuilt: Workout;
   readonly acceptedSameDay: Workout | null | undefined;
   readonly acceptedWeek: readonly Workout[];
+  readonly carry?: AcceptedCarry;
 }): Workout {
+  const carry = args.carry ?? 'loads';
   let touched = false;
   const exercises = (args.rebuilt.exercises ?? []).map((row) => {
     const own = ownRowOnDay(row, args.acceptedSameDay)
       ?? ownRowInWeek(row, args.acceptedWeek);
-    if (!own || own.prescribedWeightKg === row.prescribedWeightKg) return row;
+    if (!own) return row;
+    const next = { ...row, prescribedWeightKg: own.prescribedWeightKg };
+    if (carry === 'loads_and_dose') {
+      next.prescribedSets = own.prescribedSets;
+      next.prescribedRepsMin = own.prescribedRepsMin;
+      next.prescribedRepsMax = own.prescribedRepsMax;
+    }
+    const same = next.prescribedWeightKg === row.prescribedWeightKg
+      && next.prescribedSets === row.prescribedSets
+      && next.prescribedRepsMin === row.prescribedRepsMin
+      && next.prescribedRepsMax === row.prescribedRepsMax;
+    if (same) return row;
     touched = true;
-    return { ...row, prescribedWeightKg: own.prescribedWeightKg };
+    return next;
   });
   return touched ? { ...args.rebuilt, exercises } : args.rebuilt;
 }
@@ -82,10 +137,12 @@ export function carryOwnAcceptedLoadsIntoWorkout(args: {
 export function carryOwnAcceptedLoads(args: {
   readonly accepted: readonly Workout[];
   readonly rebuilt: readonly Workout[];
+  readonly carry?: AcceptedCarry;
 }): Workout[] {
   return args.rebuilt.map((workout) => carryOwnAcceptedLoadsIntoWorkout({
     rebuilt: workout,
     acceptedSameDay: args.accepted.find((old) => old.dayOfWeek === workout.dayOfWeek) ?? null,
     acceptedWeek: args.accepted,
+    carry: args.carry,
   }));
 }

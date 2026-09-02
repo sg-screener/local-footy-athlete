@@ -255,6 +255,8 @@ export interface CanonicalProgramWeeksInput {
     governedFromISO: string;
     pinnedHistoryWorkouts: readonly Workout[];
   } | null;
+  /** See GenerateProgramFromProfileOptions.acceptedWeekIdentitiesByDay. */
+  acceptedWeekIdentitiesByDay?: Readonly<Record<number, readonly string[]>> | null;
   readonly authoredAtISO: string;
 }
 
@@ -604,6 +606,9 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         governedFromISO: boundary.governedFromISO,
         identities: acceptedAutomaticHistory,
       } } : {}),
+      ...(args.acceptedWeekIdentitiesByDay
+        ? { acceptedWeekIdentitiesByDay: args.acceptedWeekIdentitiesByDay }
+        : {}),
       // Later weeks in a newly authored block must see the same accepted seat
       // choices that restart will read. Otherwise a changed weekly layout can
       // re-pick core/accessory seats before their first week's record is saved.
@@ -616,6 +621,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     const automaticWeeklyExerciseSelector = createAutomaticWeeklyExerciseSelector(
       [
         ...acceptedAutomaticHistory,
+        // Item 1 (2026-09-02): a rebuild's later automatic families (the
+        // optional Gunshow, power) see the accepted week they are rebuilding
+        // too, so a rebuilt Friday cannot repeat a kept day's curls.
+        ...Object.values(args.acceptedWeekIdentitiesByDay ?? {}).flat(),
         ...composedWeek.days.flatMap((day) => day.rows.map((row) => row.identity)),
       ],
     );

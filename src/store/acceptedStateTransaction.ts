@@ -112,7 +112,7 @@ import {
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
 } from '../rules/rollingHorizonRepair';
-import { carryOwnAcceptedLoads } from '../rules/acceptedLoadCarry';
+import { acceptedAutomaticIdentitiesByDay, carryOwnAcceptedLoads } from '../rules/acceptedLoadCarry';
 import {
   userMoveConstraintId,
   userRemovalConstraintId,
@@ -1929,6 +1929,10 @@ export function buildFixtureProjection(args: {
         targetFixtureDay: targetGameDay,
         activeConstraints: args.activeConstraints,
         microcycleLimit: 1,
+        // Item 1 (Sam, 2026-09-02): the stub composes against the accepted
+        // week it is rebuilding, so a day it replaces cannot repeat what the
+        // days it keeps already carry.
+        acceptedWeekIdentitiesByDay: acceptedAutomaticIdentitiesByDay(sourceCanonicalWorkouts),
       });
       targetMicrocycle = target.microcycles[0];
       // WEEK IDENTITY IS THE COVERING WEEK'S, NEVER THE STUB'S (R5.3,
@@ -2043,6 +2047,9 @@ export function buildFixtureProjection(args: {
     const workouts = carryOwnAcceptedLoads({
       accepted: sourceCanonicalWorkouts,
       rebuilt: alternative.workouts,
+      // Item 1 (Sam, 2026-09-02): a bye or a moved game is not a lighter
+      // week — the same lift keeps its accepted sets and reps as well.
+      carry: 'loads_and_dose',
     });
     const alternativeReplan: FixtureMinimalReplanResult = {
       ...replan,

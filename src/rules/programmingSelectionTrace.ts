@@ -22,6 +22,8 @@ export type AutomaticCandidateRejection =
   | 'role'
   | 'weekly_spacing'
   | 'already_on_day'
+  /** Item 1 (2026-09-02): the accepted week carries it on a day this rebuild keeps. */
+  | 'accepted_on_another_day'
   | 'athlete_availability'
   | 'manual_or_special_use_only';
 

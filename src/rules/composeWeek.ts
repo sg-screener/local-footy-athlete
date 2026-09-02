@@ -109,6 +109,7 @@ import {
   automaticPrehabFallbacksForSlot,
   createAutomaticWeeklyExerciseSelector,
 } from './automaticWeeklyExerciseSelection';
+import { preferredMovementPlaneCohort, type MovementPlaneTieBreakContext } from './movementPlaneProgramming';
 import {
   MINIMUM_USEFUL_STRENGTH_EXERCISES,
   minimumUsefulStrengthApplies,
@@ -245,6 +246,16 @@ export interface ComposerInputs {
     readonly governedFromISO: string;
     readonly identities: readonly string[];
   };
+  /**
+   * Item 1 (Sam, 2026-09-02): THE ACCEPTED WEEK THIS STUB IS REBUILDING, by
+   * weekday — the automatic strength identities each accepted day carries.
+   * A rebuilt day may replace its own accepted day, but the days it does NOT
+   * replace stay on the athlete's screen; composing day D therefore treats
+   * every identity on the accepted week's OTHER days as taken. Measured
+   * before this input existed: a Sunday-game rebuild put Seated Calf Raise on
+   * Monday while the stored Wednesday still had it (week 41, both athletes).
+   */
+  readonly acceptedWeekIdentitiesByDay?: Readonly<Record<number, readonly string[]>>;
   /** The athlete's four Progress choices are strength-programming inputs. */
   readonly trackedLiftChoices?: TrackedLiftChoices;
 }
@@ -295,7 +306,7 @@ export interface ComposedRow {
      * the return date, an exclusion ends when the athlete restores the exercise.
      * The same distinction `ComposedGap.cause` already draws.
      */
-    readonly cause: 'excluded_today' | 'kit_today' | 'already_on_day';
+    readonly cause: 'excluded_today' | 'kit_today' | 'already_on_day' | 'accepted_on_another_day';
   };
 }
 
@@ -1427,6 +1438,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // Every legality question below asks the DAY's set, never the week's, so a
     // dated exclusion applies to its own day and to no other.
     const excludedToday = excludedOn(planned.dayOfWeek);
+    // Item 1: identities the accepted week carries on its OTHER days.
+    const acceptedElsewhere = new Set<ComposedExerciseIdentity>(
+      Object.entries(inputs.acceptedWeekIdentitiesByDay ?? {})
+        .filter(([dayOfWeek]) => Number(dayOfWeek) !== planned.dayOfWeek)
+        .flatMap(([, identities]) => identities.map(composedIdentityFor)),
+    );
     // …and the same is now true of the KIT. `inputs.kit` stays the PERMANENT
     // answer and decides what gets RECORDED; this decides what ships today.
     const kitToday = kitOn(planned.dayOfWeek);
@@ -1679,6 +1696,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           .map(asComposedIdentity)
           .filter((identity) => !excludedToday.has(identity)
             && !identitiesThisDay.has(identity)
+            && !acceptedElsewhere.has(identity)
             && composedRowIsLegal(identity, kitToday)
             && exerciseProgrammingAllows(identity, {
               experienceLevel: inputs.profile.experienceLevel,
@@ -1689,6 +1707,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           .map((entry) => asComposedIdentity(entry.name))
           .filter((identity) => !excludedToday.has(identity)
             && !identitiesThisDay.has(identity)
+            && !acceptedElsewhere.has(identity)
             && composedRowIsLegal(identity, kitToday)
             && exerciseProgrammingAllows(identity, {
               experienceLevel: inputs.profile.experienceLevel,
@@ -1906,6 +1925,46 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         }
         return firstUncoveredCategory(candidates);
       };
+      // ── SQUAT-DAY THIRD SEAT (Sam, 2026-09-02) ──────────────────────────
+      // "Could it not do a different type of knee exercise?" On a Lower Squat
+      // day the loaded seat spends its knee-dominant bench first — a second
+      // single-leg lift, a knee or calf isolation — and takes a posterior
+      // isolation (Back Extension) only when nothing knee-side is legal.
+      // Inside that bench the frontal pair (Cossack, Lateral Lunge) is
+      // favoured while the week still lacks a frontal-plane lift, through the
+      // same movement-plane cohort the fallback path already uses. The hinge
+      // day keeps R-336: knee-dominant work is refused there, posterior first.
+      // The plane context THIS seat hands to every plane-aware reader below.
+      // For the loaded lower seat only the FRONTAL hole may narrow: the week's
+      // transverse hole belongs to the trunk seats, and letting it narrow here
+      // left one single-leg lift standing on every squat day (measured: 40 of
+      // 45, Single-Leg Squat (to Box), through the block selector's cohort).
+      const seatPlaneContext = (referenceIdentity?: string): MovementPlaneTieBreakContext => {
+        const context = weeklyExerciseSelector.movementPlaneContextFor(slot, referenceIdentity);
+        if (slot !== 'loaded_lower_accessory') return context;
+        return {
+          ...context,
+          missingUsefulPlanes: (context.missingUsefulPlanes ?? [])
+            .filter((plane) => plane === 'frontal'),
+        };
+      };
+      const preferLoadedSeatPurpose = (
+        candidates: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => {
+        if (slot !== 'loaded_lower_accessory') return candidates;
+        if (kind === 'lower_squat') {
+          const kneeSide = candidates.filter((candidate) =>
+            !automaticExerciseSuppliesPosteriorChain(candidate));
+          const bench = kneeSide.length > 0 ? kneeSide : candidates;
+          return preferredMovementPlaneCohort(bench, seatPlaneContext());
+        }
+        if (kind === 'lower_hinge') {
+          const posterior = candidates.filter((candidate) =>
+            automaticExerciseSuppliesPosteriorChain(candidate));
+          return posterior.length > 0 ? posterior : candidates;
+        }
+        return candidates;
+      };
       const baseLegalBeforeDayFamily = legalUnder(excluded, inputs.kit);
       // The weekly selector (identity once per week, dedicated-day purpose,
       // compound ceiling) is applied BEFORE the robustness category preference,
@@ -1916,15 +1975,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         list: readonly ComposedExerciseIdentity[],
       ): readonly ComposedExerciseIdentity[] => list.filter((identity) =>
         weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
-      const baseLegal = preferMissingFootballCategory(
+      const baseLegal = preferLoadedSeatPurpose(preferMissingFootballCategory(
         usableThisWeek(withoutUsedVariationFamily(baseLegalBeforeDayFamily)),
-      );
-      const legalBeforeDayIdentity = preferMissingFootballCategory(usableThisWeek(
-        withoutUsedVariationFamily(withoutRdlFamily(legalUnder(excludedToday, kitToday))),
       ));
+      const legalBeforeDayIdentity = preferLoadedSeatPurpose(preferMissingFootballCategory(usableThisWeek(
+        withoutUsedVariationFamily(withoutRdlFamily(legalUnder(excludedToday, kitToday))),
+      )));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
-      const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));
+      const legal = legalBeforeDayIdentity.filter((id) =>
+        !identitiesThisDay.has(id) && !acceptedElsewhere.has(id));
       /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */
@@ -2091,7 +2151,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             recentSelections: slotHistory,
             progressedIdentities: inputs.progressedIdentities,
             pinnedIdentities: inputs.pinnedIdentities,
-            movementPlaneContext: weeklyExerciseSelector.movementPlaneContextFor(slot),
+            movementPlaneContext: seatPlaneContext(),
           });
       /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**
        * *"A temporary injury/constraint substitution must not become the
@@ -2163,10 +2223,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             recentSelections: [],
             progressedIdentities: [],
             pinnedIdentities: inputs.pinnedIdentities,
-            movementPlaneContext: weeklyExerciseSelector.movementPlaneContextFor(
-              slot,
-              selection.identity,
-            ),
+            movementPlaneContext: seatPlaneContext(selection.identity),
           }).identity
         : selection.identity;
       const changedByDayIdentity = identitiesThisDay.has(selection.identity)
@@ -2175,6 +2232,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         !substitutedToday ? undefined
           : excludedToday.has(selection.identity) ? 'excluded_today'
           : changedByDayIdentity ? 'already_on_day'
+          : acceptedElsewhere.has(selection.identity) ? 'accepted_on_another_day'
           : !composedRowIsLegal(selection.identity, kitToday) ? 'kit_today'
           : undefined;
       if (substitutedToday && !substitutionCause) {
@@ -2202,6 +2260,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           route: 'automatic',
         })) rejectedBy.push('experience');
         if (identitiesThisDay.has(candidate)) rejectedBy.push('already_on_day');
+        if (acceptedElsewhere.has(candidate)) rejectedBy.push('accepted_on_another_day');
         if (rejectedBy.length === 0 && !considered.has(candidate) && candidate !== identity) {
           rejectedBy.push('weekly_spacing');
         }

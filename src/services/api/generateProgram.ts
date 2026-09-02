@@ -308,6 +308,13 @@ export interface GenerateProgramFromProfileOptions {
     pinnedHistoryWorkouts: readonly Workout[];
   } | null;
   /**
+   * Item 1 (Sam, 2026-09-02): a one-week rebuild states the accepted week's
+   * automatic strength identities by weekday, so the composer treats every
+   * identity on the days it does not replace as already taken. See
+   * `ComposerInputs.acceptedWeekIdentitiesByDay`.
+   */
+  acceptedWeekIdentitiesByDay?: Readonly<Record<number, readonly string[]>> | null;
+  /**
    * Whether an unacceptable week is fatal HERE, in the vocabulary
    * `acceptedStateTransaction` already ratified.
    *
@@ -873,6 +880,7 @@ export function canonicalProgramInputFromProfile(
     targetWeekAvailability: options.targetWeekAvailability,
     weekAcceptance: options.weekAcceptance,
     remainderBoundary: options.remainderBoundary ?? null,
+    acceptedWeekIdentitiesByDay: options.acceptedWeekIdentitiesByDay ?? null,
   };
   const localPhaseMap: Record<string, string> = {
     'Off-season': 'Base-Building',

@@ -822,11 +822,13 @@ async function main(): Promise<void> {
   // after a Sunday game read the onboarding estimate (Back Squat 95 / Bench 80
   // against the athlete's 100 / 85) and a weighted Pull-Up read "BW", because
   // the one-week fixture stub is generated without the block's progression.
-  await run('R-344 a bye week, the week after a Sunday game, and a relaunch all keep the athlete\'s own loads', async () => {
+  await run('R-344 / item 1: a bye week, the week after a Sunday game, and a relaunch keep the athlete\'s own loads, sets and reps, with no weekly repeat', async () => {
     const { buildWornWorld } = require('./support/settingsJourney') as typeof import('./support/settingsJourney');
     const { relaunchApp, quietAsync } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
     const { addDaysISO } = require('../utils/programBlockState') as typeof import('../utils/programBlockState');
     const { startingWeightForAthlete } = require('../utils/loadEstimation') as typeof import('../utils/loadEstimation');
+    const { automaticExerciseRouteForIdentity, workoutExerciseWasAutomaticallySelected } =
+      require('../rules/automaticWeeklyExerciseSelection') as typeof import('../rules/automaticWeeklyExerciseSelection');
     const athlete = profile();
     const world = await quietAsync(() => buildWornWorld({ profile: athlete, installDayISO: WEEK_START }));
     assert(world.blockTwoStart !== null && !world.rolloverRefusal,
@@ -834,17 +836,24 @@ async function main(): Promise<void> {
     const blockTwoStart = world.blockTwoStart as string;
     // THE ACCEPTED LOADS, snapshotted before any fixture decision: name+role → kg.
     const acceptedDetail = new Map<string, string[]>();
+    const ownDose = new Map<string, Map<string, [number, number, number]>>();
     const acceptedLoads = (weekStart: string): Map<string, number> => {
       const program = useProgramStore.getState().currentProgram;
       const microcycle = program?.microcycles.find((week) => week.startDate.slice(0, 10) === weekStart);
       const loads = new Map<string, number>();
+      const doses = new Map<string, [number, number, number]>();
       const detail: string[] = [];
       for (const workout of microcycle?.workouts ?? []) for (const row of workout.exercises ?? []) {
         const name = row.exercise?.name; const kg = row.prescribedWeightKg;
         detail.push(`${name}@d${workout.dayOfWeek}/${row.section18Evidence?.role ?? ''}=${kg}#${row.id}`);
-        if (name && typeof kg === 'number' && kg > 0) loads.set(`${name}|${row.section18Evidence?.role ?? ''}`, kg);
+        if (name && typeof kg === 'number' && kg > 0) {
+          loads.set(`${name}|${row.section18Evidence?.role ?? ''}`, kg);
+          doses.set(`${name}|${row.section18Evidence?.role ?? ''}`,
+            [row.prescribedSets, row.prescribedRepsMin, row.prescribedRepsMax]);
+        }
       }
       acceptedDetail.set(weekStart, detail);
+      ownDose.set(weekStart, doses);
       return loads;
     };
     const accepted = new Map<string, Map<string, number>>();
@@ -861,12 +870,29 @@ async function main(): Promise<void> {
       const own = accepted.get(weekStart) ?? new Map<string, number>();
       let compared = 0; let differsFromEstimate = 0;
       const wrong: string[] = [];
+      // Item 1 (Sam, 2026-09-02): a rebuilt week keeps the same lift's sets and
+      // reps, and never repeats an automatic strength identity across its days.
+      const seen = new Map<string, number>();
       for (const workout of visible) for (const row of workout.exercises ?? []) {
         const name = row.exercise?.name ?? '';
+        if (name && workoutExerciseWasAutomaticallySelected(row)
+          && automaticExerciseRouteForIdentity(name) === 'strength') {
+          const prior = seen.get(name);
+          if (prior !== undefined && prior !== workout.dayOfWeek) {
+            wrong.push(`${name} repeats on days ${prior} and ${workout.dayOfWeek}`);
+          }
+          seen.set(name, workout.dayOfWeek);
+        }
         const kg = own.get(`${name}|${row.section18Evidence?.role ?? ''}`);
         if (kg === undefined) continue;
         compared += 1;
         if (kg !== startingWeightForAthlete(name, athlete)) differsFromEstimate += 1;
+        const dose = ownDose.get(weekStart)?.get(`${name}|${row.section18Evidence?.role ?? ''}`);
+        if (dose && (row.prescribedSets !== dose[0] || row.prescribedRepsMin !== dose[1]
+          || row.prescribedRepsMax !== dose[2])) {
+          wrong.push(`${name}: visible ${row.prescribedSets}x${row.prescribedRepsMin}-${row.prescribedRepsMax} `
+            + `vs accepted ${dose[0]}x${dose[1]}-${dose[2]}`);
+        }
         if (row.prescribedWeightKg !== kg) {
           wrong.push(`${name}@d${workout.dayOfWeek}/${row.section18Evidence?.role ?? ''}#${row.id} (mc ${workout.microcycleId}): `
             + `visible ${row.prescribedWeightKg} vs accepted ${kg}; accepted rows: `

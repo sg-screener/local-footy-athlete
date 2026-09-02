@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import type { Workout, WorkoutExercise } from '../types/domain';
 import {
+  acceptedAutomaticIdentitiesByDay,
   carryOwnAcceptedLoads,
   carryOwnAcceptedLoadsIntoWorkout,
 } from '../rules/acceptedLoadCarry';
@@ -89,6 +90,47 @@ run('an accepted blank is the athlete\'s choice and is carried as blank', () => 
   const accepted = [workout(1, [row('a1', 'Goblet Squat', undefined)])];
   const rebuilt = [workout(1, [row('b1', 'Goblet Squat', 24)])];
   assert.equal(load(carryOwnAcceptedLoads({ accepted, rebuilt })[0], 'Goblet Squat'), undefined);
+});
+
+console.log('\n[item 1] sets and reps travel with the fixture rebuild; the readiness door carries loads only');
+
+function dosed(id: string, name: string, kg: number | undefined, sets: number, min: number, max: number): WorkoutExercise {
+  return { ...row(id, name, kg), prescribedSets: sets, prescribedRepsMin: min, prescribedRepsMax: max } as WorkoutExercise;
+}
+const doseOf = (w: Workout, name: string) => {
+  const r = w.exercises.find((e) => e.exercise?.name === name)!;
+  return [r.prescribedSets, r.prescribedRepsMin, r.prescribedRepsMax, r.prescribedWeightKg];
+};
+
+run('loads_and_dose carries the same lift\'s accepted sets and reps as well as its load', () => {
+  const accepted = [workout(1, [dosed('a1', 'Back Squat', 100, 4, 4, 6)])];
+  const rebuilt = [workout(1, [dosed('b1', 'Back Squat', 95, 3, 3, 5)])];
+  const out = carryOwnAcceptedLoads({ accepted, rebuilt, carry: 'loads_and_dose' });
+  assert.deepEqual(doseOf(out[0], 'Back Squat'), [4, 4, 6, 100]);
+});
+
+run('loads (the readiness door) leaves the compiler\'s reduced dose alone', () => {
+  const accepted = [workout(1, [dosed('a1', 'Back Squat', 100, 4, 4, 6)])];
+  const rebuilt = [workout(1, [dosed('b1', 'Back Squat', 95, 2, 3, 5)])];
+  const out = carryOwnAcceptedLoads({ accepted, rebuilt, carry: 'loads' });
+  assert.deepEqual(doseOf(out[0], 'Back Squat'), [2, 3, 5, 100]);
+  const byDefault = carryOwnAcceptedLoads({ accepted, rebuilt });
+  assert.deepEqual(doseOf(byDefault[0], 'Back Squat'), [2, 3, 5, 100]);
+});
+
+run('acceptedAutomaticIdentitiesByDay lists automatic strength rows by weekday and nothing else', () => {
+  const auto = (id: string, name: string, extra: Partial<WorkoutExercise> = {}) =>
+    ({ ...row(id, name, 20), automaticSelection: true, ...extra }) as WorkoutExercise;
+  const accepted = [
+    workout(1, [auto('a1', 'Back Squat'), auto('a2', 'Crab Walks'), row('a3', 'Reverse Lunges', 20),
+      auto('a6', 'Leg Extension', { section18Evidence: { role: 'strength_accessory' } as never })]),
+    workout(3, [auto('a4', 'Seated Calf Raise', { section18Evidence: { role: 'strength_accessory' } as never }),
+      auto('a5', 'RDLs')]),
+  ];
+  const byDay = acceptedAutomaticIdentitiesByDay(accepted);
+  assert.deepEqual(byDay[1], ['Leg Extension'],
+    'a main lift follows the block record and may move day; prehab and athlete-added rows are outside the rule');
+  assert.deepEqual(byDay[3], ['Seated Calf Raise']);
 });
 
 console.log(`\nAccepted load carry: ${passed} passed / ${failures.length} failed`);

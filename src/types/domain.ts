@@ -1612,7 +1612,7 @@ export interface WorkoutExercise {
      * automatic de-duplication provenance and deliberately renders no athlete
      * explainer (R-295).
      */
-    readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day';
+    readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day' | 'accepted_on_another_day';
   };
 
   // Timestamps
