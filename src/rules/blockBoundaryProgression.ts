@@ -101,6 +101,7 @@ import {
   resolveExerciseName,
   startingWeightForAthlete,
   resolveLoadControlMode,
+  familySeedFromRecord,
 } from '../utils/loadEstimation';
 import { participatesInCounting } from './sessionRowCounting';
 import { carriesStrengthComponent } from '../utils/sessionComponents';
@@ -988,6 +989,12 @@ export function loadForReplacementExercise(args: {
   const authority = resolveLoadAuthority(name);
   if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') return undefined;
 
+  // ── 2b. R-360: A LOGGED SIBLING IN THE SAME FAMILY, CAPPED ──
+  const borrowed = args.onboardingData
+    ? familySeedFromRecord(name, args.onboardingData, args.recordedLoadByExercise)
+    : null;
+  if (typeof borrowed === 'number' && borrowed > 0) return borrowed;
+
   // ── 3. SAM'S AUTHORED ANCHOR ESTIMATE, from the athlete's own answers ──
   const estimate = args.onboardingData
     ? startingWeightForAthlete(name, args.onboardingData)
@@ -1108,8 +1115,14 @@ export function decideBlockBoundaryLoads(args: {
     // which is precisely why it satisfies rule 4: there is no path by which a
     // replacement can be seeded from what it replaced. The `loadRatio` sibling
     // table is still not consulted anywhere in this module.
+    // R-360 (Sam, 2026-09-03): a lift with no record of its own borrows from a
+    // logged sibling in its family, capped, before the authored estimate —
+    // measured: the beginner's first Back Squat after a year of High Box
+    // Squat at 67.5 started from the 47.5 guess instead of the 50 his own
+    // record implied.
     const estimate = onboardingData
-      ? startingWeightForAthlete(exerciseName, onboardingData)
+      ? (familySeedFromRecord(exerciseName, onboardingData, history.lastRecordedLoadByExercise)
+        ?? startingWeightForAthlete(exerciseName, onboardingData))
       : null;
     if (typeof estimate === 'number' && Number.isFinite(estimate) && estimate > 0) {
       decisions.push({

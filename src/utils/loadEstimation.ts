@@ -1234,6 +1234,57 @@ export function startingWeightForAthlete(
  * @param lastPerformedWeights - Optional map of exerciseId → last performed weight.
  *                               Prioritised over estimates when available.
  */
+/**
+ * R-360 (Sam, 2026-09-03: "yes with a cap"). THE CAP on a borrowed first
+ * weight, as a multiple of the lift's own onboarding estimate. A small-ratio
+ * sibling amplifies: the cohort's beginner logged a 35 kg dumbbell bench,
+ * which implied a 93.5 kg bench press when he actually reached 75.
+ */
+export const FAMILY_SEED_CAP_MULTIPLIER = 1.5;
+
+/**
+ * A NEW LIFT BORROWS ITS FIRST WEIGHT FROM A LOGGED LIFT IN ITS FAMILY.
+ *
+ * Every prescribed lift hangs off one anchor (squat or bench) with a fixed
+ * ratio, so a logged sibling implies the anchor and the anchor implies the
+ * new lift: `record ÷ sibling ratio × this ratio`. The sibling with the
+ * LARGEST ratio is read (closest to the anchor, least amplification), the
+ * result is capped at `FAMILY_SEED_CAP_MULTIPLIER` × this lift's own
+ * estimate, and it is rounded to the lift's equipment lattice. A weak sibling
+ * borrows down as honestly as a strong one borrows up. The lift's OWN record
+ * is never a borrow — its readers take it first, upstream of this function.
+ * `null` when the lift has no prescribable load or no logged sibling.
+ */
+export function familySeedFromRecord(
+  exerciseName: string,
+  onboardingData: OnboardingData,
+  recordedLoads: Readonly<Record<string, number>> | undefined,
+): number | null {
+  if (!recordedLoads) return null;
+  const authority = resolveLoadAuthority(exerciseName);
+  if (authority.kind !== 'prescribed') return null;
+  const target = authority.profile;
+  const own = resolveExerciseName(exerciseName);
+  let best: { impliedAnchorKg: number; ratio: number } | null = null;
+  for (const [name, kg] of Object.entries(recordedLoads)) {
+    if (typeof kg !== 'number' || !Number.isFinite(kg) || kg <= 0) continue;
+    if (resolveExerciseName(name) === own) continue;
+    const sibling = resolveLoadAuthority(name);
+    if (sibling.kind !== 'prescribed' || sibling.profile.anchor !== target.anchor) continue;
+    if (!best || sibling.profile.ratio > best.ratio) {
+      best = { impliedAnchorKg: kg / sibling.profile.ratio, ratio: sibling.profile.ratio };
+    }
+  }
+  if (!best) return null;
+  const borrowed = best.impliedAnchorKg * target.ratio;
+  const estimate = estimateStartingWeight(exerciseName, onboardingData);
+  const capped = estimate !== null && estimate > 0
+    ? Math.min(borrowed, estimate * FAMILY_SEED_CAP_MULTIPLIER)
+    : borrowed;
+  const rounded = prescribableWeight(capped, target.equipment);
+  return rounded > 0 ? rounded : null;
+}
+
 export function applyLoadEstimates(
   exercises: import('../types/domain').WorkoutExercise[],
   onboardingData: OnboardingData,

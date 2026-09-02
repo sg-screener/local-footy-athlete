@@ -8993,6 +8993,45 @@ Squat after a year of High Box Squat) — mapped for Sam, awaiting his call.
 `64fbace0`.
 
 
+
+**R-359** · A sixth hard day is warned, never refused, and the app never
+opens it, 2026-09-03.
+
+Owner: hingecod. Sam: "go" on the cohort's blank-weeks finding. R-009 ruled
+the warning; the generated-week contract still BLOCKED on
+`hard_day_permitted_maximum`, so a 4-day athlete whose club nights fell on
+two other days (five committed days) plus the app's own Saturday speed
+session made six, the rollover threw, and three cohort athletes saw a blank
+program from week 9 to 30 and could not report an injury. Two changes: (1)
+the clause DISCLOSES instead of blocking — the week publishes with its
+contract and the §18 effective-week evaluator carries the warning
+(`hard_day_breach`); (2) when the athlete's own strength days, club nights
+and games already reach the Bible's absolute hard-day maximum (five), the
+scheduler's automatic speed session rides an existing strength day instead
+of opening a new one. Extends R-009, R-007, R-065. · `WORKING` —
+`test:hard-day-warns` (three worlds: six committed days warned and published
+with an accepted shoulder report; five committed days and no sixth opened;
+the cohort's exact Mon/Wed-club shape), red-first at `7dc09008`.
+
+**R-360** · A new lift borrows its first weight from a logged lift in its
+family, with a cap, 2026-09-03.
+
+Owner: hingecod. Sam: "yes with a cap" on the mapped question 3. Every
+prescribed lift hangs off one anchor (squat or bench) with a fixed ratio
+(`EXERCISE_LOAD_MAP`), so a logged sibling implies the anchor and the anchor
+implies the new lift: record ÷ sibling ratio × this ratio, reading the
+sibling with the largest ratio (closest to the anchor), capped at
+`FAMILY_SEED_CAP_MULTIPLIER` (1.5) × the lift's own onboarding estimate,
+rounded to the lift's equipment lattice. A weak sibling borrows down as
+honestly as a strong one borrows up. Order everywhere a first weight is
+decided: the lift's own record (R-358) → a family borrow → the estimate.
+Readers: `resolveComposedLoad`, `decideBlockBoundaryLoads`,
+`loadForReplacementExercise`, `addExerciseCandidates.loadFor`; one owner:
+`familySeedFromRecord`. Measured on the cohort: the beginner's year-3 Back
+Squat would start at 50 from his High Box Squat 67.5 (47.5 before); a 35 kg
+DB bench would imply 93.5 for a first Bench Press and is capped to 70
+(estimate 47.5; he reached 75). · `WORKING` — `test:family-seed` (8 cells),
+red-first at `7dc09008`.
 **R-356 addendum, same day.** (1) covers MAIN STRENGTH as well: a strength
 day whose every main lift the injury paused (a knee on a lower day) is
 recorded as an `injury_restriction` reduction of `main_strength_frequency`

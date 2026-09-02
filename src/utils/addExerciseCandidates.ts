@@ -52,7 +52,7 @@ import {
   type VocabularyGroupId,
 } from '../data/selectableExerciseVocabulary';
 import { assessTapSwapCandidateSafety, type TapSwapEnvironment } from './tapSwapHierarchy';
-import { resolveExerciseName, startingWeightForAthlete } from './loadEstimation';
+import { familySeedFromRecord, resolveExerciseName, startingWeightForAthlete } from './loadEstimation';
 import { automaticNordicPrescriptionForIdentity } from '../rules/nordicPrescription';
 import { CONDITIONING_META, getExerciseTags, type ConditioningTier } from '../data/exerciseTags';
 import { SECTION_LABELS, type SessionExecutionSectionId } from './sessionExecutionChecklist';
@@ -362,6 +362,9 @@ function loadFor(
   const recorded = recordedLoads?.[resolveExerciseName(name)];
   if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) return recorded;
   if (!profile) return null;
+  // R-360: a logged sibling in the same family, capped, before the estimate.
+  const borrowed = familySeedFromRecord(name, profile, recordedLoads);
+  if (borrowed !== null && borrowed > 0) return borrowed;
   try {
     return startingWeightForAthlete(name, profile);
   } catch {

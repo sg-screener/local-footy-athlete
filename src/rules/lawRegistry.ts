@@ -834,6 +834,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-a-sixth-hard-day-is-warned-never-refused',
+    law: 'R-359: the generated-week contract discloses hard_day_permitted_maximum instead of blocking (R-009: a refusal survives only when the action is physically impossible), so the week publishes with its contract and the effective-week evaluator carries the warning; when the athlete\'s own strength days, club nights and games already reach the Bible\'s absolute hard-day maximum, the scheduler\'s automatic speed session rides an existing strength day instead of opening a new one.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-359',
+    guard: {
+      state: 'guarded',
+      by: 'test:hard-day-warns',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 7dc09008 on the cohort\'s exact shape (4 gym days, club Mon/Wed): the rollover refused hard_day_permitted_maximum:6 and the shoulder report was refused. Green after: 16/16 across three worlds.',
+    },
+  },
+  {
+    id: 'LAW-a-new-lift-borrows-from-its-family-with-a-cap',
+    law: 'R-360: a prescribed lift with no record of its own seeds from the logged sibling with the largest ratio under the same anchor (record / sibling ratio x own ratio), capped at FAMILY_SEED_CAP_MULTIPLIER x its own onboarding estimate and rounded to its lattice; the order is own record, family borrow, estimate, at every first-weight reader.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-360',
+    guard: {
+      state: 'guarded',
+      by: 'test:family-seed',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 7dc09008: the function did not exist (suite threw), the block boundary seeded a first Back Squat at the 47.5 estimate over the 50 a logged High Box Squat 67.5 implied. Green after: 8/8, cap measured on the DB-bench case (93.5 implied, 70 prescribed).',
+    },
+  },
+  {
     id: 'LAW-every-week-answers-for-its-frontal-plane',
     law: 'R-357: every canonical week runs the lower-body frontal completion after it is authored and before it is judged — one frontal row on a strength day the athlete has not done yet, or the honest lower_body_frontal_unavailable exception; a week already carrying the plane is untouched. The deload keep-order treats a frontal-plane row as important alongside the four upper planes.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-357',

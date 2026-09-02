@@ -48,7 +48,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
  * 100 and 102.5 are Sam's approved numbers and are written out as such.
  */
 const EXPECTED_PROGRESSED_KG = 102.5;
-import { startingWeightForAthlete } from '../utils/loadEstimation';
+import { familySeedFromRecord, startingWeightForAthlete } from '../utils/loadEstimation';
 import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import {
   blockBoundaryExplanationSentences,
@@ -453,10 +453,16 @@ for (const mc of contaminationBlock2.microcycles) {
       const authored = startingWeightForAthlete(name, athlete());
       if (typeof authored !== 'number' || authored <= 0) continue;
       anchorChecked = true;
+      // R-360 (Sam, 2026-09-03): an unseen lift with a logged sibling in its
+      // family borrows from that record (capped) BEFORE the authored estimate.
+      // This world logged Back Squat only, so a squat-family row borrows and a
+      // bench-family row takes the estimate; either way the outgoing exercise's
+      // exact number is never inherited (section [5] above).
+      const expected = familySeedFromRecord(name, athlete(), { 'Back Squat': CONTAMINANT_KG }) ?? authored;
       ok(
-        `unseen "${name}" takes the authored anchor estimate (${authored}kg)`,
-        ex.prescribedWeightKg === authored,
-        `expected ${authored}, got ${JSON.stringify(ex.prescribedWeightKg)}`,
+        `unseen "${name}" takes its family borrow or the authored anchor estimate (${expected}kg; estimate ${authored}kg)`,
+        ex.prescribedWeightKg === expected,
+        `expected ${expected}, got ${JSON.stringify(ex.prescribedWeightKg)}`,
       );
     }
   }

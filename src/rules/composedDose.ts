@@ -35,6 +35,7 @@ import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import {
   estimateStartingWeight,
+  familySeedFromRecord,
   normaliseAutomaticExerciseLoadChange,
   resolveExerciseName,
 } from '../utils/loadEstimation';
@@ -372,6 +373,10 @@ export function resolveComposedLoad(args: {
   // lift she has never logged. Reachability (R-083) is still asked first.
   const recorded = args.recordedLoads?.[resolveExerciseName(composedIdentityFor(args.identity))];
   if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) return recorded;
+  // R-360 (Sam, 2026-09-03): no record of its own — borrow from a logged lift
+  // in the same family, capped, before the onboarding estimate.
+  const borrowed = familySeedFromRecord(composedIdentityFor(args.identity), args.profile, args.recordedLoads);
+  if (borrowed !== null && borrowed > 0) return borrowed;
   const base = estimateStartingWeight(composedIdentityFor(args.identity), args.profile);
   if (base === null || !(base > 0)) return 0;
   const target = applyOffseasonMainLiftLoad({

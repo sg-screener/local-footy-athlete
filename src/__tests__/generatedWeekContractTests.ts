@@ -268,10 +268,19 @@ console.log('\n[clauses] Each clause accepts what satisfies it and REDS what doe
 
   // hard_day_permitted_maximum
   const hard = [0, 1, 2].map((d) => day(d, [mainLift('squat')], { intensity: 'High' }));
-  const r10 = verdictOf(hard, contract({ hardDayPermittedMaximum: 2 }));
-  ok('[hard_day_permitted_maximum] RED above the hard-DAY ceiling',
-    r10.verdict === 'refused' && r10.clauses.includes('hard_day_permitted_maximum'),
-    r10.clauses.join(','));
+  // R-359 (Sam, 2026-09-03: "go") — R-009's word at the contract: a sixth hard
+  // day is WARNED, never refused. The clause is DISCLOSED and the week stands;
+  // the §18 effective-week evaluator carries the warning downstream. (Until
+  // 2026-09-03 this cell pinned a refusal, and three cohort athletes saw a
+  // blank program for 22 weeks.)
+  const r10 = validateGeneratedWeek({ workouts: hard, contract: contract({ hardDayPermittedMaximum: 2 }), anchors: [] });
+  const r10Control = validateGeneratedWeek({ workouts: hard, contract: contract({ hardDayPermittedMaximum: 3 }), anchors: [] });
+  ok('[hard_day_permitted_maximum] DISCLOSED above the hard-DAY ceiling; the verdict is whatever the OTHER clauses say (R-359)',
+    !r10.findings.some((f) => f.clause === 'hard_day_permitted_maximum')
+      && r10.disclosedGaps.some((f) => f.clause === 'hard_day_permitted_maximum')
+      && r10.verdict === r10Control.verdict
+      && r10.findings.map((f) => f.clause).join(',') === r10Control.findings.map((f) => f.clause).join(','),
+    `${r10.verdict} findings=${r10.findings.map((f) => f.clause).join(',')} disclosed=${r10.disclosedGaps.map((f) => f.clause).join(',')} control=${r10Control.verdict}`);
 
   // training_paused_means_no_training
   const r11 = verdictOf(lawfulWeek(), contract({ trainingPaused: true }));

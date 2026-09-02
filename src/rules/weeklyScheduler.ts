@@ -1023,12 +1023,23 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         : PURPOSE_IS_LOWER[purpose] ? 'other_strength' : 'upper_strength',
     };
   });
+  // R-359 (Sam, 2026-09-03): when the athlete's OWN days — strength days,
+  // club nights and games — already reach the hard-day ceiling, the app's
+  // speed session rides an existing strength day instead of opening a sixth.
+  // Measured on the six-athlete cohort: four gym days plus two club nights on
+  // other days, then a Saturday Speed session made six.
+  const committedDays = new Set<number>([
+    ...purposeByDay.keys(), ...inputs.clubNights, ...scheduledGameDays(inputs),
+  ]);
+  const speedCandidates = committedDays.size >= BIBLE_WEEKLY_CAPS.hardDaysAbsoluteMax
+    ? automaticSpeedCandidates.filter((candidate) => candidate.role !== 'standalone')
+    : automaticSpeedCandidates;
   const unrestrictedPlannedSprintDay = clubSpeedRides
     || !overlay.sprintExposureRequired || !appSprintNeedPermitted(inputs)
     ? null
     : selectFreshSpeedDay({
         inputs,
-        candidates: automaticSpeedCandidates,
+        candidates: speedCandidates,
         heavyLowerDays: [...purposeByDay]
           .filter(([, purpose]) => PURPOSE_IS_LOWER[purpose])
           .map(([day]) => day),

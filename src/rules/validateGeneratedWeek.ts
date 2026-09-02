@@ -433,8 +433,15 @@ export function validateGeneratedWeek(
     block('full_rest_required_minimum', 'not enough days on which nothing is required',
       targets.fullRestRequiredMinimum, ledger.fullRestDays);
   }
+  // ── R-009 / R-359 (Sam, 2026-09-03: "go") — A SIXTH HARD DAY IS WARNED,
+  // NEVER REFUSED. "should give warnings but allow them to do whatever they
+  // want": a refusal survives only when the action is physically impossible,
+  // and a sixth hard day is not. This clause used to BLOCK, so a 4-day athlete
+  // whose club nights fell on two other days saw a blank program for 22 weeks
+  // and could not report an injury (six-athlete cohort, three athletes). The
+  // week publishes; the §18 effective-week evaluator carries the warning.
   if (ledger.hardDays > targets.hardDayPermittedMaximum) {
-    block('hard_day_permitted_maximum', 'too many hard days',
+    disclose('hard_day_permitted_maximum', 'too many hard days',
       targets.hardDayPermittedMaximum, ledger.hardDays);
   }
 

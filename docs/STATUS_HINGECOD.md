@@ -1459,3 +1459,33 @@ weekly-strength-budget 5, injury-recomposition 186, three-day-main-seat
 22/22; canonical-weekly-compiler 10539 passed / 45 failed (54 red before
 this work); surface-agreement 2/5 and visible-surfaces 69/70 are the same on
 the base tree `64fbace0` (inherited).
+
+## 2026-09-03 — Sam: "go and yes with a cap" — R-359 and R-360 BUILT
+
+**R-359 — a sixth hard day is warned, never refused; the app never opens it.**
+Two sites: `validateGeneratedWeek` discloses `hard_day_permitted_maximum`
+instead of blocking (R-009's word, finally at the contract); the scheduler
+filters its automatic speed candidates to existing strength days when the
+athlete's own strength days + club nights + games already reach the Bible's
+absolute maximum (five). Suite `test:hard-day-warns`, three worlds: (1) four
+gym days + club Wed/Sat (six committed) — published with its contract, the
+evaluator records the hard-day warning, a shoulder report lands; (2) four gym
+days + club Wed (five) — no sixth day opened, no breach; (3) the cohort's
+exact shape (four gym days, club Mon/Wed) — not refused, week visible with
+contract, no sixth day, shoulder report accepted. RED FIRST at `7dc09008`:
+world (3) threw `Generated week refused (hard_day_permitted_maximum:6)`
+(worlds 1 and 2 were already green there — the base scheduler handled six
+committed days without an app sprint; they stand as controls). Green: 16/16.
+
+**R-360 — a new lift borrows from its family, capped at 1.5× its own
+estimate.** One owner `familySeedFromRecord` in `loadEstimation.ts`; readers
+`resolveComposedLoad`, `decideBlockBoundaryLoads`,
+`loadForReplacementExercise`, `addExerciseCandidates.loadFor`, all in the
+order own record → family → estimate. Suite `test:family-seed` 8/8 (Back
+Squat from High Box 67.5 → 50; Bench from DB bench 35 capped to 70; no
+sibling → null; own record never a borrow; weak sibling borrows down; the
+composer and the block boundary both read it). RED FIRST at `7dc09008`: the
+suite threw (no such function). The map page updated:
+https://claude.ai/code/artifact/9e4c798f-ee91-435e-885b-abcf4bb7cbac
+`test:compile` PASSED. Registry rows R-359/R-360 and law rows written, both
+in chain. Sweep, six-athlete rerun and compiler-year: below.
