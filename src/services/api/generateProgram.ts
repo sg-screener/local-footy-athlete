@@ -4,7 +4,7 @@ export { GeneratedWeekRefusedError } from '../../rules/canonicalWeeklyRowCompile
 import { OnboardingData, TrainingProgram, Microcycle, type DayOfWeek, type ConditioningEquipmentModality, type Workout } from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import { previousBlockBoundsISO } from '../../utils/programBlockState';
-import { progressedFromOwnHistory, readBlockHistory, recordedLoadsFromFeedback } from '../../rules/blockBoundaryProgression';
+import { progressedFromOwnHistory, readBlockHistory } from '../../rules/blockBoundaryProgression';
 import { composedIdentityFor } from '../../rules/composedRowLegality';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -211,6 +211,13 @@ export interface GenerateProgramFromProfileOptions {
    *     history, which is why the default is silence.
    */
   recordSelections?: 'author' | 'replay' | false;
+  /**
+   * R-358: the athlete's recorded loads by name, stated by a caller that
+   * composes WITHOUT progression history (the fixture-week stub). When absent
+   * the program compiler derives them from the progression state at its own
+   * cutoff.
+   */
+  recordedLoads?: Readonly<Record<string, number>>;
   progressionHistory?: {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
@@ -861,7 +868,7 @@ export function canonicalProgramInputFromProfile(
       options.recordSelections,
     ),
     progressedIdentities,
-    recordedLoads: recordedLoadsFromFeedback(options.progressionHistory?.sessionFeedback ?? {}),
+    ...(options.recordedLoads ? { recordedLoads: options.recordedLoads } : {}),
     selectionHistory: selectionHistoryForBuild,
     trackedLiftChoices: trackedLiftChoicesForBuild,
     conditioningSelectionHistory: options.conditioningSelectionHistory

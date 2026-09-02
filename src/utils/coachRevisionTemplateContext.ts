@@ -33,6 +33,7 @@ import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import { selectMobilityPrehabFlow } from './mobilityPrehabFlow';
 import { applyMobilityFlowExerciseDecisions, applyRecoveryAddonExerciseDecisions } from './derivedExerciseDecisions';
 import { performedMobilityMovementIds } from './sessionExecutionChecklist';
+import { recordedLoadsFromFeedback } from '../rules/blockBoundaryProgression';
 
 export interface CoachRevisionTemplateContext {
   athlete: AthleteContext;
@@ -124,6 +125,8 @@ function liveStoreProvider(dateISO?: string): CoachRevisionTemplateContext {
       blockNumber: position.blockNumber, blockStartISO: position.blockStart,
       pinnedIdentities: (prefs.pinned ?? []).map(composedIdentityFor),
       progressedIdentities: [], selectionHistory: blockSelectionHistory(),
+      // R-358: a door-authored row reads the athlete's own record before any estimate.
+      recordedLoads: recordedLoadsFromFeedback(useProgramStore.getState().sessionFeedback ?? {}),
     };
     const { useDecisionLedgerStore } = require('../store/decisionLedgerStore') as typeof import('../store/decisionLedgerStore');
     return { athlete, gameDates, inSeason, strengthComposition, dayExerciseReadState: {

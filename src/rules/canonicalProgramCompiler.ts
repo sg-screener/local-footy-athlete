@@ -5,6 +5,7 @@ import type { TrainingProgram, OnboardingData } from '../types/domain';
 import type { CoachingPlan } from '../utils/coachingEngine';
 import { compileCanonicalProgramWeeks, type CanonicalProgramWeeksInput } from './canonicalWeeklyRowCompiler';
 import { compileCanonicalProgramProgression } from './canonicalWeeklyProgressionCompiler';
+import { recordedLoadsFromFeedback } from './blockBoundaryProgression';
 import { applyExclusionsToAuthoredWeek } from './exerciseExclusions';
 import { publishAutomaticProgrammingSelectionTraces } from './programmingSelectionTrace';
 
@@ -16,7 +17,16 @@ export interface CanonicalProgramCompilerInput {
 }
 
 export function compileCanonicalProgram(input: CanonicalProgramCompilerInput) {
-  const compiled = compileCanonicalProgramWeeks(input.weeks);
+  // ── R-358: THE COMPOSER'S RECORDED LOADS, FROM THE PROGRESSION'S OWN CUTOFF ──
+  // The one writer. Feedback dated on or after `asOfISO` is not this build's to
+  // spend (the progression pass filters the same way), so a relaunch that
+  // reconstructs the accepted block reads exactly the record the build read —
+  // measured: an unfiltered map made weeks 1-4 differ after every restart.
+  const feedback = input.progression.state.sessionFeedback ?? {};
+  const recordedLoads = input.weeks.recordedLoads ?? recordedLoadsFromFeedback(Object.fromEntries(
+    Object.entries(feedback).filter(([, entry]) => entry.dateStr < input.progression.asOfISO),
+  ));
+  const compiled = compileCanonicalProgramWeeks({ ...input.weeks, recordedLoads });
   publishAutomaticProgrammingSelectionTraces(compiled.selectionTraces);
   /**
    * ── REMOVE MEANS REMOVE, IN STORAGE AND NOT ONLY ON THE SCREEN ────────────

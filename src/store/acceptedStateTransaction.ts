@@ -24,6 +24,7 @@ import {
   applyProgramOverrideWrite,
   useProgramStore,
 } from './programStore';
+import { recordedLoadsFromFeedback } from '../rules/blockBoundaryProgression';
 import {
   useCalendarStore,
   applyCalendarMarkedDaysWrite,
@@ -1928,6 +1929,17 @@ export function buildFixtureProjection(args: {
         targetFixtureDay: targetGameDay,
         activeConstraints: args.activeConstraints,
         microcycleLimit: 1,
+        // R-358 (Sam, 2026-09-03): the stub composes against the athlete's
+        // RECORDED LOADS. Left unstated, every row the rebuilt week gained
+        // restarted at the onboarding estimate — measured on the six-athlete
+        // cohort: a bye-recovery press at 9 kg over a logged 15. Loads only:
+        // the stub still states no progression history, so rotation and the
+        // block-boundary pass are untouched. The cutoff is this week's Monday,
+        // so a later replay reads exactly the record this build read.
+        recordedLoads: recordedLoadsFromFeedback(Object.fromEntries(
+          Object.entries(useProgramStore.getState().sessionFeedback ?? {})
+            .filter(([, entry]) => entry.dateStr < args.weekStart),
+        )),
         // Item 1 (Sam, 2026-09-02): the stub composes against the accepted
         // week it is rebuilding, so a day it replaces cannot repeat what the
         // days it keeps already carry.
