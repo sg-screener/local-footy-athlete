@@ -623,3 +623,16 @@ Sunday. Readiness suite 58/58 (two board cells); mutation → 56/58.
 Both regenerated years: focused 24/24, budget PASS/PASS/PASS, 0 repeats,
 52/52 restarts. modifier-lifecycle's five FAILURE lines are identical at
 868c4b12 (Section 18 onboarding-world shortfall, inherited).
+
+## Addendum 2026-09-02 — final full-year audit at `71ff5788`
+
+Clean detached checkout, base driver copied in, tools copied from the
+773765a4 run unpatched. Both athletes 52/52 weeks, 364 dates, 52/52 restarts,
+0 refused actions; acceptance 24/24, focused 24/24, strength-budget
+PASS/PASS/PASS, 47 Lower Hinge days per athlete with 0 knee-dominant rows and
+0 over the R-348 cap; week 45 keeps four sessions at half sets with the
+streak row on the board. Two 114-page PDFs, every page auto-verified, zero
+suspect pages; pages 54 and 90 inspected by eye. Genuine programming problems
+in the measured surfaces: none. Outputs: `output/final-full-year-audit-71ff5788/`
+in the main checkout and the audit checkout; report `FINAL_FULL_YEAR_AUDIT.md`
+with the measured deltas against 773765a4.
