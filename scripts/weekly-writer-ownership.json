@@ -476,11 +476,6 @@
       "classification": "projection_display",
       "reason": "Acceptance gateway resolves the shared canonical visible projection and evaluates it; returns the original candidate plus findings and never repairs workout contents."
     },
-    "src/rules/canonicalWeeklyAthleteEditCompiler.ts#reduceContractForRequest": {
-      "fingerprint": "c136c63461a6eb4c6986148c07583d2e01ca42963e8ace288b5dbbbe09f2e212",
-      "classification": "canonical_compiler",
-      "reason": "Canonical athlete-edit contract fold records explicit requested reductions against measured rows with constraint provenance; no unrequested scheduling or separate store author."
-    },
     "src/utils/workoutCanonicalisation.ts#updatePowerForPhase": {
       "fingerprint": "76695f8375e1b6fc7b7f8526b7493e52d657e5339fc6a1124afb10ce452f6074",
       "classification": "canonical_compiler",
@@ -2081,20 +2076,10 @@
       "reason": "Publishes the reversible-adjustment proposal through the accepted transaction and returns its receipt; staging remains separately inventoried.",
       "fingerprint": "582833860a30e694c9ff4c506be5a206605404d33056674794b482c0886866ad"
     },
-    "src/utils/visibleWorkoutIdentity.ts#strengthRows": {
-      "classification": "projection_display",
-      "reason": "Selects existing strength-row references using typed conditioning membership; no row mutation.",
-      "fingerprint": "7e1608f337f75d8d7d6c8c9608d341c95bd56eacc99f86dd4388880c7dbda99a"
-    },
     "src/dev/e2e/devE2EScenarioSession.ts#writeDevE2EScenarioSessionRecord": {
       "classification": "persistence_boundary",
       "reason": "Parses and stores the diagnostic scenario-session record only.",
       "fingerprint": "0d1521777794ca162a52015cded3549045496964035f0bb4eb90921e0a25266e"
-    },
-    "src/utils/visibleWorkoutIdentity.ts#conditioningRows": {
-      "classification": "projection_display",
-      "reason": "Selects existing conditioning-row references by typed IDs; no row mutation.",
-      "fingerprint": "30b7407f803eb887d5fe2d34f8a83c4332b2284b7485c424118840719bc2a7e9"
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#prescriptionWitness": {
       "classification": "projection_display",

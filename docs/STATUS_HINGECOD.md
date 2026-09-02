@@ -999,3 +999,12 @@ canonicalWeeklyAthleteEditCompiler.ts#reduceContractForRequest" — a review
 inventory naming a function that no longer exists. `canonical-weekly-compiler`
 54 (athlete-owned fifth journey), `injury-fallback-journey` 2 (coverage
 cells), `slot-coverage` 3, `session-section-add` 2 — inherited, unchanged.
+
+**`test:weekly-writer-zero` (gate unit).** Three review rows named
+capabilities the census no longer discovers (`reduceContractForRequest`,
+`visibleWorkoutIdentity#strengthRows/#conditioningRows`) — removed; the
+"absent capability" errors are gone. The unit stays red on its own zero-proof:
+DENOMINATOR 1162 capability owners, 1015 reviewed, **147 unresolved** →
+"ZERO NOT PROVEN". Each unresolved owner needs an explicit review line in
+`scripts/weekly-writer-ownership.json`; this branch's new functions are among
+them. Not a fix this seat can make silently — reported.
