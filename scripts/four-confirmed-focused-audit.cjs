@@ -75,10 +75,14 @@ for (const athlete of year.athletes ?? []) {
   const directionFindings = [];
   for (const week of weeks) for (const day of week.days ?? []) {
     if (!ordinaryShapes.has(day.composedDayShape)) continue;
+    // R-342: a prehab drill is not one of the four — the same route test the
+    // app's `usefulStrengthIdentityCounts` applies, so this checker reads the
+    // receipt against the app's own rule rather than a second copy of it.
     const useful = (day.rows ?? []).filter((row) => {
       const evidence = row.section18Evidence;
       return ['main_strength', 'strength_accessory'].includes(evidence?.role)
-        && !['core', 'midline'].includes(evidence?.slot);
+        && !['core', 'midline'].includes(evidence?.slot)
+        && automaticExerciseRouteForIdentity(identity(row)) !== 'prehab';
     }).length;
     const receipt = day.usefulStrengthSessionContract;
     const validReduction = useful >= MINIMUM_USEFUL_STRENGTH_EXERCISES

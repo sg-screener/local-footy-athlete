@@ -475,3 +475,40 @@ Restarts 52/52 both.
 NOT COVERED: the derived read-time sessions outside the fixture door (the
 readiness path is covered; other derived builders were not audited); the
 phone screen (generation-level proof).
+
+## Addendum 2026-09-02 — final full-year audit at `3b902a70`
+
+Run from a clean detached checkout of `3b902a7013416870b52ec80b94e58af0a9243ad5`
+with the untracked base driver copied in (sha bb1dd572…) and the db534496
+tools copied and corrected. Fresh 52-week male and female programmes: 52/52
+weeks, 364 distinct dates, 52/52 cold restarts each, 0 refused actions.
+Accepted-journey acceptance 24/24; focused composition 22/24; strength-budget
+selection FAIL on ONE repeat (Seated Calf Raise, week 41, both athletes:
+Monday's Lower Squat is the Sunday-game fixture overlay, Wednesday's Lower
+Hinge is the stored block week — two composers, two weekly ledgers), plane
+PASS, 0 ownership breaches, 0 family repeats, 47 Lower Hinge days with 0
+knee-dominant rows. Two 114-page PDFs, every page auto-verified, eight pages
+inspected by eye. Outputs: `output/final-full-year-audit-3b902a70/` in the
+main checkout and in the audit checkout; report `FINAL_FULL_YEAR_AUDIT.md`
+beside them with the measured deltas against db534496 (running 43/87 app
+conditioning sessions vs 20/86; real repeat sprints in weeks 16–18, 24–26,
+31, 37; five speed templates in rotation; split lower days 4.4–5.0 rows /
+10.6–14.0 sets; Pull-Ups BW → +27.5; Back Squat 100 → 115 across the season;
+bye-adjacent weeks on the accepted loads; distinct female profile).
+
+Audit-tool mistakes corrected this run: `scripts/four-confirmed-focused-audit.cjs`
+counted prehab drills toward the useful-four (second copy of the pre-R-342
+rule; corrected here and committed on this branch — the audited checkpoint's
+generation code is unchanged); `build_final_pdfs.py` carried the db534496
+filename suffix as a literal.
+
+Correction to the R-342 registry wording: the loaded third seat on a Lower
+Squat day is Leg Extension, Calf Raises OR Back Extension (15 of 45 days).
+R-336 as built refuses only single-leg-hip MOVEMENTS on the squat day, so a
+posterior isolation is legal there; "knee-dominant on the squat day" in the
+R-342 row overstated the ownership rule.
+
+Findings for a later owner: the week-41 repeat (seed the fixture stub's
+weekly selector with the accepted week's identities, as the replan already
+does for planner offers); "0 kg" labels on unloaded prehab/midline rows (37
+rows, pre-existing); warm-up knee drills on hinge days (unchanged).
