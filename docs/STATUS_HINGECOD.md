@@ -764,3 +764,80 @@ stand before the pinned drill wherever it lands: 929/0. Law row
 - **`compiler-year`: female-3-novice-home fails its year at week 23** ("Accumulated injury/edit/restart lifecycle failed"; the runner prints no detail). Not diagnosed.
 - **`session-section-add` 2 cells** — after swapping a day to a Primer session the plan shows one section (`primer`); the cells expect an `optional` section to be offered before the Add. Product-or-test question.
 - Inherited and unchanged before/after: `weekly-scheduler` 9/11 (bye fixture cells), `composer-severance` 7 + TypeError, `ladder-wide` 9/14, `slot-coverage` 87/90, `full-body-balance` chain 7/8, `section18-planner` throw, `test:compile` (three files, at the control tree too), guards `law-registry` 13/1, `repo-law-guards` 51/12, `ruling-registry` 5/3 — identical at the control.
+
+## 2026-09-02 — release gate, the year audit at the final checkpoint, and the root causes still open
+
+**Release gate (`npm run test:release`) at `d18ccf85`.** The bootstrap now
+runs: test-truth 14/14, release-gate contract 14/14, unrunnable-suite ratchet
+5/5, typecheck-gate controls 6/6, dev-e2e seeds 104/104, Maestro preflight
+9/9. The gate then stops at its first red unit, `test:compile` — the same five
+file/scope pairs (`sessionBuilder.ts` ×3 scopes,
+`automaticWeeklyExerciseSelectionTests.ts`, `sessionWorkOwnershipJourneyTests.ts`)
+that are red at the control tree and at the branch start; none is this
+branch's file. RESULT 1/27 units green — the 26 behind it are unreached, not
+red. Until that typecheck debt is paid the gate cannot see the 25 witnesses.
+
+**Open root causes (for Sam — NOT built).**
+- **Bodyweight beginner refused ("the week trains no push").** Exact rule:
+  `createAutomaticWeeklyExerciseSelector().canUse` — a compound whose
+  `automaticMainFamilyForExercise` is null (Push-ups, Bodyweight Squat's
+  push cousins) may not take a MAIN seat (`if (!family) return
+  !requestedAsMain`). On a bodyweight kit the horizontal-push main seat's
+  bench is only such compounds, so the seat is empty, the composer falls to
+  the prehab rung (Scap Push-Up, seat `shoulder_prehab`), and the week judge
+  refuses `required_safe_patterns_present:push` at generation. Trace: both
+  full-body days DECLARE `horizontal_push`; no selection trace is published
+  for it. Options: (a) when a main seat's family bench is empty, seat the
+  best legal compound as a NON-main row before the prehab rung (Push-ups at
+  index 0/1 still classifies as a main lift for §18 by
+  `classifyGeneratedWorkoutRow`, so the day still counts); (b) give Push-ups
+  a main family — rejected, it would let it spend the weekly press seat
+  everywhere; (c) rewrite the archetype — rejected, a real athlete. Tests: a
+  new bodyweight-beginner onboarding cell; `undo-reversal` 19/20;
+  `compiler-year` male-2 reaching 52/52; the R-317 budget suite unchanged.
+- **Bulgarian split squat as the tracked squat lift never lands**
+  (`estimated-1rm` 4 cells, red at the control too). The seat table
+  (`TRACKED_LIFT_PROGRAMMING_SEAT`) puts `bulgarian_split_squat` in the
+  `squat` main seat; the selector says it has no main family, so the squat
+  seat refuses it every week (trace: `weekly_spacing`) and High Box Squat is
+  taken, while the single-leg seat takes Reverse Lunges. Two owners disagree
+  on where a tracked single-leg lift sits. Smallest correction: seat it as
+  the tracked lift of the `single_leg_knee` seat (drop the `isMainLift`
+  requirement on `requestedTrackedAnchor` for that seat) — needs a ruling.
+- **`compiler-year` female-3-novice-home** (Complete beginner, home kit,
+  Pre-season, club Tuesday). The runner's own report
+  (`outputs/compiler-year-acceptance/result.json`, run BEFORE the owned-seat
+  amendment) shows Pre-season weeks 10–12 with `main_strength` 2 of 3 and a
+  conditioning planner-target miss (4 vs 3), then week 23 (In-season 8)
+  failing `facts_history_unchanged`: a Long-Lever Copenhagen row appears in
+  a fixture-replan overlay's Monday. With the amendment her week 1 Friday
+  composes Band-Assisted Pull-Up and Seated DB Press as mains (measured);
+  the rerun on the final code is recorded below.
+- **`canonical-weekly-compiler` athlete-owned-fifth journey (8 cells),
+  `injury-fallback-journey` (4), `session-section-add` primer/optional (2)** —
+  causes named in the pile-5 table; not diagnosed to a rule.
+
+**Full-year audit at `d18ccf85` (the final checkpoint of this round).** Same
+pipeline as the 71ff5788 run: clean worktree `/private/tmp/lfa-final-audit-d18ccf85`,
+the preserved driver copied to its `outputs/release-candidate-0bcc3353-rcsteps`
+path, `node scripts/programming-remediation-year.cjs --output=$A/run --kit=full`
+(1:32), the three analyzers, then the copied tools (evidence, stimulus stats,
+hinge scan, PDFs, page QA) and an rsync to
+`output/final-full-year-audit-d18ccf85/` in the main checkout.
+Results: acceptance verdict PASS; four-confirmed focused audit 24/24 (0
+failures); weekly-strength-budget verdict PASS (selection PASS, movement
+plane PASS); evidence status COMPLETE_52_WEEK_TECHNICAL_AUDIT_WITH_FINDINGS
+with **0 findings**, both athletes 52/52 weeks, 364/364 distinct dates,
+52/52 cold restarts; both PDFs built (`LFA_FINAL_FULL_YEAR_{MALE,FEMALE}_d18ccf85.pdf`)
+and every page check true, no suspect pages. The audited athletes are 4-day
+athletes; no full-body day is in this audit, so R-351 is witnessed by
+`test:three-day-main-seat` and the compiler-year archetypes, not here.
+
+**`compiler-year` rerun on the final code (`d18ccf85`).** 6 of 8 archetypes
+reach 52/52 (male-3-experienced-gym, female-4, male-5, female-5-home, male-6,
+female-6). Still failing: male-2-novice-bodyweight (the push refusal above)
+and female-3-novice-home — Pre-season weeks 10–12 count 2 of 3 main-strength
+days (Wed + Fri; the Monday carries no main lift in those weeks — week 1's
+Monday does), then week 23 (In-season 8) fails `facts_history_unchanged` /
+`facts_lifecycle_complete` because a fixture-replan overlay adds a
+Long-Lever Copenhagen row to the Monday. Neither is diagnosed to a rule yet.
