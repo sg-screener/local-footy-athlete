@@ -1132,6 +1132,30 @@ export function selectActiveProgramModifiers(
     }
   }
 
+  // R-275 / R-350 (Sam, 2026-09-02, "3b"): two tired dates in a row derive ONE
+  // constraint (`source-fact:fatigue-sequence:<second date>`) that no single
+  // fact carries, so the per-fact projection above never shows it. The athlete
+  // was told once, at the tap; the board now carries the same signed sentence
+  // from the second date through Sunday, clearable through its two reports.
+  const fatigueReports = (snapshot.temporarySourceFacts ?? []).filter((fact) =>
+    'factKind' in fact && fact.factKind === 'fatigue'
+      && (fact.status === 'active' || fact.status === 'expired'));
+  if (fatigueReports.length > 1) {
+    for (const constraint of composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: fatigueReports,
+    }).activeConstraints) {
+      if (typeof constraint.id !== 'string'
+        || !constraint.id.startsWith('source-fact:fatigue-sequence:')) continue;
+      if (isExpiredActiveConstraint(constraint, todayISO)) continue;
+      if ('startDate' in constraint && typeof constraint.startDate === 'string'
+        && todayISO < constraint.startDate.slice(0, 10)) continue;
+      const modifier = statusModifier(constraint as never, 'active_constraint');
+      if (modifier) {
+        addUnique(out, seen, { ...modifier, body: signedCopy('readiness.fatigue.sequence') });
+      }
+    }
+  }
+
   const todaySignal = snapshot.readinessSignalsByDate?.[todayISO];
   for (const constraint of buildReadinessActiveConstraints(todaySignal)) {
     addUnique(

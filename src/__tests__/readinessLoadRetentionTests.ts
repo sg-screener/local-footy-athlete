@@ -16,6 +16,11 @@ import { executeProgramControlActionDurably } from '../utils/programControlActio
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { visibleSignature } from './compilerYear/invariants';
 import { project } from '../rules/projectVisibleWeek';
+import { selectActiveProgramModifiers } from '../utils/activeProgramModifiers';
+import { useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { decisionLedgerEntries } from '../store/decisionLedgerStore';
 
 let passed = 0;
 let failed = 0;
@@ -78,6 +83,28 @@ async function main() {
           JSON.stringify(otherDays.filter(pair => pair.row.prescribedSets !== pair.old.prescribedSets)
             .map(pair => ({ date: pair.date, lift: pair.row.exercise.name, before: pair.old.prescribedSets, after: pair.row.prescribedSets }))));
       } else if (kind === 'tired_pair') {
+        // R-349: the deload keeps the athlete's sessions; R-350: the board says why.
+        const sessionsBefore = before.filter(day => (day.workout?.exercises ?? [])
+          .some(row => row.section18Evidence?.role === 'main_strength')).length;
+        const sessionsAfter = after.filter(day => (day.workout?.exercises ?? [])
+          .some(row => row.section18Evidence?.role === 'main_strength')).length;
+        ok(`${label}: the deload keeps every strength session (${sessionsBefore} before, ${sessionsAfter} after)`,
+          sessionsBefore >= 3 && sessionsAfter === sessionsBefore);
+        const boardOn = (onDate: string) => quiet(() => selectActiveProgramModifiers({
+          activeConstraints: normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,
+          temporarySourceFacts: normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts,
+          decisionEntries: decisionLedgerEntries(),
+          reversibleAdjustments: useProgramStore.getState().reversibleAdjustmentLedger.adjustments,
+          sessionConstraints: useProgramStore.getState().userRemovalConstraints,
+          onboardingData: useProfileStore.getState().onboardingData,
+          todayISO: onDate, weekKind: undefined, compiledWeek: undefined, visibleWeekDays: after,
+        } as never)).map(modifier => `${modifier.title} :: ${String(modifier.body ?? '')}`);
+        const saysStreak = (rows: string[]) => rows.some(row => /two tired days in a row/i.test(row));
+        ok(`${label}: the board carries "two tired days in a row" from the second date through the week`,
+          saysStreak(boardOn(nextDay)) && saysStreak(boardOn('2026-07-16')),
+          JSON.stringify({ second: boardOn(nextDay), thursday: boardOn('2026-07-16') }));
+        ok(`${label}: the board does not carry it on the first tired date`,
+          !saysStreak(boardOn(date)), JSON.stringify(boardOn(date)));
         const fromSecond = retained.filter(pair => pair.date >= nextDay);
         ok(`${label}: from the second tired date at least two loaded lifts carry fewer sets (R-275 deload)`,
           new Set(fromSecond.map(pair => pair.row.exercise.name)).size >= 2
