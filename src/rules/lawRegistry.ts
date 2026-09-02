@@ -746,6 +746,39 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-hinge-day-three-then-other-things',
+    law: 'R-348: after its main hinge lift a Lower Hinge day carries at most one hamstring-bucket row (an isolation whose only primary muscle is the hamstrings) and one back-extension-bucket row (posterior support training hamstrings with glutes, low back or calves); every later seat drops a spent bucket; Hamstring Curl and Nordic Lower never share a session; glute-only, calf, groin, hip and trunk work are outside both buckets.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-348',
+    guard: {
+      state: 'guarded',
+      by: 'test:automatic-weekly-selection',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: 21 of 22 in-season hinge days carried RDLs, Hamstring Curl, Back Extension, Nordic Lower. THE CHANGE: hingeSupportBucket (typed from primary muscles and classification) and withoutSpentHingeBuckets applied before the seat preferences in composeWeek. Cells: the bucket cell and the 50-world cap cell (non-vacuity: at least one day carrying one of each). MUTATION: disabling the cap reds the 50-world cell (36 days over). AFTER: selection 24/24; both regenerated years 47 hinge days, 0 over the cap. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
+    id: 'LAW-readiness-deload-keeps-sessions',
+    law: 'R-349: a readiness deload keeps the sessions the athlete already has and halves the sets; the weekly compiler sets deloadKeepsSessions whenever the readiness directive is deloaded, and under it the low-readiness veto is not applied to the fourth-session selector; conditioning\'s reduced-week rules still read lowReadiness.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-349',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: two tired days turned week 45\'s Lower Hinge into Mobility (three-session layout under the Decision 14 veto). THE CHANGE: SchedulerReadiness.deloadKeepsSessions, set by canonicalWeeklyCompiler, read by the three fourth-session literals in weeklyScheduler. Cells: the R-349 cell and its veto control here; the tired-pair session-count cell in test:readiness-load-retention. MUTATION: ignoring the flag reds the R-349 cell. AFTER: scheduler 140/140, readiness 58/58; regenerated week 45 keeps four sessions at half sets. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
+    id: 'LAW-tired-streak-row-on-the-board',
+    law: 'R-350: the week board derives the fatigue-sequence constraint from the dated tired reports and shows a row from the second date through Sunday whose body is the signed sentence readiness.fatigue.sequence, clearable through its reports; it never shows on the first tired date.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-350',
+    guard: {
+      state: 'guarded',
+      by: 'test:readiness-load-retention',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: after two tired days the board showed only the dated "Not 100% today" rows; the streak sentence existed only as the tap acknowledgment. THE CHANGE: selectActiveProgramModifiers derives the sequence constraint from all fatigue reports and projects it with the signed body. Cells: the two tired-pair board cells. MUTATION: removing the block reds both. AFTER: readiness 58/58, modifier-effect-phrases 4/4. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

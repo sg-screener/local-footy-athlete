@@ -8781,3 +8781,62 @@ Press 4, Step Ups 3, Lateral Lunge 3, Walking Lunges 2, Calf Raises 1 — male),
 0 posterior. Guard: `LAW-squat-day-loaded-seat-is-knee-side` through chained
 `test:automatic-weekly-selection` (50-world cell) and `test:slot-coverage`
 (mapping cells). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-348** · A hinge day is the main hinge, one hamstring exercise and one
+back-extension type, then other things, 2026-09-02.
+
+Owner: hingecod. Sam, shown week 27's hinge day (RDLs, Hamstring Curl, Back
+Extension, Nordic Lower, Crab Walks): *"rdl or sl rdl, ham curl or nordic,
+back extension or bosch — so 3 exercises is plenty for hinge day — then it
+can be other things like glute hip groin tib calf core etc after that"* and
+*"do not put ham curl and nordic in the same session"*. Cause: three hinge-day
+preferences (R-233's hamstring pair on the single-leg-hip seat, R-347's
+posterior-first loaded seat, R-342's loaded-first robustness bench with
+R-336's posterior-first order) each said "hamstrings first" and nothing
+counted; 21 of 22 in-season hinge days carried four hamstring-type rows.
+
+Now two typed support buckets, read from the catalogue's primary muscles and
+classification, never a name list: `hamstring` (an isolation whose only
+primary muscle is the hamstrings — Hamstring Curl, Nordic Lower, Swiss Ball
+Hamstring Curl) and `back_extension` (posterior support training hamstrings
+with glutes, low back or calves — Back Extension, SL 45° Back Extension and
+its Hold, Bosch Hold). The main hinge lifts (compounds), glute-only work,
+calves, groin, hips and trunk are outside both. After the main lift a hinge
+day carries at most one row of each bucket; every later seat drops a spent
+bucket. Measured after, both athletes: 47 hinge days, 0 over the cap, 42–43
+carrying exactly one of each (in-season: RDLs, Hamstring Curl, Back Extension,
+Copenhagen, Crab Walks). Guard: `LAW-hinge-day-three-then-other-things`
+through chained `test:automatic-weekly-selection` (bucket cell + 50-world
+cell). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-349** · A readiness deload keeps the athlete's sessions and halves the
+sets, 2026-09-02.
+
+Owner: hingecod. Sam chose "2b" on the report: two tired days in a row were
+turning Wednesday's hinge session into Mobility because the deload flagged the
+week as low readiness and Decision 14 (WC-141, *"low readiness never adds
+work"*) vetoed the fourth in-season session on the rebuild. Ruling: that veto
+is about EARNING a fourth session; a deloaded week that already has four is
+maintaining, not adding. The scheduler's readiness gains
+`deloadKeepsSessions`, set by the weekly compiler whenever the readiness
+directive is `deloaded`, and the fourth-session selector is not vetoed under
+it; conditioning's reduced-week rules still read `lowReadiness`. Measured:
+week 45 keeps Lower Squat, Upper Pull, Lower Hinge and Upper Push with every
+retained lift at half sets and the same weight. Guard:
+`LAW-readiness-deload-keeps-sessions` through chained `test:weekly-scheduler`
+(R-349 cell with its veto control) and the tired-pair cell in
+`test:readiness-load-retention`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-350** · The week board carries "two tired days in a row" from the second
+date through Sunday, 2026-09-02.
+
+Owner: hingecod. Sam chose "3b". R-275 promised the athlete is told; the
+sentence showed only once, as the tap-time acknowledgment, because the board
+projection drops app-derived constraints and shows one row per dated fact,
+and the streak is a derived constraint no single fact carries. Now the board
+derives the fatigue-sequence constraint from the dated reports and shows a
+row from the second date through Sunday whose body is the signed sentence
+(`readiness.fatigue.sequence`), clearable through its two reports; it never
+shows on the first tired date. Guard: `LAW-tired-streak-row-on-the-board`
+through chained `test:readiness-load-retention` (tired-pair cells). Receipt:
+`docs/STATUS_HINGECOD.md`.

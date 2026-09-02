@@ -595,3 +595,31 @@ not carry the "two tired days in a row" sentence. Outputs:
 `output/final-full-year-audit-773765a4/` in the main checkout and the audit
 checkout; report `FINAL_FULL_YEAR_AUDIT.md` with the measured deltas against
 3b902a70.
+
+## Addendum 2026-09-02 — reviewer points, resolved by ruling (R-348, R-349, R-350)
+
+**R-348 hinge day shape.** `hingeSupportBucket` (typed: hamstrings-only
+isolation → `hamstring`; hamstrings-with-glutes/low-back/calves → 
+`back_extension`; compounds, glute-only, calf, groin, hip, trunk → none) and
+`withoutSpentHingeBuckets` in `composeWeek`, applied before the seat
+preferences at both candidate sites. Before: 21/22 in-season hinge days were
+RDLs, Hamstring Curl, Back Extension, Nordic Lower, Crab Walks. After: RDLs,
+Hamstring Curl, Back Extension, Copenhagen, Crab Walks; 47 hinge days per
+athlete, 0 over the cap, 42–43 with one of each bucket. Mutation: cap off →
+36 days over → cell red.
+
+**R-349 readiness deload keeps sessions.** `SchedulerReadiness.deloadKeepsSessions`
+from `canonicalWeeklyCompiler` (readiness.deloaded), read by the three
+fourth-session literals in `weeklyScheduler`; `lowReadiness` itself unchanged
+for conditioning. Week 45 now keeps Lower Squat / Upper Pull / Lower Hinge /
+Upper Push at half sets, weights held. Scheduler 140/140 (R-349 cell + veto
+control); mutation → 139/140.
+
+**R-350 streak row.** `selectActiveProgramModifiers` derives the
+`source-fact:fatigue-sequence` constraint from all fatigue reports (active or
+expired) and projects it with the signed body from the second date through
+Sunday. Readiness suite 58/58 (two board cells); mutation → 56/58.
+
+Both regenerated years: focused 24/24, budget PASS/PASS/PASS, 0 repeats,
+52/52 restarts. modifier-lifecycle's five FAILURE lines are identical at
+868c4b12 (Section 18 onboarding-world shortfall, inherited).
