@@ -23,6 +23,8 @@ export function requiredRunningSpeedQualities(args: {
   readonly offseasonBlock?: 'early_optional' | 'transition' | 'normal_build' | null;
   readonly teamTrainingDays?: readonly number[];
   readonly sprintExposure?: SprintExposure;
+  /** 1-based week inside the phase; lets the first Pre-season block widen the ask. */
+  readonly phaseWeekNumber?: number | null;
 }): readonly RequestedSpeedQuality[] {
   const reportedMissing = reportedMissingSpeedQualities(args.sprintExposure);
   if (reportedMissing !== null) return reportedMissing;
@@ -31,9 +33,16 @@ export function requiredRunningSpeedQualities(args: {
       ? ['acceleration', 'top_end_speed']
       : ['acceleration'];
   }
-  return (args.teamTrainingDays?.length ?? 0) > 0
-    ? ['top_end_speed']
-    : ['acceleration', 'top_end_speed'];
+  if ((args.teamTrainingDays?.length ?? 0) > 0) {
+    // R-341 (Sam, 2026-09-02): club nights still cover accelerations (R-079),
+    // but the FIRST Pre-season block also asks for one authored acceleration
+    // exposure per fortnight (hill / 30 m) so the year does not open on flys
+    // alone. From the second block the ask is top-end only.
+    return args.phase === 'Pre-season' && (args.phaseWeekNumber ?? 0) >= 1 && (args.phaseWeekNumber ?? 0) <= 4
+      ? ['top_end_speed', 'acceleration']
+      : ['top_end_speed'];
+  }
+  return ['acceleration', 'top_end_speed'];
 }
 
 /** P15: a reported missing quality is not satisfied by a generic club-night count.

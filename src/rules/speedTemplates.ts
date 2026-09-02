@@ -73,6 +73,25 @@ export function runningSpeedTemplatePreference(args: {
     }
     return phaseWeek % 2 === 1 ? 'Fly 20 (20+20)' : 'Fly 30 (30+30)';
   }
+  // R-341 (Sam, 2026-09-02: *"there should be more variety that the athlete
+  // can be given"*). The Pre-season shelves rotate instead of two templates
+  // taking turns: top-end walks Fly 20 -> Fly 30 -> Progressive Sprint
+  // Exposure; acceleration walks 20 m -> Hill -> 30 m. When both qualities are
+  // asked for (a club athlete's first Pre-season block) the odd weeks are
+  // top-end and the even weeks an authored acceleration. In-season keeps the
+  // small Fly 20 / Fly 30 alternation; Off-season keeps R-311's progression.
+  const topEndShelf = ['Fly 20 (20+20)', 'Fly 30 (30+30)', 'Progressive Sprint Exposure'] as const;
+  const accelerationShelf = ['20 m Acceleration Reps', 'Hill Acceleration', '30 m Acceleration Reps'] as const;
+  const rotate = (shelf: readonly string[], step: number): string => shelf[Math.max(0, step) % shelf.length];
+  if (args.phase === 'Pre-season') {
+    if (args.requestedQualities.length === 1) {
+      return args.requestedQualities[0] === 'acceleration'
+        ? rotate(accelerationShelf, phaseWeek - 1)
+        : rotate(topEndShelf, phaseWeek - 1);
+    }
+    const pair = Math.floor((phaseWeek - 1) / 2);
+    return phaseWeek % 2 === 1 ? rotate(topEndShelf, pair) : rotate(accelerationShelf, pair + 1);
+  }
   if (args.requestedQualities.length === 1) {
     return args.requestedQualities[0] === 'acceleration'
       ? '20 m Acceleration Reps'

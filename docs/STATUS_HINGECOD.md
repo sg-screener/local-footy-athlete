@@ -303,3 +303,14 @@ repeat-sprint sessions (weeks 16–18, 24–26 as runs on upper days; bye weeks
 31, 37, 43 on the bike), 52/52 restarts. Suites: scheduler 137/137, fresh
 Speed 14/14, COD 19/19, modality-by-day 5/5, equality 176/176, generated-week
 30/30, final composition 6/6, deload 50/50; inherited reds unchanged.
+
+## Addendum 2026-09-02 — R-341: speed variety (unit 3 of six)
+
+Cause: with club nights the ask was top-end only and the preference
+alternated Fly 20 / Fly 30 by week. Fix: Pre-season shelves rotate (top-end:
+Fly 20, Fly 30, Progressive; acceleration: 20 m, Hill, 30 m) and the first
+Pre-season club block asks for an authored acceleration on even weeks.
+Guard: new chained `test:speed-template-variety` 5/5, red 3/5 under the old
+alternation (mutation restored). Regenerated 52-week male year: Fly 20 ×6,
+Fly 30 ×5, Progressive ×3, 20 m ×3, Hill ×2 (was Fly 20 ×11, three
+accelerations); scheduler 137/137, fresh Speed 14/14, restarts 52/52.

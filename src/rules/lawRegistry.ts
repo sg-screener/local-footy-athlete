@@ -669,6 +669,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-speed-shelves-rotate',
+    law: 'R-341: the Pre-season top-end shelf rotates Fly 20, Fly 30 and Progressive Sprint Exposure week by week and the acceleration shelf rotates 20 m, Hill and 30 m; a club athlete\'s first Pre-season block (phase weeks 1-4) asks for top-end and acceleration together and takes an authored acceleration on the even weeks; later blocks ask for top-end only; R-311\'s Off-season progression and the in-season Fly 20 / Fly 30 alternation are unchanged; every preferred name is a run-only Speed template.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-341',
+    guard: {
+      state: 'guarded',
+      by: 'test:speed-template-variety',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the audited year delivered Fly 20 eleven of nineteen speed sessions and three accelerations all year because the club ask was top-end only and the preference alternated two names. THE CHANGE: the speed-quality gate takes the phase week and widens the first Pre-season club block; the preference rotates the authored shelves. Five new cells (ask by block, shelf rotation without consecutive repeats, first-block alternation with hill and 30 m, every name run-only, Off-season and In-season unchanged). MUTATION: disabling the Pre-season rotation reds three cells. AFTER: variety 5/5, scheduler 137/137, fresh Speed 14/14; regenerated 52-week male year shows five templates in rotation, 52/52 restarts. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

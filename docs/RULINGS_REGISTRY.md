@@ -8553,3 +8553,27 @@ Guard: `LAW-repeat-sprint-is-a-hard-conditioning-demand` through chained
 `test:weekly-scheduler` (late/early Pre-season rotation, bye-week dose,
 game-week refusal, Speed pool exclusion) and `test:conditioning-templates`
 (category/quality truth). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-341** · Speed variety: the Pre-season shelves rotate and a club athlete's
+first Pre-season block asks for an authored acceleration too, 2026-09-02.
+
+Owner: hingecod. Sam: *"figure out why this ... speed variety is narrow ...
+there should be more variety that the athlete can be given"*. Cause: with
+club nights the app asked only for top-end speed (R-079: footy supplies
+accelerations), and the template preference simply alternated Fly 20 and Fly
+30 by week; accelerations appeared only in the no-club Off-season weeks. The
+year delivered Fly 20 eleven times and one hill or 30 m acceleration never.
+
+Now the Pre-season top-end shelf rotates Fly 20 -> Fly 30 -> Progressive
+Sprint Exposure week by week; the acceleration shelf rotates 20 m -> Hill ->
+30 m; and a club athlete's FIRST Pre-season block (phase weeks 1–4) asks for
+top-end and acceleration together, taking an authored acceleration on the
+even weeks. From the second block the ask is top-end only. R-311's Off-season
+progression and the small in-season Fly 20 / Fly 30 alternation are
+unchanged; every preferred name is a real run-only Speed template. Measured
+on a regenerated 52-week male year: five speed templates in rotation (Fly 20
+×6, Fly 30 ×5, Progressive ×3, 20 m ×3, Hill ×2) where the audited year had
+Fly 20 ×11 and three accelerations.
+
+Guard: `LAW-speed-shelves-rotate` through chained
+`test:speed-template-variety`. Receipt: `docs/STATUS_HINGECOD.md`.

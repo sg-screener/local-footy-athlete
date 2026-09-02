@@ -974,6 +974,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     offseasonBlock: inputs.offseasonBlock,
     teamTrainingDays: inputs.clubNights,
     sprintExposure: inputs.sprintExposure,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const overlay = inputs.appSprintPermitted === false
     || (inputs.clubNights.length > 0
@@ -1906,6 +1907,7 @@ function appSprintNeedPermitted(inputs: WeeklySchedulerInputs): boolean {
     offseasonBlock: inputs.offseasonBlock,
     teamTrainingDays: inputs.clubNights,
     sprintExposure: inputs.sprintExposure,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   if (missing.length === 0 || inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
   // P15 does not relax the existing nights ceiling, even for a missing quality.
