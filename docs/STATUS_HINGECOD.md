@@ -1069,3 +1069,13 @@ athletes × 52).** The one failure key left is the writer-ownership census
 prerequisite (151/1163 unresolved candidate owners; this branch's new
 functions are among them), the same job the release gate's census unit
 needs.
+
+**Correction the same day.** The final-checkpoint year audit at `cee3c49e`
+FAILED its repeat checks: week 22, both athletes, Barbell Row ×2 and
+Pull-Ups ×2 (`repeatedExactExerciseBreaches` 4, `repeatedMainFamilyBreaches`
+4). Cause: R-356 fix 3's rehearsal-scoped item-1 ledger let a fixture
+rebuild repeat the KEPT day's lifts on the rebuilt day. That variant was not
+the fix for the lone-day pull main (the coverage order was; the M5 world
+stays green without it) and is reverted; the ledger seeds from every accepted
+day again. `test:week-checker-allowances` 32/32 after the revert. The audit
+is rerun at the corrected tip below.
