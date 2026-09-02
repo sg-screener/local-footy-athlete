@@ -169,6 +169,23 @@ async function reportKnee(date: string) {
     check('5: the two-day novice\'s emptied conditioning day is not an empty card', after.emptyConditioning.length === 0, after.emptyConditioning.join(','));
   }
 
+  // ── 1, the main-strength half: a full-gym three-day player's knee week ──
+  {
+    const weekStart = await walkTo('male-3-experienced-gym', 'Pre-season', 10);
+    const before = judge(weekStart);
+    check('CONTROL: the full-gym week has three main-strength days before the knee',
+      before.days.filter((day) => mains(day).length > 0).length >= 3 && before.blocking.length === 0, before.blocking.join(' | '));
+    const report = await reportKnee(weekStart);
+    check('CONTROL: the full-gym player\'s knee report was accepted', report.ok === true, String(report.message));
+    const after = judge(weekStart);
+    check('CONTROL: the knee took a main-strength day away (the lower day carries no main lift)',
+      after.days.filter((day) => mains(day).length > 0).length < 3);
+    check('1: the withdrawn main-strength day is recorded as an injury allowance',
+      after.reductions.some((r) => r.startsWith('main_strength_frequency->') && r.includes('injury_restriction')), after.reductions.join(' | '));
+    check('1: no main-strength shortfall is flagged on the injured week',
+      !after.blocking.some((f) => f.includes(':main_strength')), after.blocking.join(' | '));
+  }
+
   // ── 2: a practice match on a strength day of a five-day home week ──
   {
     const weekStart = await walkTo('female-5-home', 'Pre-season', 6);

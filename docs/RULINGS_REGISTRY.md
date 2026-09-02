@@ -8947,3 +8947,14 @@ nights plus games), not distinct days; a game moved onto a club night is two.
 shell — at the injury fold and at read. Guard:
 `LAW-week-checker-judges-what-the-app-could-build` through chained
 `test:week-checker-allowances`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-356 addendum, same day.** (1) covers MAIN STRENGTH as well: a strength
+day whose every main lift the injury paused (a knee on a lower day) is
+recorded as an `injury_restriction` reduction of `main_strength_frequency`
+by the same withdrawal count — the pre-change tree carried
+`required_minimum_shortfall:main_strength 3 vs 2` on every full-gym knee
+week; the earlier green came from R-355's repeat rung duplicating a lift
+there. R-355's doubling is therefore gated to its own case: it fires only
+when the kit offers no unused legal compound at all; a spent weekly seat
+budget is not limited kit (the 52-week audit caught Barbell Row and
+Pull-Ups doubled in week 22 before the gate).

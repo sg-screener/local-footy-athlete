@@ -104,17 +104,46 @@ export function recordInjuryConditioningWithdrawal(
   contract: WeeklyExposureContractV2,
   withdrawnCoreSessions: number,
 ): WeeklyExposureContractV2 {
-  if (withdrawnCoreSessions <= 0) return contract;
+  return recordInjuryWithdrawals(contract, { coreConditioningSessions: withdrawnCoreSessions, mainStrengthDays: 0 });
+}
+
+/**
+ * R-356 (1), both halves. An injury also withdraws MAIN-STRENGTH days: a
+ * lower day whose squat and hinge the knee paused becomes core and aerobic
+ * work with no main lift, and the healthy contract still expects three
+ * main-strength days. Measured 2026-09-02 on the compiler-year archetypes
+ * (every full-gym athlete's knee weeks: `required_minimum_shortfall:main_strength
+ * 3 vs 2`), identical on the pre-change tree — the earlier green was the
+ * repeat rung doubling a lift there. The withdrawal is the allowance.
+ */
+export function recordInjuryWithdrawals(
+  contract: WeeklyExposureContractV2,
+  withdrawn: { coreConditioningSessions: number; mainStrengthDays: number },
+): WeeklyExposureContractV2 {
+  if (withdrawn.coreConditioningSessions <= 0 && withdrawn.mainStrengthDays <= 0) return contract;
   const next = cloneContract(contract);
-  const core = next.conditioning.core;
-  const healthyTarget = core.plannerSelectedTarget ?? core.defaultTarget ?? core.requiredMinimum;
-  addReduction(next, {
-    metric: 'conditioning_core_frequency',
-    reducedTarget: Math.max(0, healthyTarget - withdrawnCoreSessions),
-    reason: 'injury_restriction',
-    detail: `An active injury withdrew ${withdrawnCoreSessions} core-conditioning session(s) and no off-feet `
-      + 'replacement was available on this kit; the week is judged without them.',
-  });
+  if (withdrawn.coreConditioningSessions > 0) {
+    const core = next.conditioning.core;
+    const healthyTarget = core.plannerSelectedTarget ?? core.defaultTarget ?? core.requiredMinimum;
+    addReduction(next, {
+      metric: 'conditioning_core_frequency',
+      reducedTarget: Math.max(0, healthyTarget - withdrawn.coreConditioningSessions),
+      reason: 'injury_restriction',
+      detail: `An active injury withdrew ${withdrawn.coreConditioningSessions} core-conditioning session(s) and no off-feet `
+        + 'replacement was available on this kit; the week is judged without them.',
+    });
+  }
+  if (withdrawn.mainStrengthDays > 0) {
+    const exposure = next.mainStrength.exposure;
+    const healthyTarget = Math.max(exposure.requiredMinimum, exposure.plannerSelectedTarget ?? exposure.defaultTarget ?? exposure.requiredMinimum);
+    addReduction(next, {
+      metric: 'main_strength_frequency',
+      reducedTarget: Math.max(0, healthyTarget - withdrawn.mainStrengthDays),
+      reason: 'injury_restriction',
+      detail: `An active injury paused every main lift on ${withdrawn.mainStrengthDays} strength day(s); `
+        + 'the week is judged without those main-strength exposures.',
+    });
+  }
   applyReductionProjections(next);
   return next;
 }

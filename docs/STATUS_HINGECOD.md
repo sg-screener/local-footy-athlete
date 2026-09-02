@@ -1091,3 +1091,18 @@ at all (`compounds.length === 0`), which is what "limited equipment" means;
 a spent seat budget is not limited kit. `test:injury-limited-kit` 16/16 and
 `test:week-checker-allowances` 32/32 after the gate. The audit is rerun once
 more below.
+
+**Third correction, and the honest picture.** With doubling gated, the
+year runner fell to 363/416: `required_minimum_shortfall:main_strength 3 vs
+2` on every full-gym knee week. Probed the same knee week on the pre-change
+tree (`4712a17a`) and the tip: IDENTICAL rows and the identical finding — an
+injured lower day carries no main lift, and the 416/416 earlier in the day
+was the repeat rung duplicating a lift onto it. So the allowance is the
+answer, as for conditioning: `recordInjuryWithdrawals` now records
+`main_strength_frequency` (injury_restriction) for each strength day whose
+every main lift the injury paused, counted as the athlete sees the week. New
+cell on the full-gym three-day player's knee week (allowance recorded, no
+shortfall, control: the lower day really lost its mains). Suite 38/38.
+`test:compile` PASSED. Year audit at `4e2ebbf2`: acceptance PASS, focused
+24/24, budget PASS (selection PASS, plane PASS). Reruns of the year runner
+and the audit at this tip are recorded below.

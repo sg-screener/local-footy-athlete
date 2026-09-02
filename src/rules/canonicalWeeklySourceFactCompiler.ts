@@ -4,7 +4,7 @@
  */
 import { applyConstraintsToSession, applyConstraintsToTypedComponents } from '../utils/exposureEngine';
 import { compileActiveExposureConstraints } from './canonicalWeeklyConstraintCompiler';
-import { recordInjuryConditioningWithdrawal } from './section18SafetyPolicy';
+import { recordInjuryWithdrawals } from './section18SafetyPolicy';
 import type { OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
 import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
 import { compileCanonicalProgram } from './canonicalProgramCompiler';
@@ -279,6 +279,7 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
     // day carries none) and record them on the week's contract as the
     // authorised reduction they are. See `recordInjuryConditioningWithdrawal`.
     let withdrawnCoreSessions = 0;
+    let withdrawnMainDays = 0;
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
       const next = injuryWeek.workoutsByDate[dateISO];
@@ -306,10 +307,14 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         }
       })();
       if (coreCredit(before) && !coreCredit(asRead)) withdrawnCoreSessions += 1;
+      const mainDay = (candidate: typeof before): boolean =>
+        (candidate?.exercises ?? []).some((row) => row.section18Evidence?.role === 'main_strength');
+      if (mainDay(before) && !mainDay(asRead)) withdrawnMainDays += 1;
     }
-    if (withdrawnCoreSessions > 0 && overlays[weekStart]?.exposureContractV2) {
-      overlays[weekStart] = { ...overlays[weekStart], exposureContractV2: recordInjuryConditioningWithdrawal(
-        overlays[weekStart].exposureContractV2!, withdrawnCoreSessions) };
+    if ((withdrawnCoreSessions > 0 || withdrawnMainDays > 0) && overlays[weekStart]?.exposureContractV2) {
+      overlays[weekStart] = { ...overlays[weekStart], exposureContractV2: recordInjuryWithdrawals(
+        overlays[weekStart].exposureContractV2!,
+        { coreConditioningSessions: withdrawnCoreSessions, mainStrengthDays: withdrawnMainDays }) };
     }
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
