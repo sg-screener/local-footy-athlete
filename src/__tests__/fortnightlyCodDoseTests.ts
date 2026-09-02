@@ -133,7 +133,7 @@ ok('the three sections preserve Sam\'s exact work, recovery, amount, effort and 
   codRows.slice(1).map(row => row.notes).join('\n---\n') === [
     'Work: 20 m build-up + 3 m controlled stop\nRecovery: Start every 30 s\nReps: 10 reps\nIntensity: 4/10\nLower your body and stop under control.',
     'Work: 10 m approach + cut + 10 m exit\nRecovery: Start every 60 s\nReps: 5 reps per side\nIntensity: 10/10\nKeep your plant foot underneath you.',
-    'Work: 30 m out + 30 m back\nRecovery: Start every 60 s\nReps: 15 reps\nIntensity: 7/10\nPlant cleanly and accelerate out of the turn.',
+    'Work: 30 m out + 30 m back\nRecovery: Start every 60 s\nReps: 10 reps\nIntensity: 7/10\nPlant cleanly and accelerate out of the turn.',
   ].join('\n---\n'), codRows.slice(1).map(row => row.notes));
 ok('the combined COD session is an explicit on-feet exception on lower-body days',
   combinedConditioningMustBeOffFeet({

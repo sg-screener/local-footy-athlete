@@ -30,7 +30,7 @@ export const APPROVED_CONDITIONING_ATHLETE_COPY: readonly ApprovedConditioningAt
   { name: '10 s Max Sprint Repeats', title: '10 s Max Sprint Repeats', work: '10 s maximal', recovery: '50 s recovery', count: '6 reps', intensity: 'Maximal', cue: 'Reset before each effort and attack every rep.' },
   { name: '10 s Repeat Efforts', title: '10 s Repeat Efforts', work: '10 s hard', recovery: '30 s easy', count: '8 reps', intensity: 'Very hard', cue: 'Keep the same output from the first rep to the last.' },
 
-  { name: 'Up-Back Shuttle', title: 'Up-Back Shuttle', work: '30 m out + 30 m back', recovery: 'Start every 60 s', count: '15 reps', intensity: 'Hard but controlled', cue: 'Plant cleanly and accelerate out of the turn.' },
+  { name: 'Up-Back Shuttle', title: 'Up-Back Shuttle', work: '30 m out + 30 m back', recovery: 'Start every 60 s', count: '10 reps', intensity: 'Hard but controlled', cue: 'Plant cleanly and accelerate out of the turn.' },
   { name: 'Low-Intensity Deceleration Drills', title: 'Low-Intensity Deceleration Drills', work: '15–20 m approach + controlled stop', recovery: 'Start every 45 s', count: '3 reps', intensity: 'Easy', cue: 'Lower your body and stop under control.' },
   { name: 'Deceleration and Landing Work', title: 'Deceleration and Landing Work', work: 'One jump-and-stick or run-and-stick', recovery: 'Start every 60 s', count: '4 reps', intensity: 'Controlled', cue: 'Land quietly and hold your position.' },
   { name: '45-Degree Cut Reps', title: '45-Degree Cut Reps', work: '10 m approach + cut + 10 m exit', recovery: 'Start every 90 s', count: '5 reps', intensity: 'Maximal intent', cue: 'Keep your plant foot underneath you.' },

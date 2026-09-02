@@ -8285,7 +8285,8 @@ three sections in this order:
    start every 30 seconds; 10 reps; effort 4/10.
 2. 45-Degree Cut Reps — 10 m approach + cut + 10 m exit; start every 60
    seconds; 5 reps per side; effort 10/10.
-3. Up-Back Shuttle — 30 m out + 30 m back; start every 60 seconds; 15 reps;
+3. Up-Back Shuttle — 30 m out + 30 m back; start every 60 seconds; 10 reps
+   (trimmed from 15 by Sam on 2026-09-02: *"the COD is slightly too large"*);
    effort 7/10.
 
 The supplied cues remain attached to their matching section. `Deceleration and

@@ -127,3 +127,13 @@ Mutations (file restored byte-identical after each, sha checked):
 - Weeks 35–52 of the journeys (In-season beyond week 34 was not regenerated).
 - Any reordering of Lower Squat support; that day is unchanged by ruling.
 - Athlete-added work is outside the rule and was not exercised on device.
+
+## Addendum 2026-09-02 — Up-Back Shuttle trimmed to 10 reps
+
+Sam: *"the COD is slightly too large … make the last thing 10 reps."* The
+third section of the combined Change of Direction session now prescribes 10
+reps (was 15) in the one authored template, the source-of-truth workbook tab
+`COD Session Sections`, the Programming Bible, the R-331 registry text, the
+fortnightly COD tape and the signed athlete-copy fixture. Equality
+170/170, fortnightly COD tape 19/19. No cadence, placement or section order
+changed.
