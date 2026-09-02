@@ -790,6 +790,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-pinned-drill-wins-the-last-seat',
+    law: 'R-352: on a football-robustness seat, once the day carries its four loaded rows (or the loaded minimum does not apply to the day), a legal pinned candidate is the bench and the block selector honours the pin; while the day is below four loaded rows, loaded work still comes first (R-342 unchanged).',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-352',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: four "compiler honors Reverse Nordic boundary" cells (1-2 years and 5+ years at G-4 and G-null) plus the mutation-fixture cell were red on the branch only (control 913/0): R-342 retyped one robustness seat as the loaded seat, the remaining robustness seat walked to the first uncovered category (glute/hip → Crab Walks) and the athlete\'s pinned Reverse Nordic Curl lost. THE CHANGE: preferMissingFootballCategory returns the legal pinned candidates once the day is not below the loaded minimum. 917/0 after; then a control cell per experience×G-day asserts four loaded rows stand before the pinned drill wherever it lands (929/0). Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

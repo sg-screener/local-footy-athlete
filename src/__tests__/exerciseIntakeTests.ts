@@ -31,6 +31,7 @@ import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { getCoachRevisionTemplateContext } from '../utils/coachRevisionTemplateContext';
+import { usefulStrengthIdentityCounts } from '../rules/minimumUsefulStrengthSession';
 import { composeWeek } from '../rules/composeWeek';
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
 import { compileCanonicalStrengthTemplate } from '../rules/canonicalWeeklyRowCompiler';
@@ -790,6 +791,23 @@ async function main() {
       names.includes('Reverse Nordic Curl') === (experienceLevel !== 'Complete beginner' && (daysToGame === null || daysToGame > 2)));
     check(`${experienceLevel}/G-${daysToGame}: compiler honors unilateral extension boundary`,
       names.includes('SL 45° Back Extension') === (experienceLevel !== 'Complete beginner' && (daysToGame === null || daysToGame > 1)));
+    // R-352 CONTROL: the pinned drill wins the LAST seat, never a loaded one —
+    // wherever Reverse Nordic Curl lands, four loaded rows already stand
+    // before it on that day (R-342 is not narrowed by the pin).
+    const pinnedAfterFourLoaded = lowerDays.every(lower => {
+      const built = quiet(() => compileCanonicalStrengthTemplate({ composition: {
+        ...context.strengthComposition!, profile: { ...profile, experienceLevel },
+        blockNumber: 2, blockStartISO: plusDays(date, 28),
+        pinnedIdentities: ['SL 45° Back Extension', 'Reverse Nordic Curl'].map(composedIdentityFor),
+      }, plannedDay: { planEntryId: lower.planEntryId!, isTeamDay: false, dayOfWeek: lower.dayOfWeek,
+        name: lower.name, workoutType: lower.workoutType, sessionTier: lower.sessionTier!,
+        strengthIntent: lower.strengthIntent, daysToGame } }));
+      const rows = built?.exercises.map(row => row.exercise.name) ?? [];
+      const at = rows.indexOf('Reverse Nordic Curl');
+      if (at === -1) return true;
+      return rows.slice(0, at).filter(name => usefulStrengthIdentityCounts(composedIdentityFor(name))).length >= 4;
+    });
+    check(`${experienceLevel}/G-${daysToGame}: a pinned drill never displaces one of the four loaded rows (R-352)`, pinnedAfterFourLoaded);
   }
   for (let block = 1; block <= 3; block++) for (const workout of program.microcycles[0].workouts.filter(w => !!w.strengthIntent)) {
     const built = quiet(() => compileCanonicalStrengthTemplate({ composition: {

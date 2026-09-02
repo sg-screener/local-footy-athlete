@@ -896,6 +896,23 @@ const LOWER_BODY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
 ]);
 
+/**
+ * R-351: a balance-shape full-body day keeps its A/B ladder and ADDS the weekly
+ * main seats the budget reserved for it that the shape lacks, placed before the
+ * robustness seats so they are composed as mains, not as afterthoughts. Seats
+ * already in the shape are not repeated; an empty list changes nothing.
+ */
+export function withOwnedSeats(
+  shape: readonly SessionSlot[],
+  owned: readonly SessionSlot[],
+): readonly SessionSlot[] {
+  const missing = owned.filter((slot) => !shape.includes(slot));
+  if (missing.length === 0) return shape;
+  const firstRobustness = shape.indexOf('football_robustness');
+  const at = firstRobustness === -1 ? shape.length : firstRobustness;
+  return [...shape.slice(0, at), ...missing, ...shape.slice(at)];
+}
+
 export function coverageGapsMakeAFullBodySession(
   gaps: readonly SessionSlot[],
 ): boolean {
@@ -1498,15 +1515,19 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // heading publishes a two-row "Full body" session — so the day keeps the
     // planner's ordinary ladder and the week refuses honestly instead. See
     // `coverageGapsMakeAFullBodySession`.
+    // R-351: the weekly main seats the budget reserved for THIS day. A
+    // coverage day leads with them; a balance-shape day appends the ones its
+    // A/B shape lacks, so an owned seat (and the athlete's tracked lift that
+    // sits in it) is delivered every week, not on alternate shapes only.
+    const seatsOwnedHere = WEEKLY_MAIN_STRENGTH_SLOTS.filter((slot) =>
+      weeklyStrengthBudget.reservedOwnerBySlot[slot] === planned.planEntryId);
     const plannedCoverageGaps = !fullBody
       && planned.strengthIntent.archetype === 'full_body'
       ? coverageSlotsForFullBodyDay({
         suppliedByOtherDays: suppliedByOtherDays(planned),
         takenByEarlierCoverageDays: takenByCoverageDays,
         pairCounts: weekPairCounts,
-        // R-351: the seats the budget reserved for this day lead it.
-        reservedForThisDay: WEEKLY_MAIN_STRENGTH_SLOTS.filter((slot) =>
-          weeklyStrengthBudget.reservedOwnerBySlot[slot] === planned.planEntryId),
+        reservedForThisDay: seatsOwnedHere,
       })
       : null;
     const isCoverageDay = plannedCoverageGaps !== null
@@ -1624,7 +1645,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       ? plannedCoverageGaps
       // R-130a: one switch, one pick — the female tables for female athletes,
       // the male objects untouched for everyone else.
-      : slotsForKind(kind, inputs.profile?.gender);
+      : withOwnedSeats(slotsForKind(kind, inputs.profile?.gender), isBalanceShape ? seatsOwnedHere : []);
     // P16: when permanent kit leaves only Leg Press as the suitable bilateral
     // squat, cover that pattern once and retain the other day's single-leg work.
     // Do not rename a unilateral lift, add sets, or rewrite an accepted seat.
@@ -1897,11 +1918,25 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           && usefulStrengthIdentityCounts(row.identity)).length;
         const loadedBench = allCandidates.filter((candidate) =>
           usefulStrengthIdentityCounts(candidate));
-        const candidates = minimumUsefulStrengthApplies(kind)
-          && loadedRowsSoFar < MINIMUM_USEFUL_STRENGTH_EXERCISES
-          && loadedBench.length > 0
+        const belowLoadedMinimum = minimumUsefulStrengthApplies(kind)
+          && loadedRowsSoFar < MINIMUM_USEFUL_STRENGTH_EXERCISES;
+        const candidates = belowLoadedMinimum && loadedBench.length > 0
           ? loadedBench
           : allCandidates;
+        // ── R-352: THE ATHLETE'S PINNED DRILL BEATS THE CATEGORY WALK ────
+        // Sam approved 2026-09-02 (pile 4 of the red-test report). Measured:
+        // R-342 turned a robustness seat into the loaded seat and the one
+        // remaining robustness seat asked for the first uncovered category, so
+        // a pinned Reverse Nordic Curl lost to Crab Walks. Once the day has
+        // its four loaded rows (or the minimum does not apply), a legal pinned
+        // candidate on this seat is the bench; the block selector then honours
+        // the pin. While the day is still below four, loaded work comes first
+        // and the pin waits — R-342 is not narrowed.
+        if (!belowLoadedMinimum) {
+          const pinned = candidates.filter((candidate) =>
+            inputs.pinnedIdentities.includes(candidate));
+          if (pinned.length > 0) return pinned;
+        }
         // Weekly lower-body frontal strength is a required coverage hole, not
         // an audit suggestion. When it is still missing, the groin/adductor
         // robustness seat is the first legal purpose-compatible place to fill

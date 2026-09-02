@@ -8861,3 +8861,18 @@ law); counting a no-big-lift session as strength (the reclassification move
 banned 2026-07-27); lower/upper/lower for 3-day athletes (contradicts R-234).
 Guard: `LAW-full-body-day-owns-one-big-lift` through chained
 `test:three-day-main-seat`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-352** · A pinned drill wins the last robustness seat once four loaded
+rows stand, 2026-09-02.
+
+Owner: hingecod. Sam approved pile 4 of the red-test report. R-342 turned one
+of the lower day's robustness seats into the loaded seat; the one robustness
+seat left asked for the first uncovered football category, so the athlete's
+pinned Reverse Nordic Curl (a bodyweight quad drill) lost to Crab Walks and
+the intake suite's boundary cells went red. Now, once the day is not below
+its four loaded rows, a legal pinned candidate is the seat's bench and the
+block selector honours the pin; below four, loaded work still comes first.
+Options rejected: rewriting the test (the pin is a promise to the athlete);
+a sixth seat (more volume). Guard: `LAW-pinned-drill-wins-the-last-seat`
+through chained `test:exercise-intake` (boundary cells + the new control
+cell). Receipt: `docs/STATUS_HINGECOD.md`.

@@ -158,6 +158,15 @@ function mainLiftDays(workouts: readonly Workout[]): string[] {
   check('week 3 full-body day exists and carries a vertical push or vertical pull main lift',
     !!fullBodyDay && fullBodyRows.length > 0 && mainLiftDays([fullBodyDay]).length === 1,
     fullBodyRows.map((r) => r.exercise?.name).join(', '));
+  // ── 4. BOTH owned seats, EVERY week: the full-body day is not on alternate shapes ──
+  for (const [index, week] of weeks.slice(0, 4).entries()) {
+    const day = week.workouts.find((w: Workout) => /full/i.test(w.name));
+    const names = (day?.exercises ?? []).map((r) => r.exercise?.name ?? '');
+    const verticalPush = names.some((n) => /Overhead Press|Shoulder Press|Landmine Press|Z-Press|Seated DB Press/.test(n));
+    const verticalPull = names.some((n) => /Pull-Ups|Chin-Ups|Pulldown/.test(n));
+    check(`week ${index + 1}: the full-body day carries BOTH the vertical push and the vertical pull it owns`,
+      verticalPush && verticalPull, names.join(', '));
+  }
   console.log(`\nThree-day main seat: ${passed} passed, ${failures.length} failed`);
   totalsPrinted(failures.length);
   process.exit(failures.length === 0 ? 0 : 1);
