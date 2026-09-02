@@ -68,6 +68,15 @@ export interface SchedulerReadiness {
   readonly highReadiness: boolean;
   readonly lowFatigue: boolean;
   readonly consistentlyCompletesThree: boolean;
+  /**
+   * R-349 (Sam, 2026-09-02, "2b"): a readiness DELOAD keeps the athlete's
+   * sessions and halves the sets. Decision 14's veto ("low readiness never
+   * adds work") is about EARNING a fourth session; a deloaded week that
+   * already has four is maintaining, not adding. When true, the low-readiness
+   * veto is not applied to the fourth-session selector; conditioning's
+   * reduced-week rules still read `lowReadiness` unchanged.
+   */
+  readonly deloadKeepsSessions?: boolean;
 }
 
 export interface WeeklySchedulerInputs {
@@ -774,6 +783,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ? Math.min(effectiveGymDays, 3)
     : effectiveGymDays;
 
+  // R-349: a readiness deload keeps the sessions the athlete already has.
+  const fourthSessionVetoed = inputs.readiness.lowReadiness
+    && inputs.readiness.deloadKeepsSessions !== true;
   const layout = baseLayoutFor({
     phase: inputs.phase,
     gymDayCount: layoutGymDays,
@@ -784,7 +796,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
       highReadiness: inputs.readiness.highReadiness,
       lowFatigue: inputs.readiness.lowFatigue,
-      lowReadiness: inputs.readiness.lowReadiness,
+      lowReadiness: fourthSessionVetoed,
     },
   });
   if (!layout) {
@@ -861,7 +873,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
         highReadiness: inputs.readiness.highReadiness,
         lowFatigue: inputs.readiness.lowFatigue,
-        lowReadiness: inputs.readiness.lowReadiness,
+        lowReadiness: fourthSessionVetoed,
       },
     });
     const reducedPurposes = smaller
@@ -1845,7 +1857,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
         highReadiness: inputs.readiness.highReadiness,
         lowFatigue: inputs.readiness.lowFatigue,
-        lowReadiness: inputs.readiness.lowReadiness,
+        // R-349: the same veto answer the base layout used.
+        lowReadiness: inputs.readiness.lowReadiness && inputs.readiness.deloadKeepsSessions !== true,
       },
     })
     : null;

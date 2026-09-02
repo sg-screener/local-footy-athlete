@@ -231,6 +231,19 @@ console.log('\n[selector] The in-season fourth session');
   ok('[WC-102] age 28 without the earned arm stays on THREE', ['WC-102'],
     older.requiredStrengthSessions === 3, JSON.stringify(purposesOf(older)));
 
+  // R-349 (Sam, 2026-09-02, "2b"): a readiness DELOAD keeps the sessions the
+  // athlete has and halves the sets; the low-readiness veto is about earning.
+  const deloadedKeeps = built({ gymAccessDays: FOUR, age: 25,
+    readiness: { lowReadiness: true, highReadiness: false, lowFatigue: false,
+      consistentlyCompletesThree: false, deloadKeepsSessions: true } });
+  ok('[R-349] a readiness deload keeps the four-session in-season week', ['WC-141'],
+    deloadedKeeps.requiredStrengthSessions === 4, JSON.stringify(purposesOf(deloadedKeeps)));
+  const deloadedVetoed = built({ gymAccessDays: FOUR, age: 25,
+    readiness: { lowReadiness: true, highReadiness: false, lowFatigue: false,
+      consistentlyCompletesThree: false } });
+  ok('[WC-141] without the deload flag low readiness still vetoes the fourth session', ['WC-141'],
+    deloadedVetoed.requiredStrengthSessions === 3, JSON.stringify(purposesOf(deloadedVetoed)));
+
   const earned = built({ gymAccessDays: FOUR, age: 34,
     readiness: { lowReadiness: false, highReadiness: true, lowFatigue: true,
       consistentlyCompletesThree: true } });

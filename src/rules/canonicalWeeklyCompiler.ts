@@ -231,6 +231,8 @@ export function compileCanonicalWeek(
     readiness: {
       ...input.scheduler.readiness,
       lowReadiness: input.readiness?.deloaded === true,
+      // R-349: the deload halves the sets; it does not take a session away.
+      deloadKeepsSessions: input.readiness?.deloaded === true,
     },
   });
   if (scheduleRefused(schedule)) return { ok: false, refusal: schedule };
