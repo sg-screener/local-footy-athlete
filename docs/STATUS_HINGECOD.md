@@ -1253,3 +1253,120 @@ four, permit five). The healthy-week frontal gap sits under **R-327**
 contribution") — the check exists, the composer does not complete it outside
 the injury path. No ruling found on a returning lift's load memory; that one
 is a question for Sam.
+
+## 2026-09-03 — ROOT-CAUSE REPORT for the cohort's "smaller findings" (no code changed; awaiting Sam)
+
+Measured on `output/athlete-cohort-64fbace0/` (selection traces + year JSON) and
+the code at `3783c9c1`.
+
+### F1 — a healthy week with no lower-body frontal row and no exception (2-day wk15; 3-day wks 30/36/48; beginner 10 of 156)
+
+**Producers, three cases, one shared hole.**
+- *Case A — the week after a Sunday game (3-day 30/36/48, beginner in-season
+  same weeks).* Trace: the block build composed Monday as a strength day and
+  put `Copenhagen Plank (Half)` in its `football_robustness` seat; the Sunday
+  fixture landing in the previous week made Monday G+1, and
+  `weeklyScheduler.dayIsUsableForStrength` (WC-050, `isGamePlusOne`) removed
+  Monday from strength days; the week re-derived as ONE coverage day
+  (Wednesday). `composeWeek` restored Wednesday's accepted seats
+  (`selectionReason: restored_recorded_selection`): `Slant Board Step-Down`
+  for `single_leg_knee` (phase-priority 0 over Cossack 1 / Lateral Lunge 8) and
+  `Seated Calf Raise` for `football_robustness:1`, whose every frontal
+  candidate carried `weekly_spacing` — rejected against the Monday Copenhagen
+  that no longer exists. Nothing re-asks the plane:
+  `completeWeeklyLowerBodyFrontal` is called only by
+  `canonicalWeeklyInjuryCompiler.ts:181` and `fixtureMinimalReplan.ts:1232`,
+  and the latter runs for the fixture's OWN week and before the day
+  reassignment.
+- *Case B — a scheduled deload week (2-day wk15, beginner wk19).* Trace: the
+  robustness seat chose `Long-Lever Copenhagen` / `Groin Squeeze`; the day's
+  modifier reads "Deload week active". `deloadWeekRules.applyStrengthDeloadToExercises`
+  keeps `min(3, floor(n/2))` accessories, ordered by: important UPPER slots
+  first, then rows whose halved set count stays above one, then authored
+  order. With two accessories the keep count is one; the back-extension (3
+  sets → 2) outranks the Copenhagen (2 sets → 1), so the frontal row is cut.
+  The keep order knows the four upper planes and not the lower frontal plane.
+- *Case C — a lone coverage day with a full-gym single-leg pick* is Case A's
+  seat ranking; it only bites once A or B has removed the other frontal source.
+
+**Candidate corrections.**
+1. **Call `completeWeeklyLowerBodyFrontal` once for every canonical week**,
+   after the row compiler composes it (place a legal frontal row on a
+   strength day, or write the honest `lower_body_frontal_unavailable`
+   exception the analyzer already honours). One site, an existing function
+   with its own tests, covers A, C and any future reshaping. — RECOMMENDED.
+2. Make the composer's `single_leg_knee` seat prefer a frontal candidate when
+   the week has no other frontal source. Rejected as the only fix: it is a
+   scoring rule inside the selector (R-327 limits plane preference to
+   tie-breaks), it cannot write the exception, and it does nothing for B.
+3. Rebuild the following week through the fixture replan so its completion
+   runs. Rejected: misses B, and the replan's completion runs before the day
+   reassignment, so it would still see the Monday that is about to vanish.
+4. For B specifically: **the deload keep-order treats a frontal-plane row as
+   important** (one comparator line using `exerciseSuppliesLowerBodyFrontal`),
+   so the cut keeps the plane instead of re-adding a row after cutting. With
+   1 in place this is the tidy pairing: the cut keeps it, completion finds it
+   present. — RECOMMENDED alongside 1.
+
+**Tests.** Red-first cells: (a) 3-day archetype, in-season, Sunday game the
+week before → the derived week has a frontal row or a written exception;
+(b) 2-day archetype scheduled pre-season deload week keeps its frontal row;
+(c) control: a week that already has a frontal row is byte-identical after
+completion. Existing: `test:movement-planes`, `test:deload-law`,
+`test:deload-week`, `test:weekly-strength-budget`,
+`test:week-checker-allowances`, `test:compiler-year`; cohort rerun: zero
+required frontal findings that are not honest exceptions.
+
+### F2 — a lift comes back far lighter than the athlete last lifted it
+
+**Producers, three, all "a fresh estimate written where a record exists".**
+- *P1 (DB Shoulder Press 15→9, Seated DB Press 27.5→10, Goblet 27.5→12.5,
+  Chest-Supported DB Row 20→9/10).* Every composed row's base load is
+  `composedDose.resolveComposedLoad` → `estimateStartingWeight` (onboarding
+  anchors × ratio; the probe reproduces 9 / 10 / 12.5 exactly). The athlete's
+  own recorded loads are consulted ONLY at a block boundary
+  (`canonicalWeeklyProgressionCompiler` → `decideBlockBoundaryLoads`,
+  `authoringBlockNumber > 1`, keyed by exact name over all history) and in an
+  injury SWAP (`loadForReplacementExercise`). A week re-derived mid-block —
+  the bye-recovery split (week 37) or the G+1 coverage week (week 30) — gains
+  rows the block never had; those rows keep the composed estimate, the
+  athlete confirms it, and the next boundary reads "last recorded = 9" — the
+  15 is overwritten, not lost by accident.
+- *P2 (Trap Bar Deadlift 50→25 in the shoulder week).* The Friday trap bar was
+  not a seat (no hinge decision for 2026-11-20 in the trace); it was an injury
+  ADDITION, and `addExerciseCandidates.loadFor` gives an added row
+  `startingWeightForAthlete` (25 for a Complete beginner), never the record.
+- *P3 (year-3 Back Squat 47.5 after High Box Squat 67.5).* `decideBlockBoundaryLoads`
+  finds no record under the exact name → `authored_estimate`. Family history
+  is not read. This one is by design (the contract's "own recorded exercise
+  outranks the estimate" names only the same exercise).
+
+**Candidate corrections.**
+1. **One rule, "a recorded load by name outranks any estimate", at the two
+   estimate producers**: `resolveComposedLoad` and `addExerciseCandidates.loadFor`
+   take the recorded-load map the compiler already builds
+   (`readBlockHistory` over all feedback → `lastRecordedLoadByExercise`,
+   exactly what `sourceFactCompilation.ts:41` feeds the injury compiler) and
+   go through `loadForReplacementExercise` (recorded first, estimate second).
+   New input field on the composer: writer = row compiler from
+   `state.sessionFeedback`; reader = `resolveComposedLoad`; test = cell below.
+   — RECOMMENDED.
+2. Re-run the block-boundary pass whenever a week is re-derived. Rejected:
+   re-runs rotation and set decisions for a reshaping that is not a boundary,
+   and the boundary pass is contract-bound to "the previous block".
+3. Fix it at read time (`useDayWorkout` fallback / `lastPerformedWeights` by
+   id). Rejected: that is the stored ≠ visible split Sam ruled out
+   (`blockBoundaryProgression.ts` header, 2026-08-16).
+4. P3: seed a new lift from its family's tracked-lift estimate. Not
+   recommended without a ruling — a conservative first week on a new lift is
+   defensible; question for Sam.
+
+**Tests.** Red-first cells: (a) 3-day archetype, in-season bye week → the
+rebuilt upper day's press carries the last logged load (15, not 9);
+(b) beginner, shoulder week → the added trap bar carries 50, not 25;
+(c) control: a lift with no record still gets the estimate. Existing:
+`test:block-two-progression`, `test:programming-final-composition`,
+`test:visible-surface-agreement`, `test:injury-limited-kit`, `test:compiler-year`;
+cohort rerun: "load drops >30%" = 0 for all six.
+
+### Registry grep: R-327 (planes), R-092 (deload row roles), R-083/R-086 (reachable load), R-343 (bodyweight logging); no ruling on load memory across a reshaped week — that is the one new question.
