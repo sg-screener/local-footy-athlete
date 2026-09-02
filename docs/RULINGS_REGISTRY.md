@@ -8980,8 +8980,13 @@ composer's base load and the injury block's added rows read the athlete's
 last logged load by canonical name (`recordedLoadsFromFeedback`, the one map
 the injury swap already used) before any estimate; reachability (R-083) is
 still asked first. A lift with no record still starts from the estimate.
-Writer: the row compiler and the injury compiler, from session feedback;
-reader: `resolveComposedLoad`, `addExerciseCandidates.loadFor`. Not ruled:
+Writer: the program compiler (`compileCanonicalProgram`), from the
+progression state cut off at the progression's own `asOfISO`, so a relaunch
+reads exactly the record the build read; the fixture-week stub states its
+loads only (cut off at the week's Monday) through the generator's
+`recordedLoads` option; the injury compiler carries the same map to the
+block's added rows. Readers: `resolveComposedLoad`,
+`addExerciseCandidates.loadFor`. Not ruled:
 seeding a NEW lift from a related lift's record (the beginner's year-3 Back
 Squat after a year of High Box Squat) — mapped for Sam, awaiting his call.
 · `WORKING` — `test:plane-and-load-memory` (cells 2a/2b/2c), red-first at

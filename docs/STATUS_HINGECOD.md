@@ -1425,3 +1425,37 @@ today, and he actually reached 75) — the dumbbell ratios are small, so
 borrowing across kit overshoots and would need a cap or narrower families.
 Lifts with no prescribed load (51 bodyweight, 22 unloaded, 4 athlete-chosen,
 4 equipment-minimum, 15 unauthored) cannot borrow.
+
+**Correction, same day (`7dc09008`).** The six-athlete rerun at `631b6267`
+showed two things the archetype cells did not: (a) every athlete's weeks 1-4
+now differed after a relaunch (4 failed restarts each) — the generation-time
+map was built from ALL feedback, so the reconstruction of block 1 read logs
+the build never had; (b) the bye-recovery press still restarted at 9 kg —
+the fixture-week stub (`buildFixtureProjection`) states no progression
+history by design, so the composer saw an empty record (probe: the only
+composition of that press with zero recorded keys was that stub's). Fix:
+ONE writer — `compileCanonicalProgram` derives the map from the progression
+state cut off at its own `asOfISO`; the stub states its loads only (cut off
+at the week's Monday) through a new `recordedLoads` generation option, so
+rotation and the block-boundary pass stay untouched (stating the whole
+history there changed day shapes). 3-day athlete at `7dc09008`: 52 restarts
+clean, 0 refused steps, 0 load drops, 0 missing-plane weeks. Gates: suite
+20/20, `test:compile` PASSED, session-change-durability 59,
+forward-decision 2/2, block-two-progression 47/47; `test:fixture-identity`
+is 4/7 on the base tree `64fbace0` as well (inherited, not this change).
+Final six-athlete rerun, PDFs and compiler-year at `7dc09008`: below.
+
+**Final receipts at `7dc09008`.** Six-athlete rerun (`output/athlete-cohort-7dc09008/`):
+2-day, 3-day and the 156-week beginner — every restart clean, 0 refused
+steps, **0 load drops >30% (was 1 / 0 / 5), 0 required-plane weeks (was
+1 / 3 / 10)**, one PDF each, page QA clean apart from the header-only table
+noted before. The three 4-day athletes are unchanged: blank from week 9 to 30
+under the hard-day refusal (R-009 finding, awaiting Sam's "go"). Compiler-year:
+416 green / 416 reached / 416 required athlete-weeks; the one failure key is
+the inherited writer-ownership census. Neighbours: deload-law 78/78,
+deload-week 50, movement-planes 13/13, injury-limited-kit 16/16,
+week-checker-allowances 38/38, programming-final-composition 6,
+weekly-strength-budget 5, injury-recomposition 186, three-day-main-seat
+22/22; canonical-weekly-compiler 10539 passed / 45 failed (54 red before
+this work); surface-agreement 2/5 and visible-surfaces 69/70 are the same on
+the base tree `64fbace0` (inherited).

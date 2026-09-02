@@ -852,7 +852,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:plane-and-load-memory',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 64fbace0: resolveComposedLoad returned the 20 kg estimate over a recorded 15 (2a); the injury block\'s added rows carried the estimate over a recorded 33 (2b). Green at 631b6267, with the bye-week journey control (2c).',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 64fbace0: resolveComposedLoad returned the 20 kg estimate over a recorded 15 (2a); the injury block\'s added rows carried the estimate over a recorded 33 (2b). Green at 631b6267, with the bye-week journey control (2c). Corrected at 7dc09008: one writer at the program compiler with the progression cutoff (an unfiltered map made weeks 1-4 differ after every relaunch), and the fixture-week stub states its loads (it composed against an empty record).',
     },
   },
   {
