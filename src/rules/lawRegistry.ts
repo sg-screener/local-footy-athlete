@@ -779,6 +779,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-full-body-day-owns-one-big-lift',
+    law: 'R-351: a full-body day beside dedicated days still owns one weekly main seat. When every main seat is reserved and a full-body day owns none, the owner holding both planes of a pattern hands the vertical plane (vertical push, vertical pull) to the full-body day; the upper day keeps its horizontal mains and composes the vertical rows as supporting work; the coverage day treats a seat reserved for it as a gap it leads with. R-317 (one seat per week) is unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-351',
+    guard: {
+      state: 'guarded',
+      by: 'test:three-day-main-seat',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the 3-day, no-club, Off-season athlete (lower + upper + full body) was refused at the end of onboarding — required_minimum_shortfall:main_strength:2 — because the lower day reserved squat and hinge, the upper day reserved all four push/pull planes and the full-body day composed three unilateral helpers and no main lift; week 3 (mid Off-season) requires three main-strength days. Accepted at the 2026-08-27 census checkpoint, refused from the weekly-budget commit e05491f7 onward (bisected). THE CHANGE: weeklyStrengthBudget hands the vertical seats to the unseated full-body day; coverageSlotsForFullBodyDay leads with the seats reserved for the day. 9 red cells went green: budget ownership (with three controls: full-body first, lower + two full-body, upper + full-body), coverage-day lead, and the athlete journey — accepted, every one of weeks 1-4 has three main-lift days. Eight suites that died at onboarding on this world (session-change-durability, injury-recomposition, modifier-lifecycle, canonical-weekly-compiler, injury-fallback-journey, compiler-year, and their chains) run again. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

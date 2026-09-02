@@ -100,6 +100,7 @@ import {
 import {
   createWeeklyStrengthBudget,
   isWeeklyMainStrengthSlot,
+  WEEKLY_MAIN_STRENGTH_SLOTS,
 } from './weeklyStrengthBudget';
 import {
   asComposedIdentity,
@@ -916,15 +917,26 @@ export function coverageSlotsForFullBodyDay(args: {
   readonly pairCounts: Readonly<Record<string, number>>;
   /** A CEILING, never a target — R-014. */
   readonly size?: number;
+  /**
+   * R-351: weekly main seats the budget reserved for THIS day. Another day can
+   * supply the same plane kit-wise, but it may not spend the seat, so the
+   * plane is a gap this day must fill — and it leads the day.
+   */
+  readonly reservedForThisDay?: readonly SessionSlot[];
 }): readonly SessionSlot[] {
   const size = args.size ?? FULL_BODY_DAY_SIZE;
   const chosen: SessionSlot[] = [];
+  for (const slot of args.reservedForThisDay ?? []) {
+    if (chosen.length >= size) break;
+    if (!chosen.includes(slot)) chosen.push(slot);
+  }
   // ONE PASS, AND ONLY THE GENUINE GAPS. The removed second pass walked the
   // ladder again to pad the day out to seven — which is precisely how Monday came
   // to carry a squat, a deadlift and both single-leg compounds on top of a week
   // that already had them on Tuesday.
   for (const slot of WEEKLY_COVERAGE_SET) {
     if (chosen.length >= size) break;
+    if (chosen.includes(slot)) continue;
     if (args.suppliedByOtherDays.has(slot)) continue;
     if (args.takenByEarlierCoverageDays.has(slot)) continue;
     chosen.push(slot);
@@ -1492,6 +1504,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         suppliedByOtherDays: suppliedByOtherDays(planned),
         takenByEarlierCoverageDays: takenByCoverageDays,
         pairCounts: weekPairCounts,
+        // R-351: the seats the budget reserved for this day lead it.
+        reservedForThisDay: WEEKLY_MAIN_STRENGTH_SLOTS.filter((slot) =>
+          weeklyStrengthBudget.reservedOwnerBySlot[slot] === planned.planEntryId),
       })
       : null;
     const isCoverageDay = plannedCoverageGaps !== null

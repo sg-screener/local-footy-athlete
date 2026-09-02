@@ -8840,3 +8840,24 @@ row from the second date through Sunday whose body is the signed sentence
 shows on the first tired date. Guard: `LAW-tired-streak-row-on-the-board`
 through chained `test:readiness-load-retention` (tired-pair cells). Receipt:
 `docs/STATUS_HINGECOD.md`.
+
+**R-351** · A full-body day beside dedicated days still owns one big lift,
+2026-09-02.
+
+Owner: hingecod. Sam approved the root-cause report ("approve 2 3. 4 5").
+A 3-day, no-club, Off-season athlete (lower + upper + full body) was refused
+at the end of onboarding: the lower day reserved squat and hinge, the upper
+day reserved both push planes and both pull planes, and the full-body day
+(R-087: only what the other days missed) composed three unilateral helpers
+and no main lift, so week 3 (mid Off-season, three main-strength days
+required) counted two. Accepted at the 2026-08-27 census checkpoint, refused
+from the weekly-budget commit (R-317) onward. Now, when every main seat is
+reserved and a full-body day owns none, the owner holding both planes of a
+pattern hands the VERTICAL plane over: the upper day keeps a horizontal press
+and a horizontal pull as its mains (vertical rows stay as supporting work),
+and the full-body day leads with the seat it owns. One seat per week (R-317)
+is unchanged. Options rejected: lowering the week-3 minimum (changes the
+law); counting a no-big-lift session as strength (the reclassification move
+banned 2026-07-27); lower/upper/lower for 3-day athletes (contradicts R-234).
+Guard: `LAW-full-body-day-owns-one-big-lift` through chained
+`test:three-day-main-seat`. Receipt: `docs/STATUS_HINGECOD.md`.

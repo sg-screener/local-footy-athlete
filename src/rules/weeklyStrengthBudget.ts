@@ -54,6 +54,47 @@ function explicitlyOwnedSlots(intent: StrengthIntent): readonly WeeklyMainStreng
   return slots;
 }
 
+/**
+ * R-351 — A FULL-BODY DAY BESIDE DEDICATED DAYS STILL OWNS ONE BIG LIFT.
+ *
+ * Measured 2026-09-02 (seat `hingecod`): lower + upper + full body, no club.
+ * The lower day reserved squat and hinge, the upper day reserved both push
+ * planes and both pull planes, and the full-body day — the fallback owner
+ * above — was left with nothing it could spend. It composed three unilateral
+ * helpers and no main lift, the week-3 (mid Off-season) contract requires
+ * three main-strength days, §18 counted two, and the athlete was REFUSED at
+ * the end of onboarding. Accepted at the 2026-08-27 census checkpoint;
+ * refused from the weekly-budget commit onward.
+ *
+ * The correction is the smallest one that keeps R-317 (one seat per week):
+ * when every seat is reserved and a full-body day owns none, the day whose
+ * owner holds BOTH planes of a pattern hands the VERTICAL plane over. The upper
+ * day keeps a horizontal press and a horizontal pull as its mains and still
+ * composes the vertical rows as supporting work; the full-body day leads with
+ * an overhead press and a vertical pull, then fills the week's lower gaps.
+ * Nothing moves when any seat is unreserved (the full-body day already has
+ * something to spend) or when no full-body day exists.
+ */
+function handVerticalSeatsToAnUnseatedFullBodyDay(
+  days: readonly WeeklyStrengthBudgetDay[],
+  reserved: Partial<Record<WeeklyMainStrengthSlot, string>>,
+): void {
+  const everySeatReserved = WEEKLY_MAIN_STRENGTH_SLOTS.every((slot) => reserved[slot] !== undefined);
+  if (!everySeatReserved) return;
+  const unseated = days.find((day) => day.strengthIntent.archetype === 'full_body'
+    && !WEEKLY_MAIN_STRENGTH_SLOTS.some((slot) => reserved[slot] === day.planEntryId));
+  if (!unseated) return;
+  const pairs = [
+    ['horizontal_push', 'vertical_push'],
+    ['horizontal_pull', 'vertical_pull'],
+  ] as const;
+  for (const [horizontal, vertical] of pairs) {
+    if (reserved[horizontal] !== undefined && reserved[horizontal] === reserved[vertical]) {
+      reserved[vertical] = unseated.planEntryId;
+    }
+  }
+}
+
 export function createWeeklyStrengthBudget(
   days: readonly WeeklyStrengthBudgetDay[],
 ): WeeklyStrengthBudget {
@@ -63,6 +104,7 @@ export function createWeeklyStrengthBudget(
       reserved[slot] ??= day.planEntryId;
     }
   }
+  handVerticalSeatsToAnUnseatedFullBodyDay(days, reserved);
   const spent = new Set<WeeklyMainStrengthSlot>();
 
   const canSpend = (slot: SessionSlot, planEntryId: string): boolean => {

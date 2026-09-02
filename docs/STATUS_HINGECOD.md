@@ -636,3 +636,67 @@ suspect pages; pages 54 and 90 inspected by eye. Genuine programming problems
 in the measured surfaces: none. Outputs: `output/final-full-year-audit-71ff5788/`
 in the main checkout and the audit checkout; report `FINAL_FULL_YEAR_AUDIT.md`
 with the measured deltas against 773765a4.
+
+## 2026-09-02 — R-351: a full-body day beside dedicated days owns one big lift (pile 2 of the red-test report)
+
+**What Sam approved.** "approve 2 3. 4 5" on the root-cause report of the
+inherited red suites. Pile 2 = the 3-day athlete refused at onboarding.
+
+**Measured before.** The 3-day, no-club, Off-season athlete every one of
+`session-change-durability`, `injury-recomposition`, `modifier-lifecycle`,
+`canonical-weekly-compiler`, `injury-fallback-journey` and `compiler-year`
+cold-starts through was refused: `Section 18 final-week rejection
+(required_minimum_shortfall:main_strength:2)` — expected 3, actual 2, evidence
+Mon 2026-07-27 + Wed 2026-07-29 (week 3, mid Off-season). The Friday
+`full_body` day composed Single-Leg RDL, Single-Arm DB Floor Press,
+Single-Arm Lat Pulldown: three unilateral helpers, no main lift. Cause: the
+weekly strength budget (R-317) reserves squat + hinge for the lower day and
+all four push/pull planes for the upper day, and a full-body day "reserves
+nothing and spends what is unreserved" — nothing was. Bisected between the
+census checkpoint `aa2167e2` (accepted) and the branch start `8d68d6dd`
+(refused): first bad commit `e05491f7` "Replace repeated strength mains with
+weekly budget" (seat `weeklybudget`, 2026-09-01). Same refusal at the control
+tree.
+
+**The change (WORKING, `test:three-day-main-seat`, chained in `test:bible`).**
+- `weeklyStrengthBudget.ts`: `handVerticalSeatsToAnUnseatedFullBodyDay` —
+  when every main seat is reserved and a `full_body` day owns none, the owner
+  holding BOTH planes of a pattern hands the vertical plane over
+  (`vertical_push`, `vertical_pull`). Order-independent; no-op when any seat is
+  unreserved or no full-body day exists.
+- `composeWeek.ts` `coverageSlotsForFullBodyDay`: new optional
+  `reservedForThisDay` — seats the budget reserved for this day lead the day
+  even when another day could supply the plane kit-wise; deduped in the gap
+  walk. The composer passes the budget's reservations for the day.
+- R-317 unchanged: one seat per week; the upper day still composes its vertical
+  rows as supporting work.
+
+**Red first.** 9 of 14 cells red before the change (budget ownership ×5 incl.
+the order control, coverage lead ×2, athlete accepted, week-3 full-body
+main). 18/18 after. Athlete-visible: weeks 1–4 each have three main-lift days;
+the Friday full-body day now reads Single-Leg RDL, Single-Arm DB Floor Press,
+Pull-Ups (vertical pull main; the balance shape that week is A, so the
+vertical PUSH seat lands on a B-shape week).
+
+**Blast radius (branch after vs branch tip `2b516ff5` before, same trees).**
+Revived: session-change-durability (dead → 58/1), injury-recomposition (dead →
+179/7), modifier-lifecycle (1/34 all Section-18 refusals → 2/33, now a
+different, fixture refusal: "I still need your team training days" on the two
+3-day archetypes), canonical-weekly-compiler (died after 1 FAIL → runs to 8
+FAILs, all in the athlete-owned-fifth journey), injury-fallback-journey (dead →
+4 FAILs), compiler-year (Section 18 → team-days fixture refusal). Unchanged
+before/after: weekly-scheduler 9/11 (two bye-fixture cells), composer-severance
+7 FAILs + TypeError, full-body-balance chain 7/8 (classification scope), ladder
+census 9/14 (R-089 counts), section18-planner throws (conditioning 4 vs 3),
+slot-coverage 87/90. Green: weekly-strength-budget 5/5, weekly-strength-variety
+5/5, section18-v2 141/141, minimum-useful-strength 9/9,
+automatic-weekly-selection 24/24. `test:compile` is red at the control tree
+too (sessionBuilder.ts, automaticWeeklyExerciseSelectionTests.ts,
+sessionWorkOwnershipJourneyTests.ts — not this unit's files).
+
+**Found in passing, NOT fixed (needs Sam).** The 2-day bodyweight beginner
+archetype (`male-2-novice-bodyweight`) is refused at generation: "the week
+trains no push" (`required_safe_patterns_present:push`), at the control tree
+too. Push-ups is selectable, seated at horizontal_push, legal on an empty kit
+and allowed for a beginner — so the refusal is upstream of legality; root
+cause still open.
