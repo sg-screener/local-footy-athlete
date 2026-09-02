@@ -41,7 +41,10 @@ import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2
 import { selectStoredWeekDeclaration } from '../rules/storedWeekDeclaration';
 import { getMondayISOForDate, selectMicrocycleForDate } from './programBlockState';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
-import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
+import {
+  equipmentExerciseProgressionFor,
+  exerciseVariationConflictsWithSession,
+} from '../rules/exerciseVariationFamily';
 import {
   sourceBoundRegressionAllows,
   sourceBoundRegressionFor,
@@ -111,6 +114,7 @@ export interface TapSwapChoice {
     | 'pattern_substitute_engine'
     | 'tag_registry_pattern_fallback'
     | 'source_bound_regression'
+    | 'equipment_progression'
     | 'add_hierarchy_fallback'
     | 'recovery_fallback'
     | 'rest_fallback';
@@ -890,6 +894,17 @@ export function getTapSwapChoices(args: {
           hierarchyTier: 'same_movement_pattern',
           source: 'source_bound_regression',
           reason: `Approved regression from ${relation.source}.`,
+        }];
+      })(),
+      ...((): TapSwapChoice[] => {
+        const relation = equipmentExerciseProgressionFor(args.originalExercise);
+        if (!relation || !assessTapSwapCandidateSafety(relation.target, environment).safe) return [];
+        return [{
+          kind: 'exercise',
+          name: relation.target,
+          hierarchyTier: 'same_movement_pattern',
+          source: 'equipment_progression',
+          reason: `Equipment progression from ${relation.source}.`,
         }];
       })(),
       ...patternChoices(args.originalExercise, args.reason, environment, avoidNames),

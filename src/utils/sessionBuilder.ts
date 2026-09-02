@@ -105,6 +105,7 @@ import {
   slotsForExerciseName,
   type SessionSlot as WeeklySessionSlot,
 } from '../rules/sessionSlotCoverage';
+import { preferAvailableEquipmentProgressions } from '../rules/exerciseVariationFamily';
 
 // ─── Athlete Context ───
 
@@ -639,7 +640,7 @@ export function filterPoolEntriesForAthlete(
   entries: readonly PoolExercise[],
   athlete: AthleteContext,
 ): PoolExercise[] {
-  return preferAutomaticCurlCandidates(filterPool(
+  return preferAvailableEquipmentProgressions(preferAutomaticCurlCandidates(filterPool(
     [...entries],
     injuriesToTags(athlete.injuries),
     new Set(athlete.equipmentTags),
@@ -651,7 +652,7 @@ export function filterPoolEntriesForAthlete(
       const region = guidedInjuryBucketForArea(injury.bodyArea);
       return !region || injuryPermitsExerciseAtSeverity(row.name,
         region, onboardingInjurySeverityScore(injury));
-    })));
+    }))), row => row.name);
 }
 
 export function dateHash(dateStr: string): number {

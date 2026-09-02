@@ -1226,6 +1226,37 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  'T-Bar Tib Raises': {
+    strengthClassification: 'isolation',
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'moderate', stability: 'high', unilateral: false,
+    eccentric: 'moderate', lateWeek: 'caution',
+    prescription: {
+      sets: 2, repsMin: 15, repsMax: 20, restSeconds: 30,
+      prescriptionType: 'reps', perSide: false,
+      notes: 'Begin with the empty tib bar or a light load. Keep full ankle range and lower under control. Record total external load.',
+    },
+    programming: {
+      strengthRole: 'accessory', automaticMinimum: 'new', manualMinimum: 'new',
+      warmup: true, primer: false,
+    },
+    injury: {
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'good',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'good',
+      'lowerBack': 'good',
+      'neck': 'good',
+      'shoulder': 'good',
+      'elbow': 'good',
+      'wrist/hand': 'good',
+    },
+  },
+
   'Single-Leg Calf Raise': {
     strengthClassification: 'isolation',
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',

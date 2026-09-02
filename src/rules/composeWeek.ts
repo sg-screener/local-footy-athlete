@@ -81,6 +81,7 @@ import {
 } from './programmingSelectionTrace';
 import {
   exerciseVariationFamily,
+  preferAvailableEquipmentProgressions,
   sameExerciseVariationFamily,
   type ExerciseVariationFamily,
 } from './exerciseVariationFamily';
@@ -578,8 +579,10 @@ function experiencePreferred(
   candidates: readonly ComposedExerciseIdentity[],
   profile: OnboardingData,
 ): readonly ComposedExerciseIdentity[] {
-  const sourceBound = applySourceBoundAutomaticRegression(candidates, profile)
-    .map(composedIdentityFor);
+  const sourceBound = preferAvailableEquipmentProgressions(
+    applySourceBoundAutomaticRegression(candidates, profile).map(composedIdentityFor),
+    identity => identity,
+  );
   const gates = visibleGatesForLadderLevel(
     ladderLevelForProfile(profile?.experienceLevel ?? null),
   );

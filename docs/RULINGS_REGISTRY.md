@@ -8301,6 +8301,26 @@ Guard: `LAW-one-combined-cod-session` through chained `test:weekly-scheduler`,
 with workbook equality through `test:conditioning-templates`. Red-first,
 mutation and NOT COVERED receipt: `docs/STATUS_CODCOMBINE.md`.
 
+**R-332** · T-Bar Tib Raises is the equipment progression of Tib Raises,
+2026-09-02.
+
+Owner: tibbar. T-Bar Tib Raises uses the existing lower-prehab and lower-body
+Movement Prep routes with the same 2 × 15–20 total repetitions and 30 seconds
+rest as Tib Raises. It is available to everyone in all phases, uses the new
+athlete-answerable `Tib bar` equipment capability, records athlete-chosen total
+external kilograms through the existing 2.5 kg control, and carries Sam's
+supplied cues, ratings, restrictions, sagittal plane and video.
+
+When the tib bar is available, automatic selection prefers the T-bar movement
+over its bodyweight base. Without one, Tib Raises remains available. The Swap
+ladder offers the direct progression from Tib Raises, manual Add/Swap remains
+available, and the two identities share one variation family. A familiar light
+dose remains legal at G-1; Primer does not select it automatically.
+
+Guard: `LAW-t-bar-tib-raises-intake` through chained `test:exercise-intake`,
+which invokes `test:t-bar-tib-raises`. Red-first, workbook, mutation, final
+execution and NOT COVERED receipt: `docs/STATUS_TIBBAR.md`.
+
 **R-333** · A typed conditioning block keeps the canonical conditioning card,
 including inside a Recovery session, 2026-09-02.
 

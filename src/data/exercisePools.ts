@@ -71,7 +71,10 @@ export type EquipmentTag =
   | 'sandbag'
   // One answer owns every approved medicine-ball throw and slam. Wall, ball
   // suitability and floor/space are athlete judgement, not equipment tags.
-  | 'medicine_ball';
+  | 'medicine_ball'
+  // A separately askable loading implement. Owning plates does not imply the
+  // athlete owns a tib bar, so it cannot collapse onto `barbell`.
+  | 'tib_bar';
 
 export type InjuryTag =
   | 'shoulder'
@@ -314,6 +317,7 @@ export const LOWER_PREHAB_POOL: PoolExercise[] = [
   authoredExercise("sl-45-back-extension-hold", "SL 45° Back Extension Hold", ["back_extension_bench"]),
   ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.', ['swiss_ball'], ['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
   ex('tib-raise',         'Tib Raises',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
+  ex('tbar-tib-raise',    'T-Bar Tib Raises',       2, 15, 20, 30, 'Load the tib bar lightly and retain full ankle range.', ['tib_bar'], [], 'low', { prescriptionType: 'reps' }),
   ex('banded-tke',        'Banded TKE',             2, 15, 20, 30, 'Band behind the knee. Straighten and squeeze the quad.', ['bands'], ['knee'], 'low', { prescriptionType: 'reps' }),
   ex('bosch-hold',        'Bosch Hold',             2, 20, 30, 30, 'Drive the heel down, hips high. Single or double leg.', ['bodyweight'], ['hamstring', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
   ex('spanish-squat',     'Spanish Squat Hold',     2, 20, 30, 30, 'Band behind the knees. Sit back and hold.',   ['bands'], ['knee'], 'low', { prescriptionType: 'duration' }),

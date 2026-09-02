@@ -229,6 +229,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Swiss Ball Hamstring Curl": ['swiss_ball'],
   "Tempo Run": [],
   "Tib Raises": [],
+  "T-Bar Tib Raises": ["tib_bar"],
   "Trap Bar Deadlift": ['trap_bar'],
   "Tricep Circuit (Dirty 30)": ['barbell'],
   "Tricep Pushdown": ['cables'],

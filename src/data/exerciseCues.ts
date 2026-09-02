@@ -856,6 +856,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Lean back against wall, lift toes to sky, can use a Tib bar if you have one.',
     secondaryCue: 'Controlled reps, full range.',
   },
+  'T-Bar Tib Raises': {
+    primaryCue: 'Pull your toes toward your shins through the full range.',
+    secondaryCue: 'Keep knees still, pause at the top, and lower under control.',
+  },
   'Toe Stretch': {
     primaryCue: 'Tuck toes under, sit back into the heels.',
     secondaryCue: 'Build tolerance gradually.',

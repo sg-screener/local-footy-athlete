@@ -61,6 +61,7 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   // `Bear Carry`. Commercial = all, so it lands here and nowhere else.
   'sandbag',
   'medicine_ball',
+  'tib_bar',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -74,6 +75,7 @@ const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Cable Machine': ['cables'],
   'Pull-up Bar': ['pullup_bar'],
   'Medicine Ball': ['medicine_ball'],
+  'Tib Bar': ['tib_bar'],
 };
 
 const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -119,6 +121,8 @@ const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Suitable throwing wall': ['medicine_ball'],
   'Ball suitable for slams': ['medicine_ball'],
   'Impact-safe floor and clear space': ['medicine_ball'],
+  'Tib bar': ['tib_bar'],
+  tib_bar: ['tib_bar'],
 };
 
 export const EQUIPMENT_CHECKLIST_OPTION_TAGS: Readonly<Record<string, readonly EquipmentTag[]>> = {
@@ -279,6 +283,7 @@ export function equipmentTagsForRequirement(
   if (/^(medicine_ball|medicine_ball_wall_throws|throwing_wall|suitable_throwing_wall|slam_ball|ball_suitable_for_slams|slam_space|impact_safe_floor_and_clear_space)$/.test(normalized)) {
     return ['medicine_ball'];
   }
+  if (/^(tib_bar|tibialis_bar)$/.test(normalized)) return ['tib_bar'];
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {

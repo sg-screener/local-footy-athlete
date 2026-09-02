@@ -79,6 +79,7 @@ ok(
  * Adding a member to `EquipmentTag` fails COMPILATION here until the author
  * classifies it: asked, or excluded with a pinned justification below. */
 const TAG_CLASSIFICATION: Record<EquipmentTag, 'asked' | 'always_available' | 'derived_from_modalities'> = {
+  tib_bar: 'asked',
   bodyweight: 'always_available',
   dumbbells: 'asked',
   barbell: 'asked',

@@ -33,7 +33,10 @@ const glyph = (color: string, children: React.ReactNode) => (
     {children}
   </Svg>
 );
+/** Tib bar — Sam approved a simple T mark for the new equipment answer. */
+export const TIB_BAR_ICON_PATH = 'M6 5h12M12 5v14';
 export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => React.ReactNode> = {
+  tib_bar: (color) => glyph(color, <Path d={TIB_BAR_ICON_PATH} />),
   medicine_ball: (color) => <LfaIcon name="sandbag-dead-ball" color={color} />,
   /** Barbell and plates — Sam's supplied stacked-plate trace. */
   barbell: (color) => <LfaIcon name="barbell-plates" color={color} />,

@@ -658,6 +658,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         // Calf / ankle block
         { name: 'Calf Raises',     loadRatio: 0, group: 'calf' },
         { name: 'Tib Raises',       loadRatio: 0, group: 'calf' },
+        { name: 'T-Bar Tib Raises', loadRatio: 0, group: 'calf' },
         // Glute / posterior block — Sam's locked-list additions (2026-07-24),
         // which also replaced the retired Adductor Machine in this slot.
         { name: 'Single-Leg Hip Thrust', loadRatio: 0, group: 'glute' },
