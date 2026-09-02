@@ -137,3 +137,75 @@ reps (was 15) in the one authored template, the source-of-truth workbook tab
 fortnightly COD tape and the signed athlete-copy fixture. Equality
 170/170, fortnightly COD tape 19/19. No cadence, placement or section order
 changed.
+
+## Addendum 2026-09-02 — R-337: the week is budgeted in stimuli, not days
+
+Sam, on the five-day off-season weeks and Speed stacked onto tempo: *"is the
+problem thinking in days vs thinking in stimulus?"* then *"count stimulus"*.
+
+### Exact cause
+
+The scheduler budgeted `conditioningTarget` (four from normal Off-season week
+5) in receiver DAYS. The planned automatic Speed day had to be one of the
+selected receivers, so it rode that day's metabolic work and the four-day
+budget still delivered four metabolic days plus Speed. When the annual world's
+receivers were Tue/Thu/Sat, the day-count gap was filled by the free-day top-up
+pass, which may not use a gym day (Monday), and Friday would have made three
+consecutive energy days, so the Sunday bike sprint was added: five training
+days, Speed stacked on Saturday's tempo.
+
+### What changed
+
+- `weeklyProgrammingContract.ts`: typed `speedInsideConditioningTarget` on
+  every phase overlay (true for normal Off-season build and Pre-season; false
+  for early/transition Off-season and In-season, where WC-143 and P15 keep
+  Speed riding an upper receiver in game weeks).
+- `weeklyScheduler.ts`: `metabolicBudget = target − anchors − delivered − Speed
+  stimulus`; with room the receiver selection excludes the Speed day and
+  retries with stacking only when spacing cannot seat the budget; the stale
+  "keep a receiver after Speed" score is silent when Speed owns its day; an
+  existing training day is preferred over opening a new day before even
+  spacing; a Speed day counts as a running day.
+- `weeklyPlanDisplay.ts`: a strength session whose only energy-system
+  component is Speed keeps its session name on the week row (it was titled
+  "Speed Conditioning" while its parts correctly showed Upper Body Push +
+  Speed).
+- Three new scheduler cells and a rewritten fresh-Speed cell 9.
+
+### Red-first, mutation, results
+
+- Red first: 128/131 on the checkpoint code (the three new cells).
+- Mutation: `speedInsideConditioningTarget: false` on the normal build overlay
+  reds the same three cells; file restored byte-identical (sha checked).
+- Checkpoint 34-week journeys, both sexes: off-season weeks 5–7 all five
+  training days, Sunday energy day, Speed stacked on Saturday. After: four
+  training days (Mon lower + easy off-feet or COD, Tue upper + hard, Thu hinge
+  + tempo off-feet, Sat upper + Speed only), no Sunday session, zero stacked
+  days. Pre-season weeks without club nights (13–14) follow the same shape.
+- Unchanged: 31 Lower Hinge days per athlete with zero knee-dominant rows,
+  zero repeats, zero dedicated-ownership or required plane findings, 34/34
+  restarts each, focused audit 11/12 (Week-40 check needs a 40-week run).
+- Suites: weekly scheduler 131/131, fresh Speed 14/14, persistence 2/2,
+  fortnightly COD 19/19, scheduler fixtures 11/11, off-season continuity 9/9,
+  spare-day options 22/22, generated-week 30/30, final composition 6/6,
+  minimum-useful 7/7, selection 21/21, planes 13/13, template equality
+  170/170, weekly-plan display green.
+
+### Still stacked, by earlier rulings (not changed here)
+
+- Pre-season weeks with club nights (Mon/Wed team training): Speed rides the
+  Friday hinge beside its steady blocks through the club top-up path (P15 /
+  R-330 club rule). In-season game weeks keep WC-143's shape.
+
+### Inherited red, reproduced identically at the untouched checkpoint
+
+travel-zero-equipment 8/10, session-classification 48/50,
+canonical-weekly-compiler one duplicate-row cell, compound-session-selection
+7/8, slot-coverage 81/84, the typecheck gate's five pre-existing files, law
+registry 13/14, ruling registry 5/8.
+
+### NOT COVERED
+
+Full `test:bible`, `test:programming-hierarchy`'s inherited release chain,
+annual PDFs, either phone, the simulator, weeks 35–52, and the club-night
+Speed top-up shape (a separate ruling if Sam wants it split too).

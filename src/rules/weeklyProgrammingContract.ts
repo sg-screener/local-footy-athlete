@@ -439,6 +439,14 @@ export interface PhaseOverlay {
   readonly conditioningTarget: { readonly min: number; readonly max: number };
   /** WC-136. How much of `conditioningTarget` may be hard, and as which quality. */
   readonly hardConditioning: HardConditioningAllowance;
+  /**
+   * R-337 (Sam, 2026-09-02: *"count stimulus"*). True when a proper authored
+   * Speed day is one of the stimuli `conditioningTarget` counts, so the
+   * scheduler budgets the metabolic exposures AFTER it and gives Speed its own
+   * day when the week has room. False where Sam's game-week caps keep Speed
+   * riding an upper day beside the week's metabolic work (WC-143, P15).
+   */
+  readonly speedInsideConditioningTarget: boolean;
   readonly statement: string;
 }
 
@@ -455,6 +463,7 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     // §8: *"No running is required. Conditioning is light aerobic/off-leg work
     // only."* The one overlay where a hard session is forbidden outright.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
+    speedInsideConditioningTarget: false,
     statement: 'Off-season weeks 1-2: every strength session remains optional, '
       + '75% load, light aerobic/off-leg work only, zero Speed work, with up to '
       + 'three full rest days.',
@@ -466,6 +475,7 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     // §8: *"Conditioning returns progressively through aerobic-base and
     // controlled capacity work."* Capacity, named as capacity — not yet hard.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
+    speedInsideConditioningTarget: false,
     statement: 'Off-season weeks 3-4: the normal strength skeleton becomes '
       + 'required again, 90% load and conditioning returns progressively, while '
       + 'Speed remains at zero. Week 4 is not automatically a deload.',
@@ -483,6 +493,7 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     // one block with neither club training nor matches, so the one block that
     // may author glycolytic work — alternated with aerobic power by mini-cycle.
     hardConditioning: { count: 1, qualities: ['vo2', 'glycolytic'], requiresNoGameWeek: false },
+    speedInsideConditioningTarget: true,
     statement: 'Off-season week 5 onward: normal loading, 2-4 required strength '
       + 'sessions by availability, conditioning builds to 3-4, at least one '
       + 'genuine sprint/high-speed exposure.',
@@ -499,6 +510,7 @@ export const PRESEASON_OVERLAY: PhaseOverlay = {
   // resolves to. Glycolytic is NOT named: *"team training and matches already
   // provide glycolytic stress"*, and pre-season has both.
   hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: false },
+  speedInsideConditioningTarget: true,
   statement: 'Pre-season: prefer four strength sessions when availability '
     + 'permits, scale honestly to two or three, four total conditioning exposures '
     + '(club training counts), no more than two lower sessions.',
@@ -521,6 +533,7 @@ export const INSEASON_OVERLAY: PhaseOverlay = {
   // authors no hard aerobic work; a healthy bye week may, and it replaces the
   // exposure the fixture would have supplied. See the three shapes above.
   hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: true },
+  speedInsideConditioningTarget: false,
   statement: 'In-season: maintain strength and conditioning while arriving fresh '
     + 'for the game. No scheduled calendar deload. Game, club training, readiness '
     + 'and injury drive reductions.',

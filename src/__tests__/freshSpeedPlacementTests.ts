@@ -67,10 +67,18 @@ const materialised = materialiseAuthoredSessions({ schedule: earlyUpper, gameDay
   facts: { weekStartISO: earlyUpper.weekStartISO, phase: 'Off-season', capacity: 'high',
     isBeginner: false, experienced: true, powerGoalNudge: false, injuries: [] } });
 const combined = materialised.find(day => day.dayOfWeek === speedDay(earlyUpper));
-ok('9 combined session retains a separately typed first Speed component',
-  combined?.owner === 'strength' && combined.sprintTemplate !== null
-    && earlyUpper.days.find(day => day.dayOfWeek === combined.dayOfWeek)?.sprintComponent === true,
-  JSON.stringify(combined));
+// R-337 (Sam, 2026-09-02: *"count stimulus"*): with room in the week Speed is
+// the strength day's only energy-system component and carries no metabolic
+// block; the typed sprint template is still authored by the one sprint owner.
+const SPEED_QUALITIES = new Set(['acceleration', 'top_end_speed', 'repeat_sprint']);
+const combinedIntention = earlyUpper.days.find(day => day.dayOfWeek === combined?.dayOfWeek);
+ok('9 Speed on a strength day is a separately typed first component with no metabolic block when the week has room',
+  combined?.owner === 'strength' && combinedIntention?.conditioning === 'sprint_high_speed'
+    && combinedIntention.sprintComponent === false
+    && (combined.sprintTemplate !== null
+      || (combined.conditioningTemplate !== null && SPEED_QUALITIES.has(combined.conditioningTemplate.quality))),
+  JSON.stringify({ intention: combinedIntention, sprint: combined?.sprintTemplate?.name,
+    conditioning: combined?.conditioningTemplate?.name }));
 
 const pre = built({ phase: 'Pre-season', offseasonBlock: null,
   gymAccessDays: [MON, WED, THU, SAT] });

@@ -8415,3 +8415,42 @@ Guard: `LAW-lower-hinge-purpose-relevant-support` through chained
 `test:programming-hierarchy`, which invokes `test:programming-audit-projection`.
 Red-first, mutation, focused 34-week results and NOT COVERED receipt:
 `docs/STATUS_HINGECOD.md`.
+
+**R-337** · The week is budgeted in stimuli, not days, 2026-09-02.
+
+Owner: hingecod. Sam, asked why off-season weeks 5–7 used five training days
+and stacked Speed onto tempo when the schedule had room: *"is the problem
+thinking in days vs thinking in stimulus?"* — then, on the answer, *"count
+stimulus"*. His shape for that week: *"Mon tues rest thursday rest saturday
+rest"*, bike sprints after Monday's lower session, no Sunday session.
+
+The phase's energy-system target is a list of stimuli — from normal Off-season
+week 5, and in Pre-season without a fixture: Speed, one hard, one tempo, at
+most one easy — and days are only where they are put. A planned automatic
+Speed day is one of those stimuli, so the metabolic budget is what remains
+after it. Density is a separate rule: when the week has enough legal receivers,
+Speed owns its day and carries no metabolic block; Speed shares a day with
+tempo or intervals only when the legal receivers are short. A stimulus goes
+onto a day the athlete already trains before it opens a new day; even spacing
+is judged only among arrangements that add the same number of days. Off-feet
+metabolic work may sit after a lower session as before.
+
+Unchanged by ruling: R-303's four-app-day maximum and no three consecutive
+energy-system days, WC-143's no-club game week (fast session early, Speed on
+an upper day, moderate at G-2) and P15's in-season caps where Speed rides an
+upper receiver, the club-night Speed top-up, game-proximity, injury, illness,
+readiness, deload and equipment rules, and every strength rule. A strength
+session whose only energy-system component is Speed keeps its session name on
+the week row; Speed is a part, not the day.
+
+Measured on the checkpoint's own 34-week journeys (both sexes): off-season
+weeks 5–7 each used five training days with a Sunday bike sprint and Speed
+stacked onto Saturday's tempo. After: four training days (Mon lower + easy
+off-feet, Tue upper + hard, Thu hinge + tempo off-feet, Sat upper + Speed
+only), Sunday empty, zero stacked days; strength, hinge purpose, restart and
+analyzer results unchanged.
+
+Guard: `LAW-week-budgeted-in-stimuli` through chained `test:weekly-scheduler`
+(the six-day cell, the Speed-owns-its-day cell and the exact availability
+matrix cell). Red-first, mutation and NOT COVERED receipt:
+`docs/STATUS_HINGECOD.md`.

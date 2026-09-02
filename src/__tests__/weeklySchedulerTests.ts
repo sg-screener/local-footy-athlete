@@ -417,6 +417,17 @@ console.log('\n[spacing] Lower spacing, planes, hard days and rest');
       gym: coordinate.gymAccessDays,
       energy: appDays(result).map((day) => [day.dayOfWeek, day.conditioningCategory]),
     }))));
+  // R-337: every coordinate here has at least three legal receivers besides
+  // the Speed day, so stacking Speed onto metabolic work is never the answer.
+  const stackedSpeed = accepted.filter(({ coordinate, result }) =>
+    coordinate.clubNights.length === 0 && result.days.some((day) =>
+      day.sprintComponent && day.conditioning !== 'sprint_high_speed'));
+  ok('[R-337 matrix] no accepted no-club coordinate stacks Speed onto a metabolic conditioning day',
+    ['WC-132', 'WC-138'], stackedSpeed.length === 0,
+    JSON.stringify(stackedSpeed.slice(0, 5).map(({ coordinate, result }) => ({
+      gym: coordinate.gymAccessDays, weekKind: coordinate.weekKind,
+      energy: appDays(result).map((day) => [day.dayOfWeek, day.conditioningCategory, day.sprintComponent]),
+    }))));
   ok('[R-303 matrix] club anchors remain separate and reduce rather than inflate app-programmed work',
     ['WC-045', 'WC-062'], accepted.filter(({ coordinate }) => coordinate.clubNights.length > 0)
       .every(({ coordinate, result }) =>
@@ -751,6 +762,32 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   ok('[WC-138] ...and Sunday carries nothing before Monday\'s lower day', ['WC-138'],
     offRef.days.find((d) => d.dayOfWeek === SUN)?.conditioning === null,
     JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.conditioning])));
+  // ── R-337: THE WEEK IS BUDGETED IN STIMULI, NOT DAYS ─────────────────────
+  // Sam, 2026-09-02: *"count stimulus"*. Speed is one of the four required
+  // energy-system stimuli. When the week has room it earns its own day; it
+  // shares a day with metabolic work only when the legal receivers are short.
+  const sixDay = built({ phase: 'Off-season', offseasonBlock: 'normal_build',
+    gymAccessDays: [MON, TUE, WED, THU, FRI, SAT], clubNights: [], gameDay: null });
+  const sixDayEnergy = sixDay.days.filter((day) =>
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush')
+    || day.sprintComponent);
+  const sixDaySpeed = sixDay.days.find((day) =>
+    day.conditioning === 'sprint_high_speed' || day.sprintComponent);
+  ok('[R-337] a six-day normal build delivers four stimuli on four distinct days and leaves Sunday empty',
+    ['WC-132', 'WC-138'],
+    sixDayEnergy.length === 4
+    && sixDay.days.find((day) => day.dayOfWeek === SUN)?.conditioning === null
+    && sixDayEnergy.filter((day) => day.conditioning === 'sprint_high_speed'
+      || day.sprintComponent).length === 1
+    && sixDayEnergy.map((day) => day.conditioningCategory)
+      .filter((category) => category === 'vo2' || category === 'glycolytic').length === 1,
+    JSON.stringify(sixDay.days.map((day) => [day.dayOfWeek, day.owner, day.conditioning,
+      day.conditioningCategory, day.sprintComponent])));
+  ok('[R-337] the Speed day carries no metabolic conditioning when the week has room',
+    ['WC-138'],
+    sixDaySpeed !== undefined && sixDaySpeed.conditioning === 'sprint_high_speed'
+    && sixDaySpeed.sprintComponent === false,
+    JSON.stringify(sixDaySpeed));
   // The same selector now governs every phase; phase-specific quality and
   // exposure-count rules remain separate.
   const inSeasonRef = built({ phase: 'In-season',

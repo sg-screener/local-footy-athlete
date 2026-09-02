@@ -1059,12 +1059,23 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   // Speed consumes one of these existing exposure DAYS. The receiver set below
   // must include its selected day; no extra slot is reserved here.
-  let appConditioningBudget = Math.max(
+  const appConditioningBudget = Math.max(
     0,
     overlay.conditioningTarget.min
       - anchorConditioningDays
       - deliveredAppDays.size,
   );
+  // ── R-337: THE WEEK IS BUDGETED IN STIMULI, NOT DAYS ──────────────────────
+  //
+  // Sam, 2026-09-02: *"count stimulus"*. The phase target is a list of
+  // energy-system stimuli — Speed, one hard, one tempo, at most one easy — and
+  // days are only where they are put. A planned automatic Speed day IS one of
+  // those stimuli, so the metabolic budget is what remains after it. Counting
+  // days instead let Speed ride a metabolic receiver, tick one day, and send
+  // the week hunting for a fifth training day to cover a gap that was never
+  // real (the Sunday bike sprints of off-season weeks 5-7).
+  const speedStimulus = plannedSprintDay !== null && overlay.speedInsideConditioningTarget ? 1 : 0;
+  const metabolicBudget = Math.max(0, appConditioningBudget - speedStimulus);
 
 
   // ── WHICH DAYS MAY CARRY APP CONDITIONING AT ALL, DECIDED BEFORE THE LOOP ─
@@ -1116,12 +1127,24 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     && !inputs.clubNights.includes(day)
     && !isScheduledGameDay(day, inputs)
     && !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs));
+  // R-337 density: when the week has room, the Speed day is not a metabolic
+  // receiver — Speed and tempo/intervals share a day only when the legal
+  // receivers are genuinely short. Room is measured against the metabolic
+  // budget, and the selection below still retries with stacking permitted if
+  // the spacing rules cannot seat the whole budget on separate days.
+  const receiversBesideSpeed = legalConditioningCandidates.filter((day) => day !== plannedSprintDay);
+  const roomForOwnSpeedDay = speedStimulus === 1
+    && receiversBesideSpeed.length >= metabolicBudget;
   const conditioningDays = (() => {
-    const count = Math.min(appConditioningBudget, legalConditioningCandidates.length);
+    const select = (
+      candidatesForCount: readonly number[],
+      speedHasOwnDay: boolean,
+    ): number[] => {
+    const count = Math.min(metabolicBudget, candidatesForCount.length);
     // WC-143's explicit early-upper/G-2 sequence and released-fixture priority
     // remain authoritative. The ordinary case considers complete receiver sets,
     // not a weekday prefix, before spending the same exposure budget.
-    if (noClubGameWeek || releasedReceivers.length > 0) return legalConditioningCandidates.slice(0, count);
+    if (noClubGameWeek || releasedReceivers.length > 0) return candidatesForCount.slice(0, count);
     const anchors = [...anchorConditioningDaySet];
     const training = [...purposeByDay.keys(), ...anchors];
     const cyclicStreak = (days: readonly number[]) => {
@@ -1140,12 +1163,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
       return [
-        // Speed must occupy one selected conditioning receiver. If selection
-        // omits that day, it becomes additive after this budget is spent.
-        plannedSprintDay !== null && !days.includes(plannedSprintDay) ? 1 : 0,
+        // With no room, Speed must occupy one selected conditioning receiver;
+        // otherwise it would become additive after this budget is spent. With
+        // room (R-337) it owns its day and this preference is silent.
+        plannedSprintDay !== null && !speedHasOwnDay && !days.includes(plannedSprintDay) ? 1 : 0,
         // If hard work is required, keep a later legal receiver available so
         // Speed does not get pushed onto it merely to consolidate intensity.
-        hardQuality !== null && plannedSprintDay !== null
+        hardQuality !== null && plannedSprintDay !== null && !speedHasOwnDay
           && !days.some((day) => orderIndex(day) > orderIndex(plannedSprintDay)
             && day !== plannedSprintDay && !isGameMinusTwo(day, inputs)
             && !isGameMinusOne(day, inputs) && !isGamePlusOne(day, inputs)) ? 1 : 0,
@@ -1166,11 +1190,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // not the price of spacing this week when Monday already owns lower
         // strength. The selector can attach the easy seat to Monday instead.
         days.includes(0) && PURPOSE_IS_LOWER[purposeByDay.get(1)!] ? 1 : 0,
-        gaps.reduce((sum, gap) => sum + gap * gap, 0),
+        // R-337: a stimulus goes onto a day the athlete already trains before
+        // it opens a new one. Sam, 2026-09-02: *"why it chose to fill 5 days
+        // instead of something that could be done on 4 safely?"* Even spacing
+        // is judged only among arrangements that add the same number of days.
         days.filter(day => !purposeByDay.has(day)).length,
+        gaps.reduce((sum, gap) => sum + gap * gap, 0),
       ];
     };
-    const desiredCandidates = combinations(legalConditioningCandidates, count);
+    const desiredCandidates = combinations(candidatesForCount, count);
     const compare = (a: readonly number[], b: readonly number[]) => {
       const left = score(a); const right = score(b);
       for (let i = 0; i < left.length; i++) if (left[i] !== right[i]) return left[i] - right[i];
@@ -1180,7 +1208,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     for (let candidateCount = count; candidateCount >= 0; candidateCount -= 1) {
       const candidates = candidateCount === count
         ? desiredCandidates
-        : combinations(legalConditioningCandidates, candidateCount);
+        : combinations(candidatesForCount, candidateCount);
       const safe = candidates.filter((candidate) => {
         const candidateStreak = energyStreak([
           ...deliveredAppDays,
@@ -1192,6 +1220,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       if (safe.length > 0) return safe.sort(compare)[0] ?? [];
     }
     return [];
+    };
+    if (!roomForOwnSpeedDay) return select(legalConditioningCandidates, false);
+    const separated = select(receiversBesideSpeed, true);
+    // Spacing could not seat the whole metabolic budget beside a separate
+    // Speed day: the honest fallback is the shared day, never a lost stimulus.
+    return separated.length >= Math.min(metabolicBudget, receiversBesideSpeed.length)
+      ? separated
+      : select(legalConditioningCandidates, false);
   })();
   // WC-144 (Sam's Q3 ruling, 2026-08-26 — the pre-season hard runner leaving
   // an all-lower receiver set for a free weekend day) was BUILT HERE and
@@ -1329,13 +1365,16 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     // Speed is running exposure even when its standalone receiver replaces the
     // ordinary running template; this planning count prevents an extra day.
     ...conditioningDays.filter((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
+    // R-337: a Speed day of its own is a running day the budget already holds.
+    ...(plannedSprintDay !== null && !conditioningDaySet.has(plannedSprintDay)
+      ? [plannedSprintDay] : []),
   ]);
   // Unplaced conditioning is already scheduled by the standalone top-up pass
   // below. Count those running slots before exchanging an off-leg gym slot;
   // otherwise a two-day deload with sprint restricted trades both gym slots
   // away and attempts five runs to satisfy a five-exposure conditioning target.
   const standaloneConditioningBudget = Math.max(0,
-    appConditioningBudget - conditioningDays.length);
+    metabolicBudget - conditioningDays.length);
   let runningSlotsToReserve = inputs.appRunningPermitted === false ||
     (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional')
     ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size - standaloneConditioningBudget);
@@ -1346,7 +1385,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     conditioningDaySet.delete(day);
     runningSlotsToReserve -= 1;
   }
-  const residualConditioning = Math.max(0, appConditioningBudget - conditioningDays.length);
+  const residualConditioning = Math.max(0, metabolicBudget - conditioningDays.length);
 
   const days: SessionIntention[] = [];
   for (const day of WEEK_ORDER) {
@@ -1699,7 +1738,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush') || day.sprintComponent).length;
   const appConditioningDays = deliveredAppDays.size + authoredAppConditioningDays;
   const runningDayCount = deliveredSprintDays.size
-    + withComposedOptional.filter((day) => day.conditioning === 'running').length;
+    + withComposedOptional.filter((day) => day.conditioning === 'running'
+      // R-337: a Speed day of its own is a running day.
+      || day.conditioning === 'sprint_high_speed').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //
   // §3, Sprint/high-speed: *"At least 1 except early off-season. **Games and club

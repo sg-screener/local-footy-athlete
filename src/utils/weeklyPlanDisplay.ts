@@ -109,6 +109,11 @@ export function combinedConditioningCategoryLabel(
 
 function isStandaloneConditioning(workout: WeeklyDisplayWorkout): boolean {
   if (workout.hasCombinedConditioning || workout.conditioningBlock?.attachedKind) return false;
+  // R-337: a strength session whose only energy-system component is Speed is
+  // still the strength session. Its typed speed identity names a part, never
+  // the day, so the week row keeps the session name and the projection
+  // renders Speed as its own part.
+  if (getSessionComponentRows(workout as Partial<Workout>).strengthRows.length > 0) return false;
   return !!projectConditioningVisibleIdentity(workout as Partial<Workout>) ||
     /\b(?:conditioning|aerobic|tempo|interval|sprint|run|flush)\b/i.test(
       `${workout.workoutType ?? ''} ${workout.name ?? ''}`,

@@ -1,3 +1,4 @@
+import { isConditioningOnlyWorkout } from '../utils/visibleWorkoutIdentity';
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -147,6 +148,25 @@ const speed = conditioning('8 x 15sec Assault Bike sprints', {
   exercises: [row('8 x 15sec Assault Bike sprints', 1, 8, 120)],
 });
 eq('speed title', weeklyPlanTitle(speed), 'Speed Conditioning');
+
+// R-337 (Sam, 2026-09-02: "count stimulus"): a strength session whose only
+// energy-system component is Speed is still the strength session. Speed is a
+// part the projection renders; it never renames the day.
+const strengthWithSpeed: Workout = {
+  ...conditioning('20 m Acceleration Reps'),
+  name: 'Upper Body Push', workoutType: 'Strength',
+  conditioningCategory: undefined, conditioningFlavour: undefined, conditioningBlock: undefined,
+  hasCombinedConditioning: false,
+  speedBlock: { id: 'speed-1', title: '20 m Acceleration Reps', label: '20 m Acceleration Reps',
+    kind: 'true_speed', placement: 'pre_lift', durationMinutes: 15, prescription: '8 x 20 m',
+    exerciseIds: ['row-2'], modality: 'run', counting: { conditioningCredit: 'full' } } as any,
+  exercises: [
+    { ...row('Bench Press', 1), exercise: { ...row('Bench Press', 1).exercise, exerciseType: 'Compound' }, role: 'main_lift' } as any,
+    { ...row('20 m Acceleration Reps', 2), id: 'row-2' } as any,
+  ],
+};
+eq('strength + Speed keeps the session name', weeklyPlanTitle(strengthWithSpeed), 'Upper Body Push');
+eq('strength + Speed is not conditioning-only', isConditioningOnlyWorkout(strengthWithSpeed), false);
 
 console.log('\n[4] flush/recovery purpose and fallback are honest');
 eq('flush', weeklyPlanTitle(conditioning('20min Easy Aerobic Flush')), 'Aerobic Flush');
