@@ -112,6 +112,7 @@ import {
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
 } from '../rules/rollingHorizonRepair';
+import { carryOwnAcceptedLoads } from '../rules/acceptedLoadCarry';
 import {
   userMoveConstraintId,
   userRemovalConstraintId,
@@ -2028,9 +2029,24 @@ export function buildFixtureProjection(args: {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { buildWeekScopedWorkoutOverlay } = require('../utils/weekRebuild');
   const alternatives = replan.alternatives.map((alternative) => {
+    // ── R-344: THE REBUILT WEEK CARRIES THE ATHLETE'S OWN LOADS, NOT THE ──
+    // DAY-ONE GUESS. The one-week target is generated without the block's
+    // progression (no block number, no history) and the replan's released-day
+    // offer is built the same way, so their rows hold the compiler's starting
+    // estimate. Measured on the 52-week year: every bye week and every week
+    // after a Sunday game read Back Squat 95 / Bench 80 / RDL 77.5 against the
+    // athlete's accepted 100 / 85 / 82.5, and a weighted Pull-Up read "BW".
+    // Applied to the ONE output every path shares — minimal repair, full
+    // regeneration and the planner offer alike. R-096 clause 1 at the rebuild:
+    // the same lift's own accepted load wins; a lift the accepted week never
+    // carried keeps the compiler's own (clause 5).
+    const workouts = carryOwnAcceptedLoads({
+      accepted: sourceCanonicalWorkouts,
+      rebuilt: alternative.workouts,
+    });
     const alternativeReplan: FixtureMinimalReplanResult = {
       ...replan,
-      workouts: alternative.workouts,
+      workouts,
       gateway: alternative.gateway,
       editCost: alternative.editCost,
       changedDays: alternative.changedDays,
@@ -2054,7 +2070,7 @@ export function buildFixtureProjection(args: {
         // The canonical week is what gets accepted. Derived sessions are
         // derived on every read, from the accepted choices and the active
         // facts, and are never promoted.
-        workouts: alternative.workouts,
+        workouts,
         exposureContractV2: alternative.gateway.contract,
       } : microcycle),
     };

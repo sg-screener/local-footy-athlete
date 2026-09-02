@@ -816,6 +816,95 @@ async function main(): Promise<void> {
     assert(marksAfterUndo[FRIDAY] === undefined && marksAfterUndo[SATURDAY] === 'game',
       JSON.stringify(marksAfterUndo));
   });
+
+  // ── R-344 (Sam, 2026-09-02): a rebuilt week carries the athlete's OWN loads ──
+  // Measured on the 52-week year before the fix: every bye week and every week
+  // after a Sunday game read the onboarding estimate (Back Squat 95 / Bench 80
+  // against the athlete's 100 / 85) and a weighted Pull-Up read "BW", because
+  // the one-week fixture stub is generated without the block's progression.
+  await run('R-344 a bye week, the week after a Sunday game, and a relaunch all keep the athlete\'s own loads', async () => {
+    const { buildWornWorld } = require('./support/settingsJourney') as typeof import('./support/settingsJourney');
+    const { relaunchApp, quietAsync } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const { addDaysISO } = require('../utils/programBlockState') as typeof import('../utils/programBlockState');
+    const { startingWeightForAthlete } = require('../utils/loadEstimation') as typeof import('../utils/loadEstimation');
+    const athlete = profile();
+    const world = await quietAsync(() => buildWornWorld({ profile: athlete, installDayISO: WEEK_START }));
+    assert(world.blockTwoStart !== null && !world.rolloverRefusal,
+      `the worn world must roll into block 2: ${JSON.stringify(world)}`);
+    const blockTwoStart = world.blockTwoStart as string;
+    // THE ACCEPTED LOADS, snapshotted before any fixture decision: name+role → kg.
+    const acceptedDetail = new Map<string, string[]>();
+    const acceptedLoads = (weekStart: string): Map<string, number> => {
+      const program = useProgramStore.getState().currentProgram;
+      const microcycle = program?.microcycles.find((week) => week.startDate.slice(0, 10) === weekStart);
+      const loads = new Map<string, number>();
+      const detail: string[] = [];
+      for (const workout of microcycle?.workouts ?? []) for (const row of workout.exercises ?? []) {
+        const name = row.exercise?.name; const kg = row.prescribedWeightKg;
+        detail.push(`${name}@d${workout.dayOfWeek}/${row.section18Evidence?.role ?? ''}=${kg}#${row.id}`);
+        if (name && typeof kg === 'number' && kg > 0) loads.set(`${name}|${row.section18Evidence?.role ?? ''}`, kg);
+      }
+      acceptedDetail.set(weekStart, detail);
+      return loads;
+    };
+    const accepted = new Map<string, Map<string, number>>();
+    for (let offset = 0; offset < 28; offset += 7) {
+      const weekStart = addDaysISO(blockTwoStart, offset);
+      accepted.set(weekStart, acceptedLoads(weekStart));
+    }
+    const expectOwnLoads = (weekStart: string, label: string): void => {
+      const state = useProgramStore.getState();
+      const visible = rebaseAcceptedEffectiveWeek({
+        surfaces: storedWorldSurfaces(state), weekStart, profile: athlete,
+        markedDays: state.acceptedMaterialContext.markedDays,
+      }).visibleWorkouts;
+      const own = accepted.get(weekStart) ?? new Map<string, number>();
+      let compared = 0; let differsFromEstimate = 0;
+      const wrong: string[] = [];
+      for (const workout of visible) for (const row of workout.exercises ?? []) {
+        const name = row.exercise?.name ?? '';
+        const kg = own.get(`${name}|${row.section18Evidence?.role ?? ''}`);
+        if (kg === undefined) continue;
+        compared += 1;
+        if (kg !== startingWeightForAthlete(name, athlete)) differsFromEstimate += 1;
+        if (row.prescribedWeightKg !== kg) {
+          wrong.push(`${name}@d${workout.dayOfWeek}/${row.section18Evidence?.role ?? ''}#${row.id} (mc ${workout.microcycleId}): `
+            + `visible ${row.prescribedWeightKg} vs accepted ${kg}; accepted rows: `
+            + (acceptedDetail.get(weekStart) ?? []).filter((entry) => entry.startsWith(`${name}@`)).join(', '));
+        }
+      }
+      assert(compared >= 3, `${label}: only ${compared} lifts comparable — the cell would be vacuous`);
+      assert(differsFromEstimate >= 1,
+        `${label}: every accepted load equals the onboarding estimate — the cell could not see the defect`);
+      assert(wrong.length === 0, `${label}: ${wrong.join('; ')}`);
+    };
+    const decide = (args: { action: FixtureMutationAction; sourceDate?: string; targetDate?: string; todayISO: string }) => ({
+      action: args.action, fixtureKind: 'game' as const,
+      ...(args.sourceDate ? { sourceDate: args.sourceDate } : {}),
+      ...(args.targetDate ? { targetDate: args.targetDate } : {}),
+      expectedAcceptedRevision: useProgramStore.getState().acceptedMaterialContext.revision,
+      source: source(`r344:${args.action}:${args.todayISO}`),
+      todayISO: args.todayISO,
+    });
+    // 1. THE BYE — block 2, week 1: remove Saturday's game.
+    const bye = await quietAsync(() => executeFixtureMutationTransaction(
+      decide({ action: 'remove', sourceDate: addDaysISO(blockTwoStart, 5), todayISO: blockTwoStart })));
+    assert(bye.outcome === 'accepted', JSON.stringify(bye));
+    expectOwnLoads(blockTwoStart, 'bye week');
+    // 2. THE SUNDAY GAME — block 2, week 2: move Saturday to Sunday; week 3 is the dependent week.
+    const weekTwo = addDaysISO(blockTwoStart, 7);
+    const moved = await quietAsync(() => executeFixtureMutationTransaction(decide({
+      action: 'move', sourceDate: addDaysISO(weekTwo, 5), targetDate: addDaysISO(weekTwo, 6), todayISO: weekTwo,
+    })));
+    assert(moved.outcome === 'accepted', JSON.stringify(moved));
+    expectOwnLoads(weekTwo, 'Sunday-game week');
+    expectOwnLoads(addDaysISO(weekTwo, 7), 'the week after the Sunday game');
+    // 3. A RELAUNCH re-materialises the overlays through the same door.
+    const restart = await relaunchApp({ storage: localStorageData, todayISO: weekTwo });
+    assert(restart.ok, `relaunch failed: ${restart.error}`);
+    expectOwnLoads(blockTwoStart, 'bye week after relaunch');
+    expectOwnLoads(addDaysISO(weekTwo, 7), 'the week after the Sunday game, after relaunch');
+  });
 }
 
 void main().then(() => {

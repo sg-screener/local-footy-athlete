@@ -6,6 +6,7 @@ import type { OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
 import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
 import { compileCanonicalProgram } from './canonicalProgramCompiler';
 import { compileWeekOverlay } from './canonicalWeekOverlay';
+import { carryOwnAcceptedLoadsIntoWorkout } from './acceptedLoadCarry';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, datedFatigueReportsFromFacts, isInjurySourceFact, READINESS_FACT_KINDS, temporarySourceFactId,
   type TemporarySourceFact } from './temporarySourceFact';
@@ -132,19 +133,18 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
           // reduced dose skips progression, so its starting estimates are NOT
           // the accepted loads. Carry only the same lift's own accepted load;
           // new/replacement lifts keep the compiler's independently owned load.
+          // R-344: one owner for "the same lift's own accepted load", shared
+          // with the fixture projection. Same-day match first, as before; a
+          // lift that moved days now takes the week's one load too.
           overlay = { ...overlay, workoutsByDate: Object.fromEntries(
             Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
               const accepted = effective.visibleWorkouts.find(day =>
                 isoDateForWeekday(weekStart, day.dayOfWeek) === date);
-              if (!workout || !accepted) return [date, workout];
-              return [date, { ...workout, exercises: workout.exercises.map(row => {
-                const matches = accepted.exercises.filter(old =>
-                  old.exercise?.name === row.exercise?.name &&
-                  old.section18Evidence?.role === row.section18Evidence?.role);
-                const own = matches.find(old => old.id === row.id)
-                  ?? (matches.length === 1 ? matches[0] : undefined);
-                return own ? { ...row, prescribedWeightKg: own.prescribedWeightKg } : row;
-              }) }];
+              if (!workout) return [date, workout];
+              return [date, carryOwnAcceptedLoadsIntoWorkout({
+                rebuilt: workout, acceptedSameDay: accepted ?? null,
+                acceptedWeek: effective.visibleWorkouts,
+              })];
             }),
           ) };
         }

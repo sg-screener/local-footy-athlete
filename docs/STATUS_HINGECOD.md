@@ -431,3 +431,47 @@ her own logs). Split lower days: 4.4–5.0 rows and 10.6–13.2 sets for both.
 NOT COVERED: an in-season female squat that does not flatline at 60 (Sam:
 "no not yet" on waving); position, age and conditioning-level differences
 (kept shared on purpose).
+
+## Addendum 2026-09-02 — R-344: bye-week weights (approved root cause, built)
+
+Root cause (report approved by Sam): `buildFixtureProjection`
+(`src/store/acceptedStateTransaction.ts`) generates its one-week stub with
+`microcycleLimit: 1` and no `blockNumber` / `progressionHistory`;
+`generateProgram.ts` defaults to block 1 and empty history; the boundary
+never runs (`authoringBlockNumber > 1`); rows keep `applyLoadEstimates`'
+onboarding estimate. Fires on `full_regeneration` (every bye) and on the
+rolling horizon's +1 week after a moved Sunday game. Action receipts from the
+year: the bye action's accepted program said Back Squat 97.5 / Pull-Ups BW+15
+for 2027-04-26 while its overlay said 95 / BW.
+
+Change: `src/rules/acceptedLoadCarry.ts` (one owner:
+`carryOwnAcceptedLoads`, `carryOwnAcceptedLoadsIntoWorkout`); applied to the
+projection's single output (the alternatives' workouts, so minimal repair,
+full regeneration and the replan's released-day Gunshow offer are all
+covered — the first placement on the target microcycle missed the offer,
+caught by the journey cell: Face Pull 20 vs accepted 22.5); the readiness
+path's inline R-034 carry now calls the owner (same-day first; a lift that
+moved days is additionally carried).
+
+Guards: new chained `test:accepted-load-carry` 7/7; R-344 journey cell in
+chained `test:fixture-mutation-transaction` (worn block-2 world, bye →
+Sunday move → relaunch, visible weeks read against the accepted program,
+non-vacuity: ≥3 comparable lifts and ≥1 differing from the estimate).
+Mutation: carry removed from the fixture door → journey cell red (Leg Press
+120 vs 112.5); moved-day branch removed → pure cell red; both restored.
+Suites: fixture-mutation 18/21, boot-preservation 20/20, athlete-journey
+61/64, readiness-load-retention 30/32 and temporary-source-facts 0/1
+(both identical at f224fae7); inherited and identical at f224fae7: fixture-conditioned-replan 15/34, fixture-identity 1/7,
+accepted-state-transactions 20 failures, week-rebuild dies at import
+("Fixture rebuild requires an accepted typed fixture effect"), practice-match
+cells 4–6 ("I still need your team training days").
+
+Regenerated 52-week years: male weeks 29–31 Back Squat 100 / 100 / 102.5
+(was 100 / 95 / 95), 36–37 105 / 105, 42–43 — / 110, 48 112.5; year-end
+Back Squat 115 (was 102.5), Bench 100, RDL 97.5; Pull-Ups climb 0 → 27.5 with
+no drop. Female weeks 30–31 60 / 62.5, 36–37 65 / 65, 43 70, 48 72.5.
+Restarts 52/52 both.
+
+NOT COVERED: the derived read-time sessions outside the fixture door (the
+readiness path is covered; other derived builders were not audited); the
+phone screen (generation-level proof).

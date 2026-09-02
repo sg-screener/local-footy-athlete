@@ -702,6 +702,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-rebuilt-week-carries-own-loads',
+    law: 'R-344: a week rebuilt by a one-week stub (a bye, the week after a moved game, a readiness reduction) carries the same lift\'s own accepted load by name and role — same-day row first (by id, else the day\'s only such row), else the week\'s one load when the lift moved days; a lift the accepted week never carried keeps the compiler\'s own load; an ambiguous match is left alone; an accepted blank carries as blank. One owner (rules/acceptedLoadCarry.ts) read by the fixture projection\'s single output and by the readiness reduction.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-344',
+    guard: {
+      state: 'guarded',
+      by: 'test:accepted-load-carry',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST, measured on the audited year: every bye week and every week after a Sunday game carried the onboarding estimate (Back Squat 95 / Bench 80 / RDL 77.5 against the accepted 100 / 85 / 82.5) because the fixture stub is generated without block number or history. THE CHANGE: one carry owner, applied to the fixture projection\'s single output and substituted for the readiness path\'s inline carry. Seven pure cells here; the R-344 journey cell in test:fixture-mutation-transaction lives a worn block-2 world through a bye, a Sunday-game move and a relaunch and reads the visible weeks against the accepted program. MUTATION: removing the carry from the fixture door reds the journey cell (Leg Press 120 vs accepted 112.5); removing the moved-day branch reds the pure moved-day cell; both files restored byte-identical. AFTER: carry 7/7, fixture-mutation 18/21 (three inherited practice-match reds), boot-preservation 20/20, athlete-journey 61/64 (three inherited); regenerated male and female years keep every load across weeks 30-48, 52/52 restarts. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

@@ -8661,3 +8661,41 @@ assigned.
 Guard: `LAW-bodyweight-lift-earns-added-load` through chained
 `test:block-two-progression` (five new cells). Receipt:
 `docs/STATUS_HINGECOD.md`.
+
+**R-344** · A rebuilt week carries the athlete's own accepted loads,
+2026-09-02.
+
+Owner: hingecod. Sam: *"approved"* on the root-cause report for the bye-week
+weights. Cause: `buildFixtureProjection` generates a one-week stub with
+`generateProgramLocally({ microcycleLimit: 1, previousProgram })` and no
+`blockNumber` or `progressionHistory`, so generation defaults to block 1 and
+empty history, the block boundary never runs, and every row keeps the
+compiler's onboarding estimate; the replan's released-day planner offer is
+built the same way. The stub reaches the athlete on every bye week
+(`full_regeneration`) and on every week after a moved Sunday game (the
+rolling horizon's +1 protection week). Measured on the audited year: Back
+Squat 95 / Bench 80 / RDL 77.5 against the athlete's 100 / 85 / 82.5 on weeks
+30–31, 36–37, 42–43 and 48, a weighted Pull-Up reading "BW", and the next
+boundary progressing from the lower logged number.
+
+Ruling, R-096 clause 1 applied at the rebuild: the same lift's own accepted
+load (name + role) is carried into the rebuilt week — same-day row first (by
+id, else the day's only such row), else the week's one load when the lift
+moved days; a lift the accepted week never carried keeps the compiler's own
+load (clause 5); an ambiguous match is left alone; an accepted blank carries
+as blank. ONE owner, `rules/acceptedLoadCarry.ts`, read by the fixture
+projection's single output (minimal repair, full regeneration and the planner
+offer alike) and by the readiness reduction that already carried loads under
+R-034. Passing history and a block number into the stub was rejected: its
+`blockStartISO` is its own week, so the previous-block window would be wrong
+and could re-progress mid-block.
+
+Measured after: regenerated 52-week male year, weeks 30 / 36 / 48 carry
+100 / 105 / 112.5 and the bye weeks 31 / 37 / 43 carry the new block's
+102.5 / 105 / 110; Pull-Ups climb without a drop; Back Squat ends the year
+at 115 (was 102.5); female year the same shape; 52/52 restarts each.
+
+Guard: `LAW-rebuilt-week-carries-own-loads` through chained
+`test:accepted-load-carry` (seven cells) and the R-344 journey cell in
+chained `test:fixture-mutation-transaction` (bye week, week after a Sunday
+game, relaunch). Receipt: `docs/STATUS_HINGECOD.md`.
