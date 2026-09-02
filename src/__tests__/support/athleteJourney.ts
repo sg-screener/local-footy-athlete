@@ -387,6 +387,12 @@ export interface DayIntent {
    */
   editLoad?: { exerciseName: string; toKg: number };
   absenceReason?: string;
+  /**
+   * Why a SKIPPED session was skipped — the form's own reason list. The draft
+   * rule refuses a skip with no reason, exactly as the screen does, so a robot
+   * that skips must say why (default: no time).
+   */
+  skipReason?: 'busy_no_time' | 'sore_tight' | 'injured_niggle' | 'sick_low_energy' | 'didnt_feel_like_it' | 'equipment_unavailable' | 'other';
 }
 
 export type DayOutcome =
@@ -462,6 +468,13 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
   for (const component of components) {
     componentCompletions[String(component.id)] = intent.completion;
   }
+  const skipReason = intent.completion === 'skipped' ? (intent.skipReason ?? 'busy_no_time') : null;
+  const componentReasons: Record<string, { partialReason: null; skipReason: typeof skipReason }> = {};
+  if (skipReason) {
+    for (const component of components) {
+      componentReasons[String(component.id)] = { partialReason: null, skipReason };
+    }
+  }
 
   const feedback = quiet(() => buildSessionFeedbackPayload({
     dateStr: dateISO,
@@ -472,7 +485,8 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
     soreness: intent.soreness,
     difficulty: intent.difficulty,
     partialReason: null,
-    skipReason: null,
+    skipReason,
+    ...(skipReason ? { componentReasons } : {}),
     ...(strength.length > 0 ? { strength } : {}),
     // ⚠ **ANSWERED ONLY WHERE THE REAL SCREEN ASKS — the panel's own two gates.**
     //

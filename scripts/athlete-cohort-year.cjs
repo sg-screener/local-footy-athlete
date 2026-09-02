@@ -163,6 +163,12 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           label='Christmas team-training break accepted';`);
 replace("  for(const gender of ['male','female'].filter(x=>!genderOnly||genderOnly===x))data.athletes.push(await run(gender));",
   `  data.athletes.push(await run(${JSON.stringify(preset.gender)}));`);
+// A refused step is a FINDING, not the end of the year: the pair driver threw
+// on the first failed check, which hid everything after it (three athletes
+// stopped at their week-8 injury report). The failure is recorded with its
+// week and the year goes on.
+replace("const check=(ok,label,detail)=>{if(!ok)throw new Error(label+': '+JSON.stringify(detail));};",
+  "const check=(ok,label,detail)=>{if(!ok)(result.checkFailures??=[]).push({week:result.weeks.length+1,label,detail:JSON.stringify(detail??null).slice(0,700)});};");
 replace("const result={gender,profile,weeks:[],actions:[],restarts:[],loggedDays:0};",
   `const result={gender,athleteId:${JSON.stringify(presetId)},label:${JSON.stringify(preset.label)},profile,weeks:[],actions:[],restarts:[],loggedDays:0};`);
 
@@ -222,6 +228,10 @@ replace("save('year-programs.json',data);", `save('year-programs.json',data);
     sourceDriverSha256: ${JSON.stringify(originalHash)},
     traceBatches: programmingSelectionTraceBatches,
   });`);
+// A club night on a gym day: the app types the day 'Team Training' ("Team
+// Training + Lower Body Strength") but the session template carries no club
+// item, so the export showed no club row and the plane audit could not credit
+// the night. The row the athlete sees on a pure club day is added here too.
 replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
   "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
@@ -237,6 +247,9 @@ replace('warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exerci
   `warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),catalogueIdentity:m.exercise.name,mainMuscles:[...(app('src/data/muscleExperienceMetadata').muscleMetadataFor(m.exercise.name)?.primary??[])],dose:mobilityFlowMovementDose(m.exercise)}))`);
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
   "rows:template.items.map(item=>rowView(item,day.workout)),speedRows:app('src/utils/sessionComponents').getSessionComponentRows(day.workout).speedRows.map(row=>rowView({kind:'exercise',presentation:'conditioning_phase',role:'speed',row},day.workout)),energySystem:app('src/rules/energySystemExposureEvidence').energySystemExposureEvidenceForWorkout(day.workout),conditioningIdentity:app('src/utils/conditioningVisibleIdentity').projectConditioningVisibleIdentity(day.workout),resolvedEquipment:app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(useProfileStore.getState().onboardingData,normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,date),modifiers:");
+// (after the speed-row enrichment above, which rewrote the same anchor)
+replace("rows:template.items.map(item=>rowView(item,day.workout)),speedRows:",
+  "rows:[...template.items.map(item=>rowView(item,day.workout)),...(day.workout?.workoutType==='Team Training'&&!template.items.some(item=>item.kind==='team_training')?[{name:'Team training',catalogueIdentity:null,mainMuscles:[],dose:'Club session',role:'team_training'}]:[])],speedRows:");
 replace('kind:projected?.kind,parts:projected?.parts.map',
   'kind:projected?.kind,composedDayShape:day.workout?.composedDayShape,usefulStrengthSessionContract:day.workout?.usefulStrengthSessionContract,weeklyMovementPlaneExceptions:day.workout?.weeklyMovementPlaneExceptions,parts:projected?.parts.map');
 fs.mkdirSync(output, { recursive: true });
