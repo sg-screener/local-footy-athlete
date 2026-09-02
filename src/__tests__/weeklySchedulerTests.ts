@@ -722,9 +722,11 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   ok('[WC-138/R-330] the off-season week has exactly one budgeted Speed receiver', ['WC-138'],
     offSprint.length === 1,
     JSON.stringify(offSprint.map((d) => [d.dayOfWeek, d.owner, d.conditioningRole, d.sprintComponent])));
-  ok('[WC-138/R-330] a fresh standalone day beats upper days immediately after '
-    + 'heavy lower work', ['WC-138'],
-    offSprint[0]?.dayOfWeek === WED,
+  // R-338 (Sam, 2026-09-02): a fresh existing strength day beats opening a new
+  // day, and any fresh day beats an upper day immediately after heavy lower.
+  ok('[WC-138/R-330/R-338] the earliest fresh existing strength day beats a new standalone day and '
+    + 'beats upper days immediately after heavy lower work', ['WC-138'],
+    offSprint[0]?.dayOfWeek === MON,
     JSON.stringify(offSprint.map((d) => [d.dayOfWeek, d.purpose])));
   ok('[WC-138/R-330] selection no longer defaults to the last upper day', ['WC-138'],
     offSprint[0]?.dayOfWeek !== FRI,
@@ -755,8 +757,8 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
       && offEnergySet.has((day + 2) % 7)),
     JSON.stringify([...offEnergySet]));
   ok('[WC-138/R-330] the fresh Speed day remains inside the four-exposure budget', ['WC-138'],
-    (offRef.days.find((d) => d.dayOfWeek === WED)?.sprintComponent === true
-      || offRef.days.find((d) => d.dayOfWeek === WED)?.conditioning === 'sprint_high_speed')
+    (offRef.days.find((d) => d.dayOfWeek === MON)?.sprintComponent === true
+      || offRef.days.find((d) => d.dayOfWeek === MON)?.conditioning === 'sprint_high_speed')
     && offRef.demand.coreConditioning === 4,
     JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.owner])));
   ok('[WC-138] ...and Sunday carries nothing before Monday\'s lower day', ['WC-138'],
@@ -783,6 +785,29 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
       .filter((category) => category === 'vo2' || category === 'glycolytic').length === 1,
     JSON.stringify(sixDay.days.map((day) => [day.dayOfWeek, day.owner, day.conditioning,
       day.conditioningCategory, day.sprintComponent])));
+  // ── R-338: flys count as conditioning AND speed in a club pre-season week ──
+  // Sam, 2026-09-02: two team nights + the hard session + the fly are the
+  // four; no aerobic session is owed; the fly stays with the hinge on Friday.
+  const clubPre = built({ phase: 'Pre-season', offseasonBlock: null,
+    gymAccessDays: [MON, TUE, WED, THU, FRI, SAT], clubNights: [MON, WED], gameDay: null });
+  const clubPreApp = clubPre.days.filter((day) =>
+    (day.conditioning !== null && day.conditioningCategory !== 'recovery_flush') || day.sprintComponent);
+  const clubPreSpeed = clubPre.days.find((day) =>
+    day.conditioning === 'sprint_high_speed' || day.sprintComponent);
+  ok('[R-338] a two-club-night pre-season week authors the hard session and the fly only — no extra aerobic',
+    ['WC-133', 'WC-138'],
+    clubPreApp.length === 2 && clubPre.demand.coreConditioning === 4
+    && clubPreApp.some((day) => day.conditioningCategory === 'vo2' || day.conditioningCategory === 'glycolytic')
+    && clubPreSpeed !== undefined && clubPreSpeed.conditioning === 'sprint_high_speed'
+    && clubPreSpeed.sprintComponent === false,
+    JSON.stringify(clubPre.days.map((day) => [day.dayOfWeek, day.owner, day.purpose, day.conditioning,
+      day.conditioningCategory, day.sprintComponent])));
+  ok('[R-338] the fly sits on an existing strength day, after lower work rather than on a new day',
+    ['WC-138'],
+    clubPreSpeed !== undefined && clubPreSpeed.owner === 'strength'
+    && clubPreSpeed.dayOfWeek === FRI,
+    JSON.stringify(clubPre.days.map((day) => [day.dayOfWeek, day.owner, day.purpose])));
+
   ok('[R-337] the Speed day carries no metabolic conditioning when the week has room',
     ['WC-138'],
     sixDaySpeed !== undefined && sixDaySpeed.conditioning === 'sprint_high_speed'

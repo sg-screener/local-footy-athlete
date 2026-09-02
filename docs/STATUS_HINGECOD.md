@@ -209,3 +209,42 @@ registry 13/14, ruling registry 5/8.
 Full `test:bible`, `test:programming-hierarchy`'s inherited release chain,
 annual PDFs, either phone, the simulator, weeks 35–52, and the club-night
 Speed top-up shape (a separate ruling if Sam wants it split too).
+
+## Addendum 2026-09-02 — R-338: flys count as conditioning and speed; Speed stays with the lifting
+
+Sam: *"the fly counts as conditioning ... flys and accelerations are
+conditioning but they count towards the speed stimuli as well ... that friday
+5 min intervals should not even be there = should just be hinge + flys"* and
+*"keep it on the friday ... i'd rather them do it after lower body work than
+the next day"*.
+
+### Exact cause
+
+The club-athlete Speed top-up (missing top-end quality with two club nights)
+rode a conditioning receiver and never spent the stimulus budget, so the
+pre-season club week was authored two metabolic sessions plus the fly. The
+rider could only sit on a day already carrying conditioning, so the fly landed
+on the Friday hinge beside 5-minute aerobic intervals.
+
+### What changed
+
+- `weeklyScheduler.ts`: where the overlay counts Speed inside its target, the
+  club top-up uses the planned Speed path, spends one stimulus and is excluded
+  from the metabolic receivers (`clubSpeedRides` only where the overlay does
+  not, i.e. in-season R-268/P15). The fresh selector ranks an existing lower
+  strength day ahead of a new standalone day (freshness still first).
+- Scheduler cells: two new two-club-night pre-season cells; the off-season
+  reference cells now expect the earliest fresh existing strength day (Monday)
+  rather than a new Wednesday.
+
+### Results
+
+- Red first: the two new cells red; mutation (rider always) reds them again;
+  file restored byte-identical.
+- Pre-season club week (club Mon/Wed): Fri hinge + Fly only, Sat upper + hard,
+  two app days plus two club nights = four; no aerobic session.
+- Off-season build weeks unchanged from R-337.
+
+### NOT COVERED
+
+In-season club weeks keep R-268/P15 by ruling. Everything listed under R-337.

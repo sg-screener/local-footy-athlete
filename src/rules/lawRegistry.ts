@@ -636,6 +636,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-flys-count-as-conditioning-and-speed',
+    law: 'R-338: flys and accelerations are conditioning (energy-system work) that also count as the speed stimulus. In a phase that counts Speed inside its target, a club athlete\'s missing-quality Speed is planned and budgeted like any other stimulus: two team nights plus the hard session plus the fly are the four, and no extra aerobic session is owed. In-season keeps R-268/P15. Speed placement is freshness first, then an upper strength day, then an existing lower strength day, then a new standalone day; Speed may share a lower lifting day and follows the lifting.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-338',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the club-athlete Speed top-up rode a conditioning receiver without spending the stimulus budget, so a two-club-night pre-season week was authored two metabolic sessions plus the fly, and the rider could only sit on a day that already carried conditioning, so the fly landed on the Friday hinge beside 5-minute aerobic intervals. The new two-club-night cells were red. THE CHANGE: the club top-up uses the planned Speed path wherever the overlay counts Speed inside its target, so it spends one stimulus and is excluded from the metabolic receivers; the fresh selector ranks an existing lower strength day ahead of a new standalone day. AFTER: the pre-season club week is Fri hinge + Fly only and Sat upper + hard; the off-season reference week keeps Speed inside four exposures on a fresh existing day. Weekly scheduler and fresh-Speed suites green; inherited reds unchanged. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

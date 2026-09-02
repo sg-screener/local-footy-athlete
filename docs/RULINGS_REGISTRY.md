@@ -8454,3 +8454,38 @@ Guard: `LAW-week-budgeted-in-stimuli` through chained `test:weekly-scheduler`
 (the six-day cell, the Speed-owns-its-day cell and the exact availability
 matrix cell). Red-first, mutation and NOT COVERED receipt:
 `docs/STATUS_HINGECOD.md`.
+
+**R-338** · Flys and accelerations are conditioning that also count as the
+speed stimulus, and Speed stays with the lifting day, 2026-09-02.
+
+Owner: hingecod. Sam, verbatim: *"the fly counts as conditioning - i've said
+this before = flys and accelerations are conditioning but they count towards
+the speed stimuli as well. conditioning is just energy system work, so that
+friday 5 min intervals should not even be there = should just be hinge +
+flys"*, and on placement: *"keep it on the friday - that's okay - i'd rather
+them do it after lower body work than the next day i think - at least they're
+warm up and not sore"*.
+
+Under R-337's stimulus budget, a club athlete's missing-quality Speed in a
+phase that counts Speed inside its target (Pre-season without a fixture;
+normal Off-season build) is planned and budgeted like any other stimulus: two
+team nights plus the hard session plus the fly are the four exposures, and no
+extra aerobic session is owed. In-season keeps R-268/P15 (Speed rides an upper
+receiver inside the game-week caps). This refines R-079's pre-season quality
+rule (top-end speed is still owed with two club nights) and the Bible §8 line
+*"1 hard conditioning session outside of TT ... and then 1-2 lighter
+sessions"*: the lighter session is not owed when the fly is the fourth.
+
+Placement: freshness first (R-330 — the day after heavy lower, hard
+conditioning or a club night loses to a fresh alternative); then an upper
+strength day, then an existing lower strength day, then a new standalone day.
+Speed may share a lower lifting day and follows the lifting. This supersedes
+R-330's "free standalone day before the remaining fallback" order.
+
+Measured: the pre-season club week (club Mon/Wed) was Fri hinge + Fly + 5-minute
+aerobic intervals and Sat upper + hard; it is now Fri hinge + Fly only and Sat
+upper + hard. Off-season builds are unchanged by this row.
+
+Guard: `LAW-flys-count-as-conditioning-and-speed` through chained
+`test:weekly-scheduler` (the two-club-night pre-season cells and the fresh
+existing-day placement cell). Receipt: `docs/STATUS_HINGECOD.md`.

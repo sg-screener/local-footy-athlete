@@ -983,6 +983,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const clubSpeedTopUp = deliveredSprintDays.size === 0
     && inputs.clubNights.length > 0 && overlay.sprintExposureRequired
     && missingSpeedQualities.length > 0 && appSprintNeedPermitted(inputs);
+  // R-338 (Sam, 2026-09-02): *"flys and accelerations are conditioning but
+  // they count towards the speed stimuli as well"*. Where the phase counts
+  // Speed inside its target, a club athlete's missing-quality Speed is planned
+  // and budgeted like any other stimulus: two club nights plus the hard
+  // session plus the fly ARE the four, and no extra aerobic session is owed.
+  // Where it does not (in-season caps, P15/R-268), Speed still rides a receiver.
+  const clubSpeedRides = clubSpeedTopUp && !overlay.speedInsideConditioningTarget;
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -991,10 +998,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // authored three component exposures plus a standalone sprint plus the game,
   // which is five against the overlay's target of four. The app is only ever
   // meant to supply *"the remaining shortfall"*.
-  // R-330: one placement owner ranks every legal receiver. Recovery wins first,
-  // then an upper-strength receiver, then a free standalone day, then the safest
-  // remaining legal fallback. Week order is the final tie-break, so catalogue or
-  // caller enumeration can never move Speed.
+  // R-330, ordered by R-338: one placement owner ranks every legal receiver.
+  // Freshness first; then an upper-strength receiver, then an existing lower
+  // strength day, then a free standalone day. Week order is the final
+  // tie-break, so catalogue or caller enumeration can never move Speed.
   const automaticSpeedCandidates: SpeedPlacementCandidate[] = WEEK_ORDER.map((day) => {
     const purpose = purposeByDay.get(day);
     return {
@@ -1003,7 +1010,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         : PURPOSE_IS_LOWER[purpose] ? 'other_strength' : 'upper_strength',
     };
   });
-  const unrestrictedPlannedSprintDay = clubSpeedTopUp
+  const unrestrictedPlannedSprintDay = clubSpeedRides
     || !overlay.sprintExposureRequired || !appSprintNeedPermitted(inputs)
     ? null
     : selectFreshSpeedDay({
@@ -1177,9 +1184,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           ...deliveredAppDays, ...days,
           ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
         ]) - 2),
-        clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
+        clubSpeedRides && !days.some(day => purposeByDay.has(day)
           && sprintDayIsLegal(day, inputs)) ? 1 : 0,
-        clubSpeedTopUp && !days.some(day => purposeByDay.has(day)
+        clubSpeedRides && !days.some(day => purposeByDay.has(day)
           && !PURPOSE_IS_LOWER[purposeByDay.get(day)!] && sprintDayIsLegal(day, inputs)) ? 1 : 0,
         hardQuality !== null && !days.some(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]
           && !isGameMinusTwo(day, inputs)) ? 1 : 0,
@@ -1334,7 +1341,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // P15 uses the existing speed + conditioning component shape. Keeping both
   // on one legal upper day preserves the game-week conditioning/nights caps
   // and does not replace the required metabolic work with speed.
-  const clubSpeedCandidates = clubSpeedTopUp ? conditioningDays.filter(day => purposeByDay.has(day)
+  const clubSpeedCandidates = clubSpeedRides ? conditioningDays.filter(day => purposeByDay.has(day)
     && sprintDayIsLegal(day, inputs)) : [];
   const clubSpeedDay = selectFreshSpeedDay({
     inputs,
@@ -1937,7 +1944,7 @@ export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number
   for (const candidate of selection.candidates) {
     const existing = byDay.get(candidate.dayOfWeek);
     const roleRank = (role: SpeedPlacementCandidate['role']) =>
-      role === 'upper_strength' ? 0 : role === 'standalone' ? 1 : 2;
+      role === 'upper_strength' ? 0 : role === 'other_strength' ? 1 : 2;
     if (!existing || roleRank(candidate.role) < roleRank(existing.role)) {
       byDay.set(candidate.dayOfWeek, candidate);
     }
@@ -1959,8 +1966,13 @@ export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number
   const score = (candidate: SpeedPlacementCandidate): readonly number[] => {
     const day = candidate.dayOfWeek;
     const isGPlusTwo = scheduledGameProximity(day, inputs).daysSincePreviousGame === 2;
+    // R-338 (Sam, 2026-09-02): among equally fresh days, an existing strength
+    // day beats opening a new one, and upper beats lower — *"keep it on the
+    // friday ... i'd rather them do it after lower body work than the next
+    // day"*. Freshness still comes first: the day after heavy lower, hard
+    // conditioning or a club night loses to a fresh alternative.
     const role = candidate.role === 'upper_strength' ? 0
-      : candidate.role === 'standalone' ? 1 : 2;
+      : candidate.role === 'other_strength' ? 1 : 2;
     return [isGPlusTwo && laterFreshExists(day) ? 1 : 0,
       freshnessCost(day), role, orderIndex(day)];
   };
