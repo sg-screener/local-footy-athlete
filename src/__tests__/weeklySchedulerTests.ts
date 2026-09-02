@@ -30,10 +30,10 @@ import {
   PRESEASON_OVERLAY,
   PURPOSE_IS_LOWER,
   REQUIRED_PATTERNS,
-  SPLIT_LOWER_SET_BUDGET,
   WEEKLY_CONTRACT_CLAUSES,
   baseLayoutFor,
   inSeasonUsesFourSessions,
+  slotCountsTowardSetBudget,
   type ContractPhase,
   type SessionPurpose,
 } from '../rules/weeklyProgrammingContract';
@@ -260,13 +260,21 @@ console.log('\n[selector] The in-season fourth session');
     !inSeasonUsesFourSessions({ gymDayCount: 3, age: 20, consistentlyCompletesThree: true,
       highReadiness: true, lowFatigue: true, lowReadiness: false }));
 
-  // The four-session layout uses the approved 10-set budget.
-  ok('[WC-031] the split Lower Squat/Hinge sessions use the 10-set budget',
-    ['WC-031'],
+  // R-342 killed WC-031's 10-set exception: the split lower days are ordinary.
+  ok('[R-342] the split Lower Squat/Hinge sessions use the ordinary 12-15 set budget',
+    ['WC-030'],
     strengthDays(young).filter((d) => PURPOSE_IS_LOWER[d.purpose as SessionPurpose])
-      .every((d) => d.setBudget?.hardCeiling === SPLIT_LOWER_SET_BUDGET.hardCeiling
-        && d.setBudget?.preferredMin === 10),
+      .every((d) => d.setBudget?.hardCeiling === DEFAULT_SET_BUDGET.hardCeiling
+        && d.setBudget?.preferredMin === DEFAULT_SET_BUDGET.preferredMin
+        && d.setBudget?.preferredMax === DEFAULT_SET_BUDGET.preferredMax),
     JSON.stringify(strengthDays(young).map((d) => [d.purpose, d.setBudget])));
+
+  ok('[R-342] the loaded lower accessory counts toward the set budget; robustness and core do not',
+    ['WC-030'],
+    slotCountsTowardSetBudget('loaded_lower_accessory')
+      && !slotCountsTowardSetBudget('lower_accessory')
+      && !slotCountsTowardSetBudget('football_robustness')
+      && !slotCountsTowardSetBudget('core'));
 
   ok('[WC-030] every other session prefers 12-15 with a hard ceiling of 16',
     ['WC-030'],

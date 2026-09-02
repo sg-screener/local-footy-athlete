@@ -22,6 +22,8 @@ import {
   UPPER_SPLIT_PUSH_SLOTS,
   patternsCompletingLadder,
   slotDayKindForPatterns,
+  slotsForExerciseName,
+  type SessionSlot,
   sessionSlotCoverage,
   slotDayKindFor,
   slotsFilledByRow,
@@ -276,11 +278,40 @@ console.log('\n[7] Dedicated lower shapes and the compressed combined shape');
     !LOWER_SQUAT_SLOTS.includes('hinge'));
   ok('the dedicated hinge shape does not request a bilateral squat',
     !LOWER_HINGE_SLOTS.includes('squat'));
-  const completeSquat = squat(['Back Squat', 'Reverse Lunges', 'Single Leg RDL']);
+  // R-342 (Sam, 2026-09-02): "there just isn't much meat on the bones of the
+  // sessions" — the third seat is a loaded lower accessory, not a third drill.
+  const seatCount = (ladder: readonly SessionSlot[], slot: SessionSlot) =>
+    ladder.filter((candidate) => candidate === slot).length;
+  ok('[R-342] both split lower shapes seat one loaded lower accessory and two robustness seats',
+    seatCount(LOWER_SQUAT_SLOTS, 'loaded_lower_accessory') === 1
+      && seatCount(LOWER_HINGE_SLOTS, 'loaded_lower_accessory') === 1
+      && seatCount(LOWER_SQUAT_SLOTS, 'football_robustness') === 2
+      && seatCount(LOWER_HINGE_SLOTS, 'football_robustness') === 2
+      && LOWER_SQUAT_SLOTS.length === 5 && LOWER_HINGE_SLOTS.length === 5,
+    JSON.stringify({ LOWER_SQUAT_SLOTS, LOWER_HINGE_SLOTS }));
+  ok('[R-342] the loaded accessory seat sits third, ahead of the robustness seats',
+    LOWER_SQUAT_SLOTS[2] === 'loaded_lower_accessory'
+      && LOWER_HINGE_SLOTS[2] === 'loaded_lower_accessory');
+  const loadedSquat = squat(['Back Squat', 'Reverse Lunges', 'Leg Extension']);
+  const loadedHinge = hinge(['RDLs', 'Single Leg RDL', 'Back Extension']);
+  ok('[R-342] a lower-isolation row fills the split day\'s loaded accessory seat',
+    !loadedSquat.missing.includes('loaded_lower_accessory')
+      && !loadedHinge.missing.includes('loaded_lower_accessory'),
+    JSON.stringify({ squat: loadedSquat.missing, hinge: loadedHinge.missing }));
+  ok('[R-342] a prehab drill never fills the loaded seat; the female low-fatigue seat still takes it',
+    !slotsForExerciseName('Crab Walks').includes('loaded_lower_accessory')
+      && !slotsForExerciseName('Bosch Hold').includes('loaded_lower_accessory')
+      && slotsForExerciseName('Crab Walks').includes('lower_accessory')
+      && slotsForExerciseName('Leg Extension').includes('loaded_lower_accessory')
+      && slotsForExerciseName('Back Extension').includes('loaded_lower_accessory'),
+    JSON.stringify({ crab: slotsForExerciseName('Crab Walks'), leg: slotsForExerciseName('Leg Extension') }));
+  // R-342: the split ladders carry a loaded lower accessory seat, so a
+  // complete day carries a loaded isolation row too.
+  const completeSquat = squat(['Back Squat', 'Reverse Lunges', 'Single Leg RDL', 'Leg Extension']);
   ok('a dedicated squat day is complete without a bilateral hinge',
     completeSquat.missing.length === 0,
     JSON.stringify(completeSquat.missing));
-  const completeHinge = hinge(['RDLs', 'Single Leg RDL', 'Bulgarian Split Squats']);
+  const completeHinge = hinge(['RDLs', 'Single Leg RDL', 'Bulgarian Split Squats', 'Back Extension']);
   ok('a dedicated hinge day is complete without a bilateral squat',
     completeHinge.missing.length === 0,
     JSON.stringify(completeHinge.missing));

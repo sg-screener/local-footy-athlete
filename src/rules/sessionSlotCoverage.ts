@@ -42,6 +42,7 @@ import type { WorkoutExercise } from '../types/domain';
 import { participatesInCounting } from './sessionRowCounting';
 import type { MainStrengthPattern } from './strengthPatternContributions';
 import { isFootballRobustnessAccessory } from './footballRobustnessFoundation';
+import type { AutomaticExerciseRoute } from './automaticWeeklyExerciseSelection';
 
 /** The slots Sam named, in his fill order. */
 export type SessionSlot =
@@ -77,9 +78,22 @@ export type SessionSlot =
    * make it glute only"* — superseding R-130a's glute bias, which was
    * measured delivering the one reachable glute row on every seat. Appears
    * on female split days (twice, with `second_lower_accessory`) and as the
-   * extra row on female lower days. No male table declares it.
+   * extra row on female lower days. Prehab drills tagged `isolation_lower`
+   * (Crab Walks, Bosch Hold) fill it too — that is the low-fatigue intent.
    */
   | 'lower_accessory'
+  /**
+   * R-342 (Sam, 2026-09-02): the split Lower Squat / Lower Hinge day's LOADED
+   * third row, both sexes. Filled ONLY by the authored `isolation_lower`
+   * strength pool (Leg Extension, Hamstring Curl, Nordic Lower, Back
+   * Extension, Single-Leg Hip Thrust, Calf Raises, Tib Raises) — never by a
+   * prehab drill, which is exactly the difference from `lower_accessory`.
+   * Measured before its own seat existed: the shared name handed the seat
+   * Crab Walks and Bosch Hold on 4 of 5 lower days. Counts toward the set
+   * budget like a push or pull accessory. R-336 ownership decides which pool
+   * member: knee-dominant on the squat day, posterior chain on the hinge day.
+   */
+  | 'loaded_lower_accessory'
   /**
    * R-130b: the second of the split day's *"1-2 lower body accessories"* —
    * its own seat name so block-stable selection history keys the two apart
@@ -142,14 +156,23 @@ export const LOWER_SLOTS: readonly SessionSlot[] = [
  * two spellings of `LOWER_SLOTS`: keeping the bilateral slot out of the other
  * day's authored shape means selection can never disguise it as an accessory.
  * The combined lower shape remains available for a compressed one-day week.
+ *
+ * R-342 (Sam, 2026-09-02 — *"there just isn't much meat on the bones of the
+ * sessions"*): the third seat is a LOADED lower accessory drawn from the
+ * `isolation_lower` pool and dosed by the lower ladder's third position
+ * (3 × 8–12), not a third robustness drill. Measured before the change, a
+ * male Lower Squat day was Back Squat + Cossack + two robustness rows: four
+ * rows, 9–10 sets, five of them main/secondary. R-336's day ownership still
+ * decides WHICH accessory: knee-dominant on the squat day, posterior-chain on
+ * the hinge day. Two robustness seats remain.
  */
 export const LOWER_SQUAT_SLOTS: readonly SessionSlot[] = [
-  'squat', 'single_leg_knee', 'football_robustness', 'football_robustness',
+  'squat', 'single_leg_knee', 'loaded_lower_accessory', 'football_robustness',
   'football_robustness',
 ];
 
 export const LOWER_HINGE_SLOTS: readonly SessionSlot[] = [
-  'hinge', 'single_leg_hip', 'football_robustness', 'football_robustness',
+  'hinge', 'single_leg_hip', 'loaded_lower_accessory', 'football_robustness',
   'football_robustness',
 ];
 
@@ -473,6 +496,21 @@ function isUpperAccessory(name: string): boolean {
 }
 
 /** Exact authored pool membership, with the same canonical-name join as tags. */
+/**
+ * R-342: the ONE owner of "is this a prehab drill" is the weekly selector's
+ * route (pool authorship in `lower_prehab` / `hamstring_light` /
+ * `shoulder_health`). Tib Raises sits in the isolation_lower strength pool AND
+ * the prehab pool, and the loaded seat must not take it. Lazily required for
+ * the same reason `authoredPoolMembership` is: that module imports this one.
+ */
+function automaticRouteFor(name: string): AutomaticExerciseRoute {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { automaticExerciseRouteForIdentity } = require('./automaticWeeklyExerciseSelection') as {
+    automaticExerciseRouteForIdentity: (n: string) => AutomaticExerciseRoute;
+  };
+  return automaticExerciseRouteForIdentity(name);
+}
+
 function authoredPoolMembership(name: string): {
   readonly slot: string;
   readonly role: string;
@@ -657,6 +695,13 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       // not: the seats are lower-body work, not loaded carries. Males never
       // declare either seat, so the memberships are inert on the male path.
       out.push('accessory_or_core', 'lower_accessory', 'second_lower_accessory');
+      // R-342: only the AUTHORED isolation_lower pool fills the split lower
+      // day's loaded seat. The tag alone is not enough — Crab Walks and Bosch
+      // Hold carry the same tag and are prehab, which is the whole point.
+      if (authoredPoolMembership(name)?.slot === 'isolation_lower'
+        && automaticRouteFor(name) !== 'prehab') {
+        out.push('loaded_lower_accessory');
+      }
       // ── R-233 (Sam, 2026-08-26): the hamstring pair may hold the
       // single-leg hip row. His words: *"I'd rather it be RDL's and nordics,
       // or Single leg RDL's as the main hinge and then hamstring curls or

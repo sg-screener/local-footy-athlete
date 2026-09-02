@@ -8344,6 +8344,9 @@ required split-upper sessions. One typed accessory-affinity field in the
 Exercise Master and canonical exercise catalogue owns the distinction; no
 exercise-name matching is permitted.
 
+· `SUPERSEDED IN PART BY R-342` (2026-09-02) — a prehab drill no longer counts
+toward the four; loaded robustness still does.
+
 Guard: `LAW-minimum-useful-strength-and-directional-upper-accessories` through
 chained `test:full-body-balance`, which invokes
 `test:minimum-useful-strength-session`. The guard drives final male/female
@@ -8577,3 +8580,44 @@ Fly 20 ×11 and three accelerations.
 
 Guard: `LAW-speed-shelves-rotate` through chained
 `test:speed-template-variety`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-342** · Split lower days carry a loaded third row, use the ordinary set
+budget, and a prehab drill is not one of the useful four, 2026-09-02.
+
+Owner: hingecod. Sam, on the generated year: *"I think the main issue is there
+just isn't much meat on the bones of the sessions ... figure out why they are
+so small"*, and *"go"* on the plan to put meat on the lower days. Measured
+cause, on the audited 52-week male year: the split Lower Squat / Lower Hinge
+ladder was one main lift, one single-leg row and THREE robustness seats, so a
+day was 3.4–4.0 rows and 7.8–11 sets, most of it 2 × 10 drills; the in-season
+four-day layout further capped those days at 10 sets (WC-031); and R-334's
+useful-four counted Crab Walks and Bosch Hold as strength, so the receipts said
+"met".
+
+Now: (1) both split lower ladders are main lift, single-leg row, a LOADED
+lower accessory seat (`loaded_lower_accessory`, filled only by the authored
+`isolation_lower` strength pool — Leg Extension, Hamstring Curl, Nordic Lower,
+Back Extension, Single-Leg Hip Thrust, Calf Raises — dosed 3 × 8–12, never a
+prehab drill, both sexes) and two robustness seats; R-336 ownership still
+picks knee-dominant on the squat day and posterior chain on the hinge day.
+(2) WC-031's 10-set exception is killed: the in-season four-day split uses the
+ordinary 12–15 (ceiling 16) budget, and the loaded seat counts toward that
+budget like a push or pull accessory. (3) A prehab-route row (pool authorship
+in `lower_prehab` / `hamstring_light` / `shoulder_health`) does not count
+toward R-334's four; loaded robustness (Nordic Lower, Copenhagen Plank, Calf
+Raises, Groin Squeeze) still does. (4) While an ordinary split day has fewer
+than four loaded rows, a robustness seat opens its loaded bench first; drills
+enter once the minimum is met or when no loaded row is legal. R-334's
+"relevant lower-body prehab or robustness may count" is superseded in that
+one respect; the rest of R-334, R-317/R-318 (one bilateral seat per week, no
+second anchor), R-336 and the four-compound ceiling are unchanged.
+
+Measured on regenerated 52-week years (male and female): split lower days are
+4.4–5.0 rows and 10.6–14.0 sets (Off-season squat 14.0, hinge 11.8–12.4;
+In-season 11.7–12.4), every ordinary day "met", zero unexplained shortfalls;
+the only reduced days carry typed causes (deload, illness, injury, kit).
+
+Guard: `LAW-split-lower-days-carry-loaded-work` through chained
+`test:minimum-useful-strength-session` (three new cells), with the ladder
+pinned in `test:slot-coverage` and the budget in `test:weekly-scheduler`.
+Receipt: `docs/STATUS_HINGECOD.md`.

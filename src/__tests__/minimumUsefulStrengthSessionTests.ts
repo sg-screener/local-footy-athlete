@@ -20,6 +20,7 @@ import {
 import {
   MINIMUM_USEFUL_STRENGTH_EXERCISES,
   minimumUsefulStrengthApplies,
+  rowCountsTowardUsefulStrengthMinimum,
   usefulStrengthExerciseCount,
 } from '../rules/minimumUsefulStrengthSession';
 import type {
@@ -117,6 +118,34 @@ const worlds = (['male', 'female'] as const).flatMap((gender) =>
 console.log('\n[final generated sessions]');
 run('the ruled ordinary-session minimum is exactly four useful exercises', () => {
   assert.equal(MINIMUM_USEFUL_STRENGTH_EXERCISES, 4);
+});
+// R-342 (Sam, 2026-09-02): a prehab drill is not one of the four. A loaded
+// robustness row still is; the route decides, not the seat.
+run('[R-342] a prehab drill does not count toward the useful minimum; loaded work does', () => {
+  const rowFor = (name: string, slot: string) => ({
+    exercise: { name },
+    section18Evidence: { role: 'strength_accessory', slot },
+  }) as unknown as WorkoutExercise;
+  assert.equal(automaticExerciseRouteForIdentity('Crab Walks'), 'prehab');
+  assert.equal(rowCountsTowardUsefulStrengthMinimum(rowFor('Crab Walks', 'football_robustness')), false);
+  assert.equal(rowCountsTowardUsefulStrengthMinimum(rowFor('Bosch Hold', 'football_robustness')), false);
+  assert.equal(rowCountsTowardUsefulStrengthMinimum(rowFor('Nordic Lower', 'football_robustness')), true);
+  assert.equal(rowCountsTowardUsefulStrengthMinimum(rowFor('Leg Extension', 'loaded_lower_accessory')), true);
+  assert.equal(rowCountsTowardUsefulStrengthMinimum(rowFor('Leg Extension', 'core')), false);
+});
+run('[R-342] every ordinary split lower day carries a loaded lower accessory row across 30 worlds', () => {
+  const lowerDays = worlds.flatMap((world) => world.workouts
+    .filter((workout) => workout.composedDayShape === 'lower_squat'
+      || workout.composedDayShape === 'lower_hinge')
+    .map((workout) => ({ ...world, workout })));
+  assert(lowerDays.length > 0);
+  for (const { gender, phase, availableDays, workout } of lowerDays) {
+    const label = `${gender}/${phase}/${availableDays}/${workout.name}`;
+    const loaded = workout.exercises.filter((row) => row.section18Evidence?.slot === 'loaded_lower_accessory');
+    assert.equal(loaded.length, 1, `${label}: ${workout.exercises.map(identity).join(', ')}`);
+    assert.equal(automaticExerciseRouteForIdentity(identity(loaded[0])), 'strength', label);
+    assert(usefulStrengthExerciseCount(workout) >= MINIMUM_USEFUL_STRENGTH_EXERCISES, label);
+  }
 });
 run('ordinary Lower Squat, Lower Hinge, Upper Push and Upper Pull meet the useful minimum across 30 worlds', () => {
   const ordinary = worlds.flatMap((world) => world.workouts

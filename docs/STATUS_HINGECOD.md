@@ -314,3 +314,53 @@ Guard: new chained `test:speed-template-variety` 5/5, red 3/5 under the old
 alternation (mutation restored). Regenerated 52-week male year: Fly 20 ×6,
 Fly 30 ×5, Progressive ×3, 20 m ×3, Hill ×2 (was Fly 20 ×11, three
 accelerations); scheduler 137/137, fresh Speed 14/14, restarts 52/52.
+
+## Addendum 2026-09-02 — R-342: meat on the lower days (unit 4 of six)
+
+Sam: *"there just isn't much meat on the bones of the sessions ... figure out
+why they are so small"*. Measured on the audited year (db534496), split lower
+days per phase: Off-season squat 4.0 rows / 11.0 sets, hinge 4.0 / 9.0;
+Pre-season 3.5 / 8.2 and 3.4 / 7.8; In-season 4.0 / 9.4 and 3.9 / 9.1. Three
+causes: the ladder was main + single-leg + THREE robustness seats (2 × 10
+drills); the in-season four-day layout capped those days at 10 sets (WC-031);
+and R-334's useful-four counted prehab drills, so every thin day read "met".
+
+Changes: a typed `loaded_lower_accessory` seat third on both split ladders,
+filled only by the authored `isolation_lower` strength pool (route ≠ prehab,
+so Tib Raises stays out) and dosed 3 × 8–12 by the lower ladder's third
+position; WC-031 killed (clause row removed, `SPLIT_LOWER_SET_BUDGET`
+deleted, WC-103 on the default budget) and the seat counts toward the set
+budget; `rowCountsTowardUsefulStrengthMinimum` excludes prehab-route rows
+through one shared `usefulStrengthIdentityCounts`, which the composer's
+redundancy pruning also uses; and the robustness seat opens its loaded bench
+first while the day has fewer than four loaded rows.
+
+What did not work first: reusing the female `lower_accessory` seat name. That
+seat is deliberately low-fatigue and every `isolation_lower`-tagged prehab
+drill fills it, so the first regenerated year seated Crab Walks, Bosch Hold
+and SL 45° Back Extension Hold on four of five lower days. The typed seat
+fixed it. Second, with prehab excluded from the count, two prehab robustness
+rows left many days at three loaded rows (unexplained shortfall); the
+loaded-first bench fixed that with zero shortfalls remaining.
+
+After, regenerated 52-week years (male / female identical on these numbers):
+Off-season squat 5.0 rows / 14.0 (13.2 f) sets, hinge 5.0 / 11.8 (12.4 f);
+Pre-season 4.4 / 10.8 and 4.4 / 10.6; In-season 5.0 / 12.4 and 5.0 / 12.0.
+Every ordinary day "met"; the 6–7 reduced pre-season days carry typed causes
+(deload 6, illness 3, injury 3, kit/availability 1). Restarts 52/52 both.
+
+Guards: minimum-useful 9/9 (three new cells), slot coverage 85/88 (three new
+cells; the three reds are inherited and identical at 6f1ae864), scheduler
+138/138 (two new cells; the WC-031 cell rewritten to the default budget),
+selection 21/21, upper split 29/29, modality 5/5, variety 5/5. Mutation:
+old ladder → coverage 83/88; loaded-first bench removed → minimum-useful 7/9
+and selection 20/21; prehab counted → minimum-useful 8/9; all three files
+restored byte-identical. Inherited and unchanged at the control worktree:
+composer B1 50/4, severance 4 reds, generated scheduler fixtures 9/11,
+canonical compiler (duplicate-row cell + Section 18 onboarding world),
+release gate stopping at test:test-truth (dev E2E seed registry throws),
+typecheck gate's five pre-existing file errors.
+
+NOT COVERED: simulator proof of the new rows on the phone (generation-level
+proof only); combined `lower` days and full-body shapes (untouched by order);
+Section 18 exposure evidence for the new seat beyond the set budget.

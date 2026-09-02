@@ -112,6 +112,7 @@ import {
 import {
   MINIMUM_USEFUL_STRENGTH_EXERCISES,
   minimumUsefulStrengthApplies,
+  usefulStrengthIdentityCounts,
 } from './minimumUsefulStrengthSession';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
@@ -663,6 +664,8 @@ const SPLIT_UPPER_ACCESSORY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlo
   // R-130b — *"don't just make it glute only"* — after the first mix's glass
   // check showed the one reachable glute row on every seat.)
   'midline', 'lower_accessory', 'second_lower_accessory', 'shoulder_prehab',
+  // R-342: the split lower day's loaded seat joins the same-day dedup too.
+  'loaded_lower_accessory',
 ]);
 
 function hingePriorityFirst(
@@ -1840,9 +1843,29 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         return family === null || !variationFamiliesThisDay.has(family);
       });
       const preferMissingFootballCategory = (
-        candidates: readonly ComposedExerciseIdentity[],
+        allCandidates: readonly ComposedExerciseIdentity[],
       ): readonly ComposedExerciseIdentity[] => {
-        if (slot !== 'football_robustness') return candidates;
+        if (slot !== 'football_robustness') return allCandidates;
+        // ── R-342: LOADED BEFORE DRILLS UNTIL THE DAY IS USEFUL ──────────
+        // A prehab drill is not one of R-334's four (Sam, 2026-09-02). While
+        // this ordinary split day still has fewer than four loaded rows, the
+        // robustness seat opens its LOADED bench first (Nordic Lower,
+        // Copenhagen Plank, Calf Raises, Groin Squeeze); drills enter once
+        // the minimum is met, or when no loaded row is legal. Measured before
+        // this rule: a Lower Hinge of RDL, Hamstring Curl, Nordic Lower, Crab
+        // Walks and Bosch Hold — five rows, three loaded — on every hinge day
+        // of the Off-season. The category walk below runs inside whichever
+        // bench is open, so rotation still happens among purpose-relevant rows.
+        const loadedRowsSoFar = rows.filter((row) =>
+          row.slot !== 'core' && row.slot !== 'midline'
+          && usefulStrengthIdentityCounts(row.identity)).length;
+        const loadedBench = allCandidates.filter((candidate) =>
+          usefulStrengthIdentityCounts(candidate));
+        const candidates = minimumUsefulStrengthApplies(kind)
+          && loadedRowsSoFar < MINIMUM_USEFUL_STRENGTH_EXERCISES
+          && loadedBench.length > 0
+          ? loadedBench
+          : allCandidates;
         // Weekly lower-body frontal strength is a required coverage hole, not
         // an audit suggestion. When it is still missing, the groin/adductor
         // robustness seat is the first legal purpose-compatible place to fill
@@ -2377,8 +2400,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   };
   const finalDays = days.map((day) => {
     let removed = 0;
+    // R-342: the same identity test the minimum itself applies — a prehab
+    // drill is not one of the four, here or in the final receipt.
     let usefulRowsRemaining = day.rows.filter((row) =>
-      row.slot !== 'core' && row.slot !== 'midline').length;
+      row.slot !== 'core' && row.slot !== 'midline'
+      && usefulStrengthIdentityCounts(row.identity)).length;
     const rows = day.rows.filter((row) => {
       if (row.slot !== 'football_robustness') return true;
       const supplied = footballRobustnessCategoriesForExercise(row.identity);

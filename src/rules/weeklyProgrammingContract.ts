@@ -183,14 +183,12 @@ export const DEFAULT_SET_BUDGET: SetBudget = {
 };
 
 /**
- * WC-031. **The approved exception, and the document calls it that in as many
- * words:** *"The deliberately reduced 10-set Lower Squat and Lower Hinge sessions
- * used in the four-session in-season layout are an approved exception below the
- * preferred range, not a failure to reach it."*
+ * WC-031 WAS the approved 10-set exception for the four-session in-season
+ * Lower Squat / Lower Hinge days. **KILLED BY R-342 (Sam, 2026-09-02).** His
+ * words on the generated year: *"there just isn't much meat on the bones of
+ * the sessions"* — and the split lower days were the thinnest sessions in it.
+ * Every layout now declares `DEFAULT_SET_BUDGET`; no second budget exists.
  */
-export const SPLIT_LOWER_SET_BUDGET: SetBudget = {
-  preferredMin: 10, preferredMax: 10, hardCeiling: 10,
-};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §3 — GLOBAL WEEKLY RULES
@@ -311,9 +309,9 @@ export const BASE_LAYOUTS: readonly BaseLayout[] = [
   {
     clauseId: 'WC-103', phase: 'In-season', gymDays: [4, 5, 6], weekendAvailable: null,
     purposes: ['lower_squat', 'upper_pull', 'lower_hinge', 'upper_push'],
-    setBudget: SPLIT_LOWER_SET_BUDGET,
+    setBudget: DEFAULT_SET_BUDGET,
     statement: 'Selector MET — four sessions. The fourth creates separate Lower '
-      + 'Squat and Lower Hinge days, each using the 10-set main/secondary budget.',
+      + 'Squat and Lower Hinge days on the ordinary 12-15 set budget (R-342).',
   },
   {
     clauseId: 'WC-110', phase: 'Pre-season', gymDays: [2], weekendAvailable: null,
@@ -709,9 +707,6 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
   { id: 'WC-030', provenance: '§5 Total session workload / decision 16',
     statement: 'Prefer 12-15 main/secondary working sets; 16 is a hard ceiling; '
       + 'the same limit applies to Lower, Upper and Full Body.' },
-  { id: 'WC-031', provenance: '§5 / decision 13',
-    statement: 'Split in-season Lower Squat and Lower Hinge sessions use 10 '
-      + 'main/secondary working sets — an approved exception, not a failure.' },
   { id: 'WC-040', provenance: '§3 Hard-day total',
     statement: 'Prefer 4 hard days; allow 5. The app does not program 6.' },
   { id: 'WC-041', provenance: '§3 Consecutive hard days / decision 6',
@@ -953,5 +948,9 @@ export function slotCountsTowardSetBudget(slot: string | null | undefined): bool
     || slot === 'horizontal_push' || slot === 'vertical_push'
     || slot === 'horizontal_pull' || slot === 'vertical_pull'
     || slot === 'push_accessory_1' || slot === 'push_accessory_2'
-    || slot === 'pull_accessory_1' || slot === 'pull_accessory_2';
+    || slot === 'pull_accessory_1' || slot === 'pull_accessory_2'
+    // R-342: the split lower day's loaded accessory is secondary lifting work,
+    // exactly as a push or pull accessory is. Robustness, core and the female
+    // low-fatigue `lower_accessory` seat stay outside.
+    || slot === 'loaded_lower_accessory';
 }

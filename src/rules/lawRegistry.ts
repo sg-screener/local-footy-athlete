@@ -680,6 +680,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-split-lower-days-carry-loaded-work',
+    law: 'R-342: the split Lower Squat and Lower Hinge ladders are main lift, single-leg row, one loaded lower accessory seat (loaded_lower_accessory, filled only by the authored isolation_lower strength pool, never a prehab drill, dosed by the lower ladder\'s third position) and two robustness seats, both sexes; the in-season four-day split uses the ordinary 12-15 set budget (WC-031\'s 10-set exception is killed) and the loaded seat counts toward it; a prehab-route row does not count toward R-334\'s useful four while loaded robustness does; while an ordinary split day has fewer than four loaded rows a robustness seat opens its loaded bench first. R-317/R-318, R-336 and the four-compound ceiling are unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-342',
+    guard: {
+      state: 'guarded',
+      by: 'test:minimum-useful-strength-session',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST, measured on the audited year: split lower days were 3.4-4.0 rows and 7.8-11 sets because the ladder held three robustness seats and R-334 counted Crab Walks and Bosch Hold as strength. THE CHANGE: a typed loaded seat (a shared `lower_accessory` name was tried first and handed the seat Crab Walks and Bosch Hold on four of five days), the default budget, the route-based useful count shared with the composer\'s pruning, and the loaded-first robustness bench. Three new cells here (prehab does not count; every ordinary split lower day carries a loaded strength-route row across 30 worlds; the 30-world minimum), three in test:slot-coverage (ladder shape, seat order, only the strength pool fills it), two in test:weekly-scheduler (default budget, budget membership). MUTATION: old ladder reds two coverage cells; removing the loaded-first bench reds two cells here and the hinge cell in test:automatic-weekly-selection; counting prehab reds the route cell. AFTER: minimum-useful 9/9, selection 21/21, scheduler 138/138, coverage 85/88 (three inherited), upper split 29/29; regenerated male and female years 4.4-5.0 rows and 10.6-14.0 sets per split lower day, zero unexplained shortfalls, 52/52 restarts each. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

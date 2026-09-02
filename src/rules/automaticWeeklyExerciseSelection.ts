@@ -357,7 +357,7 @@ export function createAutomaticWeeklyExerciseSelector(
   ): MovementPlaneTieBreakContext => {
     const lowerSlots: ReadonlySet<SessionSlot> = new Set([
       'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
-      'lower_accessory', 'football_robustness',
+      'lower_accessory', 'loaded_lower_accessory', 'football_robustness',
     ]);
     const lowerFrontalPresent = [...planeDelivered].some((identity) =>
       exerciseSuppliesLowerBodyFrontal(

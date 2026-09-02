@@ -1,4 +1,5 @@
 import type { Workout, WorkoutExercise } from '../types/domain';
+import { automaticExerciseRouteForIdentity } from './automaticWeeklyExerciseSelection';
 import type { ComposedGap } from './composeWeek';
 import type { DeloadDoor } from './deloadWeekRules';
 import type { SlotDayKind } from './sessionSlotCoverage';
@@ -43,7 +44,22 @@ export function rowCountsTowardUsefulStrengthMinimum(row: WorkoutExercise): bool
   const role = row.section18Evidence?.role;
   if (role !== 'main_strength' && role !== 'strength_accessory') return false;
   const slot = row.section18Evidence?.slot;
-  return slot !== 'core' && slot !== 'midline';
+  if (slot === 'core' || slot === 'midline') return false;
+  return usefulStrengthIdentityCounts(row.exercise?.name ?? '');
+}
+
+/**
+ * R-342 (Sam, 2026-09-02): a prehab drill is not one of the four. R-334 let
+ * *"relevant lower-body prehab or robustness"* count, and the generated year
+ * showed what that bought: a Lower Hinge of RDL, Hamstring Curl, Nordic Lower
+ * and Crab Walks was "four useful rows". The route is the same typed answer
+ * the weekly selector already uses for ownership (`prehab` vs `strength`), so
+ * a loaded robustness row such as Nordic Lower or Copenhagen Plank still
+ * counts and a band walk or hold does not. Shared with the composer's
+ * redundancy pruning so the two never disagree about what is useful.
+ */
+export function usefulStrengthIdentityCounts(identity: string): boolean {
+  return automaticExerciseRouteForIdentity(identity) !== 'prehab';
 }
 
 export function usefulStrengthExerciseCount(workout: Workout): number {
