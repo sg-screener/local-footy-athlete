@@ -247,11 +247,30 @@ export function chooseInjurySessionAdditions(args: {
   }
   const weeklySelector = createAutomaticWeeklyExerciseSelector(automaticDelivered);
 
-  const take = (candidate: InjurySessionAddition | undefined): boolean => {
+  // R-355: the DAY's own pattern load. A day already carrying two rows of a
+  // main pattern (two presses) does not get a third from this block — the
+  // chooser used to read only the week, and Friday took DB Bench Press, Seated
+  // DB Press and then Push-ups.
+  const patternOf = (name: string) => mainPatternForExerciseMovement(getExerciseTags(name)?.movement);
+  const patternCountToday = (pattern: ReturnType<typeof patternOf>): number => pattern
+    ? [...args.keptRowNames, ...chosen.map((entry) => entry.name)]
+      .filter((name) => patternOf(name) === pattern).length
+    : 0;
+  const take = (candidate: InjurySessionAddition | undefined, options?: { repeat?: boolean }): boolean => {
     if (!candidate) return false;
     if (chosen.length >= roomForRows) return false;
     if (sets + setsOf(candidate) > SET_CEILING) return false;
     if (isVariantOfAlreadyChosen(candidate.name, chosen)) return false;
+    if (candidate.mainStrengthPattern && patternCountToday(candidate.mainStrengthPattern) >= 2) return false;
+    if (options?.repeat) {
+      // A REPEAT of work the week already carries (R-355 doubling): the weekly
+      // once-per-identity rule is deliberately not asked — that rule is the
+      // reason the unused bench is empty on limited kit. Everything else
+      // (room, sets, variants, the day's pattern cap) still holds.
+      chosen.push(candidate);
+      sets += setsOf(candidate);
+      return true;
+    }
     const requestedAsMain = !!candidate.mainStrengthPattern;
     const route = automaticExerciseRouteForIdentity(candidate.name);
     const realSlots = realMovementSlotsForAutomaticExercise(candidate.name);
@@ -362,6 +381,34 @@ export function chooseInjurySessionAdditions(args: {
     if (candidate && take({ ...candidate,
       mainStrengthPattern: mainPatternForExerciseMovement(getExerciseTags(candidate.name)?.movement),
     })) break;
+  }
+  // ── 1b. R-355 DOUBLING: NOTHING UNUSED? REPEAT SOMETHING SAFE THE WEEK HAS ──
+  //
+  // Sam, 2026-09-02: "if you have limited equipment you can double up on
+  // things when injured." When every unused legal compound in the unaffected
+  // half is gone (limited kit), a safe compound the REST of the week already
+  // carries is repeated on this day rather than an unrelated filler or an
+  // empty position. Today's own rows, the paused rows and the athlete's
+  // exclusions are never repeated.
+  if (chosen.length === 0) {
+    const neverRepeated = new Set([
+      ...args.keptRowNames, ...args.pausedRowNames, ...args.excludedByAthlete,
+    ].map(normalise));
+    const repeatable = new Set(restOfWeek.map(normalise));
+    const repeats = stableDecisionOrder(
+      leaves.flatMap((leaf) => legalAddCandidates({
+        leaf,
+        environment: args.environment,
+        profile: args.profile ?? null,
+        existingExerciseNames: [],
+      })).filter((candidate) => repeatable.has(normalise(candidate.name))
+        && !neverRepeated.has(normalise(candidate.name))),
+      `injury-session-repeat:${args.dateISO ?? 'undated'}`,
+      (candidate) => normalise(candidate.name),
+    );
+    for (const candidate of repeats) {
+      if (take({ ...candidate, mainStrengthPattern: patternOf(candidate.name) }, { repeat: true })) break;
+    }
   }
 
   // ── 2. MIDLINE, ONE PER PRESCRIPTION SHAPE ───────────────────────────────
@@ -543,7 +590,11 @@ export function deriveInjurySessionAdjustment(
     .filter((region): region is 'lower' | 'upper' => region === 'lower' || region === 'upper'));
   const pausedRegion = halves.size === 1 ? [...halves][0]! : null;
 
-  const added = chooseInjurySessionAdditions({
+  // R-355 (Sam, 2026-09-02): a Mobility or Recovery session never receives
+  // strength fillers — a paused stretch simply comes off. Measured: a knee
+  // injury paused Crab Hold on a Mobility day and the block added Push-ups.
+  const strengthSession = workout.workoutType !== 'Mobility' && workout.workoutType !== 'Recovery';
+  const added = !strengthSession ? [] : chooseInjurySessionAdditions({
     environment: args.environment,
     profile: args.profile,
     keptRowNames,

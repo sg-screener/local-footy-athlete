@@ -139,6 +139,12 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
 
 export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'workout' | 'dateISO' | 'weekExerciseNames' | 'weekAutomaticExerciseNames' | 'otherMainStrengthPatterns'> & {
   workoutsByDate: Readonly<Record<string, Workout>>;
+  /**
+   * R-354: the first date this compile may shape. Days before it are history
+   * — the source-fact fold pins them from the accepted week — and no pass in
+   * here may add to them. Absent, every date is placeable (boot replays).
+   */
+  historyBeforeISO?: string;
 }) {
   const stages = args.constraints.filter((constraint): constraint is ActiveInjuryConstraint =>
     constraint.type === 'injury' && constraint.status === 'active' && !!constraint.bucket)
@@ -180,6 +186,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
         gameDates: Object.entries(workoutsByDate)
           .filter(([, workout]) => workout.workoutType === 'Game')
           .map(([date]) => date),
+        placeableFromISO: args.historyBeforeISO,
       }).workoutsByDate
     : workoutsByDate;
   const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, workout]) => {

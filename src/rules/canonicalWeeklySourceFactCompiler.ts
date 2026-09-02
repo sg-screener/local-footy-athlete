@@ -10,7 +10,7 @@ import { carryOwnAcceptedLoadsIntoWorkout } from './acceptedLoadCarry';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, datedFatigueReportsFromFacts, isInjurySourceFact, READINESS_FACT_KINDS, temporarySourceFactId,
   type TemporarySourceFact } from './temporarySourceFact';
-import { factHorizon, factHorizonCoversDate, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
+import { factHorizon, factHorizonCoversDate, factHorizonCoversWeek, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
 import { isoDateForWeekday } from '../utils/appDate';
 import { isTeamNightMoveFact, buildTeamNightMoveWeekOverlay } from './teamNightMoveDerivation';
 import { activeUserRemovalConstraintsForWeek } from './canonicalWeeklyAthleteEditState';
@@ -259,10 +259,17 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         composedRowIsLegal(row.exercise.name, kit));
       return [dateISO, exercises.length === workout.exercises.length ? workout : { ...workout, exercises }];
     }));
+    // R-354: days before the newest injury report's first shaped date are
+    // history for this week; no pass of the injury compile may add to them.
+    const historyBeforeISO = deriving.filter(isInjurySourceFact)
+      .filter((fact) => factHorizonCoversWeek(fact, weekStart))
+      .map((fact) => firstShapedDateInWeek(fact, weekStart))
+      .sort().pop();
     const injuryWeek = compileCanonicalInjuryWeek({
       workoutsByDate: equipmentWorkoutsByDate,
       profile: input.profile, constraints, exclusions: input.surfaces.athleteExclusions ?? [],
       recordedLoads: input.recordedLoads,
+      ...(historyBeforeISO ? { historyBeforeISO } : {}),
     });
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);

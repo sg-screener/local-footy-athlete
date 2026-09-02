@@ -915,3 +915,57 @@ two that stop are ONE bug: `male-2-novice-home` at week 7 (Off-season 8) and
 the already-done Monday gains a row from a `week-overlay` rebuild (Copenhagen
 Plank (Half) for him, Long-Lever Copenhagen for her). The push refusal is
 gone with the archetype re-pin.
+
+## 2026-09-02 (later) — R-354 + R-355: injury reports leave done days alone; injured limited-kit sessions double up
+
+**Sam:** "approve the past-session bug and the filler … yes doubling".
+REGISTRY-GREP before the doubling question: R-334 (no repeat filler for a
+HEALTHY session; injury is a typed cause for a shorter one), R-317, R-230,
+R-083, the 2026-08-20 "Breathing Reset never inside Strength" and 2026-08-27
+injury over-restriction rulings — none ruled the injured, limited-kit case.
+
+**R-354 root cause, traced by logging every compile during the report.** The
+source-fact rebuild pins the done days correctly (boundary = the fact's first
+shaped date; Monday came out unchanged). The extra row was added AFTER it:
+`compileCanonicalInjuryWeek` runs `completeWeeklyLowerBodyFrontal` over the
+whole week, and that pass walks every strength date from the first — Monday —
+and appends a groin/frontal row (Copenhagen Plank (Half) for the 2-day
+novice, Long-Lever Copenhagen for the 3-day beginner). **Change:**
+`compileCanonicalInjuryWeek` takes `historyBeforeISO`; the source-fact
+compiler passes the newest injury's `firstShapedDateInWeek`; the completion
+pass takes `placeableFromISO` and never places before it. The fixture replan's
+own call of the completion pass is untouched (it carries its own remainder).
+
+**R-355 root cause.** `deriveInjurySessionAdjustment` ran on Mobility
+sessions (a paused Crab Hold → Push-ups added); `chooseInjurySessionAdditions`
+read only the WEEK for duplicates, so a day with two presses got a third, and
+on limited kit the unused bench emptied and only midline was offered.
+**Change:** no additions on Mobility/Recovery sessions; the day's pattern is
+capped at two rows; when the unused compound bench is empty, a safe compound
+the rest of the week already carries is repeated (never a paused row, a row
+already on the day, or an athlete exclusion) — the weekly once-per-identity
+rule is deliberately not asked for that repeat.
+
+**Red first (control worktree at `4712a17a`, same test file):** 12/16 —
+R-354 "Monday and Tuesday byte-identical" red (Monday gained Copenhagen Plank
+(Half)); "Mobility session receives no strength filler" red (Push-ups);
+"repeats a safe compound" red (McGill Sit Up, Side Plank, Dead Bug only);
+the third-press cell red. After: 16/16 (`test:injury-limited-kit`, chained).
+
+**Blast radius (branch vs `4712a17a`).** Identical: injury-session-adjustment
+51/54 (3 inherited), session-change-sequence 18/4, injury-compiler-preview
+(running-budget cells), session-injury-review [5] ×2, canonical-weekly-compiler
+55 → 54 failed. Improved: injury-fallback-journey 4 → 2 fails (the "lower
+back, limiting" pair went green; the two coverage cells remain). Green:
+injury-recomposition 186, modifier-lifecycle, session-change-durability 59,
+three-day-main-seat 22, readiness-load-retention 58, fact-horizon 14,
+movement-planes 13/13, guided-injury-totality 50, injury-latest-severity 48.
+
+**`compiler-year` on the final code: ALL EIGHT archetypes reach 52/52.**
+394 of 416 athlete-weeks green; the 22 red weeks are week-checker findings
+inside measured weeks, not stops: 12× conditioning planner target 4 vs 3, 3×
+conditioning minimum 3 vs 2, 2× main-strength planner target 3 vs 2 (the
+injured weeks), 2× pull main lift lost under a restriction, 1× sprint
+high-speed maximum, 4× energy-session content. Spread over five archetypes
+(incl. female-4 weeks 2 and 41, male-5 weeks 4 and 41 — worlds this branch
+never touched). Not this unit's; listed for the next round.

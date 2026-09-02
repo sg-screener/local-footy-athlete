@@ -8899,3 +8899,32 @@ temporary 'do what ya can' style program." The compiler-year archetype
 `male-2-novice-bodyweight` (a world onboarding refuses at the equipment step)
 was a stale fixture and is now `male-2-novice-home`; the push refusal it
 produced was never an athlete-reachable defect. Owner: hingecod.
+
+**R-354** · An injury report never changes a day the athlete already did,
+2026-09-02.
+
+Owner: hingecod. Sam: "approve the past-session bug". Measured on the
+compiler-year archetypes: a knee reported on Wednesday added a Copenhagen
+plank to the done Monday. The rebuild pinned the done days correctly; the
+weekly lower-body frontal completion that runs after the injury week fold
+walked every strength date with no history boundary. Now the source-fact
+compiler hands the newest injury's first shaped date to the injury week
+compile (`historyBeforeISO`) and the completion pass (`placeableFromISO`)
+never places on an earlier day. Guard: `LAW-injury-report-never-changes-a-done-day`
+through chained `test:injury-limited-kit`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-355** · Injured on limited kit: no strength filler on a Mobility day, no
+third row of a pattern, and doubling before nothing, 2026-09-02.
+
+Owner: hingecod. Sam: "shouldn't it just be if you have limited equipment
+that you can double up on things when injured?" … "yes doubling". Three
+rules for the injury-added block: (a) a Mobility or Recovery session never
+receives strength fillers — the paused stretch comes off; (b) the block never
+gives a day a third row of a push or pull pattern the day already carries
+twice; (c) when no unused legal compound in the unaffected half remains, the
+block repeats a safe compound the rest of the week already carries (never a
+paused row, a row already on the day, or an athlete exclusion) before leaving
+the position empty. R-334's "no repeat filler" stands for healthy sessions;
+this is the injured, limited-kit case it left open. Guard:
+`LAW-injured-limited-kit-doubles-up` through chained
+`test:injury-limited-kit`. Receipt: `docs/STATUS_HINGECOD.md`.

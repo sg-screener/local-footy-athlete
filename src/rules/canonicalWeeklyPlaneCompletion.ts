@@ -98,6 +98,13 @@ export function completeWeeklyLowerBodyFrontal(args: {
   readonly profile: OnboardingData;
   readonly activeConstraints?: readonly ActiveConstraint[];
   readonly gameDates?: readonly string[];
+  /**
+   * R-354: days before this date are HISTORY (already done relative to the
+   * report that triggered this completion) and may not receive the row. The
+   * injury week fold skips them per stage; this pass walked every strength
+   * date and put a Copenhagen plank on a Monday the athlete had already done.
+   */
+  readonly placeableFromISO?: string;
 }): WeeklyLowerFrontalCompletion {
   const cleaned = Object.fromEntries(Object.entries(args.workoutsByDate).map(([date, workout]) => [
     date,
@@ -108,7 +115,8 @@ export function completeWeeklyLowerBodyFrontal(args: {
   const workouts = Object.values(cleaned);
   if (hasMeaningfulLowerFrontal(workouts)) return { status: 'already_present', workoutsByDate: cleaned };
 
-  const dates = existingStrengthDates(cleaned);
+  const dates = existingStrengthDates(cleaned).filter(([dateISO]) =>
+    !args.placeableFromISO || dateISO >= args.placeableFromISO);
   const considered = POOL_REGISTRY.groin_adductors.map((entry) => entry.name);
   if (dates.length === 0) {
     const exception: WeeklyMovementPlaneException = {

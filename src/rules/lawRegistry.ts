@@ -812,6 +812,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-injury-report-never-changes-a-done-day',
+    law: 'R-354: an injury report shapes days from its first shaped date onward only; the weekly lower-body frontal completion that runs after the injury week fold receives that boundary (placeableFromISO) and never places a row on an earlier day. Days before the boundary stay byte-identical to what the athlete already saw.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-354',
+    guard: {
+      state: 'guarded',
+      by: 'test:injury-limited-kit',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST at 4712a17a: the 2-day home-kit novice reported a knee on Wednesday of Off-season week 8 and his done Monday gained "Copenhagen Plank (Half)" (the 3-day beginner: Long-Lever Copenhagen at In-season 8). Logged every compile: the source-fact rebuild pinned Monday correctly; completeWeeklyLowerBodyFrontal, run over the whole week by compileCanonicalInjuryWeek, placed the frontal row on the first strength date — Monday. THE CHANGE: the source-fact compiler passes the newest injury\'s firstShapedDateInWeek as historyBeforeISO; the completion pass takes placeableFromISO. Cell "Monday and Tuesday are byte-identical after the Wednesday knee report" red → green, with controls (edit landed, injury active). Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
+    id: 'LAW-injured-limited-kit-doubles-up',
+    law: 'R-355: when an injury pauses rows, (a) a Mobility or Recovery session never receives strength fillers — the paused row simply comes off; (b) the added block never gives a day a third row of a push or pull pattern the day already carries twice; (c) when no unused legal compound in the unaffected half remains (limited kit), the block REPEATS a safe compound the rest of the week already carries — never a paused row, a row already on the day, or an athlete exclusion — before leaving the position empty. Sam, 2026-09-02: "if you have limited equipment you can double up on things when injured … yes doubling".',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-355',
+    guard: {
+      state: 'guarded',
+      by: 'test:injury-limited-kit',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST at 4712a17a: the 3-day home-kit beginner\'s week-10 knee report put Push-ups into her Wednesday MOBILITY session, her Friday stacked three presses, and with every unused upper compound already in the week the chooser answered only midline (McGill Sit Up, Side Plank, Dead Bug). THE CHANGE: deriveInjurySessionAdjustment adds nothing on Mobility/Recovery sessions; chooseInjurySessionAdditions caps the day\'s pattern at two and, when the unused compound bench is empty, repeats a safe compound from the rest of the week (the weekly once-per-identity rule is deliberately not asked for that repeat). Three cells red → green plus the two-presses control. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',
