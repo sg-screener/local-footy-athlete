@@ -42,8 +42,7 @@ import { EXERCISE_DEMO_VIDEOS, lookupExerciseDemo } from '../services/exerciseVi
 import {
   EXERCISE_LOAD_MAP,
   isTrueBodyweightExercise,
-  resolveExerciseName,
-} from '../utils/loadEstimation';
+  resolveExerciseName, resolveLoadAuthority } from '../utils/loadEstimation';
 import { CONDITIONING_META } from '../data/exerciseTags';
 import { readSheetRecords, readXlsx } from './support/xlsxReader';
 
@@ -428,9 +427,14 @@ function main(): void {
       // exemption has to be stated rather than accidentally supplied.
       if (!CONDITIONING_META[name]) {
         const resolved = resolveExerciseName(name);
+        // RE-PINNED 2026-09-02: load handling has ONE owner, `resolveLoadAuthority`,
+        // and it knows four shapes — a profile, true bodyweight, an equipment
+        // minimum, and the authored "unloaded" prehab set (Copenhagen Plank
+        // (Half), Tib Raises). The cell used to accept only the first two and
+        // read the unloaded pair as undefined.
         ok(`${name} keeps defined load handling`,
-          Boolean(EXERCISE_LOAD_MAP[resolved]) || isTrueBodyweightExercise(name),
-          `resolveExerciseName('${name}') gave '${resolved}': no load profile and not bodyweight`);
+          resolveLoadAuthority(name).kind !== 'unauthored',
+          `resolveExerciseName('${name}') gave '${resolved}': no load authority (profile, bodyweight, equipment minimum or unloaded)`);
       }
     }
     ok('the retired Single-Arm Pulldown identity is not a current cue key',

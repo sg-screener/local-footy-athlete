@@ -304,6 +304,11 @@ ok('the phase cap limits a non-vacuous candidate world to two primers',
 
 const teamProgram = await generateThroughOnboarding({
   ...profile,
+  // The club-night claim lives on the FULL-GYM world (the comment below, and
+  // R-230: a bodyweight-only athlete is not onboardable). Re-pinned 2026-09-02
+  // when the suite first ran past onboarding: the bodyweight Tuesday carried
+  // the club night alone.
+  equipment: ['Full Gym'], equipmentAnswer: fullKit,
   teamTrainingDaysPerWeek: 1,
   teamTrainingDays: ['Tuesday'],
 } as never, {
