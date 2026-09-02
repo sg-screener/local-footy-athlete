@@ -147,10 +147,14 @@ export function completeWeeklyLowerBodyFrontal(args: {
       decision: assessTapSwapCandidateSafety(entry.name, environment),
     }));
     const safe = decisions.filter(({ decision }) => decision.safe).map(({ entry }) => entry);
+    // The completed session keeps its dedicated purpose: a frontal lunge may
+    // not be appended to a Lower Hinge, so the selector is asked with the
+    // day's composed shape and moves on to the next existing session instead.
+    const dayKind = workout.composedDayShape ?? null;
     const selectorEligibleExercises = safe.filter((entry) => selector.canUse({
       identity: entry.name,
       requestedSlot: 'football_robustness',
-      dayKind: null,
+      dayKind,
       route: 'strength',
       requestedAsMain: false,
     })).map((entry) => entry.name);
@@ -168,7 +172,7 @@ export function completeWeeklyLowerBodyFrontal(args: {
       accessories: [],
       prehab: [],
       requestedSlot: 'football_robustness',
-      dayKind: null,
+      dayKind,
       requestedAsMain: false,
     });
     if (!choice) continue;

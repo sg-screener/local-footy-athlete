@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  athleticPlaneExposuresForAuditDay,
   finalAthleteFacingAuditRows,
   programmingAuditProjectionFindings,
   summarizeProgrammingAuditConditioningVocabulary,
@@ -88,4 +89,49 @@ check('a real exercise without catalogue identity still fails the audit', () => 
   }), /missing catalogueIdentity/);
 });
 
-console.log(`Programming year audit projection: ${passed}/7 passed`);
+check('the combined Change of Direction session earns typed cod_decel credit from its authored sections', () => {
+  const combinedCod: ProgrammingAuditExportDay = {
+    date: '2026-11-10',
+    rows: [
+      { name: 'Pull-Ups', catalogueIdentity: 'Pull-Ups', role: 'main_lift' },
+      { name: 'Warm-Up', catalogueIdentity: 'Warm-up', role: 'conditioning' },
+      { name: 'Low-Intensity Deceleration Drills', catalogueIdentity: 'Low-Intensity Deceleration Drills', role: 'conditioning' },
+      { name: '45-Degree Cut Reps', catalogueIdentity: '45-Degree Cut Reps', role: 'conditioning' },
+      { name: 'Up-Back Shuttle', catalogueIdentity: 'Up-Back Shuttle', role: 'conditioning' },
+    ],
+    conditioningIdentity: { structureFamily: 'hard_intervals', primaryLabel: 'Hard Intervals' },
+  };
+  assert.deepEqual(athleticPlaneExposuresForAuditDay(combinedCod), ['cod_decel']);
+  // One section alone is still the same typed session identity; the display
+  // label of the day is never consulted.
+  assert.deepEqual(athleticPlaneExposuresForAuditDay({
+    date: '2026-11-10',
+    rows: [{ name: 'Cut reps', catalogueIdentity: '45-Degree Cut Reps', role: 'conditioning' }],
+    conditioningIdentity: { structureFamily: 'continuous_aerobic', primaryLabel: 'Change of Direction' },
+  }), ['cod_decel']);
+});
+
+check('other typed credits and non-credits are read from role, template quality and power pool only', () => {
+  assert.deepEqual(athleticPlaneExposuresForAuditDay({
+    date: '2026-11-11',
+    rows: [{ name: 'Club session', role: 'team_training' }],
+  }), ['team_training']);
+  assert.deepEqual(athleticPlaneExposuresForAuditDay({
+    date: '2026-11-12',
+    rows: [
+      { name: 'Rotational Medicine-Ball Slam', catalogueIdentity: 'Rotational Medicine-Ball Slam', role: 'power' },
+      { name: 'Back Squat', catalogueIdentity: 'Back Squat', role: 'main_lift' },
+    ],
+  }), ['rotational_med_ball']);
+  assert.deepEqual(athleticPlaneExposuresForAuditDay({
+    date: '2026-11-13',
+    rows: [
+      { name: 'Warm-Up', catalogueIdentity: 'Warm-up', role: 'conditioning' },
+      { name: 'Continuous Aerobic Run', catalogueIdentity: 'Continuous Aerobic Run', role: 'conditioning' },
+      { name: 'Change of Direction', catalogueIdentity: 'Not a template', role: 'conditioning' },
+    ],
+    conditioningIdentity: { structureFamily: 'continuous_aerobic', primaryLabel: 'Change of Direction' },
+  }), []);
+});
+
+console.log(`Programming year audit projection: ${passed}/9 passed`);

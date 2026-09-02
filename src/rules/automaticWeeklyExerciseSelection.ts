@@ -17,6 +17,7 @@ import {
   upperAccessoryAffinity,
 } from '../data/exerciseTags';
 import type { MovementPlane } from '../data/exerciseMovementPlaneMetadata';
+import { muscleMetadataFor, type MuscleGroup } from '../data/muscleExperienceMetadata';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import {
@@ -177,12 +178,83 @@ export interface AutomaticFallbackChoice extends AutomaticWeeklySelectionCandida
   readonly tier: AutomaticFallbackTier;
 }
 
+/* ── DEDICATED LOWER-DAY PURPOSE (R-318, R-336) ────────────────────────────
+ * A dedicated Lower Hinge admits only work that serves the hinge: the main
+ * hinge, single-leg hip work, hamstring, glute and back-extension work, the
+ * posterior-chain prehab that supports them, and calf or general robustness
+ * once those are spent. Knee-dominant work is refused whatever route offered
+ * it — squats, lunges, step-ups and step-downs by their typed movement, and
+ * leg-extension, Spanish-squat and reverse-Nordic style support by the typed
+ * primary muscle the catalogue signs for them. Names never decide. */
+const KNEE_DOMINANT_SLOTS: ReadonlySet<SessionSlot> = new Set(['squat', 'single_leg_knee']);
+const HIP_DOMINANT_SLOTS: ReadonlySet<SessionSlot> = new Set(['hinge', 'single_leg_hip']);
+const KNEE_DOMINANT_PRIMARY_MUSCLES: ReadonlySet<MuscleGroup> = new Set(['Quads', 'Knee']);
+const POSTERIOR_CHAIN_PRIMARY_MUSCLES: ReadonlySet<MuscleGroup> = new Set([
+  'Hamstrings', 'Glutes', 'Low back',
+]);
+
+export type DedicatedLowerDayConflict =
+  | 'knee_dominant_movement'
+  | 'knee_dominant_muscle'
+  | 'hip_dominant_movement';
+
+function primaryMusclesFor(identity: string): readonly MuscleGroup[] {
+  return muscleMetadataFor(canonicalExerciseName(identity))?.primary ?? [];
+}
+
+/** Typed movement first, typed primary muscle second; a hinge-family lift is never knee-dominant. */
+export function automaticExerciseIsKneeDominant(identity: string): boolean {
+  const real = realMovementSlotsForAutomaticExercise(identity);
+  if (real.some((slot) => KNEE_DOMINANT_SLOTS.has(slot))) return true;
+  if (real.some((slot) => HIP_DOMINANT_SLOTS.has(slot))) return false;
+  return primaryMusclesFor(identity).some((muscle) => KNEE_DOMINANT_PRIMARY_MUSCLES.has(muscle));
+}
+
+/** Hinge-family lifts and hamstring/glute/low-back-led support serve a hinge day's purpose. */
+export function automaticExerciseSuppliesPosteriorChain(identity: string): boolean {
+  const real = realMovementSlotsForAutomaticExercise(identity);
+  if (real.some((slot) => HIP_DOMINANT_SLOTS.has(slot))) return true;
+  if (real.some((slot) => KNEE_DOMINANT_SLOTS.has(slot))) return false;
+  return primaryMusclesFor(identity).some((muscle) => POSTERIOR_CHAIN_PRIMARY_MUSCLES.has(muscle));
+}
+
+/**
+ * Why an automatic candidate may not enter a dedicated lower day, or null.
+ * Lower Hinge judges strength and prehab alike; Lower Squat keeps its existing
+ * strength-route hip-dominant refusal. Power and mobility ride on top of a day.
+ */
+export function dedicatedLowerDayConflict(
+  identity: string,
+  dayKind: SlotDayKind | null | undefined,
+  route: AutomaticExerciseRoute,
+): DedicatedLowerDayConflict | null {
+  if (route === 'mobility' || route === 'power') return null;
+  if (dayKind === 'lower_hinge') {
+    const real = realMovementSlotsForAutomaticExercise(identity);
+    if (real.some((slot) => KNEE_DOMINANT_SLOTS.has(slot))) return 'knee_dominant_movement';
+    return automaticExerciseIsKneeDominant(identity) ? 'knee_dominant_muscle' : null;
+  }
+  if (dayKind === 'lower_squat' && route === 'strength'
+    && realMovementSlotsForAutomaticExercise(identity).includes('single_leg_hip')) {
+    return 'hip_dominant_movement';
+  }
+  return null;
+}
+
+/** R-336: a hinge day spends posterior-chain support before calf or general robustness. */
+export function preferDedicatedLowerDayPurpose<T extends string>(
+  identities: readonly T[],
+  dayKind: SlotDayKind | null | undefined,
+): T[] {
+  if (dayKind !== 'lower_hinge') return [...identities];
+  return [
+    ...identities.filter((identity) => automaticExerciseSuppliesPosteriorChain(identity)),
+    ...identities.filter((identity) => !automaticExerciseSuppliesPosteriorChain(identity)),
+  ];
+}
+
 function violatesDedicatedDayOwnership(candidate: AutomaticWeeklySelectionCandidate): boolean {
-  if (candidate.route !== 'strength') return false;
-  const real = new Set(realMovementSlotsForAutomaticExercise(candidate.identity));
-  if (candidate.dayKind === 'lower_hinge' && real.has('single_leg_knee')) return true;
-  if (candidate.dayKind === 'lower_squat' && real.has('single_leg_hip')) return true;
-  return false;
+  return dedicatedLowerDayConflict(candidate.identity, candidate.dayKind, candidate.route) !== null;
 }
 
 export interface AutomaticWeeklyExerciseSelector {
@@ -236,8 +308,11 @@ export function createAutomaticWeeklyExerciseSelector(
   }
 
   const canUse = (candidate: AutomaticWeeklySelectionCandidate): boolean => {
-    if (candidate.route === 'mobility' || candidate.route === 'prehab') {
-      return !candidate.requestedAsMain;
+    if (candidate.route === 'mobility') return !candidate.requestedAsMain;
+    // Genuine prehab may repeat, but it still answers to the day's purpose:
+    // a knee-dominant prehab drill is no more a hinge exercise than a lunge is.
+    if (candidate.route === 'prehab') {
+      return !candidate.requestedAsMain && !violatesDedicatedDayOwnership(candidate);
     }
     const identity = canonicalExerciseName(candidate.identity);
     if (used.has(identity) || violatesDedicatedDayOwnership(candidate)) return false;
@@ -310,9 +385,9 @@ export function createAutomaticWeeklyExerciseSelector(
       route: AutomaticExerciseRoute,
       requestedAsMain: boolean,
     ): AutomaticFallbackChoice | null => {
-      for (const identity of preferredMovementPlaneCohort(
-        identities,
-        movementPlaneContextFor(request.requestedSlot),
+      for (const identity of preferDedicatedLowerDayPurpose(
+        preferredMovementPlaneCohort(identities, movementPlaneContextFor(request.requestedSlot)),
+        request.dayKind,
       )) {
         const semanticSupportSlot = tier === 'core_or_robustness'
           ? (realMovementSlotsForAutomaticExercise(identity).find((slot) =>
@@ -414,7 +489,7 @@ export interface FinalAutomaticWeekSelectionAudit {
   readonly dedicatedDayOwnership: readonly {
     readonly dayKind: 'lower_squat' | 'lower_hinge';
     readonly identity: string;
-    readonly forbiddenSlot: 'single_leg_hip' | 'single_leg_knee';
+    readonly conflict: DedicatedLowerDayConflict;
   }[];
 }
 
@@ -445,14 +520,9 @@ export function auditFinalAutomaticWeek(
         list.push(identity);
         families.set(family, list);
       }
-      const real = new Set(realMovementSlotsForAutomaticExercise(identity));
-      if (day.dayKind === 'lower_hinge' && real.has('single_leg_knee')) {
-        dedicatedDayOwnership.push({ dayKind: 'lower_hinge', identity,
-          forbiddenSlot: 'single_leg_knee' });
-      }
-      if (day.dayKind === 'lower_squat' && real.has('single_leg_hip')) {
-        dedicatedDayOwnership.push({ dayKind: 'lower_squat', identity,
-          forbiddenSlot: 'single_leg_hip' });
+      const conflict = dedicatedLowerDayConflict(identity, day.dayKind, route);
+      if (conflict && (day.dayKind === 'lower_hinge' || day.dayKind === 'lower_squat')) {
+        dedicatedDayOwnership.push({ dayKind: day.dayKind, identity, conflict });
       }
     }
   }

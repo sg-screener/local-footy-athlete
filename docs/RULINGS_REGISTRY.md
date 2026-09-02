@@ -8371,3 +8371,46 @@ The production scheduler is unchanged.
 Guard: `LAW-final-year-audit-accepted-journey` through chained
 `test:programming-year-audit-rules`. Focused synthetic journey cases, mutation
 and NOT COVERED receipt: `docs/STATUS_FIVEBRIDGE.md`.
+
+**R-336** · Lower Hinge automatic support is hinge-purpose only, and the
+final-year audit credits the combined COD session by typed identity,
+2026-09-02.
+
+Owner: hingecod. Sam's instruction, paraphrased from the confirmed annual
+audit findings: *"Lower Hinge sessions may automatically use the main hinge,
+single-leg hip-dominant work, hamstring exercises, glute exercises,
+back-extension/posterior-chain work, relevant lower-body posterior-chain
+prehab, and suitable calf or general football-robustness work only after
+relevant posterior-chain choices are exhausted. Lower Hinge sessions must not
+automatically use squats, lunges, step-ups or step-downs, Bulgarian split
+squats, leg extensions, reverse Nordics, Spanish squat work, or other clearly
+knee-dominant/squat-family exercises."*
+
+The refusal is judged by typed metadata only: an exercise whose real movement
+slot is bilateral squat or single-leg knee, or whose signed primary muscle is
+Quads or Knee (a hinge-family lift is never knee-dominant), may not enter a
+dedicated Lower Hinge whether the strength or the prehab route offered it.
+Posterior-chain support is a hinge-family lift or an exercise whose signed
+primary muscle is Hamstrings, Glutes or Low back; the hinge day's robustness
+bench draws from that set first and from calf or general robustness only when
+no legal unused posterior option remains. If the preferred filler is illegal,
+the next legal unused posterior-chain option is taken; a typed gap is left
+only when no suitable legal option exists. Exercise names never decide.
+
+Preserved unchanged: the R-334 useful-session minimum, one automatic
+appearance per exercise per week, the four-compound ceiling, equipment, injury
+and game-safety legality, athlete-added work, and Lower Squat's separate
+ownership (R-317, R-318).
+
+The annual analyzer credits athletic transverse exposure from typed identity:
+the club-training role, the authored conditioning quality reached through a
+template name or through the typed section rows the combined Change of
+Direction session renders (R-331), and the power pool's declared exposure. No
+COD programming, cadence, placement or prescription changed.
+
+Guard: `LAW-lower-hinge-purpose-relevant-support` through chained
+`test:full-body-balance`, which invokes `test:automatic-weekly-selection`;
+`LAW-final-year-audit-credits-typed-athletic-exposure` through chained
+`test:programming-hierarchy`, which invokes `test:programming-audit-projection`.
+Red-first, mutation, focused 34-week results and NOT COVERED receipt:
+`docs/STATUS_HINGECOD.md`.

@@ -104,6 +104,7 @@ import {
 import {
   asComposedIdentity,
   automaticExerciseRouteForIdentity,
+  automaticExerciseSuppliesPosteriorChain,
   automaticIsolationSupportCandidatesForSlot,
   automaticPrehabFallbacksForSlot,
   createAutomaticWeeklyExerciseSelector,
@@ -1849,28 +1850,55 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         // already present, so legal options still rotate across the week.
         const missingLowerFrontal = weeklyExerciseSelector
           .movementPlaneContextFor(slot).missingUsefulPlanes?.includes('frontal') === true;
-        const categoryOrder = missingLowerFrontal
-          ? [
-              'adductor_or_groin' as const,
-              ...FOOTBALL_ROBUSTNESS_CATEGORIES.filter((category) =>
-                category !== 'adductor_or_groin'),
-            ]
-          : FOOTBALL_ROBUSTNESS_CATEGORIES;
-        for (const category of categoryOrder) {
-          if (footballRobustnessCovered.has(category)) continue;
-          const inCategory = candidates.filter((candidate) =>
-            footballRobustnessCategoriesForExercise(candidate).includes(category));
-          if (inCategory.length > 0) return inCategory;
+        const inCategory = (
+          pool: readonly ComposedExerciseIdentity[],
+          category: FootballRobustnessCategory,
+        ): readonly ComposedExerciseIdentity[] => pool.filter((candidate) =>
+          footballRobustnessCategoriesForExercise(candidate).includes(category));
+        if (missingLowerFrontal && !footballRobustnessCovered.has('adductor_or_groin')) {
+          const groin = inCategory(candidates, 'adductor_or_groin');
+          if (groin.length > 0) return groin;
         }
-        return candidates;
+        // The ordinary robustness order: the first weekly category still
+        // uncovered that this pool can supply, else the whole pool.
+        const firstUncoveredCategory = (
+          pool: readonly ComposedExerciseIdentity[],
+        ): readonly ComposedExerciseIdentity[] => {
+          for (const category of FOOTBALL_ROBUSTNESS_CATEGORIES) {
+            if (footballRobustnessCovered.has(category)) continue;
+            const matching = inCategory(pool, category);
+            if (matching.length > 0) return matching;
+          }
+          return pool;
+        };
+        // R-336: a dedicated hinge day spends its legal unused posterior-chain
+        // support (hamstring, glute, low back) first; calf or general
+        // robustness enters only once that bench is exhausted. The category
+        // walk then runs inside whichever bench is open, so the rotation owner
+        // ranks only purpose-relevant rows. Other days keep the one order.
+        if (kind === 'lower_hinge') {
+          const posterior = candidates.filter((candidate) =>
+            automaticExerciseSuppliesPosteriorChain(candidate));
+          return firstUncoveredCategory(posterior.length > 0 ? posterior : candidates);
+        }
+        return firstUncoveredCategory(candidates);
       };
       const baseLegalBeforeDayFamily = legalUnder(excluded, inputs.kit);
+      // The weekly selector (identity once per week, dedicated-day purpose,
+      // compound ceiling) is applied BEFORE the robustness category preference,
+      // so a category is chosen among options this day may actually use. When
+      // the preferred filler is illegal here, the next legal unused option in
+      // the same purpose is taken rather than an empty category.
+      const usableThisWeek = (
+        list: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => list.filter((identity) =>
+        weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
       const baseLegal = preferMissingFootballCategory(
-        withoutUsedVariationFamily(baseLegalBeforeDayFamily),
-      ).filter((identity) => weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
-      const legalBeforeDayIdentity = preferMissingFootballCategory(withoutUsedVariationFamily(
-        withoutRdlFamily(legalUnder(excludedToday, kitToday)),
-      )).filter((identity) => weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
+        usableThisWeek(withoutUsedVariationFamily(baseLegalBeforeDayFamily)),
+      );
+      const legalBeforeDayIdentity = preferMissingFootballCategory(usableThisWeek(
+        withoutUsedVariationFamily(withoutRdlFamily(legalUnder(excludedToday, kitToday))),
+      ));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
       const legal = legalBeforeDayIdentity.filter((id) => !identitiesThisDay.has(id));

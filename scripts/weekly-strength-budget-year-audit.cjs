@@ -28,8 +28,9 @@ const {
   exerciseSuppliesTrunkTransverse,
 } = require(path.join(repo, 'src/rules/movementPlaneProgramming'));
 const { muscleMetadataFor } = require(path.join(repo, 'src/data/muscleExperienceMetadata'));
-const { resolveTemplateByName } = require(path.join(repo, 'src/rules/conditioningSelection'));
-const { athleticPlaneExposureForPowerExercise } = require(path.join(repo, 'src/rules/powerExercisePool'));
+const {
+  athleticPlaneExposuresForAuditDay,
+} = require(path.join(repo, 'src/rules/programmingYearAuditProjection'));
 
 const evidence = (row) => row.section18Evidence ?? {};
 const isAutomaticStrengthRow = (row) => workoutExerciseWasAutomaticallySelected(row)
@@ -84,18 +85,12 @@ for (const athlete of year.athletes ?? []) {
         : 'strength';
       return [{ identity: catalogueIdentity, contribution }];
     });
+    // Typed credit only: the club anchor by role, a conditioning session by the
+    // authored quality reached through its template or its typed section rows
+    // (the combined Change of Direction session), a power row by its pool.
     for (const day of weekDays) {
-      for (const row of day.rows ?? []) {
-        if (row.role === 'team_training') {
-          athleticExposureHistory.push({ date: day.date, exposure: 'team_training' });
-        }
-        const catalogueIdentity = identity(row);
-        const template = resolveTemplateByName(catalogueIdentity);
-        if (template?.quality === 'cod_decel') {
-          athleticExposureHistory.push({ date: day.date, exposure: 'cod_decel' });
-        }
-        const powerExposure = athleticPlaneExposureForPowerExercise(catalogueIdentity);
-        if (powerExposure) athleticExposureHistory.push({ date: day.date, exposure: powerExposure });
+      for (const exposure of athleticPlaneExposuresForAuditDay(day)) {
+        athleticExposureHistory.push({ date: day.date, exposure });
       }
     }
     for (const event of week.events ?? []) {
@@ -191,8 +186,8 @@ const receipt = {
   units: {
     repeatedExactExerciseBreaches: 'distinct canonical non-Mobility/non-Prehab automatic exercise identities occurring more than once per athlete-week; each finding includes delivered occurrence count',
     repeatedMainFamilyBreaches: 'distinct real catalogue-owned anchor families occurring more than once per athlete-week; each finding includes delivered identities',
-    dedicatedDayOwnershipBreaches: 'automatic exercise occurrences whose real catalogue classification crosses dedicated lower_squat/lower_hinge ownership',
-    movementPlaneFindings: 'distinct athlete-week plane-coverage findings; lower frontal and athletic transverse are required, while trunk transverse is a soft 7–14 day check',
+    dedicatedDayOwnershipBreaches: 'automatic strength/prehab exercise occurrences whose typed movement or signed primary muscle conflicts with dedicated lower_squat/lower_hinge purpose; each finding names the typed conflict',
+    movementPlaneFindings: 'distinct athlete-week plane-coverage findings; lower frontal and athletic transverse are required, while trunk transverse is a soft 7–14 day check. Athletic credit is typed per exported day: team_training role, authored conditioning quality via template or typed section identity, power pool exposure',
   },
   thresholds: {
     automaticExerciseIdentityMaximumPerWeek: 1,

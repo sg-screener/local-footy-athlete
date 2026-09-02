@@ -12,13 +12,17 @@ const durableStorage = new Map<string, string>();
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
   auditFinalAutomaticWeek,
+  automaticExerciseIsKneeDominant,
   automaticExerciseRouteForIdentity,
+  automaticExerciseSuppliesPosteriorChain,
   automaticIsolationSupportCandidatesForSlot,
   automaticMainFamilyForExercise,
   createAutomaticWeeklyExerciseSelector,
+  dedicatedLowerDayConflict,
   workoutExerciseWasAutomaticallySelected,
   type FinalAutomaticSelectionDay,
 } from '../rules/automaticWeeklyExerciseSelection';
+import { minimumUsefulStrengthApplies } from '../rules/minimumUsefulStrengthSession';
 import { strengthExerciseClassification } from '../data/exerciseTags';
 import { slotDayKindForPatterns } from '../rules/sessionSlotCoverage';
 import { presetEquipmentAnswer } from './support/equipmentAnswerFixture';
@@ -109,6 +113,95 @@ run('Bulgarian Split Squats fail dedicated Lower Hinge ownership', () => {
   assert(!selector.canUse({ identity: 'Bulgarian Split Squats',
     requestedSlot: 'single_leg_knee', dayKind: 'lower_hinge', route: 'strength',
     requestedAsMain: false }), 'live selector admitted single-leg knee on Lower Hinge');
+});
+
+/* ── R-336: dedicated Lower Hinge admits only hinge-purpose support ────────── */
+const KNEE_DOMINANT_SUPPORT = [
+  // typed movement: squat / lunge / step family
+  'Step Ups', 'Walking Lunges', 'Goblet Squat', 'Single-Leg Leg Press',
+  // typed movement on a prehab-authored drill
+  'Slant Board Step-Down',
+  // typed primary muscle: quad/knee-led isolation and prehab
+  'Leg Extension', 'Reverse Nordic Curl', 'Spanish Squat Hold', 'Banded TKE',
+  'Standing Knee Extension',
+] as const;
+const HINGE_PURPOSE_SUPPORT = [
+  'Nordic Lower', 'Hamstring Curl', 'Back Extension', 'Single-Leg Hip Thrust',
+  'Swiss Ball Hamstring Curl', 'Bosch Hold', 'SL 45° Back Extension Hold', 'Crab Walks',
+] as const;
+const HINGE_GENERAL_SUPPORT = [
+  'Copenhagen Plank (Half)', 'Groin Squeeze', 'Calf Raises', 'Tib Raises', 'Seated Calf Raise',
+] as const;
+
+run('every knee-dominant strength or prehab exercise is refused on a dedicated Lower Hinge by typed metadata', () => {
+  for (const identity of KNEE_DOMINANT_SUPPORT) {
+    const route = automaticExerciseRouteForIdentity(identity);
+    assert(automaticExerciseIsKneeDominant(identity), `${identity} not classified knee-dominant`);
+    assert(dedicatedLowerDayConflict(identity, 'lower_hinge', route) !== null,
+      `${identity} (${route}) has no typed hinge-day conflict`);
+    const selector = createAutomaticWeeklyExerciseSelector();
+    assert(!selector.canUse({ identity, requestedSlot: 'football_robustness',
+      dayKind: 'lower_hinge', route, requestedAsMain: false }),
+    `live selector admitted ${identity} (${route}) on Lower Hinge`);
+    const result = audit([{ dayKind: 'lower_hinge', exercises: [
+      { ...automatic('RDLs'), requestedAsMain: true }, { ...automatic(identity), route },
+    ] }]);
+    assert(result.dedicatedDayOwnership.some((item) => item.identity === identity),
+      `final audit missed ${identity}: ${JSON.stringify(result.dedicatedDayOwnership)}`);
+  }
+});
+
+run('hinge-purpose and general robustness support remain admitted on Lower Hinge; Lower Squat is unchanged', () => {
+  const admitted = (identity: string, dayKind: 'lower_hinge' | 'lower_squat'): void => {
+    const route = automaticExerciseRouteForIdentity(identity);
+    assert(dedicatedLowerDayConflict(identity, dayKind, route) === null,
+      `${identity} (${route}) refused on ${dayKind}`);
+    assert(createAutomaticWeeklyExerciseSelector().canUse({ identity,
+      requestedSlot: 'football_robustness', dayKind, route, requestedAsMain: false }),
+    `live selector refused ${identity} (${route}) on ${dayKind}`);
+  };
+  for (const identity of [...HINGE_PURPOSE_SUPPORT, ...HINGE_GENERAL_SUPPORT]) {
+    assert(!automaticExerciseIsKneeDominant(identity), `${identity} wrongly classified knee-dominant`);
+    admitted(identity, 'lower_hinge');
+  }
+  // Lower Squat keeps R-318 exactly: general robustness and genuine prehab stay
+  // legal there, while strength-route single-leg hip work stays refused.
+  for (const identity of HINGE_GENERAL_SUPPORT) admitted(identity, 'lower_squat');
+  for (const identity of HINGE_PURPOSE_SUPPORT) {
+    if (automaticExerciseRouteForIdentity(identity) === 'prehab') admitted(identity, 'lower_squat');
+  }
+  for (const identity of HINGE_PURPOSE_SUPPORT) {
+    assert(automaticExerciseSuppliesPosteriorChain(identity), `${identity} is not posterior-chain`);
+  }
+  for (const identity of HINGE_GENERAL_SUPPORT) {
+    assert(!automaticExerciseSuppliesPosteriorChain(identity), `${identity} is not general support`);
+  }
+  // Lower Squat is unchanged: knee work stays legal there and hip work stays refused.
+  assert(dedicatedLowerDayConflict('Slant Board Step-Down', 'lower_squat', 'prehab') === null,
+    'Lower Squat lost its knee-capacity prehab');
+  assert(dedicatedLowerDayConflict('Single-Leg RDL', 'lower_squat', 'strength') === 'hip_dominant_movement',
+    'Lower Squat admitted single-leg hip work');
+});
+
+run('a hinge-day robustness fallback skips knee-dominant prehab and spends posterior-chain work before calf', () => {
+  const selector = createAutomaticWeeklyExerciseSelector();
+  // Frontal and transverse are already supplied this week, so the movement-plane
+  // tie-break is silent and only the hinge purpose orders the bench.
+  selector.accept({ identity: 'Crab Walks', requestedSlot: 'football_robustness',
+    dayKind: 'lower_squat', route: 'prehab', requestedAsMain: false });
+  const bench = ['Slant Board Step-Down', 'Banded TKE', 'Tib Raises', 'Swiss Ball Hamstring Curl'];
+  const hinge = selector.chooseFallback({ sameCategory: [], accessories: [], prehab: bench,
+    requestedSlot: 'football_robustness', dayKind: 'lower_hinge', requestedAsMain: false });
+  assert(hinge?.identity === 'Swiss Ball Hamstring Curl', JSON.stringify(hinge));
+  const squat = selector.chooseFallback({ sameCategory: [], accessories: [], prehab: bench,
+    requestedSlot: 'football_robustness', dayKind: 'lower_squat', requestedAsMain: false });
+  assert(squat?.identity === 'Slant Board Step-Down', JSON.stringify(squat));
+  const exhausted = selector.chooseFallback({ sameCategory: [], accessories: [],
+    prehab: ['Slant Board Step-Down', 'Spanish Squat Hold'],
+    coreOrRobustness: ['Band Pallof Press'],
+    requestedSlot: 'football_robustness', dayKind: 'lower_hinge', requestedAsMain: false });
+  assert(exhausted?.identity === 'Band Pallof Press' && exhausted.tier === 'core_or_robustness',
+    JSON.stringify(exhausted));
 });
 
 run('repeated Single-Leg RDL falls to an unused hip/hamstring accessory', () => {
@@ -256,6 +349,33 @@ run('50 real generated worlds have no non-prehab identity, family or ownership b
       || result.dedicatedDayOwnership.length) findings.push(`${world.id}/week${index + 1}: ${JSON.stringify(result)}`);
   }
   assert(findings.length === 0, `${findings.length} invalid athlete-weeks\n${findings.slice(0, 20).join('\n')}`);
+});
+
+run('no dedicated Lower Hinge in 50 generated worlds carries knee-dominant automatic work and each stays useful', () => {
+  const findings: string[] = [];
+  let hingeDays = 0;
+  for (const world of worlds) for (const [index, week] of world.program.microcycles.entries()) {
+    for (const workout of week.workouts as Workout[]) {
+      const dayKind = workout.composedDayShape
+        ?? slotDayKindForPatterns(workout.strengthIntent?.plannedPatterns ?? []);
+      if (dayKind !== 'lower_hinge') continue;
+      hingeDays += 1;
+      const rows = (workout.exercises ?? []).filter(workoutExerciseWasAutomaticallySelected)
+        .filter((row) => row.role !== 'power');
+      const knee = rows.map((row) => row.exercise?.name ?? '')
+        .filter((identity) => automaticExerciseIsKneeDominant(identity));
+      if (knee.length) findings.push(`${world.id}/week${index + 1}: knee-dominant ${knee.join(', ')}`);
+      const contract = workout.usefulStrengthSessionContract;
+      if (minimumUsefulStrengthApplies(dayKind)
+        && (!contract || contract.status === 'unexplained_shortfall')) {
+        findings.push(`${world.id}/week${index + 1}: useful-session ${JSON.stringify(contract)}`);
+      }
+    }
+    const repeats = automaticRepeatsInWorkouts(week.workouts as Workout[]);
+    if (repeats.length) findings.push(`${world.id}/week${index + 1}: repeats ${JSON.stringify(repeats)}`);
+  }
+  assert(hingeDays > 0, 'no dedicated Lower Hinge day was generated');
+  assert(findings.length === 0, `${findings.length} findings across ${hingeDays} hinge days\n${findings.slice(0, 20).join('\n')}`);
 });
 
 run('male Gunshow accessories do not repeat an earlier automatic upper-session exercise', () => {

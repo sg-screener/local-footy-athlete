@@ -1,4 +1,12 @@
-import { resolveTemplateByName } from './conditioningSelection';
+import {
+  resolveTemplateByName,
+  resolveTemplateBySectionName,
+} from './conditioningSelection';
+import {
+  athleticPlaneExposureForConditioningQuality,
+  type TypedAthleticPlaneExposure,
+} from './movementPlaneProgramming';
+import { athleticPlaneExposureForPowerExercise } from './powerExercisePool';
 import {
   programmingAuditCatalogueIdentity,
   programmingAuditRowRequiresCatalogueIdentity,
@@ -48,6 +56,35 @@ export function finalAthleteFacingAuditRows(
   day: ProgrammingAuditExportDay,
 ): ProgrammingAuditExportRow[] {
   return flattenProgrammingAuditRows(day.rows ?? []);
+}
+
+/**
+ * The typed athletic-plane credits one exported day earns: the club anchor by
+ * its role, a conditioning session by its authored template quality — reached
+ * through the template's own name or, for a combined session such as Change of
+ * Direction, through the typed section identities it renders as rows — and a
+ * power row by its pool's declared exposure. Display titles never enter.
+ */
+export function athleticPlaneExposuresForAuditDay(
+  day: ProgrammingAuditExportDay,
+): TypedAthleticPlaneExposure[] {
+  const exposures = new Set<TypedAthleticPlaneExposure>();
+  for (const row of finalAthleteFacingAuditRows(day)) {
+    if (row.role === 'team_training') {
+      exposures.add('team_training');
+      continue;
+    }
+    const identity = row.catalogueIdentity?.trim();
+    if (!identity) continue;
+    const template = resolveTemplateByName(identity) ?? resolveTemplateBySectionName(identity);
+    const conditioning = template
+      ? athleticPlaneExposureForConditioningQuality(template.quality)
+      : undefined;
+    if (conditioning) exposures.add(conditioning);
+    const power = athleticPlaneExposureForPowerExercise(identity);
+    if (power) exposures.add(power);
+  }
+  return [...exposures];
 }
 
 export interface ProgrammingAuditProjectionFinding {

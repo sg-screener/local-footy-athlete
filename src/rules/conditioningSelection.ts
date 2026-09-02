@@ -794,6 +794,17 @@ export function resolveTemplateByName(name: string): ConditioningTemplate | null
   return null;
 }
 
+/**
+ * The authored template whose ordered section this visible row is. A combined
+ * session (R-331 Change of Direction) renders its typed sections as rows and
+ * has no row carrying the template's own name; the section identity is the
+ * typed link back, so audits credit the session it belongs to.
+ */
+export function resolveTemplateBySectionName(name: string): ConditioningTemplate | null {
+  return CONDITIONING_TEMPLATES.find((template) =>
+    template.sections?.some((section) => section.name === name)) ?? null;
+}
+
 /** Read-ingress lift for history written before flush demand was carried into
  * the recorder. Preserve names and blocks; split the old aerobic seats into
  * their actual categories without writing or deleting the athlete's history. */

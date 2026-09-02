@@ -5,6 +5,7 @@ import {
   type MovementPlane,
 } from '../data/exerciseMovementPlaneMetadata';
 import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
+import type { ConditioningQuality } from '../data/conditioningTemplates';
 import type {
   ContractPhase,
   OffseasonBlock,
@@ -141,6 +142,13 @@ const ATHLETIC_TRANSVERSE_EXPOSURES = new Set<TypedAthleticPlaneExposure>([
   'rotational_med_ball', 'cod_decel', 'cutting', 'curved_running',
   'angled_deceleration', 'team_training',
 ]);
+
+/** Exact typed conditioning credit for the athletic-plane audit; no template name is read. */
+export function athleticPlaneExposureForConditioningQuality(
+  quality: ConditioningQuality,
+): TypedAthleticPlaneExposure | undefined {
+  return quality === 'cod_decel' ? 'cod_decel' : undefined;
+}
 
 export function qualifiesAthleticTransverseExposure(
   exposure: TypedAthleticPlaneExposure,
