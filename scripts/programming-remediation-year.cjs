@@ -50,7 +50,10 @@ app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionT
 });
 const events = [];`);
 replace("for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');",
-  `for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0]]) event(week,offset,'tired');
+  `for (const [week,offset] of [[5,2],[18,0],[33,3],[45,0],[45,1]]) event(week,offset,'tired');
+// R-275 (Sam, 2026-08-30): one "Totally cooked" tap rests THAT DATE only; two
+// tired taps on consecutive dates deload from the second date through Sunday.
+// Week 35 shows the first; week 45's Monday + Tuesday pair shows the second.
 event(35,0,'cooked');
 event(11,3,'christmas_break');`);
 replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=await act(readinessActionForKind(e.kind==='tired'?'tired_today':'illness_moderate',{anchorDateISO:date,todayISO:date}),date,e.kind);\n          if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];\n          label=e.kind==='tired'?'Tired today':'Sick';",
@@ -58,7 +61,7 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           const readinessKind=e.kind==='tired'?'tired_today':e.kind==='cooked'?'cooked_week':'illness_moderate';
           const r=await act(readinessActionForKind(readinessKind,{anchorDateISO:date,todayISO:date}),date,e.kind);
           if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];
-          label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Very tired - remaining week deload':'Sick';
+          label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Totally cooked - rest today':'Sick';
         } else if(e.kind==='christmas_break') {
           const span=${JSON.stringify(ACCEPTED_CHRISTMAS_BREAK)};
           await act({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'christmas_break',initiatedBy:'tap'},scope:'current_week',payload:{date:span.from,todayISO:date,noTeamTrainingSpan:span},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},date,'Christmas team-training break');

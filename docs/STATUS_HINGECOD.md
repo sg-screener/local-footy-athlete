@@ -559,3 +559,20 @@ upper split 29/29, scheduler 138/138, signed-copy 7/7, minimum-useful 9/9.
 NOT COVERED: the readiness and injury overlays do not yet state
 `acceptedWeekIdentitiesByDay` (their repeat exposure is unmeasured); the phone
 screens for BW + 2.5 kg on the three new loadable lifts.
+
+## Addendum 2026-09-02 — "remaining-week deload" (reviewer point 3): robot and test, not the app
+
+Root cause, approved by Sam: R-275 (2026-08-30) says one "Totally cooked" tap
+rests THAT DATE only and two tired taps on consecutive dates deload from the
+second date through Sunday. Measured on a real in-season week: one cooked tap
+→ Monday rest, Tuesday–Friday unchanged; two tired taps Mon+Tue → from Tuesday
+3×4–6 becomes 2×4–6 at the same 92.5 kg, accessories to one set, the optional
+Gunshow dropped. The audit robot fired one cooked tap and labelled it
+"remaining week deload" (the pre-R-275 R-127 semantics), and
+`readinessLoadRetentionTests` still encoded R-127 (red since R-275).
+Changes: the wrapper relabels week 35 "Totally cooked - rest today" and adds a
+Monday+Tuesday tired pair in week 45 so the year exercises the real deload;
+the suite now has three scenarios per sex — cooked (that date rest, other
+days' sets untouched), tired pair (from the second date ≥2 lifts fewer sets,
+first date untouched), illness (reduces) — all holding kilograms: 52/52
+(was 30/32). fatigue-sequence 35/35 + plumbing 18/18. No product code.
