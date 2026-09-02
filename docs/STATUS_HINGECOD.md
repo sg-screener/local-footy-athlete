@@ -1106,3 +1106,15 @@ shortfall, control: the lower day really lost its mains). Suite 38/38.
 `test:compile` PASSED. Year audit at `4e2ebbf2`: acceptance PASS, focused
 24/24, budget PASS (selection PASS, plane PASS). Reruns of the year runner
 and the audit at this tip are recorded below.
+
+**Final checkpoint `ec888419`.** `compiler-year`: 416 green / 416 reached /
+416 required athlete-weeks (8 × 52); the only failure key is the
+writer-ownership census prerequisite (unresolved owners), not a week.
+Full-year audit at `ec888419`: acceptance PASS, focused 24/24 (0 failures),
+weekly-strength-budget PASS (selection PASS, plane PASS), 0 findings, both
+PDFs built and page-QA clean, copied to `output/final-full-year-audit-ec888419/`.
+Release gate at `cee3c49e` (before the last two commits): 11/27 in gate
+order — it stops at its first red unit; run individually the current
+picture is 23–24 of 30 green with the census, `canonical-weekly-compiler`
+(54), `injury-fallback-journey` (2 coverage cells), `slot-coverage` (3) and
+`session-section-add` (2) still red, all pre-existing.
