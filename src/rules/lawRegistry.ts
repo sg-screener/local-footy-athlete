@@ -691,6 +691,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-bodyweight-lift-earns-added-load',
+    law: 'R-343: at a block boundary an authored-unloaded lift the athlete can add load to (bodyweight_plus) with no recorded load, in a block that qualifies on completion and recovery, completed at the top of its prescribed rep range as proven by real logged sets (actualReps >= prescribedRepsMax; completion alone claims nothing about reps), is suggested the lattice\'s smallest added load as a bodyweight_progressed row with its own athlete-facing sentence; from then on R-096 clause 1 governs it; rotation reads the same earned-a-rise predicate; a very-hard block, a rep short, or no per-set detail leaves it at BW; an automatic in-block step the weighted-bodyweight lattice can only express as zero holds the load.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-343',
+    guard: {
+      state: 'guarded',
+      by: 'test:block-two-progression',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the audited year carried Pull-Ups at BW for 52 weeks; the boundary wrote nothing for an unloaded row and the audit robot logged no set for it. THE CHANGE: readBlockHistory records top-of-range completions from logged sets; decideBlockBoundaryLoads emits bodyweight_progressed; a signed added-load sentence; the journey helper logs bodyweight rows at bodyweight with reps; the in-block wave holds a load the lattice would zero. Five new cells (top of range -> BW + 2.5 kg, stored kind and sentence, one rep short holds, no per-set detail holds, very-hard block holds). MUTATION: dropping the reps proof reds two cells; never suggesting reds three. AFTER: block-two-progression 47/47, ladder 59/59, boot-preservation 20/20, equipment-load-increments 9/9, athlete-journey 61/64 (three inherited), signed-copy 7/7; regenerated year Pull-Ups BW -> +2.5 at week 5 -> +27.5 by week 52, 52/52 restarts. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

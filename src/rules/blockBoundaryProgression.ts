@@ -100,6 +100,7 @@ import {
   resolveLoadAuthority,
   resolveExerciseName,
   startingWeightForAthlete,
+  resolveLoadControlMode,
 } from '../utils/loadEstimation';
 import { participatesInCounting } from './sessionRowCounting';
 import { carriesStrengthComponent } from '../utils/sessionComponents';
@@ -194,7 +195,15 @@ export type BlockBoundaryDecisionKind =
    * shown. Not a prohibition — the athlete may add load, and once they record
    * it, PRIORITY 1 governs this exercise from then on.
    */
-  | 'bodyweight_default';
+  | 'bodyweight_default'
+  /**
+   * R-343 (Sam, 2026-09-02): authored as unloaded, never logged with added
+   * load, but completed at the TOP of its rep range in a qualifying block, and
+   * the athlete can add external load to it (`bodyweight_plus`) — so the next
+   * block suggests the lattice's smallest added load (BW + 2.5 kg for a
+   * Pull-Up). From then on PRIORITY 1 governs it like any loaded lift.
+   */
+  | 'bodyweight_progressed';
 
 export interface BlockBoundaryLiftDecision {
   exerciseId: string;
@@ -247,6 +256,14 @@ export interface BlockHistorySignal {
    * and it is the only place block 1's four-set main lift survives into block 2.
    */
   lastRecordedPrescribedSetsByExercise: Readonly<Record<string, number>>;
+  /**
+   * R-343 (Sam, 2026-09-02): the exact exercises the athlete completed IN THIS
+   * BLOCK at the top of their prescribed rep range, proven by real logged sets
+   * (`actualReps >= prescribedRepsMax`, non-skipped, full completion). A
+   * session merely marked complete says nothing about reps and is not here —
+   * the same line the load-moved sentence already holds.
+   */
+  topOfRangeCompletedByExercise: Readonly<Record<string, true>>;
   /**
    * THE SAME QUESTION, ASKED SEPARATELY OF EACH QUALITY.
    *
@@ -409,6 +426,7 @@ export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
   },
   lastRecordedLoadByExercise: {},
   lastRecordedPrescribedSetsByExercise: {},
+  topOfRangeCompletedByExercise: {},
   qualifies: false,
   reduces: false,
 };
@@ -584,6 +602,7 @@ export function readBlockHistory(args: {
   let sawHardAnswer = false;
   const lastRecordedLoadByExercise: Record<string, number> = {};
   const lastRecordedPrescribedSetsByExercise: Record<string, number> = {};
+  const topOfRangeCompletedByExercise: Record<string, true> = {};
 
   // ── THE PER-QUALITY READ, RUN OVER THE SAME WINDOW ──
   // Separate accumulators, on purpose: the block-level verdict below counts a
@@ -720,6 +739,21 @@ export function readBlockHistory(args: {
     }
   }
 
+  // ── R-343: TOP OF THE RANGE, PROVEN BY LOGGED SETS ──
+  // `actualReps` is the builder's conservative minimum across the logged
+  // working sets, so "every set reached the top" is what this records. No
+  // per-set detail, no claim.
+  for (const [, feedback] of inBlock) {
+    for (const log of feedback.strength ?? []) {
+      if (log.completion !== 'full') continue;
+      const top = log.prescribedRepsMax;
+      if (typeof log.actualReps !== 'number' || !Number.isFinite(top) || top <= 0) continue;
+      if (log.actualReps >= top) {
+        topOfRangeCompletedByExercise[resolveExerciseName(log.exerciseName)] = true;
+      }
+    }
+  }
+
   // NO RECOVERY ANSWER IS NOT GOOD RECOVERY. An athlete who ticked sessions off
   // and never answered how they felt has told the app nothing about recovery,
   // and the contract progresses only when recovery IS good. Treating silence as
@@ -764,6 +798,7 @@ export function readBlockHistory(args: {
     },
     lastRecordedLoadByExercise,
     lastRecordedPrescribedSetsByExercise,
+    topOfRangeCompletedByExercise,
     qualifies: enoughCompleted && recoveryVerdict === 'good',
     // ⚠ NO COMPLETION GATE ON THE REDUCTION, AND THAT IS THE CONTRACT'S SHAPE.
     // Its "Low readiness or high soreness" section states the reduction order
@@ -863,12 +898,37 @@ function mayAutomaticallyIncrease(exerciseName: string): boolean {
  * and `decideBlockBoundaryLoads` calls it too. **One owner of the predicate, two
  * readers** — the alternative is the same rule written twice and drifting.
  */
+/**
+ * R-343: has this authored-unloaded lift EARNED its first added load?
+ *
+ * Three typed facts, all recorded: the athlete can add load to it at all
+ * (`bodyweight_plus` — a Pull-Up, a Dip; never a Nordic), the block qualified
+ * on completion and recovery exactly as a loaded rise does, and real logged
+ * sets reached the top of the prescribed range for this exact exercise inside
+ * the block. The lattice must also name a rung above zero. One owner; read by
+ * the load decision and by rotation's "earned a rise" retention.
+ */
+export function bodyweightAddedLoadEarned(args: {
+  exerciseName: string;
+  history: BlockHistorySignal;
+}): boolean {
+  const canonical = resolveExerciseName(args.exerciseName);
+  if (typeof args.history.lastRecordedLoadByExercise[canonical] === 'number') return false;
+  if (resolveLoadControlMode(args.exerciseName) !== 'bodyweight_plus') return false;
+  if (!args.history.qualifies) return false;
+  if (args.history.topOfRangeCompletedByExercise[canonical] !== true) return false;
+  if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
+  return smallestPracticalIncrementKg(args.exerciseName, 0) !== null;
+}
+
 export function progressedFromOwnHistory(args: {
   exerciseName: string;
   history: BlockHistorySignal;
 }): boolean {
   const recorded = args.history.lastRecordedLoadByExercise[resolveExerciseName(args.exerciseName)];
-  if (typeof recorded !== 'number') return false;
+  // R-343: a bodyweight lift that earned its first added load has progressed
+  // from its own history too — rotation reads the same answer the load does.
+  if (typeof recorded !== 'number') return bodyweightAddedLoadEarned(args);
   if (!args.history.qualifies) return false;
   if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
   return smallestPracticalIncrementKg(args.exerciseName, recorded) !== null;
@@ -1000,6 +1060,26 @@ export function decideBlockBoundaryLoads(args: {
     // records added load, PRIORITY 1 above picks it up on the next block.
     const authority = resolveLoadAuthority(exerciseName);
     if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') {
+      // ── R-343: THE FIRST ADDED LOAD IS EARNED, NOT INVENTED ──
+      // Sam, on the generated year's Pull-Ups sitting at BW for 52 weeks: the
+      // athlete *"would add weight"*. The earning condition is the same shape
+      // as PRIORITY 1's rise — a qualifying block — plus the one fact BW has
+      // no load number to carry: real logged sets at the top of the range.
+      const routeAllowsIncrease = row.section18Evidence?.slot !== 'shoulder_prehab';
+      const firstIncrement = routeAllowsIncrease
+        && bodyweightAddedLoadEarned({ exerciseName, history })
+        ? smallestPracticalIncrementKg(exerciseName, 0)
+        : null;
+      if (firstIncrement !== null) {
+        decisions.push({
+          ...base,
+          kind: 'bodyweight_progressed',
+          previousLoadKg: null,
+          nextLoadKg: firstIncrement,
+          incrementKg: firstIncrement,
+        });
+        continue;
+      }
       decisions.push({
         ...base,
         kind: 'bodyweight_default',
@@ -2002,10 +2082,11 @@ export function buildBlockBoundaryExplanation(
 ): BlockBoundaryLoadExplanationRow[] {
   const order: Record<BlockBoundaryDecisionKind, number> = {
     history_progressed: 0,
-    history_held: 1,
-    authored_estimate: 2,
-    unset: 3,
-    bodyweight_default: 4,
+    bodyweight_progressed: 1,
+    history_held: 2,
+    authored_estimate: 3,
+    unset: 4,
+    bodyweight_default: 5,
   };
   return [...decisions]
     .sort((a, b) => order[a.kind] - order[b.kind] || a.exerciseName.localeCompare(b.exerciseName))

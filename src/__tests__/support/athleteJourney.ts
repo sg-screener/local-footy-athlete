@@ -92,6 +92,7 @@ import {
 } from '../../store/sessionOutcomeTransaction';
 import { flushPendingStorageWrites } from '../../store/asyncStorageCompat';
 import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../../utils/strengthLogging';
+import { resolveLoadControlMode } from '../../utils/loadEstimation';
 import { buildSessionFeedbackPayload } from '../../utils/sessionFeedbackForm';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import { buildStrengthWorkoutHistoryFromFeedback } from '../../utils/strengthProgressionIntegration';
@@ -593,9 +594,18 @@ export function typeLoadsForSession(
     prescribedRepsMax?: number; prescribedWeightKg?: number;
     exercise?: { name?: string };
   }[]) {
-    const edited = editedByName?.[(row as { exercise?: { name?: string } }).exercise?.name ?? ''];
+    const rowName = (row as { exercise?: { name?: string } }).exercise?.name ?? '';
+    const edited = editedByName?.[rowName];
     const weight = Number.isFinite(edited) ? Number(edited) : Number(row.prescribedWeightKg);
-    if (!Number.isFinite(weight) || weight <= 0) continue;
+    // ── R-343: A BODYWEIGHT LIFT IS LOGGED TOO — AT BODYWEIGHT, WITH ITS REPS ──
+    // The first version skipped every zero-load row, so a Pull-Up done for the
+    // full range left no set behind it and the block boundary could never see
+    // the athlete had reached the top. Confirming the card at bodyweight is
+    // the same honest act as confirming it at 80 kg; no weight is invented.
+    const mode = resolveLoadControlMode(rowName);
+    const atBodyweight = (!Number.isFinite(weight) || weight <= 0)
+      && (mode === 'bodyweight_plus' || mode === 'bodyweight');
+    if (!atBodyweight && (!Number.isFinite(weight) || weight <= 0)) continue;
     const sets = Math.max(1, Number(row.prescribedSets) || 1);
     for (let setNumber = 1; setNumber <= sets; setNumber += 1) {
       logStore.logSet(row.id, {
@@ -604,12 +614,12 @@ export function typeLoadsForSession(
         workoutExerciseId: row.id,
         setNumber,
         actualReps: Number(row.prescribedRepsMax) || undefined,
-        actualWeightKg: weight,
+        ...(atBodyweight ? {} : { actualWeightKg: weight }),
         createdAt: `${dateISO}T12:00:00.000Z`,
         updatedAt: `${dateISO}T12:00:00.000Z`,
       } as never);
     }
-    programStore.setWeightOverride(dateISO, row.exerciseId, weight);
+    if (!atBodyweight) programStore.setWeightOverride(dateISO, row.exerciseId, weight);
     typed += 1;
   }
   return typed;

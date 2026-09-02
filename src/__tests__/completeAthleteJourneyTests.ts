@@ -1302,10 +1302,16 @@ async function main(): Promise<void> {
   const rotatedIn = [...kinds].filter(([name]) => !everRecorded.has(name));
   console.log(`  rotated-in lifts and their decision kinds: ${JSON.stringify(rotatedIn)}`);
 
+  // R-343 (2026-09-02): a bodyweight lift never has a recorded LOAD, so it
+  // reads as "unseen" here even when the athlete trained it all block. Its
+  // `bodyweight_progressed` first added load comes from that exact lift's own
+  // logged reps at the top of the range — never from another exercise's
+  // number — so it belongs with the non-inherited kinds.
   ok(
     'UNSEEN LIFTS: every rotated-in lift is decided by estimate, unset or bodyweight — never by history',
     rotatedIn.length === 0 || rotatedIn.every(([, kind]) =>
-      kind === 'authored_estimate' || kind === 'unset' || kind === 'bodyweight_default'),
+      kind === 'authored_estimate' || kind === 'unset' || kind === 'bodyweight_default'
+      || kind === 'bodyweight_progressed'),
     `got ${JSON.stringify(rotatedIn)}`,
   );
 

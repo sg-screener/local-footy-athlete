@@ -364,3 +364,48 @@ typecheck gate's five pre-existing file errors.
 NOT COVERED: simulator proof of the new rows on the phone (generation-level
 proof only); combined `lower` days and full-body shapes (untouched by order);
 Section 18 exposure evidence for the new seat beyond the set budget.
+
+## Addendum 2026-09-02 — R-343: pull-ups earn added weight (unit 5 of six)
+
+Sam: the athlete *"would add weight"*; why did the audit not? Cause: the
+block boundary's `bodyweight_default` branch wrote nothing until a load had
+been recorded, and the audit robot's `typeLoadsForSession` skipped every
+zero-load row, so no set (and no reps) was ever logged for a Pull-Up.
+
+Changes: `readBlockHistory` records `topOfRangeCompletedByExercise` from
+logged sets (`actualReps >= prescribedRepsMax`, full completion, in-block);
+`bodyweightAddedLoadEarned` (bodyweight_plus mode, qualifying block, top of
+range, lattice rung above zero) feeds a new `bodyweight_progressed` decision
+(BW → BW + 2.5 kg) and `progressedFromOwnHistory` so rotation sees the same
+answer; a signed `blockBoundary.addedLoad` sentence (wording is the seat's
+under his ruling); the journey helper logs bodyweight rows at bodyweight with
+reps and sets no override; the in-block wave keeps a load the
+weighted-bodyweight lattice would snap to zero. Journey cell "UNSEEN LIFTS"
+admits the new kind (a bodyweight lift never has a recorded LOAD, so it read
+as unseen).
+
+Guards: block-two-progression 47/47 (five new cells); mutation: reps proof
+dropped → 45/47, suggestion disabled → 44/47, file restored byte-identical.
+Ladder 59/59, boot-preservation 20/20, equipment-load-increments 9/9,
+strength-progression-inputs 18/18, capacity-laundering 25/25, signed-copy
+7/7, athlete-journey 61/64 (identical three reds at b48e53d8),
+difficult-missed 87/88 and strength-progression-integration 97/98 (identical
+at control), generated-power-delivery exits 1 with zero cells at control too.
+
+Regenerated 52-week male year: Pull-Ups 0,0,0,0 → 2.5 (w5) → 5 (w12) → 7.5
+(w16) → 10 (w20) → 12.5 (w24) → 15 (w32) → 17.5 (w35) → 20 (w39) → 22.5
+(w44) → 25 (w47) → 27.5 (w51); restarts 52/52.
+
+FINDING (pre-existing, NOT fixed, no owner yet): weeks 30–31, 36–37, 42–43
+and 48 — the week before each in-season bye and the bye itself — carry the
+ONBOARDING ESTIMATES for every lift (Back Squat 95 / Bench 80 / RDL 77.5
+where the athlete is at 100 / 85 / 82.5), so the athlete's progress is
+dropped on those weeks and the Pull-Up reads BW. The audited db534496 year
+shows the identical 95/80/77.5 on the same weeks; it read as a 5% wave.
+Measured by `startingWeightForAthlete` on the audit profile. Candidate
+cause: those weeks derive through the in-block engine with an empty
+last-performed map (sibling transfer × loadRatio 0 for Pull-Ups), not through
+the stored block rows.
+
+NOT COVERED: the app screen for the added-load sentence (generation-level
+proof only); a female year for this unit (unit 6 regenerates both).

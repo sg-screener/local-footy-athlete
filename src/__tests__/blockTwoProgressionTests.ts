@@ -53,6 +53,7 @@ import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import {
   blockBoundaryExplanationSentences,
   blockBoundaryLoadMovedSentence,
+  blockBoundaryAddedLoadSentence,
 } from '../rules/projectionCopy';
 import {
   decideBlockBoundaryLoads,
@@ -636,6 +637,77 @@ ok(
   `${BW_EXERCISE}'s recorded number is never rounded away`,
   bwWithHistory !== 0 && bwWithHistory !== undefined,
   `the athlete's ${BW_ADDED_KG}kg was discarded — got ${JSON.stringify(bwWithHistory)}`,
+);
+
+console.log('\n[9c] R-343: A LOADABLE BODYWEIGHT LIFT EARNS ITS FIRST ADDED LOAD AT THE TOP OF THE RANGE');
+
+/* Sam, 2026-09-02, on the generated year's Pull-Ups sitting at BW for 52
+ * weeks: the athlete "would add weight". DERIVED subject: the block's first
+ * zero-load row the lattice names a rung above zero for (a Pull-Up, a Dip —
+ * never a Nordic, whose rung is null). */
+const BW_LOADABLE = derivedOrThrow(
+  'a loadable bodyweight row for the added-load cells',
+  BLOCK_2_BASELINE_ROWS.find((r) => r.kg === 0 && smallestPracticalIncrementKg(r.name, 0) !== null),
+).name;
+const BW_FIRST_INCREMENT = smallestPracticalIncrementKg(BW_LOADABLE, 0) as number;
+const BW_TOP_REPS = 5;
+function bwTopOfRangeHistory(
+  actualReps: number | undefined,
+  overrides: Partial<SessionFeedback> = {},
+): Record<string, SessionFeedback> {
+  const feedback = historyFor({ [TRACKED]: TRACKED_RECORDED_KG }, BLOCK_1_DATES, overrides);
+  for (const entry of Object.values(feedback)) {
+    (entry.strength as unknown[]).push({
+      exerciseId: 'ex-bw', workoutExerciseId: 'wex-bw', exerciseName: BW_LOADABLE,
+      prescribedSets: 3, prescribedRepsMin: 3, prescribedRepsMax: BW_TOP_REPS,
+      weightKg: 0, completion: 'full',
+      ...(actualReps === undefined ? {} : { completedSets: 3, actualReps }),
+    });
+  }
+  return feedback;
+}
+const bwTop = build(2, BLOCK_2_START, bwTopOfRangeHistory(BW_TOP_REPS));
+const bwTopStored = storedLoadOf(bwTop, BW_LOADABLE);
+ok(
+  `${BW_LOADABLE} completed at the top of its range in a good block is suggested BW + ${BW_FIRST_INCREMENT}kg`,
+  bwTopStored === BW_FIRST_INCREMENT,
+  `expected ${BW_FIRST_INCREMENT}, got ${JSON.stringify(bwTopStored)}`,
+);
+const bwTopRow = (bwTop.blockBoundaryExplanation ?? [])
+  .filter(isLoadExplanationRow)
+  .find((row) => row.exerciseName === BW_LOADABLE);
+ok(
+  'the stored explanation records it as bodyweight_progressed from BW',
+  bwTopRow?.kind === 'bodyweight_progressed' && bwTopRow.previousLoadKg === null
+    && bwTopRow.nextLoadKg === BW_FIRST_INCREMENT,
+  `got ${JSON.stringify(bwTopRow)}`,
+);
+ok(
+  'and the athlete-facing added-load sentence renders from that row alone',
+  bwTopRow !== undefined && blockBoundaryAddedLoadSentence(bwTopRow) !== null
+    && blockBoundaryLoadMovedSentence(bwTopRow) === null,
+  'no sentence, or the loaded-lift sentence claimed a BW row',
+);
+const bwShort = storedLoadOf(build(2, BLOCK_2_START, bwTopOfRangeHistory(BW_TOP_REPS - 1)), BW_LOADABLE);
+ok(
+  `${BW_LOADABLE} one rep short of the top stays at bodyweight`,
+  bwShort === undefined || bwShort === 0,
+  `got ${JSON.stringify(bwShort)}`,
+);
+const bwNoReps = storedLoadOf(build(2, BLOCK_2_START, bwTopOfRangeHistory(undefined)), BW_LOADABLE);
+ok(
+  `${BW_LOADABLE} with no per-set reps logged stays at bodyweight — completion alone claims nothing about reps`,
+  bwNoReps === undefined || bwNoReps === 0,
+  `got ${JSON.stringify(bwNoReps)}`,
+);
+const bwHard = storedLoadOf(
+  build(2, BLOCK_2_START, bwTopOfRangeHistory(BW_TOP_REPS, { feeling: 'very_hard', soreness: 'high' })),
+  BW_LOADABLE,
+);
+ok(
+  `${BW_LOADABLE} at the top of its range in a VERY HARD block is not suggested added load`,
+  bwHard === undefined || bwHard === 0,
+  `got ${JSON.stringify(bwHard)}`,
 );
 
 console.log('\n[11] THE ATHLETE-FACING EXPLANATION IS STORED AND SURVIVES RELOAD');

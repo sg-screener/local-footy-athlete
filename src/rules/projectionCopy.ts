@@ -95,6 +95,7 @@ export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Ma
 ]);
 
 export const BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID = 'blockBoundary.loadMoved';
+export const BLOCK_BOUNDARY_ADDED_LOAD_COPY_ID = 'blockBoundary.addedLoad';
 export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBlockReduced';
 export const MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID = 'blockBoundary.commitmentQuestion';
 export const MISSED_SESSION_COMMITMENT_OPTION_COPY_ID = 'blockBoundary.commitmentOption';
@@ -278,6 +279,25 @@ export function registerProjectionCopy(): void {
         + 'prescription it describes cannot drift. Guard: test:block-two-progression.',
       text: 'You completed enough of the last block and reported good recovery, so '
         + '{exercise} has moved from {oldWeight} kg to {newWeight} kg. '
+        + 'You can change it if needed.',
+    },
+    // ── THE FIRST ADDED LOAD ON A BODYWEIGHT LIFT — R-343, Sam 2026-09-02. ──
+    //
+    // His ruling on the year's Pull-Ups sitting at BW for 52 weeks: the athlete
+    // *"would add weight"*, so the app suggests it. Rendered only from a stored
+    // `bodyweight_progressed` row, whose three facts (qualifying block, real
+    // logged sets at the top of the range, a lattice rung above zero) are the
+    // sentence's only claims. Wording is the seat's under his ruling; the
+    // sentence changes HERE if he wants other words.
+    {
+      id: BLOCK_BOUNDARY_ADDED_LOAD_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'R-343 (Sam, 2026-09-02): a loadable bodyweight lift completed at '
+        + 'the top of its rep range in a qualifying block is suggested the smallest '
+        + 'added load. Rendered only from a stored `bodyweight_progressed` row of '
+        + 'TrainingProgram.blockBoundaryExplanation. Guard: test:block-two-progression.',
+      text: 'You completed the full rep range on {exercise} at bodyweight and '
+        + 'reported good recovery, so this block suggests adding {newWeight} kg. '
         + 'You can change it if needed.',
     },
     // ── THE VERY-HARD BLOCK SENTENCE — SIGNED, Sam 2026-08-16. ──
@@ -2537,6 +2557,19 @@ export function blockBoundaryLoadMovedSentence(
   });
 }
 
+/** R-343: the first added load on a bodyweight lift, from its stored row only. */
+export function blockBoundaryAddedLoadSentence(
+  row: import('./blockBoundaryProgression').BlockBoundaryExplanationRow,
+): SignedCopy | null {
+  registerProjectionCopy();
+  if (row.kind !== 'bodyweight_progressed') return null;
+  if (typeof row.nextLoadKg !== 'number' || row.nextLoadKg <= 0) return null;
+  return signedCopy(BLOCK_BOUNDARY_ADDED_LOAD_COPY_ID, {
+    exercise: signedCopy(exerciseNameCopyId(row.exerciseName)),
+    newWeight: row.nextLoadKg,
+  });
+}
+
 /**
  * Every block-boundary sentence for a stored program, in the explanation's own
  * order. Empty when the block changed no loads — which is a real answer and the
@@ -2621,7 +2654,9 @@ export function blockBoundaryExplanationSentences(
   for (const row of program.blockBoundaryExplanation ?? []) {
     // The reduction row leads the stored explanation, so its sentence leads the
     // athlete's list for free — the order is the decision's, not this loop's.
-    const sentence = blockBoundaryReducedSentence(row) ?? blockBoundaryLoadMovedSentence(row);
+    const sentence = blockBoundaryReducedSentence(row)
+      ?? blockBoundaryLoadMovedSentence(row)
+      ?? blockBoundaryAddedLoadSentence(row);
     if (sentence) out.push(sentence);
   }
   return out;

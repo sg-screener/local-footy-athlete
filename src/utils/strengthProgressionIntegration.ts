@@ -650,11 +650,17 @@ function applyDelta(
   // target is normalised, through the exercise's typed implement lattice.
   let newWeight = exercise.prescribedWeightKg;
   if (newWeight !== undefined && newWeight !== null && newWeight > 0) {
-    newWeight = normaliseAutomaticExerciseLoadChange({
+    const snapped = normaliseAutomaticExerciseLoadChange({
       exerciseName,
       baseKg: newWeight,
       targetKg: delta.weightMultiplier * newWeight,
-    }) ?? newWeight;
+    });
+    // R-343 (2026-09-02): an automatic step never ERASES an added load. On the
+    // weighted-bodyweight lattice a -5% week from BW + 2.5 kg snaps to 0 and
+    // the athlete's Pull-Up silently read "BW" again (measured on the
+    // regenerated year, weeks 30 and 36). R-096: "hold load and reduce volume
+    // first" — so a step the lattice cannot express above zero holds.
+    newWeight = snapped !== null && snapped > 0 ? snapped : newWeight;
   }
 
   return {

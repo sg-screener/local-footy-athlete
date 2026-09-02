@@ -8621,3 +8621,43 @@ Guard: `LAW-split-lower-days-carry-loaded-work` through chained
 `test:minimum-useful-strength-session` (three new cells), with the ladder
 pinned in `test:slot-coverage` and the budget in `test:weekly-scheduler`.
 Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-343** · A loadable bodyweight lift completed at the top of its rep range
+earns its first suggested added load, and the audit robot logs bodyweight
+lifts, 2026-09-02.
+
+Owner: hingecod. Sam, on the generated year's Pull-Ups reading BW for all 52
+weeks: the athlete *"would add weight"*, and asked why the audit did not. Two
+causes: the block boundary treated an authored-unloaded row as
+`bodyweight_default` and wrote nothing until the athlete had recorded a load
+(R-096 clause 3 as built), and the audit robot never logged a set for a
+zero-load row, so no evidence of reps existed.
+
+Now: at a block boundary, a lift the athlete can add load to (`bodyweight_plus`
+— Pull-Ups, Chin-Ups, Dips, Push-ups, Inverted Row; never a Nordic) that has
+no recorded load, sits in a block that QUALIFIES on completion and recovery
+exactly as a loaded rise does, and was completed at the top of its prescribed
+range in that block — proven by real logged sets (`actualReps >=
+prescribedRepsMax`; a session merely marked complete claims nothing about
+reps) — is suggested the lattice's smallest added load (BW + 2.5 kg). The row
+is stored as `bodyweight_progressed`, renders "BW + 2.5kg", carries its own
+athlete-facing sentence, and from then on R-096 clause 1 governs it like any
+loaded lift (2.5 → 5 → 7.5 …). Rotation reads the same "earned a rise"
+predicate. A very-hard block, a rep short of the top, or no per-set detail
+leaves it at BW. The journey/audit robot now logs bodyweight rows at
+bodyweight with their reps (no weight invented). An automatic in-block step
+that the weighted-bodyweight lattice can only express as zero holds the load
+instead (R-096: hold load, reduce volume first).
+
+Measured on a regenerated 52-week male year: Pull-Ups BW for weeks 1–4, then
++2.5 kg from week 5, +5 at 12, +7.5 at 16, +10 at 20, +12.5 at 24, +15 at 32,
++20 at 39, +27.5 by week 52; 52/52 restarts. FINDING, pre-existing and not
+fixed here: on the week before each in-season bye and the bye week itself
+(weeks 30–31, 36–37, 42–43, 48) every lift's load is the ONBOARDING ESTIMATE
+(Back Squat 95, Bench 80, RDL 77.5 against the athlete's 100/85/82.5), so the
+Pull-Up reads BW there; the audited year shows the same numbers. Owner to be
+assigned.
+
+Guard: `LAW-bodyweight-lift-earns-added-load` through chained
+`test:block-two-progression` (five new cells). Receipt:
+`docs/STATUS_HINGECOD.md`.
