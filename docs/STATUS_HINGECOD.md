@@ -1514,3 +1514,70 @@ one-seat-per-week repeat the replan's day rebuild does not see (the focused
 analyzer's `automatic_weekly_repeats` / `main_family_repeats`, 8–9 exact
 breaches per athlete). Minimal-kit also shows one `week40_nested_conditioning`
 finding. Both are the next root-cause report, if Sam wants it.
+
+## 2026-09-03 — THE COMBINED CANDIDATE `candidate/2026-09-03-combined` (Sam: "combine all recent work including the T-bar work into one clean candidate")
+
+**What it is.** `fable/hinge-cod-audit-fixes` (which already carried `main`,
+`codex/four-confirmed-fixes` and `codex/five-connected-fixes`) merged with
+`codex/failure-only-state-export`'s one extra commit `e855f93e` (T-Bar Tib
+Raises + tib bar equipment) at `895dde2a`. Conflicts resolved as unions: the
+Bible and registry carry R-332 beside R-333..R-360; `sessionBuilder.ts` keeps
+both import groups; the exercise workbook is the candidate's copy (the
+Accessory Affinity column on every row) plus the one T-Bar Tib Raises row,
+inserted after Tib Raises with its affinity copied. No feature added.
+
+**Six athletes at `895dde2a`** (`output/athlete-cohort-895dde2a/`): all six
+complete the year; every restart clean; 0 refused steps; 0 load drops >30%;
+0 required-plane weeks; one PDF each, page QA clean. Remaining cohort
+findings (unchanged, not fixed): the three 4-day athletes repeat Back Squat on
+both lower days in moved-game weeks 29/41/47 (the double-squat report is next);
+minimal-kit `week40_nested_conditioning`; the two pair-calendar checks
+(`november_12_lower_hinge_is_useful`, `affected_frontal_weeks`) are bound to
+the pair athletes' dates.
+
+**Release gate `test:release` at `895dde2a`: 11/27 units green, stops at
+unit 12 `test:compiler-year`** (416/416 athlete-weeks green; its one failure
+key is the writer-ownership census prerequisite: 157/1164 unresolved owners).
+Every remaining witness run on its own: green — exercise-intake 64,
+readiness-load-retention 58, session-change-durability 59, undo-reversal 28,
+injury-recomposition 186, deload-law 78, block-two-progression 47,
+strength-progression-inputs 18, training-logging 14, approved-icons 26,
+coach-weekly-reduction 64, deriving-device-commit, fact-horizon 14,
+power-counting 12, section18-v2 141, session-execution 212,
+modifier-lifecycle, lived-history-foundations 28, estimated-1rm 54; red,
+all inherited and identical on the base tree — weekly-writer-zero (the same
+census), injury-fallback-journey (4 cells: lower-back limiting ×2, two
+coverage cells), slot-coverage 87/90, session-section-add 272/274,
+canonical-weekly-compiler 10539/45. `test:compile` PASSED. T-bar suites:
+t-bar-tib-raises 10/10, exercise-intake 64/0, movement-planes 13/13,
+minimum-useful-strength-session 9/0.
+
+**Simulator (iPhone 17 Pro, app built from the candidate, Metro from the
+candidate — the pack's `qa:audit-flows` must be given `--device`, it refuses
+otherwise): 3 of 6 launch-audit flows PASS** — bin-undo-toast,
+block-rollover, full-reset-lands-clean. Three FAIL:
+- `readiness-ack-never-silent`: expects the ack "Got it — logged how you're
+  feeling." (`home-week-readiness-ack-success`); the app shows the sheet
+  "Not 100% today — You should be okay to train as planned…" with Done —
+  the record-only acknowledgment `1aa24fdb` (2026-08-31, "Correct record-only
+  fatigue acknowledgment") changed the copy after the flow was written
+  (2026-08-26). The ack is not silent; the flow is stale against a later fix.
+- `week-move-game`: expects `edit-week-move-fixture` on the week ⋯ sheet;
+  the sheet now offers "I'm going away" and "Manage week" only — `d77cb459`
+  (2026-08-26 17:57, "Fix G-1 easier session placement and week controls")
+  removed that entry and the "bye → move the game → add a game" order Sam
+  asked for that morning (`93fa246b`). Whether the game can still be moved
+  from Manage week is NOT verified here; this one may be a real regression
+  against Sam's 26 Aug phone finding.
+- `removal-undo-home`: the removal lands and "You can change or undo this in
+  My Status" shows; the flow then taps `modifiers-strip-day-header`, which no
+  longer exists — the strip's id became `modifiers-strip-day` in `6c1ef72c`
+  (2026-08-28, "Show active program modifiers consistently across Program and
+  My Status"); stale against a later surface change. The first batch run also
+  hit a Maestro driver 500 on this flow; on its own it reaches this step.
+
+**What the candidate still needs before a phone test:** a decision on the
+week ⋯ sheet's move-game entry (regression or deliberate), and the three
+flows re-pinned to the current surfaces if the surfaces are right. Metro is
+left running from the candidate on :8081 with the app installed on the
+iPhone 17 Pro simulator.
