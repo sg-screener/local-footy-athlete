@@ -1079,3 +1079,15 @@ the fix for the lone-day pull main (the coverage order was; the M5 world
 stays green without it) and is reverted; the ledger seeds from every accepted
 day again. `test:week-checker-allowances` 32/32 after the revert. The audit
 is rerun at the corrected tip below.
+
+**Second correction, same day.** The rerun audit at `886d14f9` still repeated
+Barbell Row and Pull-Ups in week 22 — so the ledger was innocent. The real
+cause was R-355's doubling rung: week 22 carries the driver's calf injury
+(6/10) on a FULL gym; every upper main seat was already spent for the week,
+the weekly selector refused the unused compounds as mains, and the repeat
+rung then doubled the week's own Barbell Row and Pull-Ups onto the injured
+days. Doubling now fires only when the kit offers no unused legal compound
+at all (`compounds.length === 0`), which is what "limited equipment" means;
+a spent seat budget is not limited kit. `test:injury-limited-kit` 16/16 and
+`test:week-checker-allowances` 32/32 after the gate. The audit is rerun once
+more below.

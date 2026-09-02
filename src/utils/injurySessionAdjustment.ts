@@ -390,7 +390,13 @@ export function chooseInjurySessionAdditions(args: {
   // carries is repeated on this day rather than an unrelated filler or an
   // empty position. Today's own rows, the paused rows and the athlete's
   // exclusions are never repeated.
-  if (chosen.length === 0) {
+  // LIMITED KIT MEANS THE UNUSED BENCH IS EMPTY — not that the weekly seat
+  // budget refused it. Measured 2026-09-02 on the 52-week audit (full gym,
+  // calf injury, week 22): every upper seat was already spent for the week,
+  // the selector refused the unused compounds as mains, and the repeat rung
+  // then doubled Barbell Row and Pull-Ups on top of the days that had them.
+  // Doubling fires only when the kit offers no unused legal compound at all.
+  if (chosen.length === 0 && compounds.length === 0) {
     const neverRepeated = new Set([
       ...args.keptRowNames, ...args.pausedRowNames, ...args.excludedByAthlete,
     ].map(normalise));
