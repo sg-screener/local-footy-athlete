@@ -8948,6 +8948,46 @@ shell — at the injury fold and at read. Guard:
 `LAW-week-checker-judges-what-the-app-could-build` through chained
 `test:week-checker-allowances`. Receipt: `docs/STATUS_HINGECOD.md`.
 
+**R-357** · Every canonical week answers for its lower-body frontal plane,
+2026-09-03.
+
+Owner: hingecod. Sam: "approve 1" on the cohort root-cause report. The
+lower-body frontal completion (`completeWeeklyLowerBodyFrontal`) used to run
+only inside the injury compiler and the fixture replan; a healthy week whose
+frontal row left with a G+1 Monday (Sunday game the week before) or with a
+deload cut answered nothing — measured on the six-athlete cohort (3-day
+athlete weeks 30/36/48; 2-day athlete week 15; beginner 10 of 156). The same
+function now runs in the row compiler for every week, after the candidate is
+authored and before it is judged: one frontal row on a strength day the
+athlete has not done yet, or the honest `lower_body_frontal_unavailable`
+exception the audit reads; a week that already carries the plane is
+untouched. The deload keep-order treats a frontal-plane row as important,
+alongside the four upper planes, so the cut keeps the plane. Extends R-327.
+· `WORKING` — `test:plane-and-load-memory` (cells 1a/1b/1c), red-first at
+`64fbace0`.
+
+**R-358** · A recorded load by name outranks any estimate, 2026-09-03.
+
+Owner: hingecod. Sam: "approve 2". Every composed row's base load was the
+onboarding estimate (`resolveComposedLoad` → `estimateStartingWeight`), and
+the athlete's own logged loads were read only at a block boundary and in an
+injury swap. A week re-derived mid-block (bye recovery, G+1 coverage) gained
+rows the block never had and prescribed them at the estimate over the
+athlete's record (DB Shoulder Press 15 → 9; Seated DB Press 27.5 → 10; Goblet
+27.5 → 12.5), the athlete confirmed the estimate and the next block trusted
+it; the injury block's added rows did the same (Trap Bar 50 → 25). Now the
+composer's base load and the injury block's added rows read the athlete's
+last logged load by canonical name (`recordedLoadsFromFeedback`, the one map
+the injury swap already used) before any estimate; reachability (R-083) is
+still asked first. A lift with no record still starts from the estimate.
+Writer: the row compiler and the injury compiler, from session feedback;
+reader: `resolveComposedLoad`, `addExerciseCandidates.loadFor`. Not ruled:
+seeding a NEW lift from a related lift's record (the beginner's year-3 Back
+Squat after a year of High Box Squat) — mapped for Sam, awaiting his call.
+· `WORKING` — `test:plane-and-load-memory` (cells 2a/2b/2c), red-first at
+`64fbace0`.
+
+
 **R-356 addendum, same day.** (1) covers MAIN STRENGTH as well: a strength
 day whose every main lift the injury paused (a knee on a lower day) is
 recorded as an `injury_restriction` reduction of `main_strength_frequency`

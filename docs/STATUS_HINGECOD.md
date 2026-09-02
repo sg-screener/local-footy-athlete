@@ -1370,3 +1370,58 @@ rebuilt upper day's press carries the last logged load (15, not 9);
 cohort rerun: "load drops >30%" = 0 for all six.
 
 ### Registry grep: R-327 (planes), R-092 (deload row roles), R-083/R-086 (reachable load), R-343 (bodyweight logging); no ruling on load memory across a reshaped week — that is the one new question.
+
+## 2026-09-03 — Sam: "approve 1 and 2 and map out number 3" — BUILT and WORKING at `631b6267`
+
+**R-357 (every week answers for its frontal plane) and R-358 (a recorded
+load by name outranks any estimate)** — registry rows written, law rows in
+`src/rules/lawRegistry.ts` (both guarded, in chain).
+
+**Red first** (`weeklyPlaneAndLoadMemoryTests.ts`, `test:plane-and-load-memory`,
+run on the untouched tree at `64fbace0` in the cohort worktree): 16/20 —
+1a (deload cut dropped Long-Lever Copenhagen for a back extension with one
+more set), 2a (composed load 20 over a recorded 15), 2b (injury addition at
+the estimate over a recorded 33), 1b (3-day gym athlete's week after a Sunday
+game: Slant Board Step-Down on one coverage day, no frontal, no exception)
+red; 1c and 2c green on that archetype (controls; the cohort's own cases are
+the six-athlete rerun below). **Green after the change: 20/20.**
+
+**What changed, one site each.**
+- `canonicalWeeklyRowCompiler.ts`: `completeWeeklyLowerBodyFrontal` runs for
+  every week after the candidate is authored and before it is judged
+  (history days before the remainder boundary are not placeable; game dates
+  from the compiled days-to-game).
+- `deloadWeekRules.ts`: the accessory keep-order treats a frontal-plane row
+  as important alongside the four upper planes.
+- `composedDose.resolveComposedLoad`: reachability first, then the recorded
+  load by canonical name, then the estimate. `ComposerInputs.recordedLoads`
+  (writer: the row compiler from `CanonicalProgramWeeksInput.recordedLoads`,
+  set by generation from session feedback and by the source-fact compiler's
+  reduced remainder from its own map).
+- `addExerciseCandidates.loadFor` + `injurySessionAdjustment` +
+  `canonicalWeeklyInjuryCompiler`: the injury block's added rows read the
+  same map. `recordedLoadsFromFeedback` is the one helper (the injury swap's
+  window trick moved into it).
+
+**Gates.** `test:compile` PASSED. Neighbours all green: deload-law 78/78,
+deload-week 50, movement-planes 13/13, injury-limited-kit 16/16,
+week-checker-allowances 38/38, block-two-progression 47/47,
+programming-final-composition 6, weekly-strength-budget 5, injury-recomposition
+186, three-day-main-seat 22/22; full-body-balance 7/8 is the inherited red.
+`test:law-registry` 13/14 (the inherited 21 unenforced laws, none mine);
+`test:ruling-registry` 5/8, the same three cells red on the base tree — note
+that R-358 now also matches inbox item 42's old question (the cell already
+listed 16 re-asks). Compiler-year and the six-athlete rerun: below.
+
+**Question 3, mapped, not built.** The app's load table already puts every
+loaded lift in one of two families (25 lifts hang off the squat anchor, 45
+off the bench anchor, each with a fixed ratio); a logged sibling implies the
+anchor and the anchor implies every other member. The map with a live
+calculator: https://claude.ai/code/artifact/9e4c798f-ee91-435e-885b-abcf4bb7cbac
+(source in this session's scratchpad). Worked on the cohort: the beginner's
+year-3 Back Squat would start at 50 from his High Box Squat 67.5 (47.5
+today); his year-2 Bench Press would start at 93.5 from DB Bench 35 (47.5
+today, and he actually reached 75) — the dumbbell ratios are small, so
+borrowing across kit overshoots and would need a cap or narrower families.
+Lifts with no prescribed load (51 bodyweight, 22 unloaded, 4 athlete-chosen,
+4 equipment-minimum, 15 unauthored) cannot borrow.
