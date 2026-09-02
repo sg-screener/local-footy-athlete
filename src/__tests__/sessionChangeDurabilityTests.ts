@@ -188,7 +188,7 @@ async function remove(exercise: string): Promise<{ ok: boolean }> {
 }
 
 /** The app's own offered replacement for a row — never a name this suite invented. */
-function offeredReplacementFor(victim: string, existing: string[]): string {
+function offeredReplacementFor(victim: string, existing: string[], avoid: readonly string[] = []): string {
   const { resolveTapSwapEnvironment, getTapSwapChoices, groupTapSwapChoices } =
     require('../utils/tapSwapHierarchy');
   const environment = quiet(() => resolveTapSwapEnvironment({
@@ -200,7 +200,13 @@ function offeredReplacementFor(victim: string, existing: string[]): string {
     originalExercise: victim, reason: 'preference', environment,
     existingExerciseNames: existing,
   }))) as { choices: { name: string }[] }[];
-  return menu[0]!.choices[0]!.name;
+  /* RE-PINNED 2026-09-02: the menu's first offer for a swapped-in row is the
+   * exercise it replaced (it is no longer on the day, so it is offered back).
+   * The order probe needs a THIRD exercise, so the caller names what to avoid. */
+  const offered = menu.flatMap((group) => group.choices.map((choice) => choice.name))
+    .find((name) => name !== victim && !avoid.includes(name));
+  if (!offered) throw new Error(`No replacement offered for ${victim} beyond ${avoid.join(', ')}`);
+  return offered;
 }
 
 async function swap(victim: string, replacement: string): Promise<{ ok: boolean }> {
@@ -336,7 +342,7 @@ async function main(): Promise<void> {
    * then B with C does not commute: replayed backwards the day ends on B, and
    * the athlete gets the exercise they swapped AWAY from. Sam: *"Decisions
    * replay in their real action order."* */
-  const s1Third = offeredReplacementFor(s1New, s1After.map((r) => r.split('@')[0]!));
+  const s1Third = offeredReplacementFor(s1New, s1After.map((r) => r.split('@')[0]!), [s1Victim]);
   await swap(s1New, s1Third);
   const s1BeforeB = rowsOn(TARGET);
   ok('CONTROL — the second swap of the same row landed, and it is a THIRD exercise',

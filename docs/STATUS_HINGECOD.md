@@ -700,3 +700,67 @@ trains no push" (`required_safe_patterns_present:push`), at the control tree
 too. Push-ups is selectable, seated at horizontal_push, legal on an empty kit
 and allowed for a beginner — so the refusal is upstream of legality; root
 cause still open.
+
+## 2026-09-02 — R-351 amendment: a balance-shape full-body day composes BOTH seats it owns
+
+**Measured after the first R-351 commit.** The 3-day athlete's Friday read
+Single-Leg RDL, Single-Arm DB Floor Press, Pull-Ups: the balance shape that
+week is A (vertical pull), so the vertical PUSH seat the day owns was only
+composed on B-shape weeks. The tracked-lift suite showed the consequence on a
+6-day world (lower/upper/full body in weeks 1–2): "Overhead Press repeats
+often enough for observations" went red for both sexes (control 6 fails →
+branch 8), because the athlete's tracked press now sat in a seat delivered on
+alternate weeks. **The change:** `withOwnedSeats(shape, owned)` in
+`composeWeek.ts` — a balance-shape day keeps its A/B ladder and ADDS the owned
+seats the shape lacks, before the robustness seats. Friday now reads
+Single-Leg RDL, Single-Arm DB Floor Press, Pull-Ups, Landmine Press every
+week (weeks 1–4 measured). Four new cells in `test:three-day-main-seat`
+("the full-body day carries BOTH the vertical push and the vertical pull it
+owns", weeks 1–4) — red by the measurement above, 22/22 after.
+`test:estimated-1rm` back to the control's 28/6.
+
+## 2026-09-02 — pile 3: the showcase robot seed no longer needs a lift the plan stopped generating
+
+`session-layout-showcase` (dev seed) looked for a generated "Half-Kneeling
+Single-Arm Overhead Press" row only to copy its sets and reps into an
+`add_exercise` of that long name; the row is no longer generated, the seed
+threw "generated source row is missing", and `test:dev-e2e-seeds` (the
+release gate's bootstrap through `test:test-truth`) and the writer census
+died with it. Now the dose is copied from the named row when present, else
+from any generated supporting strength row; the added exercise keeps the long
+name (the witness still expects it). `test:dev-e2e-seeds` 104/104 (was a
+throw). Test infrastructure, no ruling.
+
+## 2026-09-02 — R-352: a pinned drill wins the last robustness seat once four loaded rows stand (pile 4)
+
+Root cause (mine): R-342 retyped one robustness seat as the loaded seat; the
+remaining robustness seat walked to the first uncovered football category
+(glute/hip → Crab Walks) and the athlete's pinned Reverse Nordic Curl lost.
+`test:exercise-intake` was 912/5 on the branch, 913/0 at the control (the
+four "compiler honors Reverse Nordic boundary" cells + the mutation fixture).
+**The change:** in `preferMissingFootballCategory`, once the day is not below
+its four loaded rows, the legal pinned candidates are the bench (the block
+selector honours the pin); below four, loaded work still comes first. 917/0
+after; then a control cell per experience × G-day asserts four loaded rows
+stand before the pinned drill wherever it lands: 929/0. Law row
+`LAW-pinned-drill-wins-the-last-seat`, registry R-352.
+
+## 2026-09-02 — pile 5: stale cells and fixtures re-pinned to the current rulings
+
+| suite | before | cause | what changed | after |
+| --- | --- | --- | --- | --- |
+| `test:fact-horizon` | 13/1 | T2b asserted the R-035/R-038 seven-day cooked window; R-275 (2026-08-30) supersedes it: cooked rests its own date | cell re-pinned: window = the declaration date, never reaches week 2 | 14/0 |
+| `test:session-execution` | 210/2 | source cells pinned `fontSize: 15` (now the constant `SESSION_ROW_TEXT_SIZE = 15`) and `ConditioningPrescriptionCopy` (now `ConditioningCardBody`) | cells accept the constant (and pin its value) and the new body component; the order body → one completion owner → quick actions is still pinned | 212/0 |
+| `test:estimated-1rm` | 28/6 | the anchor map judged EVERY push/pull plane against the tracked bench/pull-up; under R-317 each plane is its own seat, so a lawful horizontal-pull main read as "wrong" | map re-pinned to the product's own seat table (`selectedTrackedLiftProgrammingSeat`) | 30/4 — the 4 left are the Bulgarian split squat gap below |
+| `test:modifier-lifecycle`, `test:compiler-year`, `test:injury-recomposition` | died / refused | the archetype answers (`compilerYear/catalog.ts`) lacked `teamTrainingStopsOverChristmas`, which the TeamTrainingDays onboarding step requires of a Pre-season athlete with club nights ("I still need your team training days") | catalog answers `false` | modifier-lifecycle green (was 1/34), injury-recomposition ALL GREEN 186, compiler-year runs the years (see remaining) |
+| `test:fixture-identity` (+ the lawfulness proof it mirrors) | 1/6, all "onboarding completion REFUSED — your team training days" | same missing answer in the test's own Pre-season world | answer added in both files | 4/3 — the 3 left are real identity cells (a published week vs the derived week), diagnostic rewrite list |
+| `test:session-change-durability` | dead → 58/1 | the order probe's helper took the menu's FIRST offer for the swapped-in row, which is the exercise it replaced (no longer on the day, so offered back) | helper takes the first offer that is neither the row nor a named exercise to avoid | ALL GREEN 59 |
+
+**Remaining reds, NOT fixed, each with its cause (needs Sam):**
+- **Bodyweight beginner refused ("the week trains no push")** — `undo-reversal` 19/20, `compiler-year` male-2 archetype. Root cause: the weekly selector's `canUse` refuses a compound with no main family (`automaticMainFamilyForExercise` → null) on a MAIN seat; Push-ups has no anchor family, so a bodyweight athlete's push main seat is empty, the seat falls to the prehab rung (Scap Push-Up, slot shoulder_prehab), and the week judge refuses `required_safe_patterns_present:push`. At the control tree too.
+- **Bulgarian split squat as the tracked squat lift never lands** — `estimated-1rm` 4 cells. The seat table puts `bulgarian_split_squat` in the `squat` seat, but the selector says it has no main family, so the squat main seat refuses it (`weekly_spacing` in the trace) every week and the single-leg seat takes Reverse Lunges. Two owners disagree on where a tracked single-leg lift sits.
+- **`canonical-weekly-compiler` 8 cells (athlete-owned fifth strength session)** — the fifth session lands on Saturday 2026-07-18 and the exercise Add/Remove doors then answer "nothing on your plan" / "no session on 2026-07-18". Not diagnosed.
+- **`injury-fallback-journey` 4 cells** — "lower back, limiting" removes no rows from the 3-day lower day (Leg Press, RDLs, Lateral Lunge, Nordic Lower, Calf Raises all stand), and the 3-day world never exercises the single-leg-knee and trunk patterns. Not diagnosed.
+- **`compiler-year`: female-3-novice-home fails its year at week 23** ("Accumulated injury/edit/restart lifecycle failed"; the runner prints no detail). Not diagnosed.
+- **`session-section-add` 2 cells** — after swapping a day to a Primer session the plan shows one section (`primer`); the cells expect an `optional` section to be offered before the Add. Product-or-test question.
+- Inherited and unchanged before/after: `weekly-scheduler` 9/11 (bye fixture cells), `composer-severance` 7 + TypeError, `ladder-wide` 9/14, `slot-coverage` 87/90, `full-body-balance` chain 7/8, `section18-planner` throw, `test:compile` (three files, at the control tree too), guards `law-registry` 13/1, `repo-law-guards` 51/12, `ruling-registry` 5/3 — identical at the control.

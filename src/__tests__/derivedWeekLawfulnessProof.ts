@@ -132,6 +132,9 @@ function restSaturdayProfile(): OnboardingData {
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
+    // The TeamTrainingDays onboarding step also asks a Pre-season athlete with
+    // club nights whether training stops over Christmas (2026-09-02).
+    teamTrainingStopsOverChristmas: false,
     teamTrainingDuration: '90 minutes',
     teamTrainingIntensity: 'Moderate',
     trainingLocation: 'Commercial gym',

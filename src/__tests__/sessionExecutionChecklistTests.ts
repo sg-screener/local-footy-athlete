@@ -1133,8 +1133,12 @@ ok('[10] every exercise sits in one comfortable container, to spec',
     && /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*0\b/.test(screen));
 
 /* ── TYPOGRAPHY — current review: upright names; dose matches Form cues. ── */
+/* RE-PINNED 2026-09-02: the row text size is the named constant
+   `SESSION_ROW_TEXT_SIZE` (still 15) so every shared row reads one number;
+   the cell pins the constant's value and that the name reads it. */
 ok('[10] exercise names are upright in every shared session row',
-  /exerciseName:\s*\{[^}]*fontSize:\s*15\b[^}]*fontWeight:\s*'600'/.test(screen)
+  /const SESSION_ROW_TEXT_SIZE = 15;/.test(screen)
+    && /exerciseName:\s*\{[^}]*fontSize:\s*(?:15\b|SESSION_ROW_TEXT_SIZE)[^}]*fontWeight:\s*'600'/.test(screen)
     && !/exerciseName:\s*\{[^}]*fontStyle/.test(screen));
 ok('[10] sets x reps matches the Form cues type size, weight and line height',
   /statsPrimary:\s*\{[^}]*fontSize:\s*12\.5\b[^}]*fontWeight:\s*'400'[^}]*lineHeight:\s*16/.test(screen)
@@ -1415,7 +1419,10 @@ ok('[10] choice and phase cards use the one trailing completion owner — never 
     && /<\/Pressable>[\s\S]*\{expanded[\s\S]*<ConditioningCompletionRow checkbox=\{checkbox\} \/>/.test(
       conditioningChoiceSource,
     )
-    && /ConditioningPrescriptionCopy[\s\S]*<ConditioningCompletionRow checkbox=\{checkbox\} \/>[\s\S]*<QuickExerciseActions/.test(
+    // RE-PINNED 2026-09-02: the phase card's body is `ConditioningCardBody`
+    // (it was `ConditioningPrescriptionCopy`); the order — body, then the one
+    // completion owner, then the quick actions — is what the cell pins.
+    && /(?:ConditioningPrescriptionCopy|ConditioningCardBody)[\s\S]*<ConditioningCompletionRow checkbox=\{checkbox\} \/>[\s\S]*<QuickExerciseActions/.test(
       conditioningPhaseSource,
     ));
 ok('[10] the conditioning tick owns the same card-right edge without an independent offset',

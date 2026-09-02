@@ -60,6 +60,10 @@ export function athleteAnswers(archetype: Archetype): OnboardingData {
     trainingDaysPerWeek: archetype.days.length, preferredTrainingDays: [...archetype.days],
     teamTrainingDays: archetype.initialPhase === 'Off-season' ? [] : [...archetype.clubDays],
     teamTrainingDaysPerWeek: archetype.initialPhase === 'Off-season' ? 0 : archetype.clubDays.length,
+    // The TeamTrainingDays onboarding step also asks a Pre-season athlete with
+    // club nights whether training stops over Christmas; without this answer
+    // completeOnboarding refuses ("I still need your team training days").
+    teamTrainingStopsOverChristmas: false,
     usualGameDay: archetype.initialPhase === 'In-season' ? archetype.gameDay ?? undefined : undefined,
     gameDay: archetype.initialPhase === 'In-season' ? archetype.gameDay ?? undefined : undefined,
     trainingLocation: full ? 'Commercial gym' : 'Home',

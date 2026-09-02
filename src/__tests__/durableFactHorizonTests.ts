@@ -228,7 +228,7 @@ function registerScenarios(): void {
   // T2b — THE INVERTED CELL. Cooked must NOT reach next week, which is the
   // property A1's fix installs. Stated as its own scenario so the change is
   // visible in the report rather than implied by an absence.
-  scenario('t2-cooked_week-window', 'T2b cooked_week STOPS after 7 days — it is not an open hold', async () => {
+  scenario('t2-cooked_week-window', 'T2b cooked_week rests ITS OWN DATE only — not a 7-day hold (R-275)', async () => {
     await seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await commitReadiness('cooked_week');
@@ -240,30 +240,19 @@ function registerScenarios(): void {
     assert(fact.effectiveUntil !== null,
       'cooked_week minted an OPEN horizon — that is the A1 defect, one tap '
       + 'deloading the athlete forever');
-    // ⚠ RE-PINNED 2026-08-26. The 2026-08-13 inversion fixed the open hold by
-    // asserting "never reaches next week" — which contradicts the law's OWN
-    // sentence: "a ROLLING WINDOW from the day of the declaration … declaring
-    // on a Friday deloads the following week" (Bible :3698). This seed
-    // declares on FRIDAY, so the window lawfully crosses into WEEK_2 and must
-    // stop exactly 7 days after the declaration. The property that kills the
-    // A1 defect is the FIXED END, not week-boundary containment.
+    // ⚠ RE-PINNED 2026-09-02 to R-275 (2026-08-30), which SUPERSEDES the
+    // R-035/R-038 rolling seven-day horizon this cell used to assert:
+    // "Totally/absolutely cooked means no session on that date … Cooked
+    // remains rest on its own date." A second consecutive tired date, not
+    // this one tap, is what deloads through Sunday. So the fact's window is
+    // the declaration date itself and it never reaches the following week.
     const declaredOn = (fact.effectiveFrom ?? '').slice(0, 10);
-    const expectedUntil = (() => {
-      const parsed = new Date(`${declaredOn}T12:00:00Z`);
-      parsed.setUTCDate(parsed.getUTCDate() + 6);
-      return parsed.toISOString().slice(0, 10);
-    })();
-    assert(fact.effectiveUntil === expectedUntil,
-      `cooked_week's window is not 7 days from the declaration — `
-      + `from=${declaredOn} until=${fact.effectiveUntil}, expected ${expectedUntil}`);
-    const WEEK_3 = (() => {
-      const parsed = new Date(`${WEEK_2}T12:00:00Z`);
-      parsed.setUTCDate(parsed.getUTCDate() + 7);
-      return parsed.toISOString().slice(0, 10);
-    })();
-    assert(!factHorizonCoversWeek(fact, WEEK_3),
-      `cooked_week reaches week 3 (until=${fact.effectiveUntil}) — the rolling `
-      + 'window is 7 days, not an open hold');
+    assert((fact.effectiveUntil ?? '').slice(0, 10) === declaredOn,
+      `cooked_week's window is not its own date — `
+      + `from=${declaredOn} until=${fact.effectiveUntil} (R-275: rest on that date only)`);
+    assert(!factHorizonCoversWeek(fact, WEEK_2),
+      `cooked_week reaches week 2 (until=${fact.effectiveUntil}) — one cooked tap `
+      + 'rests that date, it does not hold the next week (R-275)');
   });
 
   // ── T2 — the sibling invariant. A3a is week-scope-wide, not illness-specific:

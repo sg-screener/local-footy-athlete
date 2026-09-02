@@ -12,6 +12,7 @@ import {
   TRACKED_LIFT_PAIRS,
   selectedTrackedLifts,
   type TrackedLiftChoices,
+  selectedTrackedLiftProgrammingSeat,
 } from '../rules/estimatedOneRepMax';
 import { trackedLiftProgrammingEvidence } from '../rules/trackedLiftProgrammingEvidence';
 import type { AutomaticProgrammingSelectionTrace } from '../rules/programmingSelectionTrace';
@@ -41,11 +42,16 @@ const expectedNames = {
   lat_pulldown: 'Lat Pulldown', overhead_press: 'Overhead Press',
   trap_bar_deadlift: 'Trap Bar Deadlift', bulgarian_split_squat: 'Bulgarian Split Squats',
 } as const;
-const patternForSlot = (slot: string): keyof TrackedLiftChoices | null => {
-  if (slot.includes('push')) return 'bench_press';
-  if (slot.includes('pull')) return 'pull_up';
-  if (slot === 'squat') return 'back_squat';
-  if (slot === 'hinge') return 'rdl';
+/* RE-PINNED 2026-09-02 to R-317: every plane is its own weekly main seat, so
+   only the seat the SELECTED lift is programmed in is judged — a horizontal
+   pull main beside the tracked Pull-Ups is lawful, not "wrong". The seat table
+   is the product's own (`selectedTrackedLiftProgrammingSeat`). */
+const patternForSlot = (slot: string, choices: TrackedLiftChoices): keyof TrackedLiftChoices | null => {
+  for (const pattern of ['bench_press', 'pull_up', 'back_squat', 'rdl'] as const) {
+    const trackedPattern = pattern === 'bench_press' ? 'push' : pattern === 'pull_up' ? 'pull'
+      : pattern === 'back_squat' ? 'squat' : 'hinge';
+    if (selectedTrackedLiftProgrammingSeat(choices, trackedPattern) === slot) return pattern;
+  }
   return null;
 };
 
@@ -93,7 +99,7 @@ for (const gender of ['male', 'female'] as const) {
       trace.kind === 'strength_exercise' && trace.need.role === 'main_strength');
     const eligible = main.map((trace) => ({
       trace,
-      slot: patternForSlot(trace.need.movementOrQuality),
+      slot: patternForSlot(trace.need.movementOrQuality, choices),
     })).filter((item): item is typeof item & { slot: keyof TrackedLiftChoices } => item.slot !== null);
     const wrong = eligible.filter(({ trace, slot }) =>
       trace.selected !== expectedNames[choices[slot] ?? slot]);
