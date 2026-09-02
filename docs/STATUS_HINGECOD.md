@@ -1237,3 +1237,19 @@ minimal-kit page 51, misses and club-effort pages 51 and 63 — for the three
 4-day athletes that is the blank-week defect above rendered; for the 2-day
 and beginner it is a session whose one table section is empty (recorded, not
 claimed as a separate defect). Copied to `output/athlete-cohort-64fbace0/`.
+
+**REGISTRY-GREP for the cohort findings: R-007, R-009, R-065, R-327.**
+The 4-day blank-week defect is already ruled: **R-009** — *"should give
+warnings but allow them to do whatever they want"*, a refusal survives only
+when the action is physically impossible, **and a 6th hard day is not**
+(BUILT `b027fef1` as the warning copy). A rollover that throws on
+`hard_day_permitted_maximum` and an injury report refused for the same clause
+are the refusal R-009 removed, surviving at the generated-week contract. So
+the correction is not a new rule: the contract clause for hard days must
+warn and publish (as the forward-decision path already does), and the
+scheduler should still prefer not to add the sixth day (R-007/R-065 prefer
+four, permit five). The healthy-week frontal gap sits under **R-327**
+("weekly and annual checks require one meaningful primary-frontal lower-body
+contribution") — the check exists, the composer does not complete it outside
+the injury path. No ruling found on a returning lift's load memory; that one
+is a question for Sam.
