@@ -15,6 +15,7 @@ import {
   automaticExerciseIsKneeDominant,
   automaticExerciseRouteForIdentity,
   automaticExerciseSuppliesPosteriorChain,
+  hingeSupportBucket,
   automaticIsolationSupportCandidatesForSlot,
   automaticMainFamilyForExercise,
   createAutomaticWeeklyExerciseSelector,
@@ -371,6 +372,46 @@ run('the loaded seat on a Lower Squat day is knee-side in 50 generated worlds; p
   assert(squatSeats >= 20, `non-vacuity: only ${squatSeats} squat-day loaded seats`);
   assert(singleLegOrFrontal >= 1, 'no squat day ever took a second single-leg lift on the loaded seat');
   assert(posterior.length === 0, `${posterior.length} posterior loaded seats on squat days\n${posterior.slice(0, 10).join('\n')}`);
+});
+
+// R-348 (Sam, 2026-09-02): a hinge day is main + one hamstring + one
+// back-extension type, then other things; Hamstring Curl and Nordic never share.
+run('[R-348] the hinge support buckets are typed from primary muscles, not names', () => {
+  const expect = (name: string, bucket: 'hamstring' | 'back_extension' | null) =>
+    assert(hingeSupportBucket(name) === bucket, `${name}: expected ${bucket}, got ${hingeSupportBucket(name)}`);
+  expect('Hamstring Curl', 'hamstring');
+  expect('Nordic Lower', 'hamstring');
+  expect('Back Extension', 'back_extension');
+  expect('Bosch Hold', 'back_extension');
+  expect('SL 45° Back Extension', 'back_extension');
+  expect('Single-Leg Hip Thrust', null);
+  expect('Crab Walks', null);
+  expect('Calf Raises', null);
+  expect('RDLs', null);
+  expect('Single-Leg RDL', null);
+});
+run('[R-348] in 50 generated worlds every Lower Hinge day carries at most one hamstring row and one back-extension row after its main lift', () => {
+  const findings: string[] = [];
+  let hingeDays = 0; let daysWithBoth = 0;
+  for (const world of worlds) for (const [index, week] of world.program.microcycles.entries()) {
+    for (const workout of week.workouts as Workout[]) {
+      if (workout.composedDayShape !== 'lower_hinge') continue;
+      hingeDays += 1;
+      const names = workout.exercises.filter(workoutExerciseWasAutomaticallySelected)
+        .map((row) => row.exercise?.name ?? '');
+      const buckets = names.map((name) => hingeSupportBucket(name));
+      const hamstring = buckets.filter((bucket) => bucket === 'hamstring').length;
+      const backExtension = buckets.filter((bucket) => bucket === 'back_extension').length;
+      if (hamstring > 0 && backExtension > 0) daysWithBoth += 1;
+      if (hamstring > 1 || backExtension > 1
+        || (names.includes('Hamstring Curl') && names.includes('Nordic Lower'))) {
+        findings.push(`${world.id}/week${index + 1}: ${names.join(', ')}`);
+      }
+    }
+  }
+  assert(hingeDays >= 20, `non-vacuity: only ${hingeDays} hinge days`);
+  assert(daysWithBoth >= 1, 'no hinge day ever carried both a hamstring row and a back-extension row');
+  assert(findings.length === 0, `${findings.length} hinge days over the bucket cap\n${findings.slice(0, 10).join('\n')}`);
 });
 
 run('no dedicated Lower Hinge in 50 generated worlds carries knee-dominant automatic work and each stays useful', () => {

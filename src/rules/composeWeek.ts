@@ -108,6 +108,8 @@ import {
   automaticIsolationSupportCandidatesForSlot,
   automaticPrehabFallbacksForSlot,
   createAutomaticWeeklyExerciseSelector,
+  hingeSupportBucket,
+  type HingeSupportBucket,
 } from './automaticWeeklyExerciseSelection';
 import { preferredMovementPlaneCohort, type MovementPlaneTieBreakContext } from './movementPlaneProgramming';
 import {
@@ -1975,12 +1977,34 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         list: readonly ComposedExerciseIdentity[],
       ): readonly ComposedExerciseIdentity[] => list.filter((identity) =>
         weeklyExerciseSelector.canUse(weeklyCandidate(identity)));
+      // ── R-348: A HINGE DAY IS MAIN + ONE HAMSTRING + ONE BACK-EXTENSION ──
+      // Sam, 2026-09-02: "rdl or sl rdl, ham curl or nordic, back extension or
+      // bosch — 3 exercises is plenty for hinge day — then other things". Once
+      // the day carries a row of a bucket, every later seat drops that bucket
+      // (so Hamstring Curl and Nordic never share a session). Never empties a
+      // seat: a list that would vanish stands, and the seat's own gap handles it.
+      const withoutSpentHingeBuckets = (
+        list: readonly ComposedExerciseIdentity[],
+      ): readonly ComposedExerciseIdentity[] => {
+        if (kind !== 'lower_hinge') return list;
+        const spent = new Set<HingeSupportBucket>();
+        for (const onDay of identitiesThisDay) {
+          const bucket = hingeSupportBucket(onDay);
+          if (bucket) spent.add(bucket);
+        }
+        if (spent.size === 0) return list;
+        const kept = list.filter((candidate) => {
+          const bucket = hingeSupportBucket(candidate);
+          return bucket === null || !spent.has(bucket);
+        });
+        return kept.length > 0 ? kept : list;
+      };
       const baseLegal = preferLoadedSeatPurpose(preferMissingFootballCategory(
-        usableThisWeek(withoutUsedVariationFamily(baseLegalBeforeDayFamily)),
+        withoutSpentHingeBuckets(usableThisWeek(withoutUsedVariationFamily(baseLegalBeforeDayFamily))),
       ));
-      const legalBeforeDayIdentity = preferLoadedSeatPurpose(preferMissingFootballCategory(usableThisWeek(
+      const legalBeforeDayIdentity = preferLoadedSeatPurpose(preferMissingFootballCategory(withoutSpentHingeBuckets(usableThisWeek(
         withoutUsedVariationFamily(withoutRdlFamily(legalUnder(excludedToday, kitToday))),
-      )));
+      ))));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
       const legal = legalBeforeDayIdentity.filter((id) =>

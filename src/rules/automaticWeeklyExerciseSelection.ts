@@ -241,6 +241,32 @@ export function dedicatedLowerDayConflict(
   return null;
 }
 
+/**
+ * R-348 (Sam, 2026-09-02): *"rdl or sl rdl, ham curl or nordic, back extension
+ * or bosch — so 3 exercises is plenty for hinge day — then it can be other
+ * things like glute hip groin tib calf core etc after that"* and *"do not put
+ * ham curl and nordic in the same session"*.
+ *
+ * The two support buckets, read from the typed primary muscles and the
+ * catalogue classification, never from a name list:
+ *   · `hamstring`: an isolation whose primary muscle is the hamstrings and
+ *     nothing else (Hamstring Curl, Nordic Lower, Swiss Ball Hamstring Curl);
+ *   · `back_extension`: posterior support that trains hamstrings WITH glutes,
+ *     low back or calves — the back-extension and hold family (Back Extension,
+ *     SL 45° Back Extension and its Hold, Bosch Hold);
+ *   · null: the main hinge lifts themselves (compounds), glute-only work,
+ *     calves, groin, hips, trunk — the "other things" allowed after the three.
+ * A hinge day carries at most ONE row of each bucket after its main lift.
+ */
+export type HingeSupportBucket = 'hamstring' | 'back_extension';
+
+export function hingeSupportBucket(identity: string): HingeSupportBucket | null {
+  if (strengthExerciseClassification(canonicalExerciseName(identity)) === 'compound') return null;
+  const primary = primaryMusclesFor(identity);
+  if (primary.length === 0 || !primary.includes('Hamstrings')) return null;
+  return primary.every((muscle) => muscle === 'Hamstrings') ? 'hamstring' : 'back_extension';
+}
+
 /** R-336: a hinge day spends posterior-chain support before calf or general robustness. */
 export function preferDedicatedLowerDayPurpose<T extends string>(
   identities: readonly T[],
