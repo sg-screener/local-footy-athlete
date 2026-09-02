@@ -969,3 +969,33 @@ injured weeks), 2× pull main lift lost under a restriction, 1× sprint
 high-speed maximum, 4× energy-session content. Spread over five archetypes
 (incl. female-4 weeks 2 and 41, male-5 weeks 4 and 41 — worlds this branch
 never touched). Not this unit's; listed for the next round.
+
+## 2026-09-02 (later) — task 2: the release gate's type step is green; the gate now runs its units
+
+**Type-checker debt (Sam: "do 2 then 1").** Three files, none this branch's:
+`sessionBuilder.ts` compared a sprint-narrowed quality with `cod_decel`
+(unreachable there; the combined-COD warm-up case is answered on the general
+path — behaviour unchanged, `speed-template-variety` 5/5, `session-execution`
+212/212); `automaticWeeklyExerciseSelectionTests` stub typed as `Exercise`;
+`sessionWorkOwnershipJourneyTests` find typed to the exercise member of the
+template-item union; my own `injuryLimitedKitTests` casts through `unknown`.
+`test:compile`: TOTAL 0 error(s), PASSED.
+
+**The gate then ran on and stopped at unit 3 (`test:exercise-intake`).** Two
+inherited "keeps defined load handling" cells (Tib Raises, Copenhagen Plank
+(Half)) accepted only two of the four load-handling shapes; re-pinned to the
+one owner `resolveLoadAuthority` (both are authored "unloaded" prehab):
+56/56. That let the chain reach `generatedPowerDeliveryTests` for the first
+time (it died at onboarding on the team-days answer before this round): its
+club-night cell built a bodyweight world its own comment says is the
+full-gym world (R-230) — re-pinned: 48/48. The whole intake chain is green.
+
+**Every gate unit run individually (30 current-contract units): 23 green, 7
+red.** `compiler-year` (the 22 week findings below) and
+`chained-mutation-continuity` (3 failures, the same findings: male-5 week 4
+pull main, female-3 week 9 conditioning) are ONE cause. `weekly-writer-zero`:
+"review names an absent capability:
+canonicalWeeklyAthleteEditCompiler.ts#reduceContractForRequest" — a review
+inventory naming a function that no longer exists. `canonical-weekly-compiler`
+54 (athlete-owned fifth journey), `injury-fallback-journey` 2 (coverage
+cells), `slot-coverage` 3, `session-section-add` 2 — inherited, unchanged.
