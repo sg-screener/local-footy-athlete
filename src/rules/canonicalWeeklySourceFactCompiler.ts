@@ -103,6 +103,7 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
           ...programInput,
           weeks: { ...programInput.weeks,
             activeConstraints: compatibility.activeConstraints,
+            recordedLoads: input.recordedLoads,
             temporarySourceFacts: visibleFacts,
             generationConstraints: undefined,
             // This is the already accepted fact's reduced remainder, never a

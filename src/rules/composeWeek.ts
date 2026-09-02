@@ -160,6 +160,12 @@ export interface ComposerInputs {
    * derives from his own strength answers and bodyweight.
    */
   readonly profile: OnboardingData;
+  /**
+   * Every load the athlete has logged, by name (Sam, 2026-09-03). Read by
+   * `resolveComposedLoad` before any estimate; writer: the row compiler, from
+   * the athlete's session feedback.
+   */
+  readonly recordedLoads?: Readonly<Record<string, number>>;
   /** Read for the week number that moves selection along the authored order. */
   readonly phaseClock: { readonly weekNumber: number };
   /** B1-M1: the phase the DOSE is resolved against, before authorship. */
@@ -1815,6 +1821,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             seasonPhase: inputs.seasonPhase,
             offseasonSubphase: inputs.offseasonSubphase,
             profile: inputs.profile,
+            recordedLoads: inputs.recordedLoads,
             kit: kitToday,
           }),
           ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
@@ -2463,6 +2470,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           seasonPhase: inputs.seasonPhase,
           offseasonSubphase: inputs.offseasonSubphase,
           profile: inputs.profile,
+          recordedLoads: inputs.recordedLoads,
           // The load must be liftable with what he has THAT DAY — a barbell
           // lattice is the wrong ladder for a dumbbell substitute.
           kit: kitToday,

@@ -6,6 +6,8 @@ import type {
 import { CONDITIONING_META, EXERCISE_TAGS } from '../data/exerciseTags';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { resolveExerciseName } from '../utils/loadEstimation';
+import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
+import { exerciseSuppliesLowerBodyFrontal } from './movementPlaneProgramming';
 import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
 import type { SessionAllocation } from '../utils/coachingEngine';
 
@@ -399,6 +401,16 @@ export function isMainStrengthRow(exercise: WorkoutExercise): boolean {
   return classifyPoolSlot(resolveExerciseName(exercise.exercise?.name ?? ''))?.role === 'anchor';
 }
 
+/** The row supplies the week's lower-body FRONTAL plane (R-327's weekly requirement). */
+function suppliesLowerBodyFrontal(exercise: WorkoutExercise): boolean {
+  const identity = resolveExerciseName(exercise.exercise?.name ?? '');
+  const pool = muscleMetadataFor(identity)?.pool;
+  const contribution = pool === 'Lower prehab' ? 'prehab'
+    : pool === 'Lower plyometric' || pool === 'Power' ? 'power'
+    : 'strength';
+  return exerciseSuppliesLowerBodyFrontal(identity, contribution);
+}
+
 export function isAccessoryStrengthRow(exercise: WorkoutExercise): boolean {
   if (isConditioningExerciseRow(exercise)) return false;
   return !isMainStrengthRow(exercise);
@@ -511,9 +523,15 @@ export function applyStrengthDeloadToExercises(
   // Important movement planes lead the keep order. A low-value isolation row
   // never survives merely because it happened to be authored before the other
   // plane that gives an upper split session its structure.
+  // Sam, 2026-09-03 ("approve 1"): the lower-body FRONTAL row is important
+  // too. It used to lose to any accessory with one more authored set, so a
+  // deload week had no side-to-side leg work and no written exception
+  // (measured: the 2-day athlete's week 15). R-327 requires the plane weekly.
+  const important = (index: number): boolean =>
+    importantUpperSlots.has(slots[index] ?? '') || suppliesLowerBodyFrontal(exercises[index]);
   const accessoryIndexes = [...rawAccessoryIndexes].sort((left, right) => {
-    const leftImportant = importantUpperSlots.has(slots[left] ?? '');
-    const rightImportant = importantUpperSlots.has(slots[right] ?? '');
+    const leftImportant = important(left);
+    const rightImportant = important(right);
     if (leftImportant !== rightImportant) return leftImportant ? -1 : 1;
     const leftDose = Math.round(exercises[left].prescribedSets * DELOAD_LAW.mainLiftSetMultiplier);
     const rightDose = Math.round(exercises[right].prescribedSets * DELOAD_LAW.mainLiftSetMultiplier);

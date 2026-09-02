@@ -954,6 +954,19 @@ export function progressedFromOwnHistory(args: {
  *
  * `undefined` means UNSET: the athlete chooses, and the weight control stays.
  */
+/**
+ * EVERY LOAD THE ATHLETE EVER LOGGED, BY CANONICAL NAME — the one map a fresh
+ * estimate must lose to (Sam, 2026-09-03: "approve 2"). Read by the composer's
+ * base load, the injury block's added rows and the injury swap alike.
+ */
+export function recordedLoadsFromFeedback(
+  feedbackByDate: Readonly<Record<string, SessionFeedback>>,
+): Readonly<Record<string, number>> {
+  return readBlockHistory({
+    feedbackByDate, blockStartISO: '0000-01-01', blockEndISO: '9999-12-31', requiredStrengthSessions: 0,
+  }).lastRecordedLoadByExercise;
+}
+
 export function loadForReplacementExercise(args: {
   exerciseName: string;
   onboardingData?: OnboardingData | null;

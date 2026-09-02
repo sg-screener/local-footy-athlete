@@ -3,6 +3,7 @@
  * Existing scheduler, composer, adapter and dose specialists retain their policies. */
 import { OnboardingData, type DayOfWeek, type ConditioningEquipmentModality, type Workout, type Microcycle, type WeekKind } from '../types/domain';
 import { buildWorkoutsFromCoach, type CoachGeneratedWorkoutInput } from '../data/defaultProgram';
+import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
 import { effectiveAnchorParticipation } from '../rules/weeklyExposureContractV2';
 import { composedIdentityFor } from '../rules/composedRowLegality';
 import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
@@ -257,6 +258,8 @@ export interface CanonicalProgramWeeksInput {
   } | null;
   /** See GenerateProgramFromProfileOptions.acceptedWeekIdentitiesByDay. */
   acceptedWeekIdentitiesByDay?: Readonly<Record<number, readonly string[]>> | null;
+  /** Every load the athlete has logged, by name (Sam, 2026-09-03). Reaches the composer's base load. */
+  recordedLoads?: Readonly<Record<string, number>>;
   readonly authoredAtISO: string;
 }
 
@@ -561,6 +564,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       : [];
     const composedWeek = composeWeek({
           profile,
+          recordedLoads: args.recordedLoads,
           phaseClock: { weekNumber: blockState.weekNumber },
           // B1-M1: the phase the DOSE is resolved against, before authorship.
           seasonPhase: profile.seasonPhase as never,
@@ -851,6 +855,38 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
      * So it is GONE, and the allowance is honoured where it belongs: the
      * composer places at most the allowance, so there is never anything to
      * strip. Nothing re-finalises an authored day to enforce a count. */
+    /* ── R-327, FOR EVERY WEEK (Sam, 2026-09-03: "approve 1") ───────────────
+     *
+     * The lower-body frontal completion used to run only inside the injury
+     * compiler and the fixture replan, so a healthy week whose frontal row left
+     * with a G+1 Monday (Sunday game the week before) or with a deload cut
+     * answered nothing — measured on the six-athlete cohort: the 3-day athlete's
+     * weeks 30/36/48, the 2-day athlete's week 15. The SAME function runs here,
+     * after the candidate is authored and before it is judged: one frontal row
+     * on a strength day the athlete has not done yet, or the honest exception
+     * the audit reads. A week that already carries the plane is untouched. */
+    {
+      const firstWorkoutByDate = new Map<string, Workout>();
+      for (const workout of workouts) {
+        const dateISO = dateForWeekday(blockState.weekStart, workout.dayOfWeek);
+        if (!firstWorkoutByDate.has(dateISO)) firstWorkoutByDate.set(dateISO, workout);
+      }
+      const completed = completeWeeklyLowerBodyFrontal({
+        weekStartISO: blockState.weekStart,
+        workoutsByDate: Object.fromEntries(firstWorkoutByDate),
+        profile,
+        activeConstraints: args.activeConstraints,
+        gameDates: Object.entries(compiledDaysToGame)
+          .filter(([, days]) => days === 0)
+          .map(([day]) => dateForWeekday(blockState.weekStart, Number(day))),
+        ...(boundary ? { placeableFromISO: boundary.governedFromISO } : {}),
+      });
+      workouts = workouts.map((workout) => {
+        const dateISO = dateForWeekday(blockState.weekStart, workout.dayOfWeek);
+        const next = completed.workoutsByDate[dateISO];
+        return next && firstWorkoutByDate.get(dateISO) === workout ? next : workout;
+      });
+    }
     if (exposureContractV2) {
       // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
       //

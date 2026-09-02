@@ -161,6 +161,8 @@ function setsOf(row: { prescribedSets?: number | null } | AddCandidate): number 
 export function chooseInjurySessionAdditions(args: {
   environment: TapSwapEnvironment;
   profile: OnboardingData | null | undefined;
+  /** Every load the athlete has logged, by name (Sam, 2026-09-03). Outranks the estimate. */
+  recordedLoads?: Readonly<Record<string, number>>;
   /** Rows staying on this session. Never offered again, and they cost set budget. */
   keptRowNames: readonly string[];
   /**
@@ -302,6 +304,7 @@ export function chooseInjurySessionAdditions(args: {
       leaf,
       environment: args.environment,
       profile: args.profile ?? null,
+      recordedLoads: args.recordedLoads,
       // Everything the week already has is "existing" as far as the door is
       // concerned, so it never offers a duplicate in the first place.
       existingExerciseNames: [...inTheWeek],
@@ -406,6 +409,7 @@ export function chooseInjurySessionAdditions(args: {
         leaf,
         environment: args.environment,
         profile: args.profile ?? null,
+        recordedLoads: args.recordedLoads,
         existingExerciseNames: [],
       })).filter((candidate) => repeatable.has(normalise(candidate.name))
         && !neverRepeated.has(normalise(candidate.name))),
@@ -526,6 +530,8 @@ export interface InjurySessionAdjustmentInputs {
    */
   environment: TapSwapEnvironment;
   profile: OnboardingData | null | undefined;
+  /** Every load the athlete has logged, by name (Sam, 2026-09-03). Outranks the estimate. */
+  recordedLoads?: Readonly<Record<string, number>>;
   /** The athlete's own word for the area — theirs at review time, the worst
    *  active episode's at the view door. */
   bodyPart: string;
@@ -603,6 +609,7 @@ export function deriveInjurySessionAdjustment(
   const added = !strengthSession ? [] : chooseInjurySessionAdditions({
     environment: args.environment,
     profile: args.profile,
+    recordedLoads: args.recordedLoads,
     keptRowNames,
     weekExerciseNames: args.weekExerciseNames,
     weekAutomaticExerciseNames: args.weekAutomaticExerciseNames,

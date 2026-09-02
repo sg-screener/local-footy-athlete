@@ -92,7 +92,7 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
     .filter(workoutExerciseWasAutomaticallySelected)
     .map(row => row.exercise?.name ?? '').filter(Boolean));
   const adjustment = deriveInjurySessionAdjustment({ workout: substitutedVisible, environment,
-    profile: args.profile, bodyPart: stage.bodyPart,
+    profile: args.profile, recordedLoads: args.recordedLoads, bodyPart: stage.bodyPart,
     redFlag: isRedFlagInjurySeverity(stage.seriousSymptoms, stage.severity),
     weekExerciseNames: substitutedWeekNames,
     weekAutomaticExerciseNames: substitutedWeekAutomaticNames,

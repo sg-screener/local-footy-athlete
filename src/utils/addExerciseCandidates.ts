@@ -337,6 +337,8 @@ export interface AddCandidateArgs {
   /** Swap-only: this row leaves before the candidate arrives. */
   replacingExerciseName?: string;
   profile?: OnboardingData | null;
+  /** Every load the athlete has logged, by name. Outranks the estimate (Sam, 2026-09-03). */
+  recordedLoads?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -348,7 +350,17 @@ export interface AddCandidateArgs {
  * an added row carry its own number rather than inheriting one from whatever it
  * was typed next to.
  */
-function loadFor(name: string, profile: OnboardingData | null | undefined): number | null {
+function loadFor(
+  name: string,
+  profile: OnboardingData | null | undefined,
+  recordedLoads?: Readonly<Record<string, number>>,
+): number | null {
+  // Sam, 2026-09-03 ("approve 2"): what the athlete last LIFTED on this movement
+  // outranks what the estimator thinks a body like theirs should. Measured: the
+  // injury block re-added a beginner's trap bar at the 25 kg estimate the week
+  // after he had pulled 50.
+  const recorded = recordedLoads?.[resolveExerciseName(name)];
+  if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) return recorded;
   if (!profile) return null;
   try {
     return startingWeightForAthlete(name, profile);
@@ -510,7 +522,7 @@ export function legalAddAlternativesForExercise(
       alternatives.push({
         name,
         ...bandFor(name),
-        weightKg: loadFor(name, args.profile),
+        weightKg: loadFor(name, args.profile, args.recordedLoads),
         proximity: leaf === nearestLeaf ? 'same_leaf' : 'same_family',
       });
     }
@@ -590,6 +602,6 @@ export function legalAddCandidates(
   return names.map((name) => ({
     name,
     ...bandFor(name),
-    weightKg: loadFor(name, args.profile),
+    weightKg: loadFor(name, args.profile, args.recordedLoads),
   }));
 }

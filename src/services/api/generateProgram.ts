@@ -4,7 +4,7 @@ export { GeneratedWeekRefusedError } from '../../rules/canonicalWeeklyRowCompile
 import { OnboardingData, TrainingProgram, Microcycle, type DayOfWeek, type ConditioningEquipmentModality, type Workout } from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import { previousBlockBoundsISO } from '../../utils/programBlockState';
-import { progressedFromOwnHistory, readBlockHistory } from '../../rules/blockBoundaryProgression';
+import { progressedFromOwnHistory, readBlockHistory, recordedLoadsFromFeedback } from '../../rules/blockBoundaryProgression';
 import { composedIdentityFor } from '../../rules/composedRowLegality';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -861,6 +861,7 @@ export function canonicalProgramInputFromProfile(
       options.recordSelections,
     ),
     progressedIdentities,
+    recordedLoads: recordedLoadsFromFeedback(options.progressionHistory?.sessionFeedback ?? {}),
     selectionHistory: selectionHistoryForBuild,
     trackedLiftChoices: trackedLiftChoicesForBuild,
     conditioningSelectionHistory: options.conditioningSelectionHistory

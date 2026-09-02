@@ -36,6 +36,7 @@ import type { OffseasonSubphase } from './offseasonSubphase';
 import {
   estimateStartingWeight,
   normaliseAutomaticExerciseLoadChange,
+  resolveExerciseName,
 } from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { getExerciseTags } from '../data/exerciseTags';
@@ -344,6 +345,8 @@ export function resolveComposedLoad(args: {
   readonly profile: OnboardingData | null;
   /** The athlete's resolved kit. R-083 decides whether a load is reachable. */
   readonly kit: readonly string[];
+  /** Every load the athlete has logged, by name. Outranks the estimate below. */
+  readonly recordedLoads?: Readonly<Record<string, number>>;
 }): number {
   if (!args.profile) return 0;
   // ── R-083: A LOAD THE ATHLETE CANNOT REACH IS NOT A PRESCRIPTION ─────────
@@ -361,6 +364,14 @@ export function resolveComposedLoad(args: {
   // he lacks never reaches this function**; if one ever did, the legality owner
   // — not this one — is what failed, and the composed row is refused upstream.
   if (!composedLoadIsReachable(args.identity, args.kit)) return 0;
+  // ── SAM, 2026-09-03 ("approve 2"): A RECORDED LOAD BY NAME OUTRANKS ANY
+  // ESTIMATE. Measured on the six-athlete cohort: a bye-recovery week gained a
+  // press the block never had and prescribed it at the 9 kg onboarding estimate
+  // over the athlete's own logged 15; she confirmed 9 and the next block
+  // trusted it. The record is what she lifted; the estimate exists only for a
+  // lift she has never logged. Reachability (R-083) is still asked first.
+  const recorded = args.recordedLoads?.[resolveExerciseName(composedIdentityFor(args.identity))];
+  if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) return recorded;
   const base = estimateStartingWeight(composedIdentityFor(args.identity), args.profile);
   if (base === null || !(base > 0)) return 0;
   const target = applyOffseasonMainLiftLoad({

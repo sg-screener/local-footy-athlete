@@ -7,7 +7,7 @@ import { canonicalProgramInputFromProfile } from '../services/api/generateProgra
 import { compileCanonicalSourceFactWeeks, sourceFactRequiresCompilation, type CanonicalWeeklySourceFactInput } from '../rules/canonicalWeeklySourceFactCompiler';
 import { composeTemporarySourceFactCompatibility, type TemporarySourceFact } from '../rules/temporarySourceFact';
 import { getAthletePrefs } from './athletePreferencesStore';
-import { readBlockHistory } from '../rules/blockBoundaryProgression';
+import { recordedLoadsFromFeedback } from '../rules/blockBoundaryProgression';
 import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { resolveBlockGridPosition } from '../utils/programBlockState';
 
@@ -38,8 +38,7 @@ export function captureSourceFactCompilerInput(state: ProgramState, facts: reado
     surfaces: { ...storedWorldSurfaces(state),
       athleteExclusions: getAthletePrefs().exclusions ?? [], temporarySourceFacts: facts },
     profile, markedDays: context.markedDays, facts, programsByWeek,
-    recordedLoads: readBlockHistory({ feedbackByDate: state.sessionFeedback ?? {},
-      blockStartISO: '0000-01-01', blockEndISO: '9999-12-31', requiredStrengthSessions: 0 }).lastRecordedLoadByExercise,
+    recordedLoads: recordedLoadsFromFeedback(state.sessionFeedback ?? {}),
   };
 }
 
