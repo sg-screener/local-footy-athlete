@@ -1489,3 +1489,28 @@ suite threw (no such function). The map page updated:
 https://claude.ai/code/artifact/9e4c798f-ee91-435e-885b-abcf4bb7cbac
 `test:compile` PASSED. Registry rows R-359/R-360 and law rows written, both
 in chain. Sweep, six-athlete rerun and compiler-year: below.
+
+**Final receipts at `3cac5245`.** Six-athlete rerun (`output/athlete-cohort-3cac5245/`):
+**all six athletes complete their year** — every restart clean (0 failed of
+52/52/156/52/52/52), 0 refused steps, 0 load drops >30%, 0 required-plane
+weeks, one PDF each with page QA clean. The three 4-day athletes, blank from
+week 9 to 30 before R-359, now carry 179–203 strength days and 298 logged
+days (misses-sessions: 239). Compiler-year: 416 green / 416 reached / 416
+required athlete-weeks; the one failure key is the inherited writer-ownership
+census. Neighbours: generated-week 36/36 and block-two-progression 47/47
+(both re-pinned), generated-week-assembly 30, forward-decision 2/2,
+plane-and-load-memory 20/20, injury-limited-kit 16/16, deload-law 78/78,
+movement-planes 13/13, week-checker-allowances 38/38, injury-recomposition
+186, session-change-durability 59, weekly-strength-budget 5,
+three-day-main-seat 22/22; inherited and unchanged on the base tree:
+weekly-scheduler 9/11, slot-coverage 87/90, bible-anchors 280/295,
+section18-contract-v2, canonical-weekly-compiler 10539/45.
+
+**One finding left for the 4-day athletes, not fixed:** in a moved-game
+(Sunday) week the fixture replan gives BOTH lower days a Back Squat (weeks 29,
+41, 47 on all three; e.g. minimal-kit week 29: Monday lower = Back Squat,
+RDLs, Nordic; Thursday lower_squat = Back Squat, Calf Raises) — an R-317
+one-seat-per-week repeat the replan's day rebuild does not see (the focused
+analyzer's `automatic_weekly_repeats` / `main_family_repeats`, 8–9 exact
+breaches per athlete). Minimal-kit also shows one `week40_nested_conditioning`
+finding. Both are the next root-cause report, if Sam wants it.
