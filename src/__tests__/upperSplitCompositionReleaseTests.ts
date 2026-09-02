@@ -12,7 +12,7 @@ import { EXERCISE_CUES } from '../data/exerciseCues';
 import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
 import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
 import { STRENGTH_POOLS, findPoolEntry } from '../data/exercisePoolsStrength';
-import { EXERCISE_TAGS } from '../data/exerciseTags';
+import { EXERCISE_TAGS, upperAccessoryAffinity } from '../data/exerciseTags';
 import { readBlockHistory, loadForReplacementExercise } from '../rules/blockBoundaryProgression';
 import { composeWeek, type ComposerInputs, type ComposerPlannedDay } from '../rules/composeWeek';
 import {
@@ -30,6 +30,7 @@ import {
   UPPER_SPLIT_PULL_SLOTS,
   UPPER_SPLIT_PUSH_SLOTS,
 } from '../rules/sessionSlotCoverage';
+import { MINIMUM_USEFUL_STRENGTH_EXERCISES } from '../rules/minimumUsefulStrengthSession';
 import {
   FOOTBALL_ROBUSTNESS_CATEGORIES,
   footballRobustnessCategoriesForExercise,
@@ -84,20 +85,20 @@ check('legacy history progresses the canonical exercise without a duplicate key'
     exerciseName: CANONICAL, recordedLoadByExercise: history.lastRecordedLoadByExercise,
   }) === 32.5);
 
-console.log('\n[composition] shared football foundation replaces required arm-pump seats');
+console.log('\n[composition] split upper work stays useful and direction-owned');
 const expectedPush = [
-  'horizontal_push', 'vertical_push', 'core',
-  'football_robustness', 'football_robustness',
+  'horizontal_push', 'vertical_push',
+  'push_accessory_1', 'push_accessory_2', 'core', 'football_robustness',
 ];
 const expectedPull = [
-  'horizontal_pull', 'vertical_pull', 'core',
-  'football_robustness', 'football_robustness',
+  'horizontal_pull', 'vertical_pull',
+  'pull_accessory_1', 'pull_accessory_2', 'core', 'football_robustness',
 ];
-check('the male push table keeps both planes and replaces pump work within five rows',
+check('the male push table keeps both planes and two typed Push support seats',
   JSON.stringify(UPPER_SPLIT_PUSH_SLOTS) === JSON.stringify(expectedPush));
-check('the male pull table keeps both planes and replaces pump work within five rows',
+check('the male pull table keeps both planes and two typed Pull support seats',
   JSON.stringify(UPPER_SPLIT_PULL_SLOTS) === JSON.stringify(expectedPull));
-check('female required split sessions use the same five-seat performance foundation',
+check('female required split sessions use the same directional ownership',
   JSON.stringify(FEMALE_UPPER_SPLIT_PUSH_SLOTS) === JSON.stringify(expectedPush)
   && JSON.stringify(FEMALE_UPPER_SPLIT_PULL_SLOTS) === JSON.stringify(expectedPull));
 
@@ -128,17 +129,16 @@ const baseInputs: ComposerInputs = {
   ...COMPOSER_ROTATION_DEFAULTS,
 };
 const normal = composeWeek(baseInputs);
-check('normal male composition keeps the shared foundation at or below its five-seat ceiling',
-  normal.days.every((day) => day.rows.length <= 5)
+check('normal male composition keeps the useful floor without filling seven seats',
+  normal.days.every((day) => day.rows.filter((row) => !['core', 'midline'].includes(row.slot)).length
+    >= MINIMUM_USEFUL_STRENGTH_EXERCISES && day.rows.length <= 6)
   && normal.days[0]?.rows[0]?.slot === 'horizontal_push'
   && normal.days[0]?.rows[1]?.slot === 'vertical_push'
   && normal.days[1]?.rows[0]?.slot === 'horizontal_pull'
   && normal.days[1]?.rows[1]?.slot === 'vertical_pull',
   JSON.stringify(normal.days.map((day) => day.rows.map((row) => `${row.slot}:${row.identity}`))));
-check('the final male split week supplies all four football-robustness categories',
-  missingFootballRobustnessCategories(
-    normal.days.flatMap((day) => day.rows.map((row) => row.identity)),
-  ).length === 0,
+check('the final male split week retains legal robustness support without using it as filler',
+  normal.days.every((day) => day.rows.some((row) => row.slot === 'football_robustness')),
   JSON.stringify(normal.days.map((day) => day.rows.map((row) => row.identity))));
 check('normal male composition has no variation-family collision',
   normal.days.every((day) => !sessionHasExerciseVariationCollision(
@@ -154,9 +154,16 @@ check('male Upper Pull has exactly one horizontal and one vertical major pull',
   && majorPullSlots.filter((slot) => slot === 'horizontal_pull').length === 1
   && majorPullSlots.filter((slot) => slot === 'vertical_pull').length === 1,
   JSON.stringify(normalPull.rows.map((row) => `${row.slot}:${row.identity}`)));
-check('required male upper sessions contain no direct arm or delt-pump seats',
-  normal.days.every((day) => day.rows.every((row) =>
-    !['biceps', 'triceps', 'shoulders', 'traps', 'arm_or_shoulder'].includes(row.slot))),
+check('required male upper sessions contain only direction-owned automatic accessories',
+  normal.days.every((day) => day.rows.every((row) => {
+    if (row.slot.startsWith('push_accessory')) {
+      return ['push', 'both'].includes(upperAccessoryAffinity(row.identity) ?? '');
+    }
+    if (row.slot.startsWith('pull_accessory')) {
+      return ['pull', 'both'].includes(upperAccessoryAffinity(row.identity) ?? '');
+    }
+    return !['biceps', 'triceps', 'shoulders', 'traps', 'arm_or_shoulder'].includes(row.slot);
+  })),
   JSON.stringify(normal.days.map((day) => day.rows.map((row) => `${row.slot}:${row.identity}`))));
 const injuryAdjusted = composeWeek({
   ...baseInputs,
@@ -174,7 +181,7 @@ console.log('\n[annual selection] typed block history rotates legal non-anchor w
   const history: import('../rules/blockExerciseSelection').BlockExerciseSelection[] = [];
   const robustnessAccessories: string[] = [];
   const pullMajorCounts: number[] = [];
-  const foundationMisses: string[][] = [];
+  const usefulCounts: number[] = [];
   for (let block = 1; block <= 13; block += 1) {
     const blockStart = new Date('2026-09-07T12:00:00Z');
     blockStart.setUTCDate(blockStart.getUTCDate() + (block - 1) * 28);
@@ -191,9 +198,8 @@ console.log('\n[annual selection] typed block history rotates legal non-anchor w
     const pull = composed.days.find((day) => day.kind === 'upper_split_pull')!;
     robustnessAccessories.push(...composed.days.flatMap((day) => day.rows
       .filter((row) => row.slot === 'football_robustness').map((row) => row.identity)));
-    foundationMisses.push([...missingFootballRobustnessCategories(
-      composed.days.flatMap((day) => day.rows.map((row) => row.identity)),
-    )]);
+    usefulCounts.push(...composed.days.map((day) => day.rows
+      .filter((row) => !['core', 'midline'].includes(row.slot)).length));
     pullMajorCounts.push(pull.rows.filter((row) => {
       const membership = findPoolEntry(row.identity);
       return membership?.slot === 'horizontal_pull' || membership?.slot === 'vertical_pull';
@@ -201,8 +207,9 @@ console.log('\n[annual selection] typed block history rotates legal non-anchor w
   }
   const counts = new Map<string, number>();
   robustnessAccessories.forEach((identity) => counts.set(identity, (counts.get(identity) ?? 0) + 1));
-  check('every annual block retains the complete football foundation',
-    foundationMisses.every((missing) => missing.length === 0), JSON.stringify(foundationMisses));
+  check('every annual block retains the useful split-session floor',
+    usefulCounts.every((count) => count >= MINIMUM_USEFUL_STRENGTH_EXERCISES),
+    JSON.stringify(usefulCounts));
   check('typed block history rotates the legal robustness bench',
     counts.size >= FOOTBALL_ROBUSTNESS_CATEGORIES.length, JSON.stringify([...counts]));
   check('every annual Upper Pull has two major pulls, never three',
@@ -213,11 +220,10 @@ const female = composeWeek({
   ...baseInputs,
   profile: { ...baseInputs.profile, gender: 'female' } as never,
 });
-check('female required sessions retain the same four-category foundation and ceiling',
-  female.days.every((day) => day.rows.length <= 5)
-  && missingFootballRobustnessCategories(
-    female.days.flatMap((day) => day.rows.map((row) => row.identity)),
-  ).length === 0,
+check('female required sessions retain the same useful floor and directional ceiling',
+  female.days.every((day) => day.rows.length <= 6
+    && day.rows.filter((row) => !['core', 'midline'].includes(row.slot)).length
+      >= MINIMUM_USEFUL_STRENGTH_EXERCISES),
   JSON.stringify(female.days.map((day) => day.rows.map((row) => row.identity))));
 
 const finalWeekSignature = (week: ReturnType<typeof composeWeek>): string => JSON.stringify(

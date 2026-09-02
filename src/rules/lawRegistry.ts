@@ -208,13 +208,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-upper-split-composition-and-pulldown-identity',
-    law: 'R-299: Single-Arm Lat Pulldown is the sole current identity and the retired spelling is read-ingress only. Normal male Upper Push and Upper Pull each have six rows with one accessory slot; female split tables remain separate. One explicit variation-family owner prevents same-session near-duplicates across composition, Add and Swap. Easier split-upper sessions retain their important movement planes and trim low-value accessories before producing many one-set rows.',
+    law: 'R-299, superseded in split-session shape by R-334: Single-Arm Lat Pulldown is the sole current identity and the retired spelling is read-ingress only. One explicit variation-family owner prevents same-session near-duplicates across composition, Add and Swap. R-334 owns the useful-session minimum and direction-matched split-upper accessories. Easier split-upper sessions retain their important movement planes and trim low-value accessories before producing many one-set rows.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-299',
     guard: {
       state: 'guarded',
       by: 'test:composer-b1 + test:exercise-canonicalisation + test:deload-law',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-01 by seat `condpair`. Red first: the composer still authored seven male split rows, the retired pulldown spelling remained in current pools/cues/equipment/metadata, same-day selection had only exact-name avoidance, and the G-1 route preserved six rows while reducing four of them to one set. The shared male slot tables now own the six-row structures, while the distinct seven-row female tables are unchanged. One explicit variation-family map is consumed by composition, Add and Swap; no name parsing is used. Legacy identity canonicalisation runs before current writing and block-history progression. The release boundary executes normal, injury-adjusted, athlete Add/Swap, G-1 and scheduled-deload routes; the annual male/female saved/restarted run adds zero retired-identity or family collisions and remains 0/728 under catalogue reversal. The exercise workbook/code equality gate holds the one canonical row. Final receipt and NOT COVERED: docs/STATUS_CONDPAIR.md.',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `condpair`; SPLIT-SESSION SHAPE SUPERSEDED BY R-334 on 2026-09-02 by seat `fourconfirmed`. The canonical pulldown, explicit variation-family owner, easier-session preservation and legacy ingress remain guarded. R-334 now owns row minimums and direction-matched accessories through test:minimum-useful-strength-session. Original red-first and NOT COVERED receipt: docs/STATUS_CONDPAIR.md; current receipt: docs/STATUS_FOURCONFIRMED.md.',
     },
   },
   {
@@ -351,13 +351,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-male-upper-split-has-two-major-pulls-and-rotating-accessories',
-    law: 'R-305, refined by R-309: a normal male Upper Pull has exactly one horizontal and one vertical major pull, never a third row or pulldown. The selected tracked anchor occupies its authored movement plane. The former direct-arm and spare push-accessory seat prescription is superseded by R-309\'s shared football-robustness foundation. The canonical Single-Arm Lat Pulldown identity and variation-family collision rules remain unchanged; injury and equipment legality still outrank composition.',
+    law: 'R-305, refined by R-309 and R-334: a normal male Upper Pull has exactly one horizontal and one vertical major pull, never a third row or pulldown. The selected tracked anchor occupies its authored movement plane. R-334 supersedes the interim accessory-seat prescription with typed Pull-owned support. The canonical Single-Arm Lat Pulldown identity and variation-family collision rules remain unchanged; injury and equipment legality still outrank composition.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-305',
     guard: {
       state: 'guarded',
       by: 'test:composer-b1 + test:estimated-1rm',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`; REFINED THE SAME DAY BY R-309. The original red boundary proved the third-major-pull defect and typed-plane misassignment. R-309 later superseded the interim direct-arm and push-accessory seat shape, while retaining the two-major-pull, canonical identity and variation-family invariants. The current focused boundary is 29/29 and every one of 13 typed-history blocks still has exactly two major pulls. Final counts, mutations and NOT COVERED: docs/STATUS_YEARREPAIR.md.',
+      receipt: 'BORN GUARDED 2026-09-01 by seat `yearrepair`; REFINED BY R-309 AND R-334. The original red boundary proved the third-major-pull defect and typed-plane misassignment. R-334 now owns the accessory shape while retaining the two-major-pull, canonical identity and variation-family invariants. The maintained focused boundary still checks 13 typed-history blocks. Original receipt: docs/STATUS_YEARREPAIR.md; current receipt: docs/STATUS_FOURCONFIRMED.md.',
     },
   },
   {
@@ -395,7 +395,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-required-programming-shares-football-robustness-foundation',
-    law: 'R-309: required male and female programming shares the same football-performance foundation. Required upper sessions keep the important push and pull work but contain no automatic direct biceps, triceps or delt-pump seats. Without lengthening the session, one or two accessory seats fill only complete-week gaps in hamstring eccentric/isometric, adductor/groin, calf/soleus and knee-capacity/unilateral exposure; existing lower work earns the same typed credit and prevents duplicates. Male Gunshow and female Primer are optional G-1 offers only in a one-game In-season or Pre-season fixture week, never ordinary Off-season, no-game, multi-game or bye weeks; reduced weeks suppress them and upper-body injury bands reduce or pause Gunshow. Gunshow is low-soreness, keeps three reps in reserve and excludes slow eccentric Chin-Up Negatives. Canonical save, restart and Undo preserve the same final sessions.',
+    law: 'R-309, superseded for ordinary split-upper accessory ownership by R-334: required male and female programming shares the same football-performance foundation. Typed Push/Pull accessories now occupy ordinary split-upper support positions; football robustness remains available for lower work, team-night composition and legal fallback support without duplicates. Male Gunshow and female Primer are optional G-1 offers only in a one-game In-season or Pre-season fixture week, never ordinary Off-season, no-game, multi-game or bye weeks; reduced weeks suppress them and upper-body injury bands reduce or pause Gunshow. Gunshow is low-soreness, keeps three reps in reserve and excludes slow eccentric Chin-Up Negatives. Canonical save, restart and Undo preserve the same final sessions.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-309',
     guard: {
       state: 'guarded',
@@ -494,7 +494,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-systemic-automatic-weekly-exercise-selection',
-    law: 'R-318: every non-Mobility/non-Prehab automatic exercise identity appears at most once per athlete-week through one canonical weekly history shared by normal strength, strength accessories, Gunshow, Primer, power and automatically placed optional sessions. Real catalogue classification owns the six weekly main families, including all squat, hinge and equivalent upper variations; role relabelling cannot bypass a spent family. Dedicated Lower Squat owns single-leg knee work and dedicated Lower Hinge owns single-leg hip/hamstring/glute/lower-back work. Fallback order is unused same-category exercise, suitable unused same-area accessory, genuine prehab, then empty. Typed automatic authorship survives injury rebuild, fixture repair and restart. Prehab never satisfies a main seat. Athlete additions remain unrestricted and do not trigger automatic refill.',
+    law: 'R-318, refined by R-334: every non-Mobility/non-Prehab automatic exercise identity appears at most once per athlete-week through one canonical weekly history shared by normal strength, strength accessories, Gunshow, Primer, power and automatically placed optional sessions. Real catalogue classification owns the six weekly main families, including all squat, hinge and equivalent upper variations; role relabelling cannot bypass a spent family. Dedicated Lower Squat owns single-leg knee work and dedicated Lower Hinge owns single-leg hip/hamstring/glute/lower-back work. Fallback order is unused same-purpose exercise, suitable unused same/supporting-muscle accessory, genuine prehab or robustness, optional core as additional work, then empty only when no legal unused option remains. Typed automatic authorship survives injury rebuild, fixture repair and restart. Prehab never satisfies a main seat. Athlete additions remain unrestricted and do not trigger automatic refill.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-318',
     guard: {
       state: 'guarded',
@@ -578,6 +578,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:standalone-conditioning-ownership',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-02 by seat `fivebridge`. TEST FIRST: the exact Bike Flush Intervals 2:1 row retained all seven data fields internally but reached presentation `recovery`, and both final-card and restart cells failed. TWO OPTIONS COMPARED: patch the Recovery renderer/template name, or let typed conditioningBlock ownership select the existing canonical conditioning card. The shared ownership route landed. Focused tests cover the exact Bike card, every authored flush, ordinary Recovery, final composition and restart. Mutation, final results and NOT COVERED receipt: docs/STATUS_FIVEBRIDGE.md.',
+    },
+  },
+  {
+    id: 'LAW-minimum-useful-strength-and-directional-upper-accessories',
+    law: 'R-334: an ordinary healthy non-deload Lower Squat, Lower Hinge, Upper Push or Upper Pull has at least four real strength/accessory rows; relevant lower prehab/robustness may count, while Movement Prep, Mobility, Conditioning, Speed and core cannot. A shorter final session carries a typed deload, injury/illness, low-readiness, game-proximity, equipment/availability, exclusion, catalogue-exhaustion or deliberately-short reason. Existing weekly identity/main-family limits, dedicated lower purposes, safety and the four-compound ceiling remain. Fallback is unused same-purpose work, same/supporting-muscle accessory, prehab/robustness, core as additional work, then honestly empty. Upper Push owns chest, pressing/lateral-delt and triceps support; Upper Pull owns back/lat, rear-delt/face-pull/shrug and biceps support. Mixed upper, Gunshow and athlete-added work retain their existing freedoms. The distinction is typed catalogue/workbook metadata, never name matching.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-334',
+    guard: {
+      state: 'guarded',
+      by: 'test:full-body-balance',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `fourconfirmed`. TWO OPTIONS COMPARED: add a post-generation filler pass, or preserve legal composer positions and attach one final typed contract. The existing composer/selector design landed: redundant support pruning stops at four useful rows, automatic isolation fallback reads typed affinity, and final sessions carry the contract through persistence. The focused gate drives 30 real final generated worlds (two sexes x three phases x 2-6 available days), all four ordinary shapes, scheduled deload, workbook equality, exact identity/main-family uniqueness, directional ownership and the four-compound ceiling. Raising/lowering the minimum and crossing the affinity make the guard red. Annual restart/PDF evidence and NOT COVERED: docs/STATUS_FOURCONFIRMED.md.',
     },
   },
   {

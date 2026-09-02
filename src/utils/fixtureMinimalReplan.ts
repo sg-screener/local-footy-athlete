@@ -12,6 +12,7 @@ import { applyRemovalLedgerToWeekContract } from '../rules/derivedWeekContract';
 // search. This file no longer keeps a copy.
 import { stripConditioningComponent } from '../rules/strengthRelocationTemplate';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { buildDerivedSession } from './sessionBuilder';
 import {
   resolveFinalVisibleSection18Week,
   runSection18AcceptedWeekGateway,
@@ -46,6 +47,13 @@ import {
 import { powerRows } from '../rules/sessionRowCounting';
 import { storedGameAnchor } from '../rules/gameAnchor';
 import { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
+import {
+  createAutomaticWeeklyExerciseSelector,
+  workoutExerciseWasAutomaticallySelected,
+} from '../rules/automaticWeeklyExerciseSelection';
+import { resolveEquipmentCapabilities } from './equipmentAvailability';
+import { isoDateForWeekday } from './appDate';
+import { completeWeeklyLowerBodyFrontal } from '../rules/canonicalWeeklyPlaneCompletion';
 
 export { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
 
@@ -400,12 +408,46 @@ function withoutPlannerOffers(workouts: readonly Workout[]): Workout[] {
 }
 
 /** Reconsider offers from the newly compiled fixture week, never the old week. */
-function withCompilerPlannerOffers(workouts: readonly Workout[], compiled: readonly Workout[]): Workout[] {
+function withCompilerPlannerOffers(
+  workouts: readonly Workout[],
+  compiled: readonly Workout[],
+  context: Pick<BuildFixtureMinimalReplanInput, 'profile' | 'weekStart' | 'targetMicrocycle'>,
+): Workout[] {
   let result = [...workouts];
   const offers = compiled.filter((workout) =>
     workout.section18ConditioningRole === 'optional_flush'
     || isAutomaticFixtureRelativePlannerOffer(workout));
-  for (const offer of offers) {
+  for (const compiledOffer of offers) {
+    // Fixture repair preserves the already-accepted core sessions where it can.
+    // Those rows can differ from the newly compiled candidate that authored the
+    // planner offer. Recompose an automatic Gunshow/Primer against the rows that
+    // will actually reach the athlete, through the same weekly selector used by
+    // ordinary generation. Athlete-added optional sessions never enter here.
+    const offer = isAutomaticFixtureRelativePlannerOffer(compiledOffer)
+      ? (() => {
+          const selector = createAutomaticWeeklyExerciseSelector(result.flatMap((workout) =>
+            workout.exercises
+              .filter(workoutExerciseWasAutomaticallySelected)
+              .map((row) => row.exercise?.name ?? '').filter(Boolean)));
+          const dateISO = isoDateForWeekday(context.weekStart, compiledOffer.dayOfWeek);
+          const rebuilt = buildDerivedSession(
+            compiledOffer.composedOptionalKind === 'primer' ? 'primer' : 'arms_pump',
+            dateISO,
+            context.targetMicrocycle.id,
+            compiledOffer.description ?? 'Optional planner offer',
+            {
+              injuries: context.profile.injuries ?? [],
+              equipmentTags: resolveEquipmentCapabilities(context.profile, [], dateISO).tags,
+              onboardingData: context.profile,
+              automaticWeeklyExerciseSelector: selector,
+            },
+          );
+          return {
+            ...compiledOffer,
+            exercises: rebuilt.exercises.map((row) => ({ ...row, workoutId: compiledOffer.id })),
+          };
+        })()
+      : compiledOffer;
     const existing = result.find(workout => workout.dayOfWeek === offer.dayOfWeek);
     if (isAutomaticFixtureRelativePlannerOffer(offer)) {
       if (!existing) result.push(offer);
@@ -1186,7 +1228,17 @@ export function buildFixtureMinimalReplan(
     weekStart: args.weekStart,
     activeFixtureDates: args.activeFixtureDates,
   })[0]?.workouts ?? fixtureNeutral;
-  const source = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts);
+  const plannerSource = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts, args);
+  const sourceCompletion = completeWeeklyLowerBodyFrontal({
+    weekStartISO: args.weekStart,
+    workoutsByDate: Object.fromEntries(plannerSource.map((workout) => [
+      isoDateForWeekday(args.weekStart, workout.dayOfWeek),
+      workout,
+    ])),
+    profile: args.profile,
+    gameDates: args.proposedFixtures.map((fixture) => fixture.date),
+  });
+  const source = Object.values(sourceCompletion.workoutsByDate);
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
   const gameMinusOneDays = gameMinusOneDayNumbers(args);

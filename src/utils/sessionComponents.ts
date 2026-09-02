@@ -751,13 +751,10 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const renderableRows = allRenderable.filter((row) => !isPowerRow(row));
   const lowLoadKind = standaloneLowLoadSessionKind(workout);
 
-  const lowLoadForRow = (row: any) => row.composedOptionalKind
-    ?? (row.sessionSection === 'mobility' || row.sessionSection === 'recovery' ? row.sessionSection
-      : row.sessionSection ? undefined : lowLoadKind);
-  const mobilityRows = renderableRows.filter(row => lowLoadForRow(row) === 'mobility');
-  const recoveryRows = renderableRows.filter(row => lowLoadForRow(row) === 'recovery');
-  const lowLoadIds = new Set([...mobilityRows, ...recoveryRows].map(row => row.id));
-
+  // A conditioning block is an explicit row owner. Resolve it before the
+  // container-level Mobility/Recovery fallback so conditioning nested inside
+  // any low-load session remains Conditioning instead of being relabelled as
+  // another mobility exercise.
   const blockConditioningIds = conditioningIdsFromBlock(workout, renderableRows);
   const legacyConditioningIds = blockConditioningIds.size > 0
     ? new Set<string>()
@@ -765,6 +762,21 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds,
     ...renderableRows.filter(row => row.sessionSection &&
       (row.sessionSection === 'conditioning' || row.role === 'conditioning')).map(row => row.id)]);
+
+  const authoredContainerLowLoadKind = workout.composedOptionalKind === 'mobility'
+    || workout.composedOptionalKind === 'recovery'
+    ? workout.composedOptionalKind
+    : null;
+  const lowLoadForRow = (row: any) =>
+    row.sessionSection === 'mobility' || row.sessionSection === 'recovery'
+      ? row.sessionSection
+      : row.sessionSection || conditioningIds.has(row?.id)
+        ? undefined
+        : authoredContainerLowLoadKind ?? row.composedOptionalKind ?? lowLoadKind;
+  const mobilityRows = renderableRows.filter(row => lowLoadForRow(row) === 'mobility');
+  const recoveryRows = renderableRows.filter(row => lowLoadForRow(row) === 'recovery');
+  const lowLoadIds = new Set([...mobilityRows, ...recoveryRows].map(row => row.id));
+
   // CARD IDENTITY, ONE NAME (Sam, 2026-08-24). Midline is an exercise role,
   // not a session type. It stays inside the session that prescribed it even
   // when edits leave midline as the only non-power row. The former

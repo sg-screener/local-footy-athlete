@@ -108,6 +108,10 @@ import {
   automaticPrehabFallbacksForSlot,
   createAutomaticWeeklyExerciseSelector,
 } from './automaticWeeklyExerciseSelection';
+import {
+  MINIMUM_USEFUL_STRENGTH_EXERCISES,
+  minimumUsefulStrengthApplies,
+} from './minimumUsefulStrengthSession';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
 
@@ -1838,7 +1842,21 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         candidates: readonly ComposedExerciseIdentity[],
       ): readonly ComposedExerciseIdentity[] => {
         if (slot !== 'football_robustness') return candidates;
-        for (const category of FOOTBALL_ROBUSTNESS_CATEGORIES) {
+        // Weekly lower-body frontal strength is a required coverage hole, not
+        // an audit suggestion. When it is still missing, the groin/adductor
+        // robustness seat is the first legal purpose-compatible place to fill
+        // it. The ordinary robustness order resumes once a frontal exercise is
+        // already present, so legal options still rotate across the week.
+        const missingLowerFrontal = weeklyExerciseSelector
+          .movementPlaneContextFor(slot).missingUsefulPlanes?.includes('frontal') === true;
+        const categoryOrder = missingLowerFrontal
+          ? [
+              'adductor_or_groin' as const,
+              ...FOOTBALL_ROBUSTNESS_CATEGORIES.filter((category) =>
+                category !== 'adductor_or_groin'),
+            ]
+          : FOOTBALL_ROBUSTNESS_CATEGORIES;
+        for (const category of categoryOrder) {
           if (footballRobustnessCovered.has(category)) continue;
           const inCategory = candidates.filter((candidate) =>
             footballRobustnessCategoriesForExercise(candidate).includes(category));
@@ -2331,6 +2349,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   };
   const finalDays = days.map((day) => {
     let removed = 0;
+    let usefulRowsRemaining = day.rows.filter((row) =>
+      row.slot !== 'core' && row.slot !== 'midline').length;
     const rows = day.rows.filter((row) => {
       if (row.slot !== 'football_robustness') return true;
       const supplied = footballRobustnessCategoriesForExercise(row.identity);
@@ -2339,7 +2359,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         supplied.forEach((category) => suppliedByOrdinaryRows.add(category));
         return true;
       }
+      // R-334: redundancy must not turn a healthy ordinary strength session
+      // into two lifts. Keep the already-selected legal support row when it is
+      // needed to preserve the useful-session minimum; no duplicate or filler
+      // is invented here.
+      if (minimumUsefulStrengthApplies(day.kind)
+        && usefulRowsRemaining <= MINIMUM_USEFUL_STRENGTH_EXERCISES) {
+        return true;
+      }
       removed += 1;
+      usefulRowsRemaining -= 1;
       return false;
     });
     return removed === 0 ? day : {

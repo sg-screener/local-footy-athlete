@@ -90,6 +90,13 @@ export type NordicCurlVariant =
 /** Sam's optional strength-only exercise classification (R-319). */
 export type StrengthExerciseClassification = 'compound' | 'isolation';
 
+/**
+ * Which half of a split upper session may automatically own an accessory.
+ * `both` is reserved for genuinely mixed support work; athlete-added rows do
+ * not consult this field.
+ */
+export type UpperAccessoryAffinity = 'push' | 'pull' | 'both';
+
 export interface ExerciseProgramming {
   strengthRole?: 'none' | 'accessory' | 'secondary';
   automaticMinimum: import('../rules/experienceCrosswalk').TrainingAgeLevel;
@@ -107,6 +114,8 @@ export interface ExerciseProgramming {
 export interface ExerciseTag {
   /** Unset for power, plyometrics, carries, core, prehab, mobility and conditioning. */
   strengthClassification?: StrengthExerciseClassification;
+  /** Authored direction for automatic split-upper accessory selection. */
+  accessoryAffinity?: UpperAccessoryAffinity;
   movement: MovementPattern;
   region: Region;
   load: LoadLevel;
@@ -3974,6 +3983,45 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 };
 
+/**
+ * Canonical split-upper accessory ownership (R-334).
+ *
+ * Kept beside the tag catalogue so generation, final-composition guards and
+ * the Exercise Master workbook compare one typed answer. Shoulder is not a
+ * direction: lateral-delt work belongs to Push while rear-delt/face-pull/shrug
+ * work belongs to Pull.
+ */
+export const UPPER_ACCESSORY_AFFINITY: Readonly<Record<string, UpperAccessoryAffinity>> = {
+  'Banded Bicep Curl': 'pull',
+  'Bicep Curl (Barbell)': 'pull',
+  'Bicep Curl (Dumbbell)': 'pull',
+  'Concentration Curl': 'pull',
+  'Hammer Curl': 'pull',
+  'Incline Dumbbell Curl': 'pull',
+  'Lying Dumbbell Curl': 'pull',
+  'Band Pull-Apart': 'pull',
+  'Cable Face Pull': 'pull',
+  'Face Pull': 'pull',
+  'Incline Y Raise': 'pull',
+  'Rear Delt Fly': 'pull',
+  'Shrugs': 'pull',
+  'Single-Arm Shrug': 'pull',
+  'Banded Tricep Pushdown': 'push',
+  'Dumbbell Kickback': 'push',
+  'Dumbbell Skull Crusher': 'push',
+  'Lateral Raise': 'push',
+  'Overhead Tricep Extension': 'push',
+  'Skull Crushers': 'push',
+  'Tricep Circuit (Dirty 30)': 'push',
+  'Tricep Pushdown': 'push',
+};
+
+for (const [name, accessoryAffinity] of Object.entries(UPPER_ACCESSORY_AFFINITY)) {
+  const tag = EXERCISE_TAGS[name];
+  if (!tag) throw new Error(`Accessory affinity names untagged exercise: ${name}`);
+  tag.accessoryAffinity = accessoryAffinity;
+}
+
 // ─── Lookup Helpers ───
 
 /** Get tags for an exercise. Returns undefined if not tagged. */
@@ -4026,6 +4074,13 @@ export function strengthExerciseClassification(
   name: string,
 ): StrengthExerciseClassification | undefined {
   return getExerciseTags(name)?.strengthClassification;
+}
+
+/** The canonical typed direction used by every automatic split-upper route. */
+export function upperAccessoryAffinity(
+  name: string,
+): UpperAccessoryAffinity | undefined {
+  return getExerciseTags(name)?.accessoryAffinity;
 }
 
 /** Get all tagged exercise names. */

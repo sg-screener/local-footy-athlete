@@ -130,6 +130,8 @@ replace('warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exerci
   `warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),catalogueIdentity:m.exercise.name,mainMuscles:[...(app('src/data/muscleExperienceMetadata').muscleMetadataFor(m.exercise.name)?.primary??[])],dose:mobilityFlowMovementDose(m.exercise)}))`);
 replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
   "rows:template.items.map(item=>rowView(item,day.workout)),speedRows:app('src/utils/sessionComponents').getSessionComponentRows(day.workout).speedRows.map(row=>rowView({kind:'exercise',presentation:'conditioning_phase',role:'speed',row},day.workout)),energySystem:app('src/rules/energySystemExposureEvidence').energySystemExposureEvidenceForWorkout(day.workout),conditioningIdentity:app('src/utils/conditioningVisibleIdentity').projectConditioningVisibleIdentity(day.workout),resolvedEquipment:app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(useProfileStore.getState().onboardingData,normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,date),modifiers:");
+replace('kind:projected?.kind,parts:projected?.parts.map',
+  'kind:projected?.kind,composedDayShape:day.workout?.composedDayShape,usefulStrengthSessionContract:day.workout?.usefulStrengthSessionContract,weeklyMovementPlaneExceptions:day.workout?.weeklyMovementPlaneExceptions,parts:projected?.parts.map');
 fs.mkdirSync(output, { recursive: true });
 fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',

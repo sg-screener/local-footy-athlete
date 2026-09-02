@@ -22,6 +22,10 @@ import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { isoDateForWeekday } from '../utils/appDate';
 import { createAutomaticWeeklyExerciseSelector } from './automaticWeeklyExerciseSelection';
+import {
+  reductionReasonsFromComposer,
+  withUsefulStrengthSessionContract,
+} from './minimumUsefulStrengthSession';
 
 /** The specialist's decision for one day, plus what the row builder needs. */
 export interface ComposedPowerPlacement {
@@ -319,7 +323,7 @@ export function materialiseComposedWeek(
     }
     if (powerRow) primersPlaced += 1;
     const exercises = powerRow ? [powerRow, ...strengthRows] : strengthRows;
-    return {
+    const workout = {
       id: workoutId,
       microcycleId: context.microcycleId,
       dayOfWeek: day.dayOfWeek,
@@ -392,5 +396,9 @@ export function materialiseComposedWeek(
       exercises,
       ...(gaps.length > 0 ? { composedGaps: gaps } : {}),
     } as unknown as Workout;
+    return withUsefulStrengthSessionContract(workout, reductionReasonsFromComposer({
+      deloadDoor: policy?.door ?? null,
+      gaps,
+    }));
   });
 }

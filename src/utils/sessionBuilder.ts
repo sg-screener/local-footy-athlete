@@ -1124,6 +1124,26 @@ function poolExerciseToWorkoutExercise(
   };
 }
 
+/**
+ * Materialise one selector-approved low-fatigue strength support row using the
+ * same pool prescription and typed authorship as ordinary composition.
+ */
+export function buildAutomaticStrengthSupportRow(
+  exercise: PoolExercise,
+  workoutId: string,
+  order: number,
+  slot: 'football_robustness',
+): WorkoutExercise {
+  return {
+    ...poolExerciseToWorkoutExercise(exercise, workoutId, order, {
+      ...ACCESSORY_ROW_EVIDENCE,
+      provenance: 'composer_declaration',
+      slot,
+    }),
+    automaticSelection: true,
+  };
+}
+
 // ─── Public API ───
 
 /**
@@ -1796,7 +1816,11 @@ export function buildConditioningTemplate(
     // athlete keeps their own session and drops to the sheet's authored low end
     // — same template, same quality, 8 reps becomes 6.
     return composeConditioningRows(template, dateStr, {
-      omitWarmup: opts?.combined === true,
+      // A combined Change-of-Direction exposure still begins with its normal
+      // Speed warm-up. The strength half of the day cannot replace sprint and
+      // cutting preparation. Other combined conditioning retains the existing
+      // no-duplicate-warm-up behaviour.
+      omitWarmup: opts?.combined === true && template.quality !== 'cod_decel',
       authoredMinimumDose: true,
       masKmh: opts?.masKmh ?? null,
       weekInBlock: opts?.weekInBlock,
@@ -1809,10 +1833,11 @@ export function buildConditioningTemplate(
       condEx(`cond-${dateStr}-session`, exerciseName, 1, 1, 1, 1, 0, exerciseName),
     ];
   }
-  // Combined S+C days: the lift warmed the athlete up; the authored block
-  // rides after it without a structural warm-up row.
+  // Combined S+C days normally reuse the lift's warm-up. Change of Direction
+  // is the typed exception: its Speed preparation is part of the conditioning
+  // exposure and must survive however the day is combined.
   return composeConditioningRows(template, dateStr, {
-    omitWarmup: opts?.combined === true,
+    omitWarmup: opts?.combined === true && template.quality !== 'cod_decel',
     masKmh: opts?.masKmh ?? null,
     weekInBlock: opts?.weekInBlock,
   });

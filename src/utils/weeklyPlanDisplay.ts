@@ -4,6 +4,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { getSessionComponentRows } from './sessionComponents';
 import {
   CONDITIONING_VISIBLE_LABELS,
   projectConditioningVisibleIdentity,
@@ -118,6 +119,16 @@ function isStandaloneConditioning(workout: WeeklyDisplayWorkout): boolean {
 export function weeklyPlanTitle(workout: WeeklyDisplayWorkout): string {
   const name = String(workout.name ?? '').trim();
   if (!name) return '';
+
+  // A low-load container does not own a nested conditioning block. Once both
+  // typed components are present, name the whole day and let projection render
+  // Mobility and Conditioning as their separate sections.
+  const components = getSessionComponentRows(workout as Partial<Workout>);
+  if (components.conditioningRows.length > 0
+    && (components.mobilityRows.length > 0 || components.recoveryRows.length > 0)
+    && (workout.composedOptionalKind === 'mobility' || name === 'Mobility')) {
+    return 'Mobility + Conditioning';
+  }
 
   const identity = projectConditioningVisibleIdentity(workout as Partial<Workout>);
   if (identity && isStandaloneConditioning(workout)) return identity.primaryLabel;

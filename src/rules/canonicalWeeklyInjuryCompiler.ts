@@ -16,6 +16,13 @@ import {
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
 import { workoutExerciseWasAutomaticallySelected } from './automaticWeeklyExerciseSelection';
+import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
+import { getMondayISOForDate } from '../utils/programBlockState';
+import { filterConstraintsForDate } from '../utils/readinessConstraints';
+import {
+  withUsefulStrengthSessionContract,
+  type UsefulStrengthReductionReason,
+} from './minimumUsefulStrengthSession';
 
 interface InjurySessionInput {
   workout: Workout; dateISO: string; profile: OnboardingData;
@@ -163,5 +170,32 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
       (stagesByDate[dateISO] ??= []).push(result);
     }
   }
-  return { workoutsByDate, stagesByDate };
+  const dates = Object.keys(workoutsByDate).sort();
+  const completed = dates.length > 0
+    ? completeWeeklyLowerBodyFrontal({
+        weekStartISO: getMondayISOForDate(dates[0]),
+        workoutsByDate,
+        profile: args.profile,
+        activeConstraints: args.constraints,
+        gameDates: Object.entries(workoutsByDate)
+          .filter(([, workout]) => workout.workoutType === 'Game')
+          .map(([date]) => date),
+      }).workoutsByDate
+    : workoutsByDate;
+  const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, workout]) => {
+    const reasons = new Set<UsefulStrengthReductionReason>(
+      workout.usefulStrengthSessionContract?.reductionReasons ?? [],
+    );
+    for (const constraint of filterConstraintsForDate([...args.constraints], dateISO)) {
+      if (constraint.status !== 'active') continue;
+      if (constraint.type === 'injury') reasons.add('injury');
+      if (constraint.type === 'equipment') reasons.add('restricted_equipment');
+      if (constraint.type === 'schedule') reasons.add('restricted_availability');
+      if (constraint.type === 'fatigue') {
+        reasons.add(constraint.readinessKind === 'illness' ? 'illness' : 'low_readiness');
+      }
+    }
+    return [dateISO, withUsefulStrengthSessionContract(workout, [...reasons])];
+  }));
+  return { workoutsByDate: contracted, stagesByDate };
 }

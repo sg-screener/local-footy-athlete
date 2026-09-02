@@ -12,7 +12,10 @@ import {
   findPoolEntry,
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
-import { strengthExerciseClassification } from '../data/exerciseTags';
+import {
+  strengthExerciseClassification,
+  upperAccessoryAffinity,
+} from '../data/exerciseTags';
 import type { MovementPlane } from '../data/exerciseMovementPlaneMetadata';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
@@ -80,12 +83,17 @@ export function automaticIsolationSupportCandidatesForSlot(
     ...STRENGTH_POOLS.isolation_upper.accessory.entries,
   ].filter((entry) => strengthExerciseClassification(entry.name) === 'isolation');
   if (slot === 'push_accessory_1' || slot === 'push_accessory_2') {
-    return upper.filter((entry) => entry.group === 'tricep' || entry.group === 'shoulder')
+    return upper.filter((entry) => {
+      const affinity = upperAccessoryAffinity(entry.name);
+      return affinity === 'push' || affinity === 'both';
+    })
       .map((entry) => canonicalExerciseName(entry.name));
   }
   if (slot === 'pull_accessory_1' || slot === 'pull_accessory_2') {
-    return upper.filter((entry) => entry.group === 'bicep'
-      || entry.group === 'shoulder' || entry.group === 'trap')
+    return upper.filter((entry) => {
+      const affinity = upperAccessoryAffinity(entry.name);
+      return affinity === 'pull' || affinity === 'both';
+    })
       .map((entry) => canonicalExerciseName(entry.name));
   }
   return [];

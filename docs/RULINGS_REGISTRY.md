@@ -7541,10 +7541,9 @@ progress under the canonical identity without data loss. Cues, video,
 equipment, injury metadata, progression and authored sheet data resolve to the
 one canonical row.
 
-Normal male Upper Push and Upper Pull each contain six strength rows: their two
-main planes, one direction-matched accessory, arm work, shoulder-girdle work and
-Midline. The second push/pull accessory seats are retired from current male
-composition. The separately ruled female split tables remain unchanged.
+The pulldown identity and variation-family parts of this ruling remain current.
+R-334 supersedes its exact split-session row shape for both sexes: useful-session
+minimums and typed direction-matched accessories now own that structure.
 
 Same-session near-duplicate prevention is explicit typed data, not name
 parsing. The shared composer, athlete Add and athlete Swap routes consume the
@@ -7674,11 +7673,11 @@ Owner: yearrepair. A normal male Upper Pull contains exactly one horizontal and
 one vertical major pull; a spare seat may not add another row or pulldown. The
 athlete's selected tracked lift occupies its real authored plane, so Pull-Up and
 Lat Pulldown anchor vertical pull rather than wearing a horizontal seat label.
-R-309 supersedes this ruling's interim shoulder/prehab, biceps, traps and core
-seat prescription with the shared football-robustness foundation.
+R-334 supersedes this ruling's interim accessory-seat prescription. The exactly
+one horizontal plus one vertical major Pull invariant remains current.
 
-The interim Male Upper Push accessory rotation is likewise superseded by R-309;
-direct pump work belongs in optional Gunshow rather than a required upper seat.
+Ordinary Upper Push/Pull accessory ownership is now governed by R-334; Gunshow
+remains the explicit mixed arms-and-delts session.
 The existing canonical Single-Arm Lat Pulldown identity, typed variation-family
 rules, progression, injury and equipment priorities remain unchanged.
 
@@ -7753,13 +7752,12 @@ COVERED: `docs/STATUS_YEARREPAIR.md`.
 **R-309** · Required programming shares the football-robustness foundation, 2026-09-01.
 
 Owner: yearrepair. Required male and female sessions share the same performance
-foundation unless an explicit coaching rule says otherwise. Required upper
-sessions keep the important push and pull planes but do not automatically spend
-rows on biceps, triceps or delt-pump work. Without lengthening the session, one
-or two short accessory seats fill only complete-week gaps across hamstring
-eccentric/isometric, adductor/groin, calf/soleus and knee-capacity/unilateral
-work. Ordinary lower rows earn the same typed credit, so an exposure already in
-the delivered week is not duplicated merely because an upper seat exists.
+foundation unless an explicit coaching rule says otherwise. R-334 supersedes
+this ruling's blanket split-upper ban on biceps, triceps and delt work: ordinary
+Upper Push and Upper Pull now use typed direction-matched accessories. The
+football-robustness foundation remains available for lower work, team-night
+composition and legal support/fallback positions; an exposure already in the
+delivered week is not duplicated merely because another seat exists.
 
 Male Gunshow and female Primer remain optional G-1 offers only in a one-game
 In-season or Pre-season fixture week, including a Pre-season practice match.
@@ -8316,6 +8314,42 @@ Guard: `LAW-standalone-flush-conditioning-presentation` through chained
 `test:standalone-conditioning-ownership`, which invokes
 `test:standalone-flush-presentation`. Red-first, real restart, mutation and NOT
 COVERED receipt: `docs/STATUS_FIVEBRIDGE.md`.
+
+**R-334** · Healthy ordinary strength sessions stay useful and split-upper
+accessories belong to their direction, 2026-09-02.
+
+Owner: fourconfirmed. An ordinary healthy, non-deload Lower Squat, Lower Hinge,
+Upper Push or Upper Pull contains at least four real strength/accessory rows.
+Relevant lower-body prehab or robustness may count; Movement Prep, Mobility,
+Conditioning, Speed and Midline do not. Midline may be added separately but
+cannot disguise a two-exercise strength session. A genuinely shorter final
+session carries its typed cause: scheduled deload, injury/illness, low readiness,
+game proximity, restricted equipment/availability, athlete exclusions,
+catalogue exhaustion or an explicitly short session.
+
+The existing weekly identity and main-family budgets, dedicated lower-day
+purposes, four-compound ceiling, safety and athlete-added freedoms remain.
+Fallback is unused legal same-purpose work, same/supporting-muscle accessory,
+prehab/robustness, optional Midline, then an honest empty position only after
+the legal unused catalogue is exhausted. No repeat or unrelated filler may be
+used to reach the floor.
+
+Upper Push automatically owns chest, pressing/lateral-delt and triceps support;
+Upper Pull automatically owns back/lat, rear-delt/face-pull/shrug and biceps
+support. Mixed/full-upper and Gunshow may use both directions. Athlete additions
+remain unrestricted. This supersedes R-299's exact split row shape, R-305's
+interim accessory shape and R-309's blanket ban on direct arm/delt work in
+required split-upper sessions. One typed accessory-affinity field in the
+Exercise Master and canonical exercise catalogue owns the distinction; no
+exercise-name matching is permitted.
+
+Guard: `LAW-minimum-useful-strength-and-directional-upper-accessories` through
+chained `test:full-body-balance`, which invokes
+`test:minimum-useful-strength-session`. The guard drives final male/female
+generation across every phase and representative 2–6-day availability, checks
+the workbook in both directions, exact identity/main-family uniqueness, the
+compound ceiling and persistence. Red-first, mutation, annual evidence and NOT
+COVERED receipt: `docs/STATUS_FOURCONFIRMED.md`.
 
 **R-335** · The final-year audit checks the accepted journey rather than stale
 calendar shortcuts, 2026-09-02.

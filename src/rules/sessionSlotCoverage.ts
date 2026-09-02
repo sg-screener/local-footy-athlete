@@ -31,7 +31,11 @@
  * NAMES what is missing. The composer is the next unit and this is its oracle.
  */
 
-import { getExerciseTags, getAllTaggedExercises } from '../data/exerciseTags';
+import {
+  getExerciseTags,
+  getAllTaggedExercises,
+  type UpperAccessoryAffinity,
+} from '../data/exerciseTags';
 import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { WorkoutExercise } from '../types/domain';
@@ -156,11 +160,9 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
 ];
 
 /**
- * A push-ONLY or pull-ONLY day. Sam clarified the complete shapes on
- * 2026-08-21, then reduced by Sam on 2026-09-01: both keep one horizontal and
- * one vertical main movement, then receive one direction-matched accessory,
- * their own arm work, their own shoulder-girdle work, and core. Six is the
- * ceiling; a slot that
+ * A push-ONLY or pull-ONLY day. R-334 supersedes the cross-direction split:
+ * both keep one horizontal and one vertical main movement, then receive two
+ * direction-matched support seats plus core and football robustness. A slot that
  * equipment or an injury makes impossible is disclosed and dropped by the
  * composer rather than replaced with work from the opposite direction.
  *
@@ -180,12 +182,12 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  */
 export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
+  'push_accessory_1', 'push_accessory_2', 'core', 'football_robustness',
 ];
 
 export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
+  'pull_accessory_1', 'pull_accessory_2', 'core', 'football_robustness',
 ];
 
 /** Extra upper-session variety is expected when the athlete's kit and safety allow it. */
@@ -249,12 +251,12 @@ export const FEMALE_UPPER_FULL_SLOTS: readonly SessionSlot[] = [
 
 export const FEMALE_UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push',
-  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
+  'push_accessory_1', 'push_accessory_2', 'core', 'football_robustness',
 ];
 
 export const FEMALE_UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull',
-  'push_accessory_1', 'pull_accessory_1', 'core', 'football_robustness',
+  'pull_accessory_1', 'pull_accessory_2', 'core', 'football_robustness',
 ];
 
 /**
@@ -517,12 +519,12 @@ function appendUpperGroupSlot(out: SessionSlot[], group: string | null | undefin
 /** Isolation support direction comes from its authored muscle group, never its name. */
 function appendIsolationSupportSlots(
   out: SessionSlot[],
-  group: string | null | undefined,
+  affinity: UpperAccessoryAffinity | undefined,
 ): void {
-  if (group === 'tricep' || group === 'shoulder') {
+  if (affinity === 'push' || affinity === 'both') {
     out.push('push_accessory_1', 'push_accessory_2');
   }
-  if (group === 'bicep' || group === 'shoulder' || group === 'trap') {
+  if (affinity === 'pull' || affinity === 'both') {
     out.push('pull_accessory_1', 'pull_accessory_2');
   }
 }
@@ -637,7 +639,7 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
       out.push(plane);
       if (isUpperAccessory(name) && tag.strengthClassification === 'isolation') {
         out.push('arm_or_shoulder');
-        appendIsolationSupportSlots(out, strengthMembership?.group);
+        appendIsolationSupportSlots(out, tag.accessoryAffinity);
         appendUpperGroupSlot(out, strengthMembership?.group);
       }
       break;
@@ -645,7 +647,7 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
     case 'isolation_upper': {
       out.push('arm_or_shoulder');
       const group = authoredPoolMembership(name)?.group;
-      appendIsolationSupportSlots(out, group);
+      appendIsolationSupportSlots(out, tag.accessoryAffinity);
       appendUpperGroupSlot(out, group);
       break;
     }

@@ -41,6 +41,7 @@ const repeatedExactExerciseBreaches = [];
 const repeatedMainFamilyBreaches = [];
 const dedicatedDayOwnershipBreaches = [];
 const movementPlaneFindings = [];
+const acceptedMovementPlaneExceptions = [];
 const athleteSummaries = [];
 
 for (const athlete of year.athletes ?? []) {
@@ -137,7 +138,18 @@ for (const athlete of year.athletes ?? []) {
         safetyConstraints,
       },
     });
-    movementPlaneFindings.push(...planeAudit.findings.map((finding) => ({
+    const planeExceptions = weekDays.flatMap((day) => day.weeklyMovementPlaneExceptions ?? [])
+      .filter((exception) => exception.kind === 'lower_body_frontal_unavailable'
+        && exception.weekStartISO === week.start);
+    const honestLowerFrontalException = planeExceptions.length === 1
+      && planeExceptions[0].consideredDates.every((entry) => entry.safeExercises.length === 0);
+    if (honestLowerFrontalException) acceptedMovementPlaneExceptions.push({
+      gender: athlete.gender,
+      week: week.number,
+      ...planeExceptions[0],
+    });
+    movementPlaneFindings.push(...planeAudit.findings.filter((finding) =>
+      finding.kind !== 'missing_lower_body_frontal' || !honestLowerFrontalException).map((finding) => ({
       gender: athlete.gender, week: week.number, ...finding,
     })));
     for (const day of weekDays) {
@@ -197,11 +209,13 @@ const receipt = {
     dedicatedDayOwnershipBreaches: dedicatedDayOwnershipBreaches.length,
     movementPlaneRequiredFindings: requiredMovementPlaneFindings.length,
     movementPlaneSoftFindings: movementPlaneFindings.length - requiredMovementPlaneFindings.length,
+    acceptedMovementPlaneExceptions: acceptedMovementPlaneExceptions.length,
   },
   repeatedExactExerciseBreaches,
   repeatedMainFamilyBreaches,
   dedicatedDayOwnershipBreaches,
   movementPlaneFindings,
+  acceptedMovementPlaneExceptions,
   notCovered: [
     'Physical iPhone acceptance',
     'Native onboarding taps',

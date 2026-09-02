@@ -1212,6 +1212,20 @@ export interface Workout {
    */
   composedGaps?: import('../rules/composeWeek').ComposedGap[];
 
+  /**
+   * Typed weekly disclosure when the final compiler cannot safely place the
+   * required meaningful lower-body frontal row on any existing training day.
+   */
+  weeklyMovementPlaneExceptions?: import('../rules/canonicalWeeklyPlaneCompletion').WeeklyMovementPlaneException[];
+
+  /** The composer's typed ordinary-session shape, preserved through restart. */
+  composedDayShape?: import('../rules/sessionSlotCoverage').SlotDayKind;
+  /** The exact authored ladder for this composed day. */
+  composedDeclaredSlots?: import('../rules/sessionSlotCoverage').SessionSlot[];
+
+  /** R-334 proof that an ordinary split strength session is useful or honestly reduced. */
+  usefulStrengthSessionContract?: import('../rules/minimumUsefulStrengthSession').UsefulStrengthSessionContractEvidence;
+
   /** Typed Section 18 component evidence; display copy never overrides it. */
   section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutSection18Evidence;
 

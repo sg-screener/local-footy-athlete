@@ -42,7 +42,10 @@ import { type SeasonPhaseClock } from '../rules/seasonPhaseClock';
 import type { FixtureConditionedAvailability } from '../rules/fixtureConditionedAvailability';
 import type { BlockExerciseSelection } from './blockExerciseSelection';
 import { energySystemExposureEvidenceForWorkout } from './energySystemExposureEvidence';
-import { createAutomaticWeeklyExerciseSelector } from './automaticWeeklyExerciseSelection';
+import {
+  createAutomaticWeeklyExerciseSelector,
+  workoutExerciseWasAutomaticallySelected,
+} from './automaticWeeklyExerciseSelection';
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
 type AthletePoolPrefsArg = Parameters<typeof buildWorkoutsFromCoach>[5];
@@ -546,6 +549,14 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
           tierByDayOfWeek: plannerTierByDay,
         })
       : composedPlannedDaysFrom(weekPlan.weeklyPlan);
+    const acceptedAutomaticHistory = boundary
+      ? boundary.pinnedHistoryWorkouts
+          .filter((workout) =>
+            dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
+          .flatMap((workout) => workout.exercises
+            .filter(workoutExerciseWasAutomaticallySelected)
+            .map((row) => row.exercise?.name ?? '').filter(Boolean))
+      : [];
     const composedWeek = composeWeek({
           profile,
           phaseClock: { weekNumber: blockState.weekNumber },
@@ -591,12 +602,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       blockStartISO: blockState.blockStart,
       ...(boundary ? { automaticSelectionHistory: {
         governedFromISO: boundary.governedFromISO,
-        identities: boundary.pinnedHistoryWorkouts
-          .filter((workout) =>
-            dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
-          .flatMap((workout) => workout.exercises
-            .filter((row) => row.section18Evidence?.provenance === 'composer_declaration')
-            .map((row) => row.exercise?.name ?? '').filter(Boolean)),
+        identities: acceptedAutomaticHistory,
       } } : {}),
       // Later weeks in a newly authored block must see the same accepted seat
       // choices that restart will read. Otherwise a changed weekly layout can
@@ -608,7 +614,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     // same canonical weekly history, so optional and power rows can only select
     // an unused legal identity.
     const automaticWeeklyExerciseSelector = createAutomaticWeeklyExerciseSelector(
-      composedWeek.days.flatMap((day) => day.rows.map((row) => row.identity)),
+      [
+        ...acceptedAutomaticHistory,
+        ...composedWeek.days.flatMap((day) => day.rows.map((row) => row.identity)),
+      ],
     );
     selectionTraces.push(...composedWeek.selectionTraces);
     /* What this block chose, carried out so the caller can RECORD it. The
