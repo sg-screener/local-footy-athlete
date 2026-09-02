@@ -13,7 +13,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { ACCEPTED_CHRISTMAS_BREAK } = require('./programming-final-year-audit-rules.cjs');
+const { ACCEPTED_AWAY_SPAN, ACCEPTED_CHRISTMAS_BREAK } = require('./programming-final-year-audit-rules.cjs');
 
 const repo = path.resolve(__dirname, '..');
 const presetId = process.argv.find(a => a.startsWith('--preset='))?.slice(9);
@@ -161,12 +161,84 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           const span=${JSON.stringify(ACCEPTED_CHRISTMAS_BREAK)};
           await act({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'christmas_break',initiatedBy:'tap'},scope:'current_week',payload:{date:span.from,teamTrainingBreak:{from:span.from,to:span.to}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},date,'christmas_break');
           label='Christmas team-training break accepted';`);
-replace("save('year-programs.json',data);", `save('year-programs.json',data);`);
 replace("  for(const gender of ['male','female'].filter(x=>!genderOnly||genderOnly===x))data.athletes.push(await run(gender));",
   `  data.athletes.push(await run(${JSON.stringify(preset.gender)}));`);
 replace("const result={gender,profile,weeks:[],actions:[],restarts:[],loggedDays:0};",
   `const result={gender,athleteId:${JSON.stringify(presetId)},label:${JSON.stringify(preset.label)},profile,weeks:[],actions:[],restarts:[],loggedDays:0};`);
 
+
+// ── The pair audit's row enrichment and trace capture, verbatim from programming-remediation-year.cjs ──
+replace("const {project} = app('src/rules/projectVisibleWeek');", `const {project} = app('src/rules/projectVisibleWeek');
+const {ownedEquipmentKit} = app('src/store/profileStore');
+const {normalizeTemporarySourceFacts} = app('src/rules/temporarySourceFact');
+const activeTemporaryFacts = () => normalizeTemporarySourceFacts({
+  value: normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts,
+});`);
+replace('const events = [];', `const programmingSelectionTraceBatches = [];
+let programmingSelectionTraceAthlete = 'not_started';
+app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionTraceObserver((traces) => {
+  programmingSelectionTraceBatches.push({ athlete: programmingSelectionTraceAthlete, traces });
+});
+const events = [];`);
+replace(
+  "    for(let d=0;d<7;d++) {",
+  `    if (weekStart===${JSON.stringify(ACCEPTED_AWAY_SPAN.from)}) {
+      const beforeTravel=visibleSignature(view(weekStart,weekStart));
+      const preTravelRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:weekStart}));
+      check(preTravelRestart.ok&&visibleSignature(view(weekStart,weekStart))===beforeTravel,'pre-travel accumulated restart',preTravelRestart);
+      const owned=ownedEquipmentKit();
+      const allowed=new Set(['dumbbells','bands','bench']);
+      const unavailable=owned.tags.filter(tag=>!allowed.has(String(tag).toLowerCase()));
+      const away=await quietAsync(()=>executeProgramControlActionDurably({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'away_this_week',initiatedBy:'tap'},scope:'current_week',payload:{date:weekStart,todayISO:weekStart,awaySpan:${JSON.stringify({ from: ACCEPTED_AWAY_SPAN.from, until: ACCEPTED_AWAY_SPAN.until })},awayEquipment:{tags:unavailable,conditioningModalities:owned.conditioningModalities}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},{visibleWeek:view(weekStart,weekStart),todayISO:weekStart}));
+      check(away.ok===true,'accumulated travel and equipment',away);
+      w.events.push({date:weekStart,label:'Going Away Monday-Friday - dumbbells, bands and bench only'});
+    }
+    const acceptedFixtureInputs=gatherDeriveInputs(weekStart);
+    w.acceptedFixtures=app('src/rules/fixtureConditionedAvailability').targetWeekFixtures({profile:acceptedFixtureInputs.onboardingData,weekStart,markedDays:acceptedFixtureInputs.markedDays,ownedPhase:app('src/rules/seasonPhaseOwner').ownSeasonPhase({profile:acceptedFixtureInputs.onboardingData,program:acceptedFixtureInputs.currentProgram})});
+    for(let d=0;d<7;d++) {`,
+);
+replace(
+  "      const date=plusDays(weekStart,d);setJourneyClock(date);",
+  `      const date=plusDays(weekStart,d);setJourneyClock(date);
+      if(date===${JSON.stringify(ACCEPTED_AWAY_SPAN.restoredOn)}){
+        const travel=activeTemporaryFacts().find(fact=>fact.factKind==='schedule'&&fact.scheduleKind==='travel'&&fact.status==='active');
+        check(!!travel,'active travel before Clear',activeTemporaryFacts());
+        const cleared=await act({type:'clear_fatigue_status',source:{screen:'program_tab',surface:'my_status',initiatedBy:'tap'},scope:'current_and_future',payload:{modifierId:travel.factId,date},requiresRebuild:false,createsActiveModifier:false,oneOffOnly:false},date,'Back home - clear travel');
+        check(cleared.ok===true&&!activeTemporaryFacts().some(fact=>fact.status==='active'&&(fact.factKind==='equipment'||(fact.factKind==='schedule'&&fact.scheduleKind==='travel'))),'travel and equipment clear atomically',activeTemporaryFacts());
+        const afterClear=visibleSignature(view(weekStart,date));
+        const clearRestart=await quietAsync(()=>journey.relaunchApp({storage,todayISO:date}));
+        check(clearRestart.ok&&visibleSignature(view(weekStart,date))===afterClear,'travel Clear restart',clearRestart);
+        w.events.push({date,label:'Back home - normal equipment and availability'});
+  }`,
+);
+replace('async function run(gender) {', `async function run(gender) {
+  programmingSelectionTraceAthlete = gender;`);
+replace("if(item.kind==='team_training') return {name:'Team training',dose:'Club session',role:'team_training'};",
+  "if(item.kind==='team_training') return {name:'Team training',catalogueIdentity:null,mainMuscles:[],dose:'Club session',role:'team_training'};");
+replace("save('year-programs.json',data);", `save('year-programs.json',data);
+  save('programming-selection-traces.json', {
+    schemaVersion: 1,
+    revision: data.revision,
+    sourceDriverSha256: ${JSON.stringify(originalHash)},
+    traceBatches: programmingSelectionTraceBatches,
+  });`);
+replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
+  "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
+replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
+  'role:item.role,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||(conditioning&&app("src/utils/sessionComponents").getSessionComponents(workout).some(c=>c.kind==="finisher"&&c.completionPolicy==="optional_no_penalty"))||undefined,pair:item.superset?.groupId');
+replace('name:o.title,description:o.description,rows:o.rows.map',
+  'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
+replace('return {name:formatExerciseDisplayName(row.exercise?.name??row.name),',
+  `const catalogueIdentity=row.exercise?.name??row.name;
+  const muscleMetadata=app('src/data/muscleExperienceMetadata').muscleMetadataFor(catalogueIdentity);
+  const conditioningMuscles=app('src/data/conditioningMuscleMetadata').conditioningSessionMuscles({exercise:catalogueIdentity,modality:workout.conditioningBlock?.modality});
+  return {name:formatExerciseDisplayName(catalogueIdentity),catalogueIdentity,mainMuscles:[...(conditioningMuscles?.primary??muscleMetadata?.primary??[])],`);
+replace('warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),dose:mobilityFlowMovementDose(m.exercise)}))',
+  `warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),catalogueIdentity:m.exercise.name,mainMuscles:[...(app('src/data/muscleExperienceMetadata').muscleMetadataFor(m.exercise.name)?.primary??[])],dose:mobilityFlowMovementDose(m.exercise)}))`);
+replace('rows:template.items.map(item=>rowView(item,day.workout)),modifiers:',
+  "rows:template.items.map(item=>rowView(item,day.workout)),speedRows:app('src/utils/sessionComponents').getSessionComponentRows(day.workout).speedRows.map(row=>rowView({kind:'exercise',presentation:'conditioning_phase',role:'speed',row},day.workout)),energySystem:app('src/rules/energySystemExposureEvidence').energySystemExposureEvidenceForWorkout(day.workout),conditioningIdentity:app('src/utils/conditioningVisibleIdentity').projectConditioningVisibleIdentity(day.workout),resolvedEquipment:app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(useProfileStore.getState().onboardingData,normalizeAcceptedMaterialContext(useProgramStore.getState().acceptedMaterialContext).activeConstraints,date),modifiers:");
+replace('kind:projected?.kind,parts:projected?.parts.map',
+  'kind:projected?.kind,composedDayShape:day.workout?.composedDayShape,usefulStrengthSessionContract:day.workout?.usefulStrengthSessionContract,weeklyMovementPlaneExceptions:day.workout?.weeklyMovementPlaneExceptions,parts:projected?.parts.map');
 fs.mkdirSync(output, { recursive: true });
 fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   preset: presetId, label: preset.label, weeks,
