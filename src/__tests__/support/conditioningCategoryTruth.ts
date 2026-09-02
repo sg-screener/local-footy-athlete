@@ -11,7 +11,9 @@ type Check = (label: string, value: boolean, detail?: string) => void;
 // no-silent-category-loss protection now executes the actual selection owner.
 export function conditioningCategoryTruth(ok: Check) {
   const expected: Record<AthleteConditioningCategory, readonly ConditioningQuality[]> = {
-    aerobic_base: ['aerobic_capacity'], tempo: ['aerobic_capacity'], sprint: ['acceleration', 'top_end_speed', 'repeat_sprint'],
+    aerobic_base: ['aerobic_capacity'], tempo: ['aerobic_capacity'], sprint: ['acceleration', 'top_end_speed'],
+  // R-311/R-340: repeat-sprint work is conditioning with its own hard demand, never Speed.
+  repeat_sprint: ['repeat_sprint'],
     vo2: ['aerobic_power'], glycolytic: ['anaerobic'], cod_decel: ['cod_decel'], recovery_flush: ['flush'],
   };
   const vocabulary = (file: string, name: string): string[] => {

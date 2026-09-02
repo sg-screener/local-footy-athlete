@@ -1610,9 +1610,9 @@ export function applyBlockBoundarySetAdditions(args: {
  * HARD work before easy — so tempo is what remains, never what is cut.
  */
 export const HARD_CONDITIONING_CATEGORIES: ReadonlySet<HardConditioningCategory> =
-  new Set<HardConditioningCategory>(['sprint', 'vo2', 'glycolytic', 'cod_decel']);
+  new Set<HardConditioningCategory>(['sprint', 'vo2', 'glycolytic', 'repeat_sprint', 'cod_decel']);
 
-export type HardConditioningCategory = 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
+export type HardConditioningCategory = 'sprint' | 'vo2' | 'glycolytic' | 'repeat_sprint' | 'cod_decel';
 
 /**
  * The category a replaced session becomes.

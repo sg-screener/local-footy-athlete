@@ -336,7 +336,8 @@ function typedPurpose(workout: ConditioningIdentityWorkout):
   switch (workout.conditioningCategory) {
     case 'sprint': return 'speed';
     case 'vo2':
-    case 'glycolytic': return 'hard';
+    case 'glycolytic':
+    case 'repeat_sprint': return 'hard';
     case 'tempo': return 'tempo';
     case 'aerobic_base': return 'aerobic';
     default: break;

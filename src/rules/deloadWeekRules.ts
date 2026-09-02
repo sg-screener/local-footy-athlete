@@ -15,6 +15,7 @@ export type DeloadConditioningCategory =
   | 'sprint'
   | 'vo2'
   | 'glycolytic'
+  | 'repeat_sprint'
   | 'cod_decel';
 
 /**
@@ -179,14 +180,15 @@ export function resolveDoorDeloadPolicy(args: {
 export function isHardDeloadConditioningCategory(
   category: DeloadConditioningCategory | null | undefined,
 ): boolean {
-  return category === 'sprint' || category === 'vo2' || category === 'glycolytic';
+  return category === 'sprint' || category === 'vo2' || category === 'glycolytic'
+    || category === 'repeat_sprint';
 }
 
 export function deloadConditioningCategory(
   category: DeloadConditioningCategory | null | undefined,
 ): DeloadConditioningCategory | null {
   if (category === 'vo2') return 'tempo';
-  if (category === 'sprint' || category === 'glycolytic') return 'aerobic_base';
+  if (category === 'sprint' || category === 'glycolytic' || category === 'repeat_sprint') return 'aerobic_base';
   return category ?? null;
 }
 
@@ -288,6 +290,7 @@ function planEntryHasQualityConditioning(entry: SessionAllocation): boolean {
     entry.conditioningCategory === 'sprint' ||
     entry.conditioningCategory === 'vo2' ||
     entry.conditioningCategory === 'glycolytic' ||
+    entry.conditioningCategory === 'repeat_sprint' ||
     entry.conditioningCategory === 'cod_decel';
 }
 

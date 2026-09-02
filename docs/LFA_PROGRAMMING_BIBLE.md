@@ -1444,7 +1444,7 @@ Rules:
 * More hard conditioning is allowed than in-season, but load still needs to be managed. 
 * Use a mix of aerobic base, tempo, hard intervals, and sprint exposure. Ideal week looks like speed exposure, repeat sprint ability, hard conditioning, and low slow aerobic base building. Some of that you get during training and some you won't. 
 * Build progressively. Do not jump from nothing to a huge running load. 
-Good pre-season qualities: Aerobic Power and footy shuttles as the season approaches, Repeat Sprint, Top End Speed, Aerobic Capacity underneath it, and Flush around the hard days. Off-feet modalities when legs are overloaded. COD/Decel is gated OFF in any week that has team training.
+Good pre-season qualities: Aerobic Power and footy shuttles as the season approaches, Repeat Sprint, Top End Speed, Aerobic Capacity underneath it, and Flush around the hard days. R-340 (2026-09-02): repeat sprint is a hard conditioning demand of its own — from late pre-season (phase week 4) the hard session alternates aerobic power and repeat sprint by mini-cycle, and an in-season bye week's hard session is a small repeat-sprint dose (off-feet, per R-339). Repeat-sprint templates are never selected as Speed (R-311). Off-feet modalities when legs are overloaded. COD/Decel is gated OFF in any week that has team training.
 Off-season
 Goal: Build aerobic base, improve general fitness, support body composition goals, and prepare the athlete for harder pre-season work.
 Rules:

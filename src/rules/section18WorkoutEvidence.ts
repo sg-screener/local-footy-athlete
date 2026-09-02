@@ -124,6 +124,7 @@ const CONDITIONING_STRESS_BY_CATEGORY: Readonly<Record<
 >> = {
   vo2: () => 'hard',
   glycolytic: () => 'hard',
+  repeat_sprint: () => 'hard',
   sprint: () => 'hard',
   tempo: () => 'moderate',
   // Section 18 explicitly treats controlled long slow aerobic as moderate.

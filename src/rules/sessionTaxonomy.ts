@@ -155,7 +155,8 @@ function conditioningCategoryFromFields(workout: Workout): SessionCategory | nul
   switch (workout.conditioningCategory) {
     case 'sprint': return 'sprint';
     case 'vo2':
-    case 'glycolytic': return 'hard_conditioning';
+    case 'glycolytic':
+    case 'repeat_sprint': return 'hard_conditioning';
     // 4B: TRUE tempo — the kernel's medium-stress conditioning bucket.
     case 'tempo': return 'tempo_conditioning';
     case 'aerobic_base': return 'aerobic_base';

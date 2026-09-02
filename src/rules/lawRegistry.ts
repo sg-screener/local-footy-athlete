@@ -658,6 +658,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-repeat-sprint-is-a-hard-conditioning-demand',
+    law: 'R-340: repeat_sprint is its own hard conditioning demand category reaching the five authored repeat-sprint templates; Pre-season rotates aerobic power with repeat-sprint by mini-cycle from phase week 4; an In-season bye week\'s hard exposure is a small repeat-sprint dose; the Speed pool never offers repeat-sprint work (R-311); every reader of the hard categories counts it as hard.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-340',
+    guard: {
+      state: 'guarded',
+      by: 'test:weekly-scheduler',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the audited year held zero repeat-sprint sessions because the templates sat behind the sprint category that only acceleration and top-end are ever requested from, and the hard slot only asked for aerobic power or anaerobic work. THE CHANGE: a repeat_sprint demand category was added the way cod_decel was (domain, contract, selector waist, pool, Section 18 stress, deload, safety, taxonomy, identity, builder); the Pre-season overlay carries a typed late list; the In-season overlay asks for repeat_sprint in bye weeks; the Speed pool drops repeat_sprint. Four new scheduler cells and the category-truth table were red before the change. AFTER: scheduler 137/137, fresh Speed 14/14, COD tape 19/19, modality-by-day 5/5, conditioning-templates 176/176, generated-week 30/30, final composition 6/6, deload 50/50; product typecheck adds no error. MUTATION: ignoring the late list reds the late-Pre-season cell. A regenerated 52-week male year places nine repeat-sprint sessions (late pre-season runs on upper days, bye-week bike doses), 52/52 restarts. Inherited reds unchanged (session-classification 48/50, rules-kernel 123/124). Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

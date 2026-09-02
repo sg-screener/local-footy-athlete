@@ -1832,7 +1832,7 @@ export function buildWorkoutsFromCoach(
     const engineFeel: ConditioningFeel | undefined = planEntry.conditioningFeel as ConditioningFeel | undefined;
     const feel: ConditioningFeel | undefined =
       engineFeel ? engineFeel
-      : (cat === 'aerobic_base' || cat === 'tempo' || cat === 'vo2' || cat === 'glycolytic' || cat === 'sprint')
+      : (cat === 'aerobic_base' || cat === 'tempo' || cat === 'vo2' || cat === 'glycolytic' || cat === 'repeat_sprint' || cat === 'sprint')
         ? (['grindy', 'sharp', 'flowing'] as const)[conditioningDateHash(`${dateStr}-${cat}`) % 3]
         : undefined;
 
@@ -1844,7 +1844,7 @@ export function buildWorkoutsFromCoach(
     // day in Off-season or Pre-season runs its attached work.
     const willUseErgCombined =
       isCombined && !runOnUpperDay && (
-        cat === 'vo2' || cat === 'glycolytic'
+        cat === 'vo2' || cat === 'glycolytic' || cat === 'repeat_sprint'
         || cat === 'aerobic_base'
         || cat === 'tempo' // 4B: combined tempo finishers are erg-based
         || (cat === 'sprint' && strengthRegion === 'lower')
@@ -1891,7 +1891,7 @@ export function buildWorkoutsFromCoach(
       };
       const pool: ErgModality[] = cat === 'aerobic_base'
         ? weightedAerobicFallbacks[weightedAerobicDefault]
-        : (strengthRegion === 'lower' && (cat === 'sprint' || cat === 'glycolytic'))
+        : (strengthRegion === 'lower' && (cat === 'sprint' || cat === 'glycolytic' || cat === 'repeat_sprint'))
           ? ['ski', 'row', 'bike', 'mixed']
           : ['bike', 'row', 'ski', 'mixed'];
       // Preference order:

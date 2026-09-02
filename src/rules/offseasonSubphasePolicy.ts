@@ -7,6 +7,8 @@ export type OffseasonConditioningCategory =
   | 'sprint'
   | 'vo2'
   | 'glycolytic'
+  /** R-340: repeat-sprint ability is CONDITIONING (R-311), requested from late Pre-season and in-season bye weeks. */
+  | 'repeat_sprint'
   /**
    * COD / DECELERATION — Sam's ruling, and it had no category until 2026-08-13.
    * `CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:121`, Bible `:1440`: prescribed in

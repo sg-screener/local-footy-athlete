@@ -150,7 +150,7 @@ function basePolicy(
   return {
     subphase,
     conditioning: {
-      categoryPriority: ['tempo', 'aerobic_base', 'vo2', 'glycolytic'],
+      categoryPriority: ['tempo', 'aerobic_base', 'vo2', 'repeat_sprint', 'glycolytic'],
       hardSessionCap: hasPracticeMatch || teamTrainingExposures >= 2 ? 0 : 1,
       targetCap: 4,
       minimumAppExposures,

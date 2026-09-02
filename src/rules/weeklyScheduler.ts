@@ -1062,7 +1062,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ? null
     : noClubGameWeek
       ? 'glycolytic'
-      : hardConditioningQualityFor(overlay, inputs.miniCycleNumber);
+      : hardConditioningQualityFor(overlay, inputs.miniCycleNumber, inputs.phaseWeekNumber);
 
   // Speed consumes one of these existing exposure DAYS. The receiver set below
   // must include its selected day; no extra slot is reserved here.

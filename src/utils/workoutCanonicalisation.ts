@@ -207,6 +207,7 @@ function conditioningIntent(
   if (
     workout.conditioningCategory === 'vo2' ||
     workout.conditioningCategory === 'glycolytic' ||
+    workout.conditioningCategory === 'repeat_sprint' ||
     rows.some(({ classification }) => classification.hardConditioning)
   ) return 'high-intensity';
   if (

@@ -286,3 +286,20 @@ COD tape 19/19, scheduler 133/133, generated-week 30/30, final composition
 conditioning-rotation 110/236, conditioning-equipment-consistency 6/20,
 finisher-eligibility 58/68, canonical-weekly-compiler (duplicate-row cell and a
 Section 18 onboarding-world shortfall).
+
+## Addendum 2026-09-02 — R-340: repeat sprints reachable (unit 2 of six)
+
+Cause: the five repeat-sprint templates lived behind the `sprint` category,
+which every Speed request narrows to acceleration/top-end (R-311), and the hard
+slot only asked for aerobic power or anaerobic work. Fix: `repeat_sprint` is a
+hard conditioning demand category (added across the domain union, contract,
+selector waist and pool, Section 18 stress, deload, game safety, block
+boundary, taxonomy, visible identity, builder), Pre-season rotates it with
+aerobic power from phase week 4, In-season bye weeks take it as their small hard
+dose, and the Speed pool drops it. Red-first: four scheduler cells + the
+category truth table; mutation (late list ignored) reds the late-Pre-season
+cell; file restored byte-identical. Regenerated 52-week male year: nine
+repeat-sprint sessions (weeks 16–18, 24–26 as runs on upper days; bye weeks
+31, 37, 43 on the bike), 52/52 restarts. Suites: scheduler 137/137, fresh
+Speed 14/14, COD 19/19, modality-by-day 5/5, equality 176/176, generated-week
+30/30, final composition 6/6, deload 50/50; inherited reds unchanged.

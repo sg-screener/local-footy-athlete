@@ -79,7 +79,7 @@ export type ConditioningKind = 'off_leg' | 'running' | 'sprint_high_speed' | 'ae
  */
 export type ContractConditioningCategory =
   | 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic'
-  | 'recovery_flush' | 'cod_decel';
+  | 'repeat_sprint' | 'recovery_flush' | 'cod_decel';
 
 /** Standalone, or riding on a strength session (§3 "Compatible doubles"). */
 export type ContractConditioningRole = 'standalone' | 'finisher' | 'component';
@@ -420,6 +420,15 @@ export interface HardConditioningAllowance {
    */
   readonly qualities: readonly ContractConditioningCategory[];
   /**
+   * R-340 (Sam, 2026-09-02): a later part of the phase may rotate a wider
+   * list — repeat-sprint ability joins aerobic power from late Pre-season
+   * (phase week 4, the `late_preseason` subphase). Absent means the one list.
+   */
+  readonly lateQualities?: {
+    readonly fromPhaseWeek: number;
+    readonly qualities: readonly ContractConditioningCategory[];
+  };
+  /**
    * When true, the hard exposure is authored ONLY in a week with no game.
    * In-season's freshness rule; false everywhere else, where the 48-hour
    * game-proximity exclusion is the whole of the protection.
@@ -509,7 +518,13 @@ export const PRESEASON_OVERLAY: PhaseOverlay = {
   // approaches"* — both live on the authored `aerobic_power` tab, which `vo2`
   // resolves to. Glycolytic is NOT named: *"team training and matches already
   // provide glycolytic stress"*, and pre-season has both.
-  hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: false },
+  // R-340: repeat-sprint ability is the quality *"genuinely undertrained"*
+  // (Bible :1321) and *"Repeat Sprint ... as the season approaches"* (:1447);
+  // from late Pre-season it rotates with aerobic power by mini-cycle.
+  hardConditioning: {
+    count: 1, qualities: ['vo2'], requiresNoGameWeek: false,
+    lateQualities: { fromPhaseWeek: 4, qualities: ['vo2', 'repeat_sprint'] },
+  },
   speedInsideConditioningTarget: true,
   statement: 'Pre-season: prefer four strength sessions when availability '
     + 'permits, scale honestly to two or three, four total conditioning exposures '
@@ -532,7 +547,10 @@ export const INSEASON_OVERLAY: PhaseOverlay = {
   // NOT ZERO — GATED ON THE WEEK HAVING NO GAME. A game week (club or not)
   // authors no hard aerobic work; a healthy bye week may, and it replaces the
   // exposure the fixture would have supplied. See the three shapes above.
-  hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: true },
+  // R-340: a bye week's one hard exposure is a small repeat-sprint dose — Bible
+  // :1436 names only "a small Anaerobic or Repeat Sprint dose" for in-season,
+  // and Sam asked for repeat sprints in the bye weeks. R-339 renders it off-feet.
+  hardConditioning: { count: 1, qualities: ['repeat_sprint'], requiresNoGameWeek: true },
   speedInsideConditioningTarget: false,
   statement: 'In-season: maintain strength and conditioning while arriving fresh '
     + 'for the game. No scheduled calendar deload. Game, club training, readiness '
@@ -574,8 +592,12 @@ export function overlayForPhase(
 export function hardConditioningQualityFor(
   overlay: PhaseOverlay,
   miniCycleNumber: number | null | undefined,
+  phaseWeekNumber?: number | null,
 ): ContractConditioningCategory | null {
-  const { count, qualities } = overlay.hardConditioning;
+  const { count, lateQualities } = overlay.hardConditioning;
+  const qualities = lateQualities && (phaseWeekNumber ?? 0) >= lateQualities.fromPhaseWeek
+    ? lateQualities.qualities
+    : overlay.hardConditioning.qualities;
   if (count <= 0 || qualities.length === 0) return null;
   const cycle = Math.max(0, (miniCycleNumber ?? 1) - 1);
   return qualities[cycle % qualities.length];

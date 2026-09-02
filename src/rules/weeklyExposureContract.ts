@@ -363,6 +363,7 @@ function evaluateSafety(
     const hasSpeed = !!allocation.speedBlock;
     const hardConditioning = allocation.conditioningCategory === 'vo2' ||
       allocation.conditioningCategory === 'glycolytic' ||
+      allocation.conditioningCategory === 'repeat_sprint' ||
       allocation.conditioningCategory === 'sprint';
     const unsafe =
       (offset === -1 && (hasStrength || hasConditioning || hasSpeed)) ||

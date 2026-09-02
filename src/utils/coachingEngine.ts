@@ -219,7 +219,7 @@ export interface SessionAllocation {
    * planning. 'tempo' (4B) is TRUE medium conditioning: controlled repeat
    * efforts at 6-7/10 — medium stress, never a hard exposure.
    */
-  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'repeat_sprint' | 'cod_decel';
   /**
    * The canonical weekly compiler's one answer to the deload conditioning law.
    * A session materialiser consumes this role; it never elects itself by
@@ -422,6 +422,7 @@ export function classifyGenerationSession(
   const hardConditioning =
     input.conditioningCategory === 'vo2' ||
     input.conditioningCategory === 'glycolytic' ||
+    input.conditioningCategory === 'repeat_sprint' ||
     input.conditioningCategory === 'sprint';
   const hasStandaloneConditioning =
     !input.strengthPattern &&

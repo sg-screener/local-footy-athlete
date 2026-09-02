@@ -71,6 +71,8 @@ export type AthleteConditioningCategory =
   | 'sprint'
   | 'vo2'
   | 'glycolytic'
+  /** R-340: repeat-sprint ability, a hard conditioning demand (R-311: never Speed). */
+  | 'repeat_sprint'
   | 'recovery_flush'
   /** COD / deceleration — see `OffseasonConditioningCategory` for the ruling. */
   | 'cod_decel';
@@ -206,10 +208,11 @@ function templatesOfQuality(...qualities: ConditioningQuality[]): ConditioningTe
  */
 export const REQUESTABLE_CATEGORIES_FOR_QUALITY:
   Readonly<Record<ConditioningQuality, readonly AthleteConditioningCategory[]>> = {
-  // Sprint-family qualities are reached through the one `sprint` category.
+  // Speed qualities are reached through the one `sprint` category. R-311/R-340:
+  // repeat-sprint work is CONDITIONING and has its own hard demand category.
   acceleration: ['sprint'],
   top_end_speed: ['sprint'],
-  repeat_sprint: ['sprint'],
+  repeat_sprint: ['repeat_sprint'],
   // One explicit request reaches the one combined COD session.
   cod_decel: ['cod_decel'],
   anaerobic: ['glycolytic'],
@@ -241,11 +244,13 @@ function poolForCategory(category: AthleteConditioningCategory): ConditioningTem
     case 'glycolytic':
       return templatesOfQuality('anaerobic');
     case 'sprint':
-      return templatesOfQuality('acceleration', 'top_end_speed', 'repeat_sprint');
+      return templatesOfQuality('acceleration', 'top_end_speed');
     case 'recovery_flush':
       return templatesOfQuality('flush');
     case 'cod_decel':
       return templatesOfQuality('cod_decel');
+    case 'repeat_sprint':
+      return templatesOfQuality('repeat_sprint');
   }
 }
 

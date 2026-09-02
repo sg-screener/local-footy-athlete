@@ -184,7 +184,7 @@ function removeConditioning(
 
 function stressFor(entry: SessionAllocation): 'light' | 'moderate' | 'hard' {
   if (entry.conditioningCategory === 'vo2' || entry.conditioningCategory === 'glycolytic' ||
-      entry.conditioningCategory === 'sprint' || entry.conditioningFlavour === 'high-intensity') {
+      entry.conditioningCategory === 'repeat_sprint' || entry.conditioningCategory === 'sprint' || entry.conditioningFlavour === 'high-intensity') {
     return 'hard';
   }
   if (entry.section18ConditioningRole === 'optional_flush' ||

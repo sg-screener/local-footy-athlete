@@ -1731,7 +1731,8 @@ export type ConditioningCategory =
   | 'tempo'
   | 'sprint'
   | 'vo2'
-  | 'glycolytic';
+  | 'glycolytic'
+  | 'repeat_sprint';
 
 
 /**

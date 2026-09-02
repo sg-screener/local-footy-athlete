@@ -52,6 +52,7 @@ import {
   type WeeklySchedule,
   type WeeklySchedulerInputs,
 } from '../rules/weeklyScheduler';
+import { poolForCategoryPublic } from '../rules/conditioningSelection';
 import {
   isGeneratedConditioningDay,
   isRunningSpeedDay,
@@ -656,7 +657,7 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   // These cells hold the SCHEDULER's half — that the overlay is what it reads.
   const preseasonWeek = built({ phase: 'Pre-season',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
-  const hardCategories = new Set(['vo2', 'glycolytic']);
+  const hardCategories = new Set(['vo2', 'glycolytic', 'repeat_sprint']);
   const preseasonHard = preseasonWeek.days.filter(
     (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory));
   ok('[WC-136] a pre-season week authors a HARD conditioning quality, not just capacity',
@@ -713,6 +714,39 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   ok('[WC-136] ...and the same athlete\'s BYE week authors one hard exposure', ['WC-136'],
     hardIn(inseasonBye) === 1,
     JSON.stringify(inseasonBye.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  // ── R-340: repeat-sprint ability is a hard CONDITIONING demand (R-311) ──
+  // Sam, 2026-09-02: *"why are there no repeat sprint sessions? i have them
+  // planned as templates in the app"*. It rotates with aerobic power from
+  // late Pre-season (phase week 4) and in the in-season bye week; it is never
+  // reachable through the Speed slot.
+  const hardOf = (week: WeeklySchedule) => week.days
+    .map((d) => d.conditioningCategory).filter((c) => c !== null && hardCategories.has(c));
+  const latePreCycle1 = built({ phase: 'Pre-season', offseasonBlock: null, phaseWeekNumber: 5, miniCycleNumber: 1,
+    gymAccessDays: [MON, TUE, THU, FRI, SAT], clubNights: [], gameDay: null });
+  const latePreCycle2 = built({ phase: 'Pre-season', offseasonBlock: null, phaseWeekNumber: 6, miniCycleNumber: 2,
+    gymAccessDays: [MON, TUE, THU, FRI, SAT], clubNights: [], gameDay: null });
+  const earlyPreCycle2 = built({ phase: 'Pre-season', offseasonBlock: null, phaseWeekNumber: 2, miniCycleNumber: 2,
+    gymAccessDays: [MON, TUE, THU, FRI, SAT], clubNights: [], gameDay: null });
+  ok('[R-340] late Pre-season rotates aerobic power with repeat-sprint by mini-cycle', ['WC-136'],
+    JSON.stringify(hardOf(latePreCycle1)) === '["vo2"]' && JSON.stringify(hardOf(latePreCycle2)) === '["repeat_sprint"]',
+    JSON.stringify({ cycle1: hardOf(latePreCycle1), cycle2: hardOf(latePreCycle2) }));
+  ok('[R-340] early Pre-season keeps aerobic power only', ['WC-136'],
+    JSON.stringify(hardOf(earlyPreCycle2)) === '["vo2"]', JSON.stringify(hardOf(earlyPreCycle2)));
+  const byeCycle1 = built({ phase: 'In-season', miniCycleNumber: 1,
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [TUE, THU], gameDay: null });
+  const byeCycle2 = built({ phase: 'In-season', miniCycleNumber: 2,
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [TUE, THU], gameDay: null });
+  const gameCycle2 = built({ phase: 'In-season', miniCycleNumber: 2,
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [TUE, THU], gameDay: SAT });
+  ok('[R-340] an in-season bye week carries the small repeat-sprint dose; a game week still authors no hard work', ['WC-136'],
+    JSON.stringify(hardOf(byeCycle1)) === '["repeat_sprint"]' && JSON.stringify(hardOf(byeCycle2)) === '["repeat_sprint"]'
+    && hardOf(gameCycle2).length === 0,
+    JSON.stringify({ bye1: hardOf(byeCycle1), bye2: hardOf(byeCycle2), game: hardOf(gameCycle2) }));
+  ok('[R-311/R-340] the Speed pool never offers repeat-sprint work', ['WC-135'],
+    poolForCategoryPublic('sprint').every((template) => template.quality !== 'repeat_sprint')
+    && poolForCategoryPublic('repeat_sprint').length === 5
+    && poolForCategoryPublic('repeat_sprint').every((template) => template.quality === 'repeat_sprint'),
+    JSON.stringify(poolForCategoryPublic('sprint').map((t) => t.name)));
 
   // ── WC-138 + R-330: Speed uses the earliest genuinely fresh receiver ─────
   const offRef = built({ phase: 'Off-season', offseasonBlock: 'normal_build',

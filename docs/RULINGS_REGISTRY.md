@@ -8522,3 +8522,34 @@ Guard: `LAW-running-means-running` through chained
 `test:conditioning-modality-by-day` (typed policy cells; generated Off-season,
 Pre-season with and without club nights, and In-season weeks). Red-first,
 mutation and NOT COVERED: `docs/STATUS_HINGECOD.md`.
+
+**R-340** · Repeat-sprint ability is a hard conditioning demand, requested from
+late Pre-season and in in-season bye weeks, 2026-09-02.
+
+Owner: hingecod. Sam: *"why are there no repeat srpint sessions? i have them
+planned as templates in the app - figure out why this is happening"*. Cause:
+the five authored repeat-sprint templates sat behind the `sprint` category,
+and every Speed request named only acceleration or top-end speed (R-311 rules
+that repeat-sprint work on incomplete recovery is conditioning, never Speed),
+while the hard-conditioning slot only ever asked for aerobic power or
+anaerobic work. No planner could ask for them.
+
+Now `repeat_sprint` is its own conditioning demand category (the same waist
+`cod_decel` uses), counted as hard conditioning everywhere the hard categories
+are read (Section 18 stress, deload reduction, game-proximity safety, block
+boundary, taxonomy, visible identity). The Pre-season overlay rotates aerobic
+power with repeat-sprint by mini-cycle from phase week 4 (the late
+subphase); the In-season bye-week hard exposure is a small repeat-sprint dose
+(Bible :1436 names only *"a small Anaerobic or Repeat Sprint dose"*
+in-season). The Speed pool no longer offers repeat-sprint templates (R-311).
+R-339 renders the in-season dose off-feet (Assault-bike / bike repeat
+sprints, Bible :680) and the pre-season dose as a run on an upper day.
+
+Measured on a regenerated 52-week male year: nine repeat-sprint sessions —
+late pre-season weeks 16–18 and 24–26 on upper days as runs, bye weeks 31, 37
+and 43 on the bike; 52/52 restarts.
+
+Guard: `LAW-repeat-sprint-is-a-hard-conditioning-demand` through chained
+`test:weekly-scheduler` (late/early Pre-season rotation, bye-week dose,
+game-week refusal, Speed pool exclusion) and `test:conditioning-templates`
+(category/quality truth). Receipt: `docs/STATUS_HINGECOD.md`.
