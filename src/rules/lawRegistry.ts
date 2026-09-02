@@ -801,6 +801,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-tracked-single-leg-squat-sits-in-the-single-leg-seat',
+    law: 'R-353: a Bulgarian split squat chosen as the tracked squat lift is the tracked lift of the single_leg_knee seat, requested there ahead of the seat\'s ordinary bench without the seat being a main seat; the squat main seat keeps a bilateral squat and the displaced default (Back Squat) still leaves automatic work.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-353',
+    guard: {
+      state: 'guarded',
+      by: 'test:estimated-1rm',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: "Bulgarian Split Squats repeats often enough for observations" and the alternatives anchor cells were red at the branch start and the control (26/8 → 30/4 after the R-317 map re-pin): the seat table put the lift in the squat main seat, and the weekly selector refuses a compound with no main family there (trace: weekly_spacing), so High Box Squat was taken every week and the single-leg seat took Reverse Lunges. THE CHANGE: TRACKED_LIFT_PROGRAMMING_SEAT.bulgarian_split_squat = single_leg_knee; the composer maps that seat to the squat tracked choice and requests the tracked anchor without isMainLift. 34/34 after. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

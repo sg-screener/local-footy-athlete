@@ -1808,16 +1808,18 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         ? automaticIsolationSupportCandidatesForSlot(slot).map(asComposedIdentity)
         : isMainLift ? anchorCandidates(slot) : supportCandidates(slot))
         .filter((identity) => !displacedTrackedDefaults.has(identity));
-      const trackedSeat = pattern
-        ? selectedTrackedLiftProgrammingSeat(
-          inputs.trackedLiftChoices,
-          pattern as TrackedLiftProgrammingPattern,
-        )
+      // R-353: the single-leg knee seat answers to the SQUAT tracked-lift choice
+      // (a Bulgarian split squat is that seat's tracked lift). It is not a main
+      // seat, so the tracked anchor is requested there without `isMainLift`.
+      const trackedPattern = (slot === 'single_leg_knee' ? 'squat' : pattern) as
+        TrackedLiftProgrammingPattern | null;
+      const trackedSeat = trackedPattern
+        ? selectedTrackedLiftProgrammingSeat(inputs.trackedLiftChoices, trackedPattern)
         : null;
-      const requestedTrackedAnchor = isMainLift
+      const requestedTrackedAnchor = (isMainLift || slot === 'single_leg_knee')
         && trackedSeat === slot
-        && pattern && trackedAnchorByPattern.has(pattern as TrackedLiftProgrammingPattern)
-        ? trackedAnchorByPattern.get(pattern as TrackedLiftProgrammingPattern) ?? null
+        && trackedPattern && trackedAnchorByPattern.has(trackedPattern)
+        ? trackedAnchorByPattern.get(trackedPattern) ?? null
         : null;
       const trackedAnchor = requestedTrackedAnchor
         ? composedIdentityFor(sourceBoundAutomaticIdentityFor(
@@ -1907,7 +1909,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         // A prehab drill is not one of R-334's four (Sam, 2026-09-02). While
         // this ordinary split day still has fewer than four loaded rows, the
         // robustness seat opens its LOADED bench first (Nordic Lower,
-        // Copenhagen Plank, Calf Raises, Groin Squeeze); drills enter once
+        // Copenhagen Plank (Half), Calf Raises, Groin Squeeze); drills enter once
         // the minimum is met, or when no loaded row is legal. Measured before
         // this rule: a Lower Hinge of RDL, Hamstring Curl, Nordic Lower, Crab
         // Walks and Bosch Hold — five rows, three loaded — on every hinge day

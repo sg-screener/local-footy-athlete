@@ -54,7 +54,7 @@ export function rowCountsTowardUsefulStrengthMinimum(row: WorkoutExercise): bool
  * showed what that bought: a Lower Hinge of RDL, Hamstring Curl, Nordic Lower
  * and Crab Walks was "four useful rows". The route is the same typed answer
  * the weekly selector already uses for ownership (`prehab` vs `strength`), so
- * a loaded robustness row such as Nordic Lower or Copenhagen Plank still
+ * a loaded robustness row such as Nordic Lower or Copenhagen Plank (Half) still
  * counts and a band walk or hold does not. Shared with the composer's
  * redundancy pruning so the two never disagree about what is useful.
  */

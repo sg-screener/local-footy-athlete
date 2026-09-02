@@ -3268,7 +3268,7 @@ async function main(): Promise<void> {
   await restartFixture('fixture Undo', ['2026-08-12', '2026-08-15']);
 
   console.log('\n[fixture compression] a two-day athlete can report a practice match');
-  const twoDay = athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-2-novice-bodyweight')!);
+  const twoDay = athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-2-novice-home')!);
   await quietAsync(() => coldStartThroughOnboarding({
     profile: { ...twoDay, seasonPhase: 'Pre-season' }, installDayISO: INSTALL_DAY,
   }));

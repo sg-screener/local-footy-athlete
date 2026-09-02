@@ -12,7 +12,9 @@ export type TrackedLiftChoices = Partial<Record<TrackedLiftSlot, TrackedLiftId>>
 export type TrackedLiftProgrammingPattern = 'push' | 'pull' | 'squat' | 'hinge';
 export type TrackedLiftProgrammingSeat =
   | 'horizontal_push' | 'vertical_push' | 'horizontal_pull' | 'vertical_pull'
-  | 'squat' | 'hinge';
+  | 'squat' | 'hinge'
+  // R-353: the tracked single-leg squat lives in the single-leg knee seat.
+  | 'single_leg_knee';
 export const TRACKED_LIFT_PAIRS: Readonly<Record<TrackedLiftSlot, readonly TrackedLiftId[]>> = {
   pull_up: ['pull_up', 'lat_pulldown'],
   bench_press: ['bench_press', 'overhead_press'],
@@ -54,7 +56,11 @@ const TRACKED_LIFT_PROGRAMMING_SEAT: Readonly<Record<
 >> = {
   bench_press: 'horizontal_push', overhead_press: 'vertical_push',
   pull_up: 'vertical_pull', lat_pulldown: 'vertical_pull',
-  back_squat: 'squat', bulgarian_split_squat: 'squat',
+  // R-353 (Sam, 2026-09-02, "yep fix that"): a Bulgarian split squat has no
+  // weekly main family, so the squat main seat refused it every week and the
+  // athlete's tracked lift never landed. It is the tracked lift of the
+  // single-leg knee seat; the squat seat keeps a bilateral squat.
+  back_squat: 'squat', bulgarian_split_squat: 'single_leg_knee',
   rdl: 'hinge', trap_bar_deadlift: 'hinge',
 };
 

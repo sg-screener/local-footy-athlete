@@ -24,7 +24,10 @@ export interface Archetype {
 // Athlete answers, not invented stored programs. Staggered entry phases make
 // an early Off-season refusal visible without hiding every other phase.
 export const ARCHETYPES: readonly Archetype[] = [
-  { id: 'male-2-novice-bodyweight', gender: 'male', days: ['Monday', 'Thursday'], experience: 'Complete beginner', equipment: 'bodyweight', initialPhase: 'Off-season', clubDays: [], gameDay: null, extraGame: false },
+  // R-230 (restated by Sam 2026-09-02): bodyweight-only is not an onboarding
+  // path — the equipment step refuses it; only the temporary away/holiday
+  // window trains on no kit. The 2-day novice is a home-kit athlete.
+  { id: 'male-2-novice-home', gender: 'male', days: ['Monday', 'Thursday'], experience: 'Complete beginner', equipment: 'home', initialPhase: 'Off-season', clubDays: [], gameDay: null, extraGame: false },
   { id: 'female-3-novice-home', gender: 'female', days: ['Monday', 'Wednesday', 'Friday'], experience: 'Complete beginner', equipment: 'home', initialPhase: 'Pre-season', clubDays: ['Tuesday'], gameDay: 'Sunday', extraGame: false },
   { id: 'male-3-experienced-gym', gender: 'male', days: ['Monday', 'Wednesday', 'Friday'], experience: '5+ years', equipment: 'commercial', initialPhase: 'Pre-season', clubDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday', extraGame: false },
   { id: 'female-4-experienced-gym', gender: 'female', days: ['Monday', 'Tuesday', 'Thursday', 'Friday'], experience: '2-5 years', equipment: 'commercial', initialPhase: 'In-season', clubDays: ['Tuesday', 'Thursday'], gameDay: 'Sunday', extraGame: false },

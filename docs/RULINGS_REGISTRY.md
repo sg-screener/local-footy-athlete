@@ -8876,3 +8876,26 @@ Options rejected: rewriting the test (the pin is a promise to the athlete);
 a sixth seat (more volume). Guard: `LAW-pinned-drill-wins-the-last-seat`
 through chained `test:exercise-intake` (boundary cells + the new control
 cell). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-353** · The tracked Bulgarian split squat sits in the single-leg knee
+seat, 2026-09-02.
+
+Owner: hingecod. Sam: "yep fix that" on the root-cause report. The
+tracked-lift seat table put `bulgarian_split_squat` in the squat MAIN seat,
+but the weekly selector refuses a compound with no main family on a main
+seat, so the athlete's chosen lift was refused every week (High Box Squat
+taken) while the single-leg seat took Reverse Lunges — the tracked lift never
+landed and its 1RM estimate could never be observed. Now the lift is the
+tracked lift of the `single_leg_knee` seat: the composer requests it there
+ahead of the seat's bench (the seat is not a main seat, so `isMainLift` is
+not required); the squat seat keeps a bilateral squat; Back Squat still
+leaves automatic work as the displaced default. Guard:
+`LAW-tracked-single-leg-squat-sits-in-the-single-leg-seat` through chained
+`test:estimated-1rm`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-230 restated by Sam, 2026-09-02:** "there is no way to do bodyweight
+only — the only way you can do it is if you're on holiday and you have a
+temporary 'do what ya can' style program." The compiler-year archetype
+`male-2-novice-bodyweight` (a world onboarding refuses at the equipment step)
+was a stale fixture and is now `male-2-novice-home`; the push refusal it
+produced was never an athlete-reachable defect. Owner: hingecod.

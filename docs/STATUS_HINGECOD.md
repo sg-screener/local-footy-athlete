@@ -841,3 +841,77 @@ days (Wed + Fri; the Monday carries no main lift in those weeks — week 1's
 Monday does), then week 23 (In-season 8) fails `facts_history_unchanged` /
 `facts_lifecycle_complete` because a fixture-replan overlay adds a
 Long-Lever Copenhagen row to the Monday. Neither is diagnosed to a rule yet.
+
+## 2026-09-02 (later) — Sam's answers on the three open items
+
+**1. Bodyweight-only is not a path (R-230, restated).** Sam: "there is no
+way to do bodyweight only — the only way is a holiday 'do what ya can'
+program." So the compiler-year archetype `male-2-novice-bodyweight` was a
+world the equipment step refuses; the push refusal it produced was never an
+athlete-reachable defect and the selector rule I named (a family-less
+compound may not take a main seat) stands. Fixture re-pinned:
+`male-2-novice-home` (home kit: dumbbells, bands, bench, pull-up bar); the
+one test naming the old id follows it. `test:undo-reversal` 26/2 → 28/0.
+Note added under R-230 in the registry. The `'bodyweight'` catalog option
+stays for the away-window worlds other suites build.
+
+**2. R-353 — the tracked Bulgarian split squat sits in the single-leg knee
+seat (approved: "yep fix that").** Root cause as reported: the seat table
+put it in the squat MAIN seat and the weekly selector refuses a compound
+with no main family there, so it was refused every week (High Box Squat
+taken) while the single-leg seat took Reverse Lunges. Change:
+`TRACKED_LIFT_PROGRAMMING_SEAT.bulgarian_split_squat = 'single_leg_knee'`
+(type widened); the composer maps the `single_leg_knee` seat to the squat
+tracked choice and requests the tracked anchor there without `isMainLift`.
+`test:estimated-1rm` 30/4 → 34/0 (the four Bulgarian/alternatives cells were
+the red-first). Law row `LAW-tracked-single-leg-squat-sits-in-the-single-leg-seat`.
+
+**3. "What's wrong with that?" — the beginner home-gym player, traced.**
+Walked her through the runner's own steps (cold start, weekly rollover,
+followed weeks, then the runner's week-10 report: a moderate KNEE injury).
+- Weeks 10–12: the injury pauses every leg row on her Monday (Bodyweight
+  Squat, Glute Bridge, Reverse Lunges, Single-Leg RDL, Groin Squeeze, Broad
+  Jumps) and the day becomes "Continuous Aerobic" with a Single-Arm DB Row,
+  McGill Sit Up and Side Plank. The week checker then counts two
+  app-programmed main-strength days (Wed, Fri) against the Pre-season three
+  and records a blocking `required_minimum_shortfall` — an injury week
+  judged by the healthy contract, with no authorised reduction recorded.
+  Two things the athlete would notice: Push-ups are inserted into her
+  Wednesday MOBILITY session (weeks 10 and 12), and Friday stacks three
+  presses (DB Bench Press, Seated DB Press, Push-ups as a main) in week 11 —
+  the injury filler picks upper work without reading what the week already
+  carries.
+- Week 23 (In-season 8): the lifecycle check removes a session, records the
+  week's Monday+Tuesday as history, reports a SHOULDER injury on the
+  Wednesday, and asserts history unchanged. Monday 2026-12-21 gained a
+  Long-Lever Copenhagen row from a `fixture-replan … week-overlay` — the
+  injury rebuild redid the whole fixture week including the already-done
+  Monday. Athlete-visible: a session you did on Monday changes after you
+  report a shoulder on Wednesday.
+- New after re-pinning the 2-day archetype to a home kit: `male-2-novice-home`
+  stops at week 7 (Off-season 8) in the same lifecycle check; detail below
+  once the rerun's report is read.
+Neither is built; both are for Sam's approval.
+
+**Blast radius after R-353 and the archetype re-pin (branch vs the branch tip
+`2b516ff5` before this round).** Green: three-day-main-seat 22/22,
+weekly-strength-budget 5/5, weekly-strength-variety 5/5,
+automatic-weekly-selection 24/24, minimum-useful-strength 9/9,
+block-two-progression 47/47, section18-v2 141/141, accepted-load-carry 10/10,
+readiness-load-retention 58/58, session-change-durability 59/59, undo-reversal
+28/28, estimated-1rm chain 34/34 + 181 + 48 + 37 + 54. Unchanged inherited
+reds: full-body-balance chain 7/8, slot-coverage 87/90, composer-severance,
+athlete-journey 61/3 (rewrite list). `test:exercise-intake`: the first
+section 929/0; its later "Authored cue + video" section runs now that the
+first is green and shows the branch start's two reds (Tib Raises and
+Copenhagen Plank (Half) load handling, at `8d68d6dd` too) plus one of mine —
+two comments used the retired bare name "Copenhagen Plank"; corrected to the
+real name, back to the inherited 54/56.
+
+**`compiler-year` on the final code:** 6 of 8 archetypes reach 52/52. The
+two that stop are ONE bug: `male-2-novice-home` at week 7 (Off-season 8) and
+`female-3-novice-home` at week 23 (In-season 8) both fail the lifecycle's
+`history_unchanged` — after the runner reports an injury on the Wednesday,
+the already-done Monday gains a row from a `week-overlay` rebuild (Copenhagen
+Plank (Half) for him, Long-Lever Copenhagen for her). The push refusal is
+gone with the archetype re-pin.
