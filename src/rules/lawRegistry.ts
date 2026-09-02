@@ -713,6 +713,39 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-rebuilt-week-keeps-dose-and-ledger',
+    law: 'R-345: a one-week fixture rebuild carries the same lift\'s accepted sets, reps and load (loads_and_dose; the readiness door carries loads only), and composes against the accepted week it rebuilds — every automatic strength identity on the accepted week\'s OTHER days is taken for the day being composed, in the composer\'s candidate list, its fallback benches and the later automatic families; main lifts, power rows and prehab drills are not listed.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-345',
+    guard: {
+      state: 'guarded',
+      by: 'test:rebuilt-week-ledger',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the 3b902a70 audit found Seated Calf Raise on a rebuilt Monday and a stored Wednesday (week 41, both athletes) and the rebuilt weeks carried the stub\'s dose. THE CHANGE: acceptedWeekIdentitiesByDay from the fixture door through generation into the composer (candidate list, prehab and trunk benches) and the row compiler\'s later families; the carry owner gains loads_and_dose. Cells: two here (9 worlds; a shifted-seed liveness control), dose-carry and identity-listing cells in test:accepted-load-carry, the item-1 journey cell in test:fixture-mutation-transaction. MUTATION: ignoring the seed in the composer reds the liveness cell; never carrying the dose reds the carry cell. AFTER: ledger 2/2, carry 10/10, fixture-mutation 18/21 (three inherited), both regenerated years 0 repeats, focused 24/24, budget PASS, Back Squat on every rebuilt week at the accepted load, 52/52 restarts. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
+    id: 'LAW-loadable-bodyweight-lifts',
+    law: 'R-346: Side Plank, Cossack Squat and Lateral Lunge are loadable bodyweight lifts (bodyweight_plus): the card reads BW then BW + 2.5 kg, the plus button and the automatic lattice step 2.5 kg, and a progression-eligible one may earn its next rung on a qualifying block.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-346',
+    guard: {
+      state: 'guarded',
+      by: 'test:render-truth',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. The three names join the agreed-loadable list the suite already checks (BW + kg mode); Side Plank leaves the no-load-control list. test:block-two-progression\'s bodyweight-accessory cell now accepts held-or-own-rung. AFTER: render-truth 30/30, block-two-progression 47/47. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
+    id: 'LAW-squat-day-loaded-seat-is-knee-side',
+    law: 'R-347: a loaded single-leg knee lift also fills the split lower day\'s loaded seat, which is a compound direction of its own under the four-compound ceiling; on a Lower Squat day the seat spends its knee-side bench first, favours the frontal pair only while the week lacks a frontal-plane lift, is narrowed by the frontal hole only, and takes a posterior isolation only when nothing knee-side is legal; the hinge day keeps R-336.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-347',
+    guard: {
+      state: 'guarded',
+      by: 'test:automatic-weekly-selection',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: Back Extension on 15 of 45 squat days, then one single-leg lift on 40 of 45 once compounds were admitted (the block selector\'s cohort narrowed on the transverse hole). THE CHANGE: slot mapping (unilateral squat and lunge rows fill the seat), the seat as a compound direction, the squat-day bench and a frontal-only plane context handed to the composer cohort and the block selector. Cells: the 50-world squat-seat cell here (non-vacuity: at least one second single-leg lift; zero posterior), two mapping cells in test:slot-coverage. MUTATION: removing the seat from the compound directions reds the cell. AFTER: selection 22/22, coverage 87/90 (three inherited), both regenerated years ten different lifts on the seat and zero posterior. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

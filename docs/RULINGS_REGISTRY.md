@@ -8699,3 +8699,85 @@ Guard: `LAW-rebuilt-week-carries-own-loads` through chained
 `test:accepted-load-carry` (seven cells) and the R-344 journey cell in
 chained `test:fixture-mutation-transaction` (bye week, week after a Sunday
 game, relaunch). Receipt: `docs/STATUS_HINGECOD.md`.
+
+· R-343 note (Sam, 2026-09-02): the added-load SENTENCE is deleted. It had no
+reader on the phone (no screen renders the block-boundary sentences; only the
+coach context receives them), and the card's "BW + 2.5 kg" is the athlete's
+fact. The `bodyweight_progressed` decision, its load and its stored row stand.
+
+**R-345** · A rebuilt week keeps its accepted sets and reps and cannot repeat
+what the accepted week keeps on other days, 2026-09-02.
+
+Owner: hingecod. Sam's item 1 ("yes"). Two gaps in the one-week rebuild
+(bye, moved game, readiness, injury): the stub is generated without the
+block's progression, so every boundary rung beyond the load — the earned
+set, the very-hard-block reduction, the in-block wave — was missing; and the
+stub's composer started with an empty weekly ledger, so a day it replaced
+could repeat an identity the accepted week kept on another day (week 41:
+Seated Calf Raise on the rebuilt Monday and the stored Wednesday, both
+athletes). Now: (1) the fixture door's carry is `loads_and_dose` — the same
+lift's accepted sets, reps and load travel into the rebuilt week; the
+readiness door keeps `loads` only (R-034's reduced dose is the compiler's).
+(2) A rebuild states the accepted week's automatic strength identities by
+weekday (`acceptedWeekIdentitiesByDay`), and composing day D treats every
+identity on the accepted week's OTHER days as taken — in the composer's
+candidate list, its prehab and trunk fallback benches, and the later
+automatic families (Gunshow, power). Main lifts are NOT listed: they follow
+the block's recorded seat and may move weekday when the week reshapes
+(measured: listing them replaced the athlete's Back Squat with a High Box
+Squat at the estimate on every week after a Sunday game). Power rows and
+prehab drills are outside the once-per-week rule and are not listed.
+Passing block number and history into the stub was rejected again (wrong
+previous-block window).
+
+Measured after, both 52-week athletes: 0 weekly repeats (was 2), focused
+composition 24/24, strength-budget PASS/PASS/PASS; weeks 30/31/36/37/43/48
+carry Back Squat at the accepted 100/102.5/105/105/110/112.5; 52/52 restarts.
+
+Guard: `LAW-rebuilt-week-keeps-dose-and-ledger` through chained
+`test:rebuilt-week-ledger` (two cells, 9 worlds, with a shifted-seed
+liveness control) and `test:accepted-load-carry` (dose-carry and identity
+listing cells), and the item-1 journey cell in chained
+`test:fixture-mutation-transaction` (sets, reps and no cross-day repeat
+through a bye, a Sunday move and a relaunch). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-346** · Side Plank, Cossack Squat and Lateral Lunge are loadable
+bodyweight lifts, 2026-09-02.
+
+Owner: hingecod. Sam: side planks *"should be able to add weight to the top
+of your hip"*; Cossack squats and lateral lunges *"should be able to be
+loaded"*; BW then BW + 2.5 kg is fine. The three join
+`BODYWEIGHT_LOADABLE_EXERCISES` (card reads "BW", then "BW + 2.5 kg"; the
+plus button and the automatic lattice already step 2.5 kg for that mode);
+Side Plank leaves the no-load-control list. A loadable lift that is
+progression-eligible may earn the lattice's next rung on a qualifying block
+(R-096 clause 1) — the block-two guard now accepts "held, or raised by its
+own rung" for a bodyweight accessory. Guard: `test:render-truth` (the
+agreed-loadable list) — `LAW-loadable-bodyweight-lifts`. Receipt:
+`docs/STATUS_HINGECOD.md`.
+
+**R-347** · The Lower Squat day's loaded third seat is knee-side first,
+frontal favoured, posterior last, 2026-09-02.
+
+Owner: hingecod. Sam: *"could it not do a different type of knee exercise? …
+what about cossack squats and lateral lunges … they're a different plane,
+they could be favoured"*. Cause: the seat shopped only the seven-entry
+`isolation_lower` pool (leg extension, calf raise, back extension on a squat
+day), the selector admitted a compound only through a compound-direction
+seat, and the block selector's movement-plane cohort narrowed the seat on the
+week's TRANSVERSE hole (one lift, Single-Leg Squat (to Box), on 40 of 45
+squat days once compounds were admitted). Now: a loaded single-leg knee lift
+(unilateral squat or lunge pattern, strength route) also fills
+`loaded_lower_accessory`; the seat is a compound direction of its own (one
+compound per seat, the four-compound session ceiling unchanged); on a Lower
+Squat day the seat's bench is everything that is not posterior-chain, the
+frontal pair is favoured only while the week still lacks a frontal-plane
+lift, and only the frontal hole may narrow this seat; a posterior isolation
+is taken only when nothing knee-side is legal. The hinge day keeps R-336
+(knee-dominant refused, posterior first). Measured on both 52-week athletes:
+ten different lifts on the seat across 45 squat days (Reverse Lunges 8, Leg
+Extension 8, Cossack 5, Single-Leg Box Squat 5, Bulgarian 4, Single-Leg Leg
+Press 4, Step Ups 3, Lateral Lunge 3, Walking Lunges 2, Calf Raises 1 — male),
+0 posterior. Guard: `LAW-squat-day-loaded-seat-is-knee-side` through chained
+`test:automatic-weekly-selection` (50-world cell) and `test:slot-coverage`
+(mapping cells). Receipt: `docs/STATUS_HINGECOD.md`.

@@ -512,3 +512,50 @@ Findings for a later owner: the week-41 repeat (seed the fixture stub's
 weekly selector with the accepted week's identities, as the replan already
 does for planner offers); "0 kg" labels on unloaded prehab/midline rows (37
 rows, pre-existing); warm-up knee drills on hinge days (unchanged).
+
+## Addendum 2026-09-02 — Sam's batch after the audit (R-345, R-346, R-347; sentence deleted)
+
+**Item 1 (R-345), rebuilt weeks.** Carry owner gains `loads_and_dose` (fixture
+door) with `loads` for the readiness door; `acceptedWeekIdentitiesByDay`
+travels from `buildFixtureProjection` → `generateProgramLocally` →
+`compileCanonicalProgramWeeks` → `composeWeek` (candidate list, prehab and
+trunk fallback benches, a new `accepted_on_another_day` substitution cause
+and trace rejection) and into the row compiler's later-family selector.
+Mains excluded from the seed after measuring: listing them put High Box
+Squat at 127.5 kg on every week after a Sunday game (the squat moves day
+when Monday becomes recovery). Guards: `test:rebuilt-week-ledger` 2/2 (new,
+chained), carry 10/10, fixture journey cell extended (sets, reps, no
+cross-day repeat). Mutation: seed ignored → ledger 1/2; dose never carried →
+carry 9/10; restored byte-identical.
+
+**Loadable lifts (R-346).** Side Plank, Cossack Squat, Lateral Lunge on the
+loadable list; Side Plank off the no-load list. render-truth 30/30;
+block-two-progression 47/47 (bodyweight-accessory cell accepts held-or-rung).
+
+**Squat-day seat (R-347).** Three causes found in order: (1) the seat shopped
+the isolation pool only → mapping change; (2) the selector admits a compound
+only through a compound-direction seat → the seat is one; (3) the block
+selector's plane cohort narrowed on the transverse hole → one lift 40/45 →
+frontal-only seat context for both the composer cohort and the block
+selector. Guards: selection 22/22 (new 50-world cell), coverage 87/90 (two
+new cells, three inherited reds). Mutation: seat removed from compound
+directions → 21/22.
+
+**Added-load sentence deleted** (Sam: no reader, no purpose). `projectionCopy`
+entry, function and list line removed; block-two-progression cell asserts the
+loaded-lift sentence never claims a BW row.
+
+**Audit PDF tool:** prints nothing where the app's label is blank (was "0 kg"
+from the placeholder); patched in the 3b902a70 audit checkout's tools copy.
+
+Regenerated 52-week years (both): focused 24/24, strength-budget
+PASS/PASS/PASS, 0 repeats, 0 posterior on squat-day seats, ten lifts in
+rotation on that seat, rebuilt weeks at the accepted squat loads, 52/52
+restarts. Suites at baseline: fixture-mutation 18/21, slot-coverage 87/90,
+scheduler fixtures 9/11, composer B1 50/4, settings-persistence 178/5,
+athlete-journey 61/3, readiness-load-retention 30/2, boot-preservation 20/20,
+upper split 29/29, scheduler 138/138, signed-copy 7/7, minimum-useful 9/9.
+
+NOT COVERED: the readiness and injury overlays do not yet state
+`acceptedWeekIdentitiesByDay` (their repeat exposure is unmeasured); the phone
+screens for BW + 2.5 kg on the three new loadable lifts.
