@@ -267,3 +267,22 @@ cca002a0 tooling were corrected before the final run and are listed with the
 evidence. Outputs: `output/final-full-year-audit-db534496/` (untracked) in the
 main checkout and in the audit checkout; report
 `FINAL_FULL_YEAR_AUDIT.md` beside them.
+
+## Addendum 2026-09-02 — R-339: running means running (unit 1 of Sam's six)
+
+Cause: the planner said "running" for upper-day attached conditioning but the
+session builder's combined-day policy (`combinedConditioningMustBeOffFeet`,
+never a recorded ruling) sent every combined non-sprint session to a machine
+and a weighted picker rolled bike/mixed/row/ski. Fix: the policy takes phase
+and region (lower/full off-feet, in-season off-feet, flush off-feet, COD never
+a machine, otherwise run); the builder passes `runOnly` for such days so a
+run-capable template is chosen; standalone easy-aerobic days run outside
+In-season. Guard: new chained `test:conditioning-modality-by-day` 5/5, red
+4/5 under the old policy (mutation restored byte-identical). Regenerated
+34-week journeys: off-season app conditioning 13/19 on legs (was 6/19),
+pre-season 20/34 (was 4/33), in-season 0/8; restarts 34/34. Neighbours green:
+COD tape 19/19, scheduler 133/133, generated-week 30/30, final composition
+6/6. Inherited reds reproduced identically at the clean db534496 checkout:
+conditioning-rotation 110/236, conditioning-equipment-consistency 6/20,
+finisher-eligibility 58/68, canonical-weekly-compiler (duplicate-row cell and a
+Section 18 onboarding-world shortfall).

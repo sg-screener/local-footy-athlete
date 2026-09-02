@@ -647,6 +647,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-running-means-running',
+    law: 'R-339: conditioning attached to an upper-body day in Off-season or Pre-season runs; a lower or full-body day\'s attached work is off-feet; in-season every app-added metabolic exposure is off-feet; a flush is off-feet; the COD session is never a machine; a standalone easy-aerobic day runs outside In-season. The athlete\'s own off-feet answer, injury restrictions and the running-load streak guard still outrank this.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-339',
+    guard: {
+      state: 'guarded',
+      by: 'test:conditioning-modality-by-day',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the audited year had 6 of 19 off-season, 4 of 33 pre-season and 0 of 24 in-season app conditioning sessions on legs; the session builder\'s combined-day policy sent every combined non-sprint session to a machine and a weighted picker then chose bike/mixed/row/ski, contradicting Bible :147 and WC-115. The new suite was 4/5 red under that policy. THE CHANGE: the typed policy now takes the season phase and region; the builder passes runOnly for an upper day outside In-season so a run-capable template is selected and no erg is rolled; standalone easy-aerobic days run outside In-season. AFTER: suite 5/5; regenerated 34-week journeys show off-season 13 of 19 app conditioning sessions on legs, pre-season 20 of 34, in-season 0 of 8, 34/34 restarts; COD tape 19/19, scheduler 133/133, generated-week 30/30, final composition 6/6. MUTATION: restoring the old policy reds four of five cells. Inherited reds reproduced identically at the untouched db534496 checkout and not repaired: conditioning-rotation 110/236, conditioning-equipment-consistency 6/20, finisher-eligibility 58/68, canonical-weekly-compiler (one duplicate-row cell and a Section 18 main-strength shortfall in its onboarding world). Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

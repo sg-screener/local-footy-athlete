@@ -44,7 +44,7 @@ import {
   doseSeconds,
   parseConditioningDose,
 } from './conditioningDose';
-import type { WorkoutExercise, WorkoutType } from '../types/domain';
+import type { SeasonPhase, WorkoutExercise, WorkoutType } from '../types/domain';
 import type { Section18ConditioningRole } from './weeklyExposureContractV2';
 import {
   rankSelectedFirst,
@@ -82,18 +82,35 @@ export type ConditioningSelectionTier = 'A' | 'B-high' | 'B-low' | 'C';
 export type ConditioningRole = 'standalone' | 'finisher' | 'component';
 
 /**
- * Lower-body strength normally pushes attached conditioning off-feet. The one
- * authored COD session is an explicit exception: it is running mechanics work
- * and cannot truthfully become a bike or erg session.
+ * Which attached conditioning goes off-feet (R-339, Sam 2026-09-02, and Bible
+ * :147 *"Hard running and top-end work pair with UPPER days. LOWER days pair
+ * with off-leg conditioning"*):
+ *
+ * - a lower or full-body lift owns the legs, so its attached work is off-feet;
+ * - in-season, every app-added exposure is off-feet — two club nights and the
+ *   game already supply the running (*"any extra conditioning should be off
+ *   leg"*);
+ * - a flush is off-feet by nature;
+ * - the one authored COD session is running mechanics and never a machine;
+ * - otherwise (an upper day in Off-season or Pre-season) the session RUNS.
+ *
+ * The old policy sent every combined non-sprint session to a machine ("the
+ * lift owns the legs"), which put twelve pre-season hard interval sessions on a
+ * bike on upper-body days. No ruling recorded that policy; the Bible says the
+ * opposite.
  */
 export function combinedConditioningMustBeOffFeet(args: {
   readonly category: AthleteConditioningCategory;
   readonly strengthRegion: 'lower' | 'upper' | 'full' | undefined;
   readonly hasAvailableMachine: boolean;
+  readonly seasonPhase?: SeasonPhase | null;
 }): boolean {
   if (!args.hasAvailableMachine) return false;
   if (args.category === 'cod_decel') return false;
-  return args.category !== 'sprint' || args.strengthRegion === 'lower';
+  if (args.category === 'recovery_flush') return true;
+  if (args.seasonPhase === 'In-season') return args.category !== 'sprint';
+  if (args.strengthRegion === 'lower' || args.strengthRegion === 'full') return true;
+  return false;
 }
 
 /* ── Tier ← quality (placement policy, declared once) ── */

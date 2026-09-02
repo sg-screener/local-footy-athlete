@@ -8489,3 +8489,36 @@ upper + hard. Off-season builds are unchanged by this row.
 Guard: `LAW-flys-count-as-conditioning-and-speed` through chained
 `test:weekly-scheduler` (the two-club-night pre-season cells and the fresh
 existing-day placement cell). Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-339** · "Running" means running: attached conditioning runs on upper days
+outside In-season, stays off-feet on lower days and in-season, 2026-09-02.
+
+Owner: hingecod. Sam, on the audit finding that twelve pre-season hard
+interval sessions sat on a bike on upper-body days: *"its okay if there's none
+in season because two team trainings and a game is enough, any extra
+conditioning should be off leg, but there should be at least 1-2 extra runs in
+pre season, and probably half or more in off season"*, and on the fix: *"Make
+hard conditioning run by default when it isn't on a lower day ... yeah i mostly
+agree with this"*.
+
+The planner already said "running" for conditioning attached to an upper day
+and "off-leg" for a lower day (WC-115, Bible :147). The session builder read
+"running" as "running allowed" and its standing combined-day policy sent every
+combined non-sprint session to a machine, so a default picker then rolled a
+bike, mixed ergs, rower or ski. That policy was never recorded as a ruling and
+contradicts the Bible.
+
+Now: a lower or full-body lift's attached work is off-feet; in-season every
+app-added metabolic exposure is off-feet; a flush is off-feet; the COD session
+is never a machine; otherwise an upper day in Off-season or Pre-season RUNS its
+attached hard, tempo or aerobic work, with a run-capable template selected for
+it. A standalone easy-aerobic day runs outside In-season. The athlete's own
+off-feet answer, injury restrictions and the running-load streak guard still
+outrank this. Measured on the regenerated 34-week journeys: off-season app
+conditioning 13 of 19 sessions on legs (was 6), pre-season 20 of 34 (was 4),
+in-season 0 of 8 (unchanged).
+
+Guard: `LAW-running-means-running` through chained
+`test:conditioning-modality-by-day` (typed policy cells; generated Off-season,
+Pre-season with and without club nights, and In-season weeks). Red-first,
+mutation and NOT COVERED: `docs/STATUS_HINGECOD.md`.

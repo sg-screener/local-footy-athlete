@@ -1780,13 +1780,25 @@ export function buildWorkoutsFromCoach(
       category: selectionCategory,
       strengthRegion,
       hasAvailableMachine: availableMachines.length > 0,
+      seasonPhase: onboardingData?.seasonPhase,
     });
+    // R-339: "running" on an upper day means running, not "running allowed".
+    // Outside In-season an upper day's attached hard/tempo/aerobic work is a
+    // run unless the athlete's own answer, an injury or the running-load guard
+    // below says otherwise. Flush and COD keep their own rules.
+    const runOnUpperDay = isCombined
+      && strengthRegion === 'upper'
+      && !legSparingOffFeet
+      && planEntry.conditioningOffFeet !== true
+      && selectionCategory !== 'recovery_flush'
+      && onboardingData?.seasonPhase !== 'In-season';
     const selectedTemplate = selectConditioningTemplate({
       category: selectionCategory,
       preferredTemplateName: planEntry.conditioningVariant,
       dateStr,
       miniCycleNumber: rotationContext?.miniCycleNumber,
       offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
+      runOnly: runOnUpperDay || undefined,
       availableMachines,
       role: selectionRole,
       // THE GATE THAT WAS DEAD TWICE, AND THEN READ THE WRONG THING.
@@ -1828,8 +1840,10 @@ export function buildWorkoutsFromCoach(
     // Session will use an erg if: combined vo2/glyco/aerobic (always erg),
     // combined sprint on lower pairing (erg), or (later) off-feet swap.
     // We pre-pick here so the weekly-tracker sees each session exactly once.
+    // R-339: a machine only where the policy above says off-feet. An upper
+    // day in Off-season or Pre-season runs its attached work.
     const willUseErgCombined =
-      isCombined && (
+      isCombined && !runOnUpperDay && (
         cat === 'vo2' || cat === 'glycolytic'
         || cat === 'aerobic_base'
         || cat === 'tempo' // 4B: combined tempo finishers are erg-based
@@ -1838,9 +1852,13 @@ export function buildWorkoutsFromCoach(
     // Standalone aerobic_base uses the same deterministic weighted erg
     // default as combined zone-2 work. Explicit/off-feet decisions remain
     // authoritative, and weekly repeat avoidance only affects fallback.
+    // R-339: a standalone easy-aerobic day runs in Off-season and Pre-season
+    // ("half or more of off-season conditioning on legs"); in-season extras and
+    // explicit off-feet answers stay on the machines.
     const willUseErgStandaloneAero =
       !isCombined && cat === 'aerobic_base' &&
-      (planEntry.conditioningOffFeet === true || usedErgs.size < 3);
+      (planEntry.conditioningOffFeet === true
+        || (onboardingData?.seasonPhase === 'In-season' && usedErgs.size < 3));
     let ergHint: ErgModality | undefined;
     const generatedModality = (cw.exercises ?? [])
       .map((exercise, index) => classifyGeneratedWorkoutRow({

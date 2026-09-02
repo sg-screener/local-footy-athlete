@@ -144,7 +144,7 @@ Inputs: the athlete's actual team-training nights, their available days, the sea
 Placement rules:
 
 * Team-training nights are anchors wherever they fall. Attach upper work to a TT night when gym-after-training works, e.g. Upper Pull + TT. 
-* Hard running and top-end work pair with UPPER days. LOWER days pair with off-leg conditioning. A hinge day never meets a sprint session. 
+* Hard running and top-end work pair with UPPER days. LOWER days pair with off-leg conditioning. A hinge day never meets a sprint session. R-339 (2026-09-02): "running" here means running — an upper day's attached hard, tempo or aerobic work is a run in Off-season and Pre-season; in-season every app-added extra is off-leg because two team trainings and the game supply the running.
 * Space lower exposures. Rest follows dense clusters. Prefer doubles plus full off-days over one session per day. 
 * Fewer available days means full-body consolidation. Two gym days = full body x2 (Monday/Wednesday in-season). Weekend available = use it for volume slots; weekend unavailable = compress into weekdays with the same pairings. 
 In-season splits:
