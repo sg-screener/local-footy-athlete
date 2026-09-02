@@ -1009,10 +1009,16 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       const row = oneSet
         ? program.microcycles[0].workouts.find(workout => workout.dayOfWeek === 1)
           ?.exercises.find(row => row.section18Evidence?.role === 'main_strength')
+        // The showcase adds the LONG NAME; only its dose is copied from a
+        // generated row. The named lift is not always generated (it stopped
+        // being on 2026-09-02 and the seed crashed the release gate's first
+        // step), so any generated supporting strength row supplies the dose.
         : program.microcycles[0].workouts.flatMap(workout => workout.exercises)
-          .find(row => row.exercise?.name === SHOWCASE_LONG_NAME);
+          .find(row => row.exercise?.name === SHOWCASE_LONG_NAME)
+          ?? program.microcycles[0].workouts.flatMap(workout => workout.exercises)
+            .find(row => row.section18Evidence?.role === 'strength_accessory' && !!row.exercise);
       if (!row?.exercise) throw new Error(`${seedId}: generated source row is missing`);
-      const prescription = { name: row.exercise.name, sets: oneSet ? 1 : row.prescribedSets,
+      const prescription = { name: oneSet ? row.exercise.name : SHOWCASE_LONG_NAME, sets: oneSet ? 1 : row.prescribedSets,
         repsMin: row.prescribedRepsMin ?? 8, repsMax: row.prescribedRepsMax ?? 8,
         weight: row.prescribedWeightKg, restSeconds: row.restSeconds };
       const common = { source: { screen: 'session_detail' as const, surface: 'dev_e2e_seed', initiatedBy: 'system' as const },
