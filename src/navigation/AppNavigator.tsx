@@ -170,7 +170,7 @@ export default function AppNavigator() {
             letterSpacing: 0.3,
             marginTop: 4,
           },
-          tabBarActiveTintColor: '#C8FF00',
+          tabBarActiveTintColor: '#D8D800',
           tabBarInactiveTintColor: '#555555',
           tabBarItemStyle: { gap: 2 },
         }}
@@ -214,7 +214,7 @@ export default function AppNavigator() {
             // A DOT, NOT A COUNT. There is exactly one question and it is not a
             // queue; a number would imply a backlog the app cannot have.
             tabBarBadge: coachCommitment.hasNotification ? '' : undefined,
-            tabBarBadgeStyle: { backgroundColor: '#C8FF00', minWidth: 10, height: 10,
+            tabBarBadgeStyle: { backgroundColor: '#D8D800', minWidth: 10, height: 10,
               borderRadius: 5, transform: [{ translateY: 2 }] },
             /*
               L-C3, THE NIKE BAR, AT THE ONE PLACE THIS SCREEN CANNOT SOLVE IT

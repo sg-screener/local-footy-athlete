@@ -36,7 +36,7 @@ const TIER_CONFIG: Record<SessionBadgeKind, { label: string; color: string; bg: 
   core: {
     label: 'CORE',
     color: colors.accent.lime,
-    bg: 'rgba(200, 255, 0, 0.12)',
+    bg: 'rgba(216, 216, 0, 0.12)',
   },
   optional: {
     label: 'OPTIONAL',

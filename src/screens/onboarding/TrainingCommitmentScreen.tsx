@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.10)',
   },
   notSureButtonSelected: {
-    backgroundColor: 'rgba(200,255,0,0.04)',
+    backgroundColor: 'rgba(216,216,0,0.04)',
     borderColor: colors.accent.lime,
   },
   notSurePressed: {

@@ -123,7 +123,9 @@ export const Button = ({
 
   const buttonStyles: ViewStyle = {
     height: getHeight(),
-    backgroundColor: getBackgroundColor(),
+    backgroundColor: pressed && variant === 'primary' && !disabled && !loading
+      ? colors.accent.limeDark
+      : getBackgroundColor(),
     borderColor: getBorderColor(),
     borderWidth: variant === 'outline' ? 1.5 : 0,
     borderRadius: borderRadius.lg,
@@ -131,7 +133,7 @@ export const Button = ({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    opacity: pressed && !disabled && !loading ? 0.7 : 1,
+    opacity: pressed && variant !== 'primary' && !disabled && !loading ? 0.7 : 1,
     width: fullWidth ? '100%' : 'auto',
   };
 

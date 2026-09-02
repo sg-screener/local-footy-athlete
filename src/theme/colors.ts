@@ -12,14 +12,14 @@ export const colors = {
     light: '#222222',     // Light variant for hover/pressed states
   },
 
-  // Accent colors — lime green punch
+  // Accent colors — yellow punch. Legacy key names stay stable for callers.
   accent: {
-    lime: '#C8FF00',      // Primary accent — CTAs, highlights, energy
-    limeDark: '#A3CC00',  // Darker lime for pressed states
-    limeLight: '#D9FF4D', // Lighter lime for subtle highlights
+    lime: '#D8D800',      // Primary accent — CTAs, highlights, energy
+    limeDark: '#B0B000',  // Pressed accent
+    limeLight: '#E4E44D', // Lighter yellow for subtle highlights
   },
 
-  // Secondary colors — kept minimal, the lime does the heavy lifting
+  // Secondary colors — kept minimal, the yellow does the heavy lifting
   secondary: {
     main: '#FFFFFF',      // White as secondary for contrast
     dark: '#E0E0E0',      // Off-white
@@ -58,7 +58,7 @@ export const colors = {
     tertiary: '#757575',
     disabled: '#4A4A4A',
     inverse: '#0C0C0C',
-    accent: '#C8FF00',
+    accent: '#D8D800',
   },
 
   // Status colors
@@ -88,7 +88,7 @@ export const colors = {
   // Session feeling colors (replaces RPE)
   feeling: {
     cooked: '#D32F2F',      // Dark red — absolutely smashed
-    strong: '#C8FF00',      // Lime — felt powerful
+    strong: '#D8D800',      // Yellow — felt powerful
     good: '#4CAF50',        // Green — solid session
     average: '#FFB74D',     // Orange — nothing special
     sore: '#FF7043',        // Deep orange — body hurting
@@ -97,7 +97,7 @@ export const colors = {
   // Gradient arrays
   gradients: {
     primary: ['#0C0C0C', '#161616'],
-    accent: ['#C8FF00', '#A3CC00'],
+    accent: ['#D8D800', '#B0B000'],
     dark: ['#161616', '#0C0C0C'],
     energyHigh: ['#F44336', '#FF6D00'],
     energyMedium: ['#FFB74D', '#FFC107'],
@@ -107,7 +107,7 @@ export const colors = {
 
   // Component-specific colors
   button: {
-    primary: '#C8FF00',
+    primary: '#D8D800',
     primaryText: '#0C0C0C',
     secondary: '#222222',
     secondaryText: '#FFFFFF',
@@ -121,7 +121,7 @@ export const colors = {
   input: {
     background: '#161616',
     border: '#333333',
-    borderFocused: '#C8FF00',
+    borderFocused: '#D8D800',
     text: '#FFFFFF',
     placeholder: '#757575',
   },
@@ -136,7 +136,7 @@ export const colors = {
   // Badge colors
   badge: {
     default: '#333333',
-    primary: '#C8FF00',
+    primary: '#D8D800',
     secondary: '#222222',
     success: '#4CAF50',
     warning: '#FFC107',

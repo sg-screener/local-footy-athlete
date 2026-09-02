@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
    *
    * Sam, 2026-08-23, looking at this card on his phone: *"i don't know what this
    * says because i can't fucking read it - why are these buttons different style
-   * to normal?"* — white on `#C8FF00`.
+   * to normal?"* — white on `#D8D800`.
    *
    * THE ANSWER TO HIS SECOND QUESTION IS THE CAUSE OF THE FIRST. These are
    * hand-rolled `Pressable`s, not the shared `Button`, so they never inherited

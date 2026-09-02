@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  // Solid circle — slightly deeper than brand lime (#C8FF00) so the success
+  // Solid circle — slightly deeper than brand lime (#D8D800) so the success
   // state reads as refined / mature rather than the high-energy brand
   // accent. Still clearly in the lime family; the glow is rendered by the
   // wrapper. Paired with a white check for a more polished premium feel.

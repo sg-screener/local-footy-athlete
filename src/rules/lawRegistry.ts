@@ -3386,6 +3386,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-08-30 by seat `fatiguecatchup`. TWO OPTIONS COMPARED: store a mutable streak/deload counter beside facts, or derive all effects from dated fatigue facts during canonical reconstruction. Dated derivation landed because expiry, Clear, restart and Sunday boundaries have one source of truth. For missed sessions, a new past-session editor was rejected in favour of the existing Week board with a typed prompt authorization. The pure matrix covers all nine two-day tier combinations, same-day repeats, gaps, Sunday/Monday and cooked precedence. Plumbing cells cover dated action scope, expired history, Clear, the shared lighter compiler, cooked null placement, low-readiness contract reduction, signed notice and removal of the old fatigue opt-in offer. The missed-session tape covers three signed answers and the Week-board route. Past-source destination rules remain in the plan-change producer. UPDATED 2026-08-31 by seat `weightcontrol`: physical feedback withdrew the redundant Week-board heading. test:week-board pins absence at the mounted picker region and signed-copy registry, preserves the real game picker banners, permits Day / Week exit only while unchanged and retains Save changes after an edit. A direct-literal remount mutation killed that cell. UPDATED 2026-09-01 by seat `weekdragux`: the renderer now continuously resolves one magnetic destination from measured day/box frames, with full-gap day locking, live visual/haptic feedback and opaque lifted cards. The named missed item is authorised directly from the visible prompt, and the pure resolver prefers a future empty slot for past work while retaining future occupied-slot swaps. Disabling that preference killed the exact Monday Lower to occupied-half Wednesday cell; a native simulator press-hold-drag verified the magnetic target, swap, landing and Save changes. Verification: STATUS_WEEKDRAGUX.md. NOT COVERED: physical-iPhone Release acceptance, VoiceOver speech, rapid multi-row fling stress and a production Supabase round trip.',
     },
   },
+  {
+    id: 'LAW-the-app-accent-is-yellow-and-the-logo-is-unchanged',
+    law: 'R-361: the app primary accent is #D8D800, its translucent forms use RGB 216/216/0, and shared primary buttons use #B0B000 while pressed. No active app source or pictogram retains the old primary, pressed, light or dark-tint lime values. The supplied LFA wordmark keeps its white default and three-path geometry; semantic status colours are unchanged.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-361',
+    guard: {
+      state: 'guarded',
+      by: 'test:accent-colour',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `accentyellow`. RED FIRST: 5/7 failed — both theme tokens, 42 active files/pictograms and both shared primary-button pressed bindings still carried the old treatment. THE CHANGE: exact primary/pressed values, every active literal and translucent tint, six traced pictograms, and the two shared button primitives moved together; historical ruling text and logo assets were not edited. MUTATION: replacing the primary theme token with the old lime kills both its exact-value cell and the no-old-lime census. Receipt: docs/STATUS_ACCENTYELLOW.md.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

@@ -1121,9 +1121,9 @@ run('unselected Week cards share the darker Day programmed surface', () => {
     'the Week Today card lost its selected surface while darkening the ordinary rows');
   const todayStyle = home.match(/weekDayCardToday:\s*\{[^}]+\}/)?.[0] ?? '';
   assert(/!dayShape && cardSelected && styles\.weekDayCardToday/.test(dayRow)
-    && todayStyle.includes("backgroundColor: '#14160F'")
+    && todayStyle.includes("backgroundColor: '#16160F'")
     && todayStyle.includes('borderWidth: 1')
-    && todayStyle.includes("borderColor: 'rgba(200, 255, 0, 0.24)'")
+    && todayStyle.includes("borderColor: 'rgba(216, 216, 0, 0.24)'")
     && home.includes('testID="day-week-today-pill"'),
   'the Week Today card no longer uses its quiet olive treatment while retaining the TODAY pill');
   assert(/weekCardMeta:\s*\{[^}]*color:\s*'#A0A0A0'/.test(home),

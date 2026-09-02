@@ -152,7 +152,7 @@ export function ActiveModifiersSection({
 const styles = StyleSheet.create({
   coachNotesSection: { paddingTop: 16, gap: 12 },
   coachNotesTitle: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.1,
@@ -160,11 +160,11 @@ const styles = StyleSheet.create({
   coachNotesStack: { gap: 8 },
   coachNoteCard: {
     backgroundColor: '#11140F',
-    borderColor: 'rgba(200, 255, 0, 0.20)',
+    borderColor: 'rgba(216, 216, 0, 0.20)',
   },
   coachNoteContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   coachNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  coachNoteDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8FF00' },
+  coachNoteDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D8D800' },
   coachNoteTitle: { flex: 1, color: '#F5F5F5', fontSize: 14, fontWeight: '700', lineHeight: 18 },
   coachNoteBody: { color: '#A7A7A7', fontSize: 12, lineHeight: 17 },
   coachNoteActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 2 },
@@ -179,9 +179,9 @@ const styles = StyleSheet.create({
     borderColor: '#2A2A2A',
   },
   coachNotePrimaryAction: {
-    backgroundColor: 'rgba(200, 255, 0, 0.13)',
-    borderColor: 'rgba(200, 255, 0, 0.36)',
+    backgroundColor: 'rgba(216, 216, 0, 0.13)',
+    borderColor: 'rgba(216, 216, 0, 0.36)',
   },
   coachNoteActionText: { color: '#CFCFCF', fontSize: 12, fontWeight: '700' },
-  coachNotePrimaryActionText: { color: '#C8FF00' },
+  coachNotePrimaryActionText: { color: '#D8D800' },
 });

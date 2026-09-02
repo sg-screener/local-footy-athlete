@@ -31,7 +31,7 @@ import { colors } from '../../theme/colors';
  * or contrast sensitivity:
  *
  *   • lime border (1.5px, colors.accent.lime)
- *   • lime-tinted fill (rgba(200, 255, 0, 0.12) — ~12% opacity)
+ *   • lime-tinted fill (rgba(216, 216, 0, 0.12) — ~12% opacity)
  *   • gentle upward scale (1.02) — feels like the tile lifts towards you
  *   • corner checkmark badge (18×18, top:6 right:6, lime fill / dark tick)
  *
@@ -111,7 +111,7 @@ export const tileStyles = StyleSheet.create({
    */
   selected: {
     borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.12)',
+    backgroundColor: 'rgba(216, 216, 0, 0.12)',
     transform: [{ scale: 1.02 }],
   },
 
@@ -127,7 +127,7 @@ export const tileStyles = StyleSheet.create({
    */
   selectedGrid: {
     borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
+    backgroundColor: 'rgba(216, 216, 0, 0.04)',
   },
 
   /** Pressed (only applied when NOT selected — keeps selection stable). */

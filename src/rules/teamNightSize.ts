@@ -48,7 +48,7 @@ export const TEAM_NIGHT_SIZE_OPTIONS: readonly {
   readonly color: string;
 }[] = [
   { key: 'light', label: 'Light', color: '#81C784' },
-  { key: 'normal', label: 'Normal', color: '#C8FF00' },
+  { key: 'normal', label: 'Normal', color: '#D8D800' },
   { key: 'hard', label: 'Hard', color: '#EF5350' },
 ];
 

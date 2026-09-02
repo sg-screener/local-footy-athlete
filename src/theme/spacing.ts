@@ -116,7 +116,7 @@ export const shadows = {
   // Colored shadows for dark theme
   accentShadow: {
     elevation: 8,
-    shadowColor: '#C8FF00',
+    shadowColor: '#D8D800',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -124,7 +124,7 @@ export const shadows = {
 
   accentShadowLarge: {
     elevation: 16,
-    shadowColor: '#C8FF00',
+    shadowColor: '#D8D800',
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 16,

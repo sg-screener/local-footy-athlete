@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     width: '22%', minWidth: 58, alignItems: 'center',
   },
   dayChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  dayChipTextSelected: { color: '#C8FF00', fontWeight: '700' },
+  dayChipTextSelected: { color: '#D8D800', fontWeight: '700' },
   // Full-width so it reads as a peer of the day row rather than an eighth day.
   noGameDayTile: {
     alignSelf: 'stretch', alignItems: 'center', marginBottom: spacing.md,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     gap: 6, backgroundColor: '#1A1A1A', borderRadius: borderRadius.lg,
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
   },
-  notePreserved: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
+  notePreserved: { color: '#D8D800', fontSize: 13, fontWeight: '600' },
   noteWiped: { color: '#FF9AA2', fontSize: 13, fontWeight: '500' },
   phaseOption: {
     minHeight: 54,
@@ -454,9 +454,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
   },
-  phaseRadioSelected: { borderColor: '#C8FF00', borderWidth: 3 },
+  phaseRadioSelected: { borderColor: '#D8D800', borderWidth: 3 },
   sheetBody: {
     color: '#B0B0B0', fontSize: 14, lineHeight: 20, textAlign: 'center',
     marginBottom: spacing.md, paddingHorizontal: spacing.sm,

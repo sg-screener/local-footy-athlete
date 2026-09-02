@@ -452,13 +452,13 @@ function HomeScreenClassic() {
             <Text style={styles.modalTitle}>{gameModalLabel}</Text>
 
             <View style={styles.modalCurrentBadge}>
-              <View style={[styles.modalCurrentDot, { backgroundColor: '#C8FF00' }]} />
+              <View style={[styles.modalCurrentDot, { backgroundColor: '#D8D800' }]} />
               <Text style={styles.modalCurrentText}>Game day</Text>
             </View>
 
             {/* Log Game — routes to SessionFeedbackPanel via startFinished */}
             <TouchableOpacity style={styles.modalOption} onPress={handleLogGame} activeOpacity={0.7}>
-              <View style={[styles.modalOptionIcon, { backgroundColor: 'rgba(200, 255, 0, 0.12)' }]}>
+              <View style={[styles.modalOptionIcon, { backgroundColor: 'rgba(216, 216, 0, 0.12)' }]}>
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.accent.lime} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                   <Path d="M12 9a3 3 0 100 6 3 3 0 000-6z" />
@@ -469,7 +469,7 @@ function HomeScreenClassic() {
 
             {/* Move Game Day */}
             <TouchableOpacity style={styles.modalOption} onPress={handleMoveGameDay} activeOpacity={0.7}>
-              <View style={[styles.modalOptionIcon, { backgroundColor: 'rgba(200, 255, 0, 0.12)' }]}>
+              <View style={[styles.modalOptionIcon, { backgroundColor: 'rgba(216, 216, 0, 0.12)' }]}>
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.accent.lime} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M5 12h14" />
                   <Path d="M12 5l7 7-7 7" />
@@ -961,13 +961,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   thisWeekBadge: {
-    backgroundColor: 'rgba(200, 255, 0, 0.12)',
+    backgroundColor: 'rgba(216, 216, 0, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   thisWeekBadgeText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '800',
@@ -979,16 +979,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(200, 255, 0, 0.10)',
+    backgroundColor: 'rgba(216, 216, 0, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.25)',
+    borderColor: 'rgba(216, 216, 0, 0.25)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     marginBottom: spacing.md,
   },
   moveBannerText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: 'rgba(200, 255, 0, 0.12)',
+    backgroundColor: 'rgba(216, 216, 0, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1040,21 +1040,21 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dayRowSelected: {
-    borderColor: '#C8FF00',
-    backgroundColor: '#1A1D12',
+    borderColor: '#D8D800',
+    backgroundColor: '#1D1D12',
   },
   dayRowToday: {
     borderColor: '#444444',
-    backgroundColor: '#141814',
+    backgroundColor: '#181812',
   },
   dayRowMoveSource: {
-    borderColor: 'rgba(200, 255, 0, 0.3)',
+    borderColor: 'rgba(216, 216, 0, 0.3)',
     backgroundColor: '#161616',
     opacity: 0.5,
   },
   dayRowMoveTarget: {
-    borderColor: 'rgba(200, 255, 0, 0.35)',
-    backgroundColor: '#141814',
+    borderColor: 'rgba(216, 216, 0, 0.35)',
+    backgroundColor: '#181812',
   },
 
   // ─── Day header ───
@@ -1076,16 +1076,16 @@ const styles = StyleSheet.create({
     minWidth: 32,
   },
   dayLabelSelected: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
   dayLabelToday: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
   dayLabelMoveTarget: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
   todayBadge: {
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1098,30 +1098,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   gameBadge: {
-    backgroundColor: 'rgba(200, 255, 0, 0.20)',
+    backgroundColor: 'rgba(216, 216, 0, 0.20)',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.35)',
+    borderColor: 'rgba(216, 216, 0, 0.35)',
   },
   gameBadgeText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '800',
     letterSpacing: 1,
   },
   movingBadge: {
-    backgroundColor: 'rgba(200, 255, 0, 0.15)',
+    backgroundColor: 'rgba(216, 216, 0, 0.15)',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.3)',
+    borderColor: 'rgba(216, 216, 0, 0.3)',
   },
   movingBadgeText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '800',
@@ -1146,7 +1146,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   combinedCondLabel: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'right',
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   moveTargetLabel: {
     flex: 1,
-    color: 'rgba(200, 255, 0, 0.5)',
+    color: 'rgba(216, 216, 0, 0.5)',
     fontSize: 14,
     fontWeight: '500',
     fontStyle: 'italic',
@@ -1179,7 +1179,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   viewWorkoutButton: {
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
     paddingVertical: 12,
     borderRadius: borderRadius.md,
     alignItems: 'center',
@@ -1226,7 +1226,7 @@ const styles = StyleSheet.create({
     borderColor: '#2A2A2A',
   },
   quickActionChipHighlight: {
-    borderColor: '#C8FF00',
+    borderColor: '#D8D800',
     backgroundColor: '#1A1E10',
   },
   quickActionText: {
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   quickActionTextHighlight: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
 
   // ─── Season Phase Shift ───
@@ -1254,13 +1254,13 @@ const styles = StyleSheet.create({
   phaseShiftButton: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#C8FF00',
+    borderColor: '#D8D800',
     paddingVertical: 14,
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   phaseShiftButtonText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.2,
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   rebuildNotePreserved: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -1416,7 +1416,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   rebuildConfirmButton: {
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -1459,8 +1459,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   phaseShiftDayChipSelected: {
-    backgroundColor: '#C8FF00',
-    borderColor: '#C8FF00',
+    backgroundColor: '#D8D800',
+    borderColor: '#D8D800',
   },
   phaseShiftDayChipText: {
     color: colors.text.primary,

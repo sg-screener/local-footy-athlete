@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
+    backgroundColor: 'rgba(216, 216, 0, 0.04)',
   },
   cardPressed: {
     backgroundColor: colors.surface.tertiary,

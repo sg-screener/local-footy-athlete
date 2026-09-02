@@ -1422,7 +1422,7 @@ function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, boxed
           <View style={[
             styles.optionIcon,
             danger && !disabled && !neutralIconChip && { backgroundColor: 'rgba(244, 67, 54, 0.12)' },
-            !danger && !disabled && !neutralIconChip && { backgroundColor: 'rgba(200, 255, 0, 0.12)' },
+            !danger && !disabled && !neutralIconChip && { backgroundColor: 'rgba(216, 216, 0, 0.12)' },
           ]}>
             {icon}
           </View>
@@ -1438,7 +1438,7 @@ function MenuOption({ label, sub, icon, danger, neutralIconChip, disabled, boxed
 // recognisable shape per action and per session type — Sam's design ruling 10
 // calls a glyph that does not mean its row a defect, so nothing here is a
 // decorative reuse of a neighbour's shape.
-const ACCENT = '#C8FF00';
+const ACCENT = '#D8D800';
 const DANGER = '#F44336';
 const MUTED = '#5A5A5A';
 
@@ -1628,8 +1628,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   optionBoxedPressed: {
-    backgroundColor: 'rgba(200, 255, 0, 0.06)',
-    borderColor: 'rgba(200, 255, 0, 0.28)',
+    backgroundColor: 'rgba(216, 216, 0, 0.06)',
+    borderColor: 'rgba(216, 216, 0, 0.28)',
   },
   optionWithIcon: {
     flexDirection: 'row',
@@ -1670,14 +1670,14 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#C8FF00',
+    color: '#D8D800',
   },
   secondaryButton: {
     marginTop: 8,
   },
   resultOk: {
     fontSize: 15,
-    color: '#C8FF00',
+    color: '#D8D800',
     lineHeight: 21,
     marginBottom: 16,
   },

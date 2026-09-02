@@ -15,7 +15,7 @@ export const sessionExecutionCheckbox: ViewStyle = {
 
 export const sessionExecutionCheckboxChecked: ViewStyle = {
   borderColor: colors.accent.lime,
-  backgroundColor: 'rgba(200,255,0,0.12)',
+  backgroundColor: 'rgba(216,216,0,0.12)',
 };
 
 export const sessionExecutionCheckmark: TextStyle = {

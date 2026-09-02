@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   },
   dayChip: { width: '22%', minWidth: 58, alignItems: 'center' },
   dayChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  dayChipTextSelected: { color: '#C8FF00', fontWeight: '700' },
+  dayChipTextSelected: { color: '#D8D800', fontWeight: '700' },
   choice: {
     minHeight: 54,
     flexDirection: 'row',
@@ -400,12 +400,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { borderColor: '#C8FF00' },
+  radioSelected: { borderColor: '#D8D800' },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
   },
   check: {
     width: 24,
@@ -417,8 +417,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkSelected: {
-    borderColor: '#C8FF00',
-    backgroundColor: '#C8FF00',
+    borderColor: '#D8D800',
+    backgroundColor: '#D8D800',
   },
   textInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',

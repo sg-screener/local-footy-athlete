@@ -490,10 +490,10 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   optionIconSelected: {
-    backgroundColor: 'rgba(200,255,0,0.12)',
+    backgroundColor: 'rgba(216,216,0,0.12)',
   },
   optionSelected: {
-    borderBottomColor: 'rgba(200,255,0,0.35)',
+    borderBottomColor: 'rgba(216,216,0,0.35)',
   },
   optionLabel: {
     color: colors.text.primary,

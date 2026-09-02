@@ -5314,7 +5314,7 @@ function PlayIcon() {
   // padding so the affordance remains tappable but visually quiet.
   return (
     <Svg width={7} height={7} viewBox="0 0 12 12">
-      <Polygon points="3,2 3,10 10,6" fill="#C8FF00" />
+      <Polygon points="3,2 3,10 10,6" fill="#D8D800" />
     </Svg>
   );
 }
@@ -5340,7 +5340,7 @@ const optionGlyph = (color: string, children: React.ReactNode) => (
     {children}
   </Svg>
 );
-const OPTION_ICON_ACCENT = '#C8FF00';
+const OPTION_ICON_ACCENT = '#D8D800';
 /* `otherOptionIcon` DELETED with the two enums that shared it
  * (`swap_reason` and `add_kind`), both of which are gone. */
 /* `ADD_EXERCISE_KIND_ICON` DELETED with the `add_kind` step it decorated
@@ -5466,9 +5466,9 @@ const styles = StyleSheet.create({
   // padding, no decorations, single accent colour to match the rest
   // of the screen's coach-state vocabulary.
   coachNotesBanner: {
-    backgroundColor: 'rgba(200, 255, 0, 0.06)',
+    backgroundColor: 'rgba(216, 216, 0, 0.06)',
     borderLeftWidth: 2,
-    borderLeftColor: 'rgba(200, 255, 0, 0.55)',
+    borderLeftColor: 'rgba(216, 216, 0, 0.55)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -5504,7 +5504,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 6,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(200, 255, 0, 0.18)',
+    borderTopColor: 'rgba(216, 216, 0, 0.18)',
     gap: 2,
   },
   coachNotesDetailLine: {
@@ -5774,7 +5774,7 @@ const styles = StyleSheet.create({
   // the block; the SUPERSET eyebrow sits above inside the rail indent.
   pairWrap: {
     borderLeftWidth: 2,
-    borderLeftColor: 'rgba(200, 255, 0, 0.14)',
+    borderLeftColor: 'rgba(216, 216, 0, 0.14)',
     paddingLeft: 6,
     paddingTop: 2,
     paddingBottom: 6,
@@ -5922,14 +5922,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.22)',
+    borderColor: 'rgba(216, 216, 0, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.45,
   },
   playBtnActive: {
-    backgroundColor: 'rgba(200, 255, 0, 0.18)',
-    borderColor: 'rgba(200, 255, 0, 0.55)',
+    backgroundColor: 'rgba(216, 216, 0, 0.18)',
+    borderColor: 'rgba(216, 216, 0, 0.55)',
     opacity: 1,
   },
 
@@ -5954,7 +5954,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'stretch',
     borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(200, 255, 0, 0.35)',
+    borderRightColor: 'rgba(216, 216, 0, 0.35)',
     marginRight: 13,
   },
   // Every text line lives in here, so they cannot disagree about their left
@@ -6035,8 +6035,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.12)',
-    backgroundColor: 'rgba(200, 255, 0, 0.025)',
+    borderColor: 'rgba(216, 216, 0, 0.12)',
+    backgroundColor: 'rgba(216, 216, 0, 0.025)',
     overflow: 'hidden',
     // ⚠ `alignSelf: 'flex-start'` DELETED (third pass) — it was a REAL cause of
     // the drift Sam saw, not just the checkbox's `marginTop`. In a row that
@@ -6055,14 +6055,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(200, 255, 0, 0.075)',
+    borderRightColor: 'rgba(216, 216, 0, 0.075)',
   },
   weightBtnRight: {
     width: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(200, 255, 0, 0.075)',
+    borderLeftColor: 'rgba(216, 216, 0, 0.075)',
   },
   weightBtnText: {
     color: colors.accent.lime,
@@ -6175,8 +6175,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   recoveryAddonCard: {
-    borderColor: 'rgba(200, 255, 0, 0.16)',
-    backgroundColor: 'rgba(200, 255, 0, 0.045)',
+    borderColor: 'rgba(216, 216, 0, 0.16)',
+    backgroundColor: 'rgba(216, 216, 0, 0.045)',
   },
   recoveryAddonHeader: {
     flexDirection: 'row',
@@ -6508,8 +6508,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   exerciseEditOptionPressed: {
-    backgroundColor: 'rgba(200, 255, 0, 0.06)',
-    borderColor: 'rgba(200, 255, 0, 0.28)',
+    backgroundColor: 'rgba(216, 216, 0, 0.06)',
+    borderColor: 'rgba(216, 216, 0, 0.28)',
   },
   exerciseEditOptionWithIcon: {
     minHeight: 52,
@@ -6562,8 +6562,8 @@ const styles = StyleSheet.create({
   exerciseEditSuggestionCard: {
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.16)',
-    backgroundColor: 'rgba(200, 255, 0, 0.05)',
+    borderColor: 'rgba(216, 216, 0, 0.16)',
+    backgroundColor: 'rgba(216, 216, 0, 0.05)',
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
     gap: 4,

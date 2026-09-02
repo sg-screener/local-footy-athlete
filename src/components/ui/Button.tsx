@@ -18,10 +18,10 @@ import { Text } from '../common/Text';
  * V2 Button primitive.
  *
  * Variants:
- *   - primary   : Lime fill on dark — main CTA. Has a soft accent glow.
+ *   - primary   : Yellow fill on dark — main CTA. Has a soft accent glow.
  *   - secondary : Surface-toned fill — supportive action.
- *   - outline   : Transparent + lime border — alternate to primary.
- *   - ghost     : No background, lime text — low-emphasis action.
+ *   - outline   : Transparent + yellow border — alternate to primary.
+ *   - ghost     : No background, yellow text — low-emphasis action.
  *   - danger    : Red fill — destructive actions only.
  *
  * Sizes:
@@ -144,12 +144,16 @@ export function Button({
         style={({ pressed }) => [
           styles.base,
           {
-            backgroundColor: bg,
+            backgroundColor: pressed && variant === 'primary' && !disabled && !loading
+              ? colors.accent.limeDark
+              : bg,
             borderColor: border,
             borderWidth: variant === 'outline' ? 1.5 : 0,
             height: HEIGHTS[size],
             paddingHorizontal: PADDINGS[size],
-            opacity: pressed && !disabled && !loading ? press.opacity : 1,
+            opacity: pressed && variant !== 'primary' && !disabled && !loading
+              ? press.opacity
+              : 1,
           },
         ]}
       >

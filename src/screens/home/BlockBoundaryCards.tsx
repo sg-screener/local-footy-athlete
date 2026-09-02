@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  chipPrimary: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
+  chipPrimary: { backgroundColor: '#D8D800', borderColor: '#D8D800' },
   chipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   chipPrimaryText: { color: '#0B0B0B' },
 });

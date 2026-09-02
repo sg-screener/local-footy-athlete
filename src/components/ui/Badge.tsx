@@ -64,9 +64,9 @@ export function Badge({
 function toneStyles(tone: V2BadgeTone) {
   switch (tone) {
     case 'accent':
-      return { bg: '#C8FF00', text: '#0C0C0C', border: 'transparent' };
+      return { bg: '#D8D800', text: '#0C0C0C', border: 'transparent' };
     case 'outline':
-      return { bg: 'rgba(200, 255, 0, 0.15)', text: '#C8FF00', border: 'rgba(200, 255, 0, 0.40)' };
+      return { bg: 'rgba(216, 216, 0, 0.15)', text: '#D8D800', border: 'rgba(216, 216, 0, 0.40)' };
     case 'success':
       return { bg: 'rgba(76, 175, 80, 0.15)', text: '#81C784', border: 'rgba(76, 175, 80, 0.35)' };
     case 'warning':

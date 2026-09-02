@@ -232,7 +232,7 @@ function CloseIcon() {
 function PlayBadge() {
   return (
     <Svg width={56} height={56} viewBox="0 0 56 56">
-      <Circle cx={28} cy={28} r={26} fill="rgba(200, 255, 0, 0.12)" />
+      <Circle cx={28} cy={28} r={26} fill="rgba(216, 216, 0, 0.12)" />
       <Circle
         cx={28}
         cy={28}
@@ -251,20 +251,20 @@ function FilmStripGlyph() {
     <Svg width={72} height={56} viewBox="0 0 72 56">
       <Path
         d="M4 8h64v40H4z"
-        fill="rgba(200, 255, 0, 0.08)"
-        stroke="rgba(200, 255, 0, 0.35)"
+        fill="rgba(216, 216, 0, 0.08)"
+        stroke="rgba(216, 216, 0, 0.35)"
         strokeWidth={1.5}
       />
       {/* sprocket holes (left rail) */}
-      <Circle cx={10} cy={14} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={10} cy={22} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={10} cy={30} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={10} cy={38} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
+      <Circle cx={10} cy={14} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={10} cy={22} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={10} cy={30} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={10} cy={38} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
       {/* sprocket holes (right rail) */}
-      <Circle cx={62} cy={14} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={62} cy={22} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={62} cy={30} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
-      <Circle cx={62} cy={38} r={1.6} fill="rgba(200, 255, 0, 0.55)" />
+      <Circle cx={62} cy={14} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={62} cy={22} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={62} cy={30} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
+      <Circle cx={62} cy={38} r={1.6} fill="rgba(216, 216, 0, 0.55)" />
       {/* play triangle */}
       <Polygon points="32,20 32,36 46,28" fill={colors.accent.lime} />
     </Svg>
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.22)',
+    borderColor: 'rgba(216, 216, 0, 0.22)',
   },
   webview: {
     flex: 1,

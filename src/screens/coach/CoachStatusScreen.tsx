@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   modifierCount: { color: '#8D918D', fontSize: 11, fontWeight: '800', letterSpacing: 0.7 },
   modifierBlock: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#303030' },
   modifierRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#C8FF00' },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#D8D800' },
   modifierText: { flex: 1, minWidth: 0, gap: 3 },
   modifierTitle: { color: '#F2F2F2', fontSize: 15, lineHeight: 19, fontWeight: '700' },
   modifierBody: { color: '#888C88', fontSize: 13, lineHeight: 17 },

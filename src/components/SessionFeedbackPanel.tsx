@@ -140,7 +140,7 @@ interface Props {
 
 const FEELING_OPTIONS: { key: FeedbackFeeling; label: string; color: string }[] = [
   { key: 'easy',      label: 'Easy',      color: '#81C784' },
-  { key: 'good',      label: 'Solid',     color: '#C8FF00' },
+  { key: 'good',      label: 'Solid',     color: '#D8D800' },
   { key: 'hard',      label: 'Hard',      color: '#FFB74D' },
   { key: 'very_hard', label: 'Very Hard', color: '#EF5350' },
 ];
@@ -149,7 +149,7 @@ const FEELING_OPTIONS: { key: FeedbackFeeling; label: string; color: string }[] 
 
 const SORENESS_OPTIONS: { key: FeedbackSoreness; label: string; color: string }[] = [
   { key: 'none',     label: 'None',     color: '#81C784' },
-  { key: 'mild',     label: 'Mild',     color: '#C8FF00' },
+  { key: 'mild',     label: 'Mild',     color: '#D8D800' },
   { key: 'moderate', label: 'Moderate', color: '#FFB74D' },
   { key: 'high',     label: 'High',     color: '#EF5350' },
 ];

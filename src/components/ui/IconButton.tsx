@@ -73,7 +73,7 @@ function toneBg(tone: V2IconButtonTone, disabled: boolean): string {
   if (disabled) return '#1E1E1E';
   switch (tone) {
     case 'accent':
-      return 'rgba(200, 255, 0, 0.14)';
+      return 'rgba(216, 216, 0, 0.14)';
     case 'ghost':
       return 'transparent';
     case 'default':

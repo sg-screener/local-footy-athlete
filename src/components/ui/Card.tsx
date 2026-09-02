@@ -141,15 +141,15 @@ export function Card({
 function toneColors(tone: V2CardTone, selected: boolean) {
   if (selected) {
     return {
-      bg: '#1A1D12',           // lime-tinted dark
-      border: '#C8FF00',       // full-strength lime border
+      bg: '#1D1D12',           // yellow-tinted dark
+      border: '#D8D800',       // full-strength yellow border
     };
   }
   switch (tone) {
     case 'raised':
       return { bg: '#1E1E1E', border: '#2A2A2A' };
     case 'accent':
-      return { bg: '#1A1D12', border: 'rgba(200, 255, 0, 0.35)' };
+      return { bg: '#1D1D12', border: 'rgba(216, 216, 0, 0.35)' };
     case 'outline':
       return { bg: 'transparent', border: '#2A2A2A' };
     case 'default':

@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     width: `${100 / 7}%`, height: 40,
     alignItems: 'center', justifyContent: 'center',
   },
-  cellSelected: { backgroundColor: '#C8FF00', borderRadius: 20 },
+  cellSelected: { backgroundColor: '#D8D800', borderRadius: 20 },
   weekday: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '600' },
   day: { color: '#FFFFFF', fontSize: 15 },
   dayDisabled: { color: 'rgba(255,255,255,0.22)' },

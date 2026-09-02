@@ -26,7 +26,7 @@ import { LfaIcon } from '../../components/icons/LfaIcon';
 // rendering an empty chip). Exported so `EquipmentEditorSheet` (the profile
 // surface asking the same vocabulary) draws the same glyphs — one icon owner
 // for one vocabulary, not two pictures of one fact.
-const EQUIPMENT_ICON_ACCENT = '#C8FF00';
+const EQUIPMENT_ICON_ACCENT = '#D8D800';
 const EQUIPMENT_ICON_MUTED = '#5A5A5A';
 const glyph = (color: string, children: React.ReactNode) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   optionIconAccent: {
-    backgroundColor: 'rgba(200,255,0,0.12)',
+    backgroundColor: 'rgba(216,216,0,0.12)',
   },
   optionRow: {
     flex: 1,

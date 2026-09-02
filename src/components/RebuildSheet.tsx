@@ -45,7 +45,7 @@ export function BuildingState({
 }: BuildingStateProps) {
   return (
     <View style={styles.building}>
-      <ActivityIndicator size="large" color="#C8FF00" style={styles.buildingSpinner} />
+      <ActivityIndicator size="large" color="#D8D800" style={styles.buildingSpinner} />
       <SheetHeader title="Program" subtitle={title} centered />
       <Text style={styles.sheetSubtext}>{durationText}</Text>
       <Animated.View style={{ opacity: msgOpacity }}>
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
     gap: 6, backgroundColor: '#1A1A1A', borderRadius: borderRadius.lg,
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
   },
-  notePreserved: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
+  notePreserved: { color: '#D8D800', fontSize: 13, fontWeight: '600' },
   noteWiped: { color: '#FF9AA2', fontSize: 13, fontWeight: '500' },
   building: {
     alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.md,
   },
   buildingSpinner: { marginBottom: spacing.md },
   buildingMsg: {
-    color: '#C8FF00', fontSize: 14, fontWeight: '500',
+    color: '#D8D800', fontSize: 14, fontWeight: '500',
     textAlign: 'center', minHeight: 20, letterSpacing: 0.2,
   },
   complete: {
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   completeMark: {
     width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#C8FF00', marginBottom: spacing.lg,
+    backgroundColor: '#D8D800', marginBottom: spacing.lg,
   },
   completeTick: { color: '#0C0C0C', fontSize: 30, lineHeight: 34, fontWeight: '800' },
   completeBody: {

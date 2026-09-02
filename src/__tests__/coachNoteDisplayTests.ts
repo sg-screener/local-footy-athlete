@@ -230,7 +230,7 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
       && /attachedWorkoutContext:\s*{[\s\S]{0,80}color:\s*'#7A7A7A'[\s\S]{0,80}fontSize:\s*14/.test(HOME_V2)
       && /attachedWorkoutContextSelected:\s*{[\s\S]{0,80}color:\s*'#7A7A7A'[\s\S]{0,80}fontSize:\s*17/.test(HOME_V2)
       && !/attachedWorkoutContext:\s*{[\s\S]{0,120}#E8E8E8/.test(HOME_V2)
-      && !/attachedWorkoutContext:\s*{[\s\S]{0,120}#C8FF00/.test(HOME_V2),
+      && !/attachedWorkoutContext:\s*{[\s\S]{0,120}#D8D800/.test(HOME_V2),
   );
   ok(
     'Program row has no lime-only workoutContextAccent style',

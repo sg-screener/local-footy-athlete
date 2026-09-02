@@ -106,7 +106,7 @@ function SessionEquipmentBody({
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
             >
               <View style={[styles.icon, !available && styles.iconMissing]}>
-                {equipmentIconFor(requirement.value as any, available ? '#C8FF00' : '#666666')}
+                {equipmentIconFor(requirement.value as any, available ? '#D8D800' : '#666666')}
               </View>
               <View style={styles.rowCopy}>
                 <Text style={[styles.label, !available && styles.missingText]}>
@@ -121,7 +121,7 @@ function SessionEquipmentBody({
               <MaterialCommunityIcons
                 name={available ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
                 size={22}
-                color={available ? '#C8FF00' : '#666666'}
+                color={available ? '#D8D800' : '#666666'}
               />
             </Pressable>
           );
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(200,255,0,0.08)',
+    backgroundColor: 'rgba(216,216,0,0.08)',
   },
   iconMissing: { backgroundColor: '#202020' },
   rowCopy: { flex: 1, marginHorizontal: 14 },

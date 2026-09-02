@@ -193,7 +193,7 @@ function DevLaunchRefused({ reason, onClear }: {
         testID="dev-launch-refused-clear"
         onPress={onClear}
         style={{
-          backgroundColor: '#C8FF00',
+          backgroundColor: '#D8D800',
           borderRadius: 12,
           paddingVertical: 14,
           alignItems: 'center',

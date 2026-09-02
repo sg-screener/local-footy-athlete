@@ -3140,7 +3140,7 @@ function WeekStrip({ weekDays, visibleWeek, activeDate, onSelect }: WeekStripPro
         const markColor = kind === 'game'
           ? '#FFC247'
           : kind === 'training'
-            ? '#C8FF00'
+            ? '#D8D800'
             : '#5E6268';
         return (
           <Pressable
@@ -3725,7 +3725,7 @@ function GameDaySheet({
         label="Move Game Day This Week"
         testID={explorerTestId.fixtureIngress('move', fixtureId)}
         accent
-        icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/><Path d="M12 5l7 7-7 7"/></Svg>}
+        icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/><Path d="M12 5l7 7-7 7"/></Svg>}
         onPress={onMove}
       />
       <SheetOption
@@ -3779,7 +3779,7 @@ function SheetOption({
     >
       <View style={[
         styles.sheetOptionIcon,
-        accent && { backgroundColor: 'rgba(200, 255, 0, 0.12)' },
+        accent && { backgroundColor: 'rgba(216, 216, 0, 0.12)' },
         danger && { backgroundColor: 'rgba(244, 67, 54, 0.12)' },
       ]}>
         {icon}
@@ -3859,7 +3859,7 @@ function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: Mis
           the component would mean giving it a second job to do. */}
       <View style={styles.missedIcon}>
         <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-          stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <Circle cx="12" cy="12" r="9" />
           <Path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.5.2-.8.7-.8 1.2v.4" />
           <Path d="M12 17h.01" />
@@ -4098,7 +4098,7 @@ function WeekReadinessSheet({
             label="Yes — make today lighter"
             testID="readiness-lighter-accept"
             accent
-            icon={checkIcon('#C8FF00')}
+            icon={checkIcon('#D8D800')}
             onPress={() => { if (!lighterDayBusy) onAcceptLighterDay(lighterDayOffer.date); }}
           />
           <SheetOption
@@ -4149,7 +4149,7 @@ function WeekReadinessSheet({
             testID={explorerTestId.readinessClearAction(active.id)}
             accent
             icon={
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M20 6L9 17l-5-5" />
               </Svg>
             }
@@ -4577,12 +4577,12 @@ const styles = StyleSheet.create({
   // Move banner
   moveBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(200, 255, 0, 0.08)',
+    backgroundColor: 'rgba(216, 216, 0, 0.08)',
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md, paddingVertical: 12,
     marginBottom: spacing.md,
   },
-  moveText: { color: '#C8FF00', fontSize: 14, fontWeight: '600' },
+  moveText: { color: '#D8D800', fontSize: 14, fontWeight: '600' },
   moveCancel: { color: '#B0B0B0', fontSize: 14, fontWeight: '600' },
   weekBoardEdit: { gap: spacing.md },
   weekBoardSave: {
@@ -4704,7 +4704,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999,
     borderWidth: 1, borderColor: '#2A2A2A',
   },
-  missedChipPrimary: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
+  missedChipPrimary: { backgroundColor: '#D8D800', borderColor: '#D8D800' },
   missedChipText: { color: '#C9CCC9', fontSize: 12, fontWeight: '700' },
   missedChipPrimaryText: { color: '#0B0B0B' },
 
@@ -4717,7 +4717,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   coachNotesTitle: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.1,
@@ -4727,7 +4727,7 @@ const styles = StyleSheet.create({
   },
   coachNoteCard: {
     backgroundColor: '#11140F',
-    borderColor: 'rgba(200, 255, 0, 0.20)',
+    borderColor: 'rgba(216, 216, 0, 0.20)',
   },
   coachNoteContent: {
     paddingHorizontal: spacing.md,
@@ -4743,7 +4743,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
   },
   coachNoteTitle: {
     flex: 1,
@@ -4774,8 +4774,8 @@ const styles = StyleSheet.create({
     borderColor: '#2F2F2F',
   },
   coachNotePrimaryAction: {
-    backgroundColor: 'rgba(200, 255, 0, 0.13)',
-    borderColor: 'rgba(200, 255, 0, 0.36)',
+    backgroundColor: 'rgba(216, 216, 0, 0.13)',
+    borderColor: 'rgba(216, 216, 0, 0.36)',
   },
   coachNoteActionText: {
     color: '#CFCFCF',
@@ -4783,7 +4783,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   coachNotePrimaryActionText: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
 
   // ─── Week list ───
@@ -4796,9 +4796,9 @@ const styles = StyleSheet.create({
   // the existing Today badge. No colour, typeface or icon system is introduced.
   weekDayCard: { minHeight: 86 },
   weekDayCardToday: {
-    backgroundColor: '#14160F',
+    backgroundColor: '#16160F',
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.24)',
+    borderColor: 'rgba(216, 216, 0, 0.24)',
   },
   weekDayCardCompact: { minHeight: 58 },
   weekDayCardInner: { paddingHorizontal: 12, paddingVertical: 10 },
@@ -4900,9 +4900,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: borderRadius.full,
   },
-  viewToggleOptionActive: { backgroundColor: 'rgba(200,255,0,0.14)' },
+  viewToggleOptionActive: { backgroundColor: 'rgba(216,216,0,0.14)' },
   viewToggleLabel: { color: '#8A8F98', fontSize: 15, fontWeight: '700', letterSpacing: 0.4 },
-  viewToggleLabelActive: { color: '#C8FF00' },
+  viewToggleLabelActive: { color: '#D8D800' },
 
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
   weekStripChip: {
@@ -4914,16 +4914,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
   weekStripChipActive: {
-    backgroundColor: 'rgba(200,255,0,0.12)',
+    backgroundColor: 'rgba(216,216,0,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(200,255,0,0.35)',
+    borderColor: 'rgba(216,216,0,0.35)',
   },
   weekStripDay: {
     color: '#8A8F98', fontSize: 11, lineHeight: 14,
     fontWeight: '700', letterSpacing: 0.6,
   },
-  weekStripDayToday: { color: '#C8FF00' },
-  weekStripDayActive: { color: '#C8FF00' },
+  weekStripDayToday: { color: '#D8D800' },
+  weekStripDayActive: { color: '#D8D800' },
   weekStripDate: { color: '#E8EAED', fontSize: 15, fontWeight: '600' },
   weekStripDateActive: { color: '#FFFFFF' },
   weekStripMark: { width: 5, height: 5, borderRadius: 3 },
@@ -5050,9 +5050,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
-  dayRowMoveSource: { opacity: 0.5, borderColor: 'rgba(200, 255, 0, 0.30)' },
+  dayRowMoveSource: { opacity: 0.5, borderColor: 'rgba(216, 216, 0, 0.30)' },
   dayRowMoveTarget: {
-    borderColor: 'rgba(200, 255, 0, 0.40)', backgroundColor: '#141814',
+    borderColor: 'rgba(216, 216, 0, 0.40)', backgroundColor: '#181812',
   },
 
   // 2, not 14. The 14 was INERT until the header became two rows — the eyebrow
@@ -5170,7 +5170,7 @@ const styles = StyleSheet.create({
     color: '#F4F4F4', fontSize: 18, fontWeight: '700',
   },
   moveTargetLabel: {
-    flex: 1, color: 'rgba(200, 255, 0, 0.55)', fontSize: 14, fontWeight: '500',
+    flex: 1, color: 'rgba(216, 216, 0, 0.55)', fontSize: 14, fontWeight: '500',
     fontStyle: 'italic', textAlign: 'right',
   },
 
@@ -5245,12 +5245,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  phaseRadioSelected: { borderColor: '#C8FF00', borderWidth: 3 },
+  phaseRadioSelected: { borderColor: '#D8D800', borderWidth: 3 },
   phaseRadioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
   },
 
   sheetCurrentBadge: {
@@ -5258,7 +5258,7 @@ const styles = StyleSheet.create({
     gap: 8, marginBottom: spacing.lg,
   },
   sheetCurrentDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#C8FF00',
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#D8D800',
   },
   sheetCurrentText: { color: '#B0B0B0', fontSize: 13, fontWeight: '500' },
 
@@ -5287,7 +5287,7 @@ const styles = StyleSheet.create({
     gap: 6, backgroundColor: '#1A1A1A', borderRadius: borderRadius.lg,
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
   },
-  notePreserved: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
+  notePreserved: { color: '#D8D800', fontSize: 13, fontWeight: '600' },
   noteWiped: { color: '#FF9AA2', fontSize: 13, fontWeight: '500' },
 
   chipGrid: {
@@ -5309,7 +5309,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   phaseSkewTitle: {
-    color: '#C8FF00', fontSize: 14, fontWeight: '700', marginBottom: spacing.xs,
+    color: '#D8D800', fontSize: 14, fontWeight: '700', marginBottom: spacing.xs,
   },
   phaseSkewBody: {
     color: '#BDBDBD', fontSize: 13, lineHeight: 19, marginBottom: spacing.md,
@@ -5318,7 +5318,7 @@ const styles = StyleSheet.create({
     color: '#FF6B6B', fontSize: 12, marginBottom: spacing.sm,
   },
   dayChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  dayChipTextSelected: { color: '#C8FF00', fontWeight: '700' },
+  dayChipTextSelected: { color: '#D8D800', fontWeight: '700' },
   // Full-width so it reads as a peer of the day row rather than an eighth day.
   noGameDayTile: {
     alignSelf: 'stretch', alignItems: 'center', marginBottom: spacing.md,
@@ -5332,7 +5332,7 @@ const styles = StyleSheet.create({
   },
   buildingSpinner: { marginBottom: spacing.md },
   buildingMsg: {
-    color: '#C8FF00', fontSize: 14, fontWeight: '500',
+    color: '#D8D800', fontSize: 14, fontWeight: '500',
     textAlign: 'center', minHeight: 20, letterSpacing: 0.2,
   },
 });

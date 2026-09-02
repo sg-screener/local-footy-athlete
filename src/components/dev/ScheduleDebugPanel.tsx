@@ -408,7 +408,7 @@ function severityBadgeStyle(severity: MismatchSeverity) {
 
 function tierColor(tier: string) {
   switch (tier) {
-    case 'core': return { color: '#C8FF00' };
+    case 'core': return { color: '#D8D800' };
     case 'optional': return { color: '#64B5F6' };
     case 'recovery': return { color: '#81C784' };
     default: return { color: '#888' };
@@ -417,7 +417,7 @@ function tierColor(tier: string) {
 
 function sourceColor(source: string) {
   switch (source) {
-    case 'template': return { color: '#C8FF00' };
+    case 'template': return { color: '#D8D800' };
     case 'gameProximity': return { color: '#FFB74D' };
     case 'game': return { color: '#EF5350' };
     case 'conditioning': return { color: '#64B5F6' };
@@ -441,16 +441,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 90,
     right: 16,
-    backgroundColor: 'rgba(200, 255, 0, 0.15)',
+    backgroundColor: 'rgba(216, 216, 0, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.4)',
+    borderColor: 'rgba(216, 216, 0, 0.4)',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     zIndex: 999,
   },
   fabText: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   headerTitle: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 1,
@@ -505,9 +505,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   tabActive: {
-    backgroundColor: 'rgba(200, 255, 0, 0.15)',
+    backgroundColor: 'rgba(216, 216, 0, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(200, 255, 0, 0.3)',
+    borderColor: 'rgba(216, 216, 0, 0.3)',
   },
   tabText: {
     color: '#666',
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   tabTextActive: {
-    color: '#C8FF00',
+    color: '#D8D800',
   },
 
   // Body
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     ...MONO,
   },
   valueAccent: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 12,
     fontWeight: '700',
     ...MONO,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
 
   // Flags
   flagTrue: {
-    color: '#C8FF00',
+    color: '#D8D800',
     fontSize: 12,
     fontWeight: '700',
   },

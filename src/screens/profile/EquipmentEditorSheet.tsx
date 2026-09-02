@@ -48,7 +48,7 @@ interface EquipmentEditorSheetProps {
  * may ask or offer later, not what it programs. The list is DERIVED from the
  * exercise library, the same one owner as the onboarding step.
  */
-const ITEM_ICON_ACCENT = '#C8FF00';
+const ITEM_ICON_ACCENT = '#D8D800';
 const ITEM_ICON_MUTED = '#5A5A5A';
 
 export function EquipmentEditorSheet({
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#C8FF00',
+    backgroundColor: '#D8D800',
     alignItems: 'center',
     justifyContent: 'center',
   },

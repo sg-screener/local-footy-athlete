@@ -9062,3 +9062,17 @@ there. R-355's doubling is therefore gated to its own case: it fires only
 when the kit offers no unused legal compound at all; a spent weekly seat
 budget is not limited kit (the 52-week audit caught Barbell Row and
 Pull-Ups doubled in week 22 before the gate).
+
+**R-361** · The app accent is yellow, 2026-09-03.
+
+Owner: accentyellow. Sam: "Change the app's accent colour from lime #C8FF00
+to yellow #D8D800, with #B0B000 for the pressed state. Sam's ruling, 3 Sep.
+Logo stays as is." The primary accent is `#D8D800`; translucent accent
+treatments use the same `216, 216, 0` RGB; and the shared primary-button
+pressed state is exactly `#B0B000`. Semantic success, warning, error and info
+colours do not change. The supplied LFA wordmark and brand image assets do not
+change. The existing `lime` / `limeDark` key names remain as compatibility
+names so this colour-only ruling does not create a repo-wide API rename.
+Guard: `LAW-the-app-accent-is-yellow-and-the-logo-is-unchanged` through chained
+`test:accent-colour` (7 cells, including an old-lime mutation).
+Receipt: `docs/STATUS_ACCENTYELLOW.md`.
