@@ -803,7 +803,6 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Banded Dead Bug',
   'McGill Sit Up',
   'Bird Dog',
-  'Side Plank',
   'Ab Wheel',
   'Scap Push-Up',
   // BW prehab / stability (exercisePools bodyweight-tagged)
@@ -882,6 +881,11 @@ export function stepBandResistance(
  * changing the exercise's identity.
  */
 export const BODYWEIGHT_LOADABLE_EXERCISES = new Set([
+  // Sam, 2026-09-02: a plate on the hip / a dumbbell in hand. BW, then
+  // BW + 2.5 kg, the same step every loadable bodyweight lift uses.
+  'Side Plank',
+  'Cossack Squat',
+  'Lateral Lunge',
   'Seated Good Morning',
   'SL 45° Back Extension',
   'SL 45° Back Extension Hold',

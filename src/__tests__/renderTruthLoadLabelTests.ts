@@ -221,6 +221,8 @@ console.log('\n[7] Session controls use the exercise\'s real resistance type');
     'Dips', 'Pull-Ups', 'Chin-Ups', 'Push-ups', 'Inverted Row (Bodyweight)',
     'Glute Bridge', 'Bosch Hold', 'Long-Lever Copenhagen', 'Seated Calf Raise',
     'Single-Leg Calf Raise',
+    // Sam, 2026-09-02: a plate on the hip, a dumbbell in hand — BW then BW + 2.5 kg.
+    'Side Plank', 'Cossack Squat', 'Lateral Lunge',
   ];
   okEmpty('every agreed loadable bodyweight exercise uses BW + kg',
     loadableBodyweight.filter((name) =>

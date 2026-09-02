@@ -53,7 +53,6 @@ import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import {
   blockBoundaryExplanationSentences,
   blockBoundaryLoadMovedSentence,
-  blockBoundaryAddedLoadSentence,
 } from '../rules/projectionCopy';
 import {
   decideBlockBoundaryLoads,
@@ -565,10 +564,18 @@ ok(
   bwAccStored !== 'ABSENT_ROW',
   'the bodyweight-accessory cell would assert nothing',
 );
+// Sam, 2026-09-02: Cossack Squat and Lateral Lunge became loadable lifts, and a
+// loadable lift that is progression-eligible may EARN the lattice's next rung on
+// a qualifying block (R-096 clause 1). The athlete's number is the base either
+// way: the stored load is that number, or that number plus its own increment —
+// never less, never a different lift's number.
+const bwAccessoryRung = smallestPracticalIncrementKg(bwAccessory, bwAccessoryAdded);
 ok(
-  `${bwAccessory} restores the athlete's added +${bwAccessoryAdded}kg`,
-  bwAccStored === bwAccessoryAdded,
-  `expected ${bwAccessoryAdded}, got ${JSON.stringify(bwAccStored)} — added load on a bodyweight accessory was lost`,
+  `${bwAccessory} resumes from the athlete's added +${bwAccessoryAdded}kg (held, or raised by its own rung)`,
+  bwAccStored === bwAccessoryAdded
+    || (bwAccessoryRung !== null && bwAccStored === bwAccessoryAdded + bwAccessoryRung),
+  `expected ${bwAccessoryAdded}${bwAccessoryRung !== null ? ` or ${bwAccessoryAdded + bwAccessoryRung}` : ''}, `
+    + `got ${JSON.stringify(bwAccStored)} — added load on a bodyweight accessory was lost or replaced`,
 );
 
 console.log('\n[8b] THE INCREMENT COMES FROM THE AUTHORED LATTICE, AND HOLDS WHEN IT CANNOT SAY');
@@ -683,10 +690,9 @@ ok(
   `got ${JSON.stringify(bwTopRow)}`,
 );
 ok(
-  'and the athlete-facing added-load sentence renders from that row alone',
-  bwTopRow !== undefined && blockBoundaryAddedLoadSentence(bwTopRow) !== null
-    && blockBoundaryLoadMovedSentence(bwTopRow) === null,
-  'no sentence, or the loaded-lift sentence claimed a BW row',
+  'and the loaded-lift sentence never claims a BW row (the row carries no sentence, by Sam\'s decision)',
+  bwTopRow !== undefined && blockBoundaryLoadMovedSentence(bwTopRow) === null,
+  'the loaded-lift sentence claimed a BW row',
 );
 const bwShort = storedLoadOf(build(2, BLOCK_2_START, bwTopOfRangeHistory(BW_TOP_REPS - 1)), BW_LOADABLE);
 ok(
