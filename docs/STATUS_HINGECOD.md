@@ -248,3 +248,22 @@ on the Friday hinge beside 5-minute aerobic intervals.
 ### NOT COVERED
 
 In-season club weeks keep R-268/P15 by ruling. Everything listed under R-337.
+
+## Addendum 2026-09-02 — final full-year audit at `db534496`
+
+Run from a clean detached checkout of `db5344964f3a74b515a701050ef6ab046efd476b`
+with no production change. Fresh 52-week male and female programmes through the
+R-335 accepted journey: 52/52 weeks, 364 consecutive distinct dates, 52/52 cold
+restarts, 0 refusals, 0 refused actions per athlete. Accepted-journey acceptance
+24/24, focused composition 24/24, strength-budget analyzer PASS/PASS/PASS (0
+repeats, 0 dedicated-ownership breaches, 0 required plane findings with the 4
+injury-week frontal absences as accepted typed exceptions, 0 athletic transverse
+gaps with the typed COD credit), 47 Lower Hinge days per athlete with 0
+knee-dominant rows, off-season build weeks on four training days with no Sunday
+session and no stacked Speed. Two 114-page PDFs, every page auto-verified
+(no blank, clipped, out-of-page or header-only pages; 52 weeks; 364 dates) and
+the named pages inspected by eye. Six audit-tool mistakes in the copied
+cca002a0 tooling were corrected before the final run and are listed with the
+evidence. Outputs: `output/final-full-year-audit-db534496/` (untracked) in the
+main checkout and in the audit checkout; report
+`FINAL_FULL_YEAR_AUDIT.md` beside them.
