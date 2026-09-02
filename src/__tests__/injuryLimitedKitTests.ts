@@ -42,7 +42,7 @@ function check(name: string, condition: boolean, detail = ''): void {
 type Day = { date: string; source?: string; workout?: { name: string; workoutType?: string; injuryAdjustment?: { added: readonly { name: string }[] } | null; exercises: { exercise?: { name?: string } }[] } | null };
 const names = (day: Day | undefined) => (day?.workout?.exercises ?? []).map((row) => row.exercise?.name ?? '');
 const rowsBefore = (weekStart: string, date: string): string[] =>
-  (quiet(() => deriveVisibleWeekLive(weekStart, date)) as Day[])
+  (quiet(() => deriveVisibleWeekLive(weekStart, date)) as unknown as Day[])
     .filter((day) => day.date < date)
     .map((day) => `${day.date} ${day.workout?.name ?? 'rest'}: ${names(day).join(', ')}`);
 
@@ -85,7 +85,7 @@ async function walkTo(archetypeId: string, phaseWeek: number): Promise<string> {
     const weekStart = await walkTo('male-2-novice-home', 8);
     const wednesday = plusDays(weekStart, 2);
     setJourneyClock(wednesday);
-    const days = quiet(() => deriveVisibleWeekLive(weekStart, wednesday)) as Day[];
+    const days = quiet(() => deriveVisibleWeekLive(weekStart, wednesday)) as unknown as Day[];
     const target = days.find((day) => day.date >= wednesday && day.source !== 'game' && (day.workout?.exercises.length ?? 0) > 0)!;
     const edit = quiet(() => applyPlanChange({
       change: { kind: 'remove_session', date: target.date, scope: 'whole_day' },
@@ -107,7 +107,7 @@ async function walkTo(archetypeId: string, phaseWeek: number): Promise<string> {
     const weekStart = await walkTo('female-3-novice-home', 10);
     const report = await reportKnee(weekStart);
     check('CONTROL: the week-10 knee report was accepted', report.ok === true, String(report.message));
-    const injured = (weekStart2: string) => quiet(() => deriveVisibleWeekLive(weekStart2, weekStart2)) as Day[];
+    const injured = (weekStart2: string) => quiet(() => deriveVisibleWeekLive(weekStart2, weekStart2)) as unknown as Day[];
     const week = injured(weekStart);
     const mobility = week.filter((day) => day.workout?.workoutType === 'Mobility');
     check('CONTROL: the week has a Mobility session to protect', mobility.length >= 1);

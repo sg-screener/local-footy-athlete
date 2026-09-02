@@ -372,7 +372,9 @@ async function main(): Promise<void> {
   ok('no 10/10 sprint instruction says easy aerobic only',
     contradictory.length === 0,
     contradictory.map((item: any) => ({ name: logicalName(item.row), notes: item.row?.notes })));
-  const flyItem = finalItems.find((item: any) => /^Fly 20 \(20\+20\)$/i.test(logicalName(item.row)));
+  // The template item union only carries `row` on its exercise member; the
+  // cells below read that member's row, so the find is typed to it.
+  const flyItem: any = finalItems.find((item: any) => /^Fly 20 \(20\+20\)$/i.test(logicalName(item.row)));
   ok('the deload keeps one reduced sharp Speed exposure',
     flyItem?.row?.deloadQualityExposure === true
       && flyItem?.row?.prescribedSets === 3

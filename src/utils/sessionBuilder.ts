@@ -1817,11 +1817,11 @@ export function buildConditioningTemplate(
     // athlete keeps their own session and drops to the sheet's authored low end
     // — same template, same quality, 8 reps becomes 6.
     return composeConditioningRows(template, dateStr, {
-      // A combined Change-of-Direction exposure still begins with its normal
-      // Speed warm-up. The strength half of the day cannot replace sprint and
-      // cutting preparation. Other combined conditioning retains the existing
-      // no-duplicate-warm-up behaviour.
-      omitWarmup: opts?.combined === true && template.quality !== 'cod_decel',
+      // This branch is entered only for the three sprint qualities (the guard
+      // above), so the template is never the combined Change-of-Direction
+      // exposure that keeps its warm-up; that case is answered on the general
+      // path below. Combined speed retains the no-duplicate-warm-up behaviour.
+      omitWarmup: opts?.combined === true,
       authoredMinimumDose: true,
       masKmh: opts?.masKmh ?? null,
       weekInBlock: opts?.weekInBlock,

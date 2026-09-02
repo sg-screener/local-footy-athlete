@@ -34,7 +34,7 @@ import { visibleSignature } from './compilerYear/invariants';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { compileCanonicalInjuryWeek } from '../rules/canonicalWeeklyInjuryCompiler';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
-import type { OnboardingData, SeasonPhase, TrainingProgram, Workout } from '../types/domain';
+import type { Exercise, OnboardingData, SeasonPhase, TrainingProgram, Workout } from '../types/domain';
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 
 armTotalsOrRed();
@@ -532,7 +532,7 @@ run('injury rebuilding spends earlier automatic choices instead of repeating the
         role: 'strength_accessory', strengthPattern: null, mainStrengthPattern: null,
         provenance: 'canonical_row_classifier' },
       exercise: { id: identity.toLowerCase().replace(/\W+/g, '-'), name: identity,
-        description: '' }, createdAt: stampedAt, updatedAt: stampedAt,
+        description: '' } as unknown as Exercise, createdAt: stampedAt, updatedAt: stampedAt,
     }],
     createdAt: stampedAt, updatedAt: stampedAt,
   });
