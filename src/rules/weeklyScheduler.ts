@@ -1924,8 +1924,12 @@ function appSprintNeedPermitted(inputs: WeeklySchedulerInputs): boolean {
   });
   if (missing.length === 0 || inputs.readiness.lowReadiness || inputs.weekKind === 'deload') return false;
   // P15 does not relax the existing nights ceiling, even for a missing quality.
-  const anchorNights = new Set([...inputs.clubNights, ...scheduledGameDays(inputs)]).size;
-  return inputs.phase !== 'In-season' || anchorNights < BIBLE_WEEKLY_CAPS.sprintCodExposures.max;
+  // Fix 4 (Sam, 2026-09-02): EXPOSURES, not distinct days. A game moved onto a
+  // club night is still two high-speed exposures — the §18 ledger counts both
+  // (measured: team_training + game on the same Tuesday, a second club night,
+  // and this top-up made four against the in-season maximum of three).
+  const anchorExposures = inputs.clubNights.length + scheduledGameDays(inputs).length;
+  return inputs.phase !== 'In-season' || anchorExposures < BIBLE_WEEKLY_CAPS.sprintCodExposures.max;
 }
 
 function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {

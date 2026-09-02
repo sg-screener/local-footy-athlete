@@ -79,15 +79,32 @@ function handVerticalSeatsToAnUnseatedFullBodyDay(
   days: readonly WeeklyStrengthBudgetDay[],
   reserved: Partial<Record<WeeklyMainStrengthSlot, string>>,
 ): void {
-  const everySeatReserved = WEEKLY_MAIN_STRENGTH_SLOTS.every((slot) => reserved[slot] !== undefined);
-  if (!everySeatReserved) return;
-  const unseated = days.find((day) => day.strengthIntent.archetype === 'full_body'
-    && !WEEKLY_MAIN_STRENGTH_SLOTS.some((slot) => reserved[slot] === day.planEntryId));
-  if (!unseated) return;
   const pairs = [
     ['horizontal_push', 'vertical_push'],
     ['horizontal_pull', 'vertical_pull'],
   ] as const;
+  const owns = (day: WeeklyStrengthBudgetDay): boolean =>
+    WEEKLY_MAIN_STRENGTH_SLOTS.some((slot) => reserved[slot] === day.planEntryId);
+  // Fix 2 (Sam, 2026-09-02): TWO dedicated upper days claim the same four
+  // seats and "first claim wins" left the second with none — a fixture rebuild
+  // of a five-day week packed four upper mains into Wednesday and composed
+  // Friday's upper day with no main lift, so the week counted two main-strength
+  // days of three. The second upper day takes the vertical planes.
+  for (const day of days) {
+    if (owns(day)) continue;
+    const patterns = new Set(day.strengthIntent.plannedPatterns ?? []);
+    if (day.strengthIntent.archetype === 'full_body' || !(patterns.has('push') || patterns.has('pull'))) continue;
+    for (const [horizontal, vertical] of pairs) {
+      const pattern = horizontal === 'horizontal_push' ? 'push' : 'pull';
+      if (patterns.has(pattern) && reserved[horizontal] !== undefined && reserved[horizontal] === reserved[vertical]) {
+        reserved[vertical] = day.planEntryId;
+      }
+    }
+  }
+  const everySeatReserved = WEEKLY_MAIN_STRENGTH_SLOTS.every((slot) => reserved[slot] !== undefined);
+  if (!everySeatReserved) return;
+  const unseated = days.find((day) => day.strengthIntent.archetype === 'full_body' && !owns(day));
+  if (!unseated) return;
   for (const [horizontal, vertical] of pairs) {
     if (reserved[horizontal] !== undefined && reserved[horizontal] === reserved[vertical]) {
       reserved[vertical] = unseated.planEntryId;

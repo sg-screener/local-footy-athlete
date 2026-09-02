@@ -9,6 +9,7 @@ import { applyConditioningModalityToWorkout } from '../utils/coachModalitySwap';
 import { applyConstraintsToTypedComponents } from '../utils/exposureEngine';
 import { compileActiveExposureConstraints } from './canonicalWeeklyConstraintCompiler';
 import { withoutConditioningComponent } from './strengthRelocationTemplate';
+import { collapseWorkoutToRest, isEmptiedConditioningShell, shouldCollapseWorkoutToRest } from '../utils/workoutContent';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 
 export function compileInjuryConditioning(args: {
@@ -47,7 +48,7 @@ export function compileInjuryConditioning(args: {
     section18ConditioningRole: args.workout.section18ConditioningRole,
   }, { phase: args.profile.seasonPhase, equipment, injury });
   const decision = feasible.conditioningFeasibility;
-  if (!decision || decision.status === 'removed') return withoutConditioningComponent(filtered);
+  if (!decision || decision.status === 'removed') return honestlyEmptyToRest(withoutConditioningComponent(filtered));
   const candidate = { ...args.workout, conditioningFeasibility: decision };
   const family = decision.resolvedSubstitutionFamily;
   const replacement = family === 'bike' || family === 'row' || family === 'ski'
@@ -57,7 +58,19 @@ export function compileInjuryConditioning(args: {
     })
     : applyResolvedConditioningSubstitution(candidate);
   const checked = applyConstraintsToTypedComponents(replacement, constraints).workout;
-  return checked.conditioningBlock?.options.length ? checked : withoutConditioningComponent(filtered);
+  return checked.conditioningBlock?.options.length ? checked : honestlyEmptyToRest(withoutConditioningComponent(filtered));
+}
+
+/**
+ * Fix 5 (Sam, 2026-09-02, "yep do all"): a Conditioning day whose only content
+ * the injury withdrew is not a session any more. It used to survive as an
+ * "Aerobic Conditioning" card with nothing in it (measured on the home-kit
+ * archetypes' knee weeks). The persistable rest shell is the honest answer;
+ * the visible projection shows it as a rest day.
+ */
+function honestlyEmptyToRest(workout: Workout): Workout {
+  return shouldCollapseWorkoutToRest(workout) || isEmptiedConditioningShell(workout)
+    ? collapseWorkoutToRest(workout) : workout;
 }
 
 /** Compose the weekly planner's conditioning with the accepted strength rows.
@@ -72,7 +85,10 @@ export function withPlannedInjuryConditioning(accepted: Workout, planned: Workou
     components.teamTrainingRows.length > 0;
   // A relocated standalone energy session takes its warm-up with it. Keeping
   // the old container would leave a conditioning card containing only Warm-up.
-  if (!hasOtherWork && (accepted.conditioningBlock || accepted.speedBlock)) return planned;
+  if (!hasOtherWork && (accepted.conditioningBlock || accepted.speedBlock)) {
+    return planned && (shouldCollapseWorkoutToRest(planned) || isEmptiedConditioningShell(planned))
+      ? collapseWorkoutToRest(planned) : planned;
+  }
   const conditioningIds = new Set(accepted.conditioningBlock?.options.flatMap(option => option.exerciseIds) ?? []);
   const rows = accepted.exercises.filter(row => row.section18Evidence?.role !== 'conditioning' &&
     !conditioningIds.has(row.id));

@@ -1894,8 +1894,7 @@ export function buildFixtureProjection(args: {
     };
   } else {
     try {
-      target = generateProgramLocally(args.profile, {
-        // A fixture repair is a projection within an already accepted block,
+      const stubOptions = {
         // not acceptance of a new block. Its one-week/changed-layout selection
         // must not replace the block's recorded movement seats during replay.
         recordSelections: false,
@@ -1932,7 +1931,24 @@ export function buildFixtureProjection(args: {
         // Item 1 (Sam, 2026-09-02): the stub composes against the accepted
         // week it is rebuilding, so a day it replaces cannot repeat what the
         // days it keeps already carry.
-        acceptedWeekIdentitiesByDay: acceptedAutomaticIdentitiesByDay(sourceCanonicalWorkouts),
+      } as const;
+      // Fix 3 (Sam, 2026-09-02): the item-1 ledger may only pin lifts on days
+      // the REBUILT week still trains as strength days. A day the fixture takes
+      // — or that becomes a club-night/recovery day beside it — no longer
+      // carries its accepted lifts, and pinning them "elsewhere" locked the
+      // rebuilt week's pull main seat out of the block's own pull (measured: an
+      // added Monday game turned Tuesday's club night strength-less, and the
+      // one full-body day composed a band pull-apart where its pull main was).
+      // A rehearsal without the ledger says which days the stub keeps.
+      const rehearsal = generateProgramLocally(args.profile, stubOptions);
+      const rebuiltStrengthDays = new Set((rehearsal.microcycles[0]?.workouts ?? [])
+        .filter((workout) => workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength'))
+        .map((workout) => workout.dayOfWeek));
+      target = generateProgramLocally(args.profile, {
+        ...stubOptions,
+        acceptedWeekIdentitiesByDay: acceptedAutomaticIdentitiesByDay(
+          sourceCanonicalWorkouts.filter((workout) => rebuiltStrengthDays.has(workout.dayOfWeek)),
+        ),
       });
       targetMicrocycle = target.microcycles[0];
       // WEEK IDENTITY IS THE COVERING WEEK'S, NEVER THE STUB'S (R5.3,

@@ -1008,3 +1008,64 @@ DENOMINATOR 1162 capability owners, 1015 reviewed, **147 unresolved** →
 "ZERO NOT PROVEN". Each unresolved owner needs an explicit review line in
 `scripts/weekly-writer-ownership.json`; this branch's new functions are among
 them. Not a fix this seat can make silently — reported.
+
+## 2026-09-02 (later) — task 1, R-356: the five week-checker notes, all built ("yep do all")
+
+Each note was reproduced through the real doors on the archetype worlds
+(walk with phase shifts, report / fixture add / move, then the same
+evaluation the year runner makes), traced to its rule, then fixed:
+
+1. **Injury conditioning allowance.** The safety policy recorded reductions
+   for sprint and main strength under a lower-body restriction, never for
+   conditioning — and a moderate knee (running trigger) sets no lower-body
+   restriction at all; the withdrawal happens in the exposure filter. Change:
+   the source-fact compiler counts core-conditioning credits the injury
+   withdrew (accepted day carried a `core` block; the day as the athlete sees
+   it after the read-time filter does not) and records them through the new
+   `recordInjuryConditioningWithdrawal` as an `injury_restriction` reduction
+   of `conditioning_core_frequency`. First attempt at the policy level was
+   removed (one owner). Measured: female-3 Pre-season 10 → reduction 4→3, no
+   finding; male-2 Off-season 10 → 4→2 (two sessions withdrawn), no finding.
+2. **Second upper day.** `createWeeklyStrengthBudget`: "first claim wins" left
+   a second dedicated upper day with no seat (a practice match on a five-day
+   home week packed four mains into Wednesday). The second upper day takes
+   the vertical planes. Both upper days now carry mains; no finding.
+3. **Lone strength day.** The extra-game rebuild's one full-body coverage day
+   declared squat, hinge, single-leg pair, push, pull — and the four-compound
+   ceiling was reached before the pull seat (gap "already_on_day"). The
+   item-1 ledger was NOT the cause (verified: it was already empty). Change:
+   `coverageSlotsForFullBodyDay` seats the push/pull pair before the
+   single-leg pair when no other day supplies any upper seat. The rebuilt
+   day now reads Leg Press, RDLs, Bench Press, Single-Arm DB Row as mains; no
+   finding. (Also kept: the fixture stub's item-1 ledger is now scoped by a
+   rehearsal compile to days the rebuilt week still trains as strength days —
+   a game-day club night no longer pins its lifts "elsewhere".)
+4. **Sprint exposures.** `appSprintNeedPermitted` counted DISTINCT DAYS of club
+   nights + games against the in-season maximum; a game moved onto a club
+   night counted once while the §18 ledger counts both. Exposures are counted
+   now; the moved-game week carries no app sprint and no breach.
+5. **Emptied conditioning card.** Two sites: `compileInjuryConditioning` (fold)
+   and `compileCanonicalDayConstraints` (read-time exposure filter) both
+   collapse a Conditioning day left with nothing but its warm-up to the honest
+   rest shell (`isEmptiedConditioningShell`, one predicate). The two-day
+   novice's Saturday "Aerobic Conditioning" card is a rest day.
+
+**Red first** at `4712a17a`: `test:week-checker-allowances` 19/32 (every
+numbered cell red, controls green). After: 32/32. Chained in `test:bible`.
+Law row `LAW-week-checker-judges-what-the-app-could-build`, registry R-356.
+
+**Blast radius after R-356 (branch vs `4712a17a`).** `test:compile` PASSED
+(0 errors). Green: weekly-strength-budget 5/5, three-day-main-seat 22/22,
+injury-limited-kit 16/16, week-checker-allowances 32/32, section18-v2
+141/141, fixture-mutation-transaction 21/21, injury-recomposition 186,
+exercise-intake chain green, session-change-durability 59,
+readiness-load-retention 58, modifier-lifecycle, chained-mutation-continuity
+927/0 (was 924/3 — the same three findings), deload-law 78/78,
+block-two-progression 47/47, accepted-load-carry 10/10. Unchanged inherited:
+weekly-scheduler 9/11, ladder-wide 9/14, composer-severance, slot-coverage
+87/90, full-body-balance 7/8, injury-fallback-journey 2 coverage cells.
+**`compiler-year`: 416 green / 416 reached / 416 required athlete-weeks (8
+athletes × 52).** The one failure key left is the writer-ownership census
+prerequisite (151/1163 unresolved candidate owners; this branch's new
+functions are among them), the same job the release gate's census unit
+needs.

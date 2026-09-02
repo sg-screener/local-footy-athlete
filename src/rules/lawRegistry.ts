@@ -834,6 +834,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-week-checker-judges-what-the-app-could-build',
+    law: 'R-356: (1) a core-conditioning session an injury withdraws with no off-feet replacement is recorded on the week contract as an injury_restriction reduction of conditioning_core_frequency, counted as the athlete sees the week after the read-time exposure filter; (2) a second dedicated upper day takes the vertical push/pull seats instead of none; (3) the week\'s only strength day seats squat, hinge, push and pull before the single-leg pair; (4) the in-season app-sprint top-up counts high-speed EXPOSURES (club nights plus games), not distinct days; (5) a conditioning day emptied to its warm-up collapses to the honest rest shell, at the injury fold and at read.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-356',
+    guard: {
+      state: 'guarded',
+      by: 'test:week-checker-allowances',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST at 4712a17a: 19/32 — the home-kit knee weeks carried planner_selected_target_miss:conditioning 4 vs 3 with no reduction and an empty "Aerobic Conditioning" card; a practice match on a five-day home week left the second upper day with no main (3 vs 2); an added Monday game left the one full-body day with Leg Press, RDLs, Bench Press and a band pull-apart (no pull main); a game moved onto a club night let the app sprint make four high-speed exposures (maximum 3). After: 32/32 on the same worlds through the real doors (injury report, fixture add/move) plus the budget and coverage-order units. Receipt: docs/STATUS_HINGECOD.md.',
+    },
+  },
+  {
     id: 'LAW-canonical-session-work-has-one-visible-owner',
     law: 'R-320: one logical prescription has one canonical session-component owner and appears once in buildSessionTemplate. Typed block membership outranks workout-type fallback; day.rows is the complete athlete-facing export, while speedRows remains evidence and is never appended by audit, HTML or PDF. The weekly deload quality owner is chosen after feasible work is known but before rows are transformed; typed Speed preparation cannot spend the sharp exposure or make a 10/10 Fly say easy aerobic only. Visible titles derive from final canonical component content, and save/restart reconstructs the same answer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-320',

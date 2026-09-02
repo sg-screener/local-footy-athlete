@@ -92,6 +92,33 @@ function addReduction(
   }
 }
 
+/**
+ * Fix 1 (Sam, 2026-09-02): an injury withdrew core-conditioning sessions and
+ * this kit could not replace them off-feet. The withdrawal is recorded as the
+ * authorised reduction it is, so the week is judged without those exposures
+ * instead of against the healthy target. Measured on the home-kit archetypes:
+ * a moderate knee (running trigger) removed the hard running session and the
+ * checker read "4 planned, 3 built" every injured week.
+ */
+export function recordInjuryConditioningWithdrawal(
+  contract: WeeklyExposureContractV2,
+  withdrawnCoreSessions: number,
+): WeeklyExposureContractV2 {
+  if (withdrawnCoreSessions <= 0) return contract;
+  const next = cloneContract(contract);
+  const core = next.conditioning.core;
+  const healthyTarget = core.plannerSelectedTarget ?? core.defaultTarget ?? core.requiredMinimum;
+  addReduction(next, {
+    metric: 'conditioning_core_frequency',
+    reducedTarget: Math.max(0, healthyTarget - withdrawnCoreSessions),
+    reason: 'injury_restriction',
+    detail: `An active injury withdrew ${withdrawnCoreSessions} core-conditioning session(s) and no off-feet `
+      + 'replacement was available on this kit; the week is judged without them.',
+  });
+  applyReductionProjections(next);
+  return next;
+}
+
 function effectiveFrequencyCeiling(
   contract: WeeklyExposureContractV2,
   metric: Section18ReductionMetric,
@@ -339,6 +366,7 @@ export function applyGenerationSafetyToSection18Contract(args: {
       detail: 'An active lower-body or back restriction removes sprint/high-speed exposure and anchor credit.',
     });
   }
+
   // READINESS MAKES NO COUNT REDUCTION (Sam's readiness law, 2026-07-27).
   //
   // Four graduated branches used to live here, cutting main strength to 2 or 0,

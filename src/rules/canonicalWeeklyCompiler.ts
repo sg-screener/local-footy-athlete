@@ -219,12 +219,16 @@ export function compileCanonicalWeek(
     gameDays,
     gameDay: gameDays[0] ?? null,
   };
+  // One answer to "can this athlete condition off their feet this week": the
+  // scheduler's off-leg days and the safety policy's conditioning allowance
+  // (fix 1, 2026-09-02) read the same derivation.
+  const offLegAvailableDays = input.availability
+    ? Object.entries(input.availability.equipmentByDayOfWeek).filter(([, equipment]) =>
+      equipment.conditioningModalities.some(mode => mode !== 'treadmill')).map(([day]) => Number(day))
+    : scheduler.offLegAvailableDays;
   const schedule = scheduleWeek({
     ...scheduler,
-    offLegAvailableDays: input.availability
-      ? Object.entries(input.availability.equipmentByDayOfWeek).filter(([, equipment]) =>
-        equipment.conditioningModalities.some(mode => mode !== 'treadmill')).map(([day]) => Number(day))
-      : scheduler.offLegAvailableDays,
+    offLegAvailableDays,
     appSprintPermitted: input.injury?.blocksAppSprint !== true,
     sprintExposure: input.coaching.sprintExposure,
     appRunningPermitted: input.injury?.lowerBodyRestricted !== true,

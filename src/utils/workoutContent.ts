@@ -37,6 +37,22 @@ export function isExplicitRestStub(
   return !!workout && workout.workoutType === 'Rest' && !hasMeaningfulWorkoutContent(workout);
 }
 
+/**
+ * Fix 5 (Sam, 2026-09-02): a Conditioning day whose block and speed work were
+ * withdrawn (an injury's exposure filter, a removed replacement) and whose only
+ * remaining rows are the warm-up or conditioning-role rows is an emptied
+ * shell, not a session — the warm-up alone is not content the athlete trains.
+ */
+export function isEmptiedConditioningShell(
+  workout: Workout | null | undefined,
+): boolean {
+  if (!workout || workout.workoutType !== 'Conditioning') return false;
+  if ((workout.conditioningBlock?.options ?? []).length > 0 || workout.speedBlock) return false;
+  return (workout.exercises ?? []).every((row) =>
+    row.section18Evidence?.role === 'conditioning'
+    || /^warm[- ]?up$/i.test(String(row.exercise?.name ?? '').trim()));
+}
+
 export function shouldCollapseWorkoutToRest(
   workout: Workout | null | undefined,
 ): boolean {

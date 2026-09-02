@@ -18,7 +18,7 @@ import {
   type ModalityPreference,
 } from './modalityPreferenceLookup';
 import { applyModalityPreferenceToWorkout } from '../utils/coachModalitySwap';
-import { shouldCollapseWorkoutToRest } from '../utils/workoutContent';
+import { collapseWorkoutToRest, isEmptiedConditioningShell, shouldCollapseWorkoutToRest } from '../utils/workoutContent';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from './awaySpans';
 import { getTeamTrainingWorkoutState } from '../utils/teamTraining';
@@ -288,6 +288,14 @@ export function compileCanonicalDayConstraints(input: CanonicalDayConstraintInpu
   }
 
   workoutNow = alignPowerToFinalWorkoutContent(workoutNow).workout;
+  // Fix 5 (Sam, 2026-09-02): a day the exposure filter has emptied — a
+  // running session whose every hard exposure a knee removed, leaving a
+  // "Conditioning" card holding only its warm-up — is not a session any more.
+  // It collapses to the honest rest shell the visible projection shows as
+  // rest (measured on the two-day home-kit novice's Off-season knee week).
+  if (shouldCollapseWorkoutToRest(workoutNow) || isEmptiedConditioningShell(workoutNow)) {
+    workoutNow = collapseWorkoutToRest(workoutNow);
+  }
 
   return {
     day: collapseEmptyVisibleWorkoutShell({

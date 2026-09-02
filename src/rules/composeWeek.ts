@@ -958,6 +958,25 @@ export function coverageSlotsForFullBodyDay(args: {
     if (args.takenByEarlierCoverageDays.has(slot)) continue;
     chosen.push(slot);
   }
+  // Fix 3 (Sam, 2026-09-02): THE WEEK'S ONLY STRENGTH DAY SEATS ITS FOUR
+  // MAINS FIRST. When no other day supplies any push or pull, this day owes
+  // squat, hinge, push AND pull, but the four-compound session ceiling is
+  // reached by squat, hinge, the single-leg pair and the press before the pull
+  // seat is asked — measured on an added Monday game that left one full-body
+  // day carrying Leg Press, RDLs, Lateral Lunge, Nordic Lower, Bench Press and
+  // a band pull-apart, and §18 refusing "no pull main lift". The push/pull
+  // pair moves ahead of the single-leg pair; both pairs stay whole (R-089).
+  const upperSeats: readonly SessionSlot[] = ['horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull'];
+  const noUpperSuppliedElsewhere = !upperSeats.some((slot) => args.suppliedByOtherDays.has(slot));
+  const singleLegPair: readonly SessionSlot[] = ['single_leg_knee', 'single_leg_hip'];
+  const upperPair: readonly SessionSlot[] = ['horizontal_push', 'horizontal_pull'];
+  if (noUpperSuppliedElsewhere && chosen.includes('squat') && chosen.includes('hinge')
+    && singleLegPair.every((slot) => chosen.includes(slot)) && upperPair.every((slot) => chosen.includes(slot))) {
+    const rest = chosen.filter((slot) => !singleLegPair.includes(slot) && !upperPair.includes(slot));
+    const squatHingeEnd = Math.max(rest.indexOf('squat'), rest.indexOf('hinge')) + 1;
+    chosen.splice(0, chosen.length,
+      ...rest.slice(0, squatHingeEnd), ...upperPair, ...singleLegPair, ...rest.slice(squatHingeEnd));
+  }
   // ── THE ONE GUARD: NEVER END MID-PAIR (R-089) ────────────────────────────
   //
   // Walking a paired order can only unbalance a pattern by stopping between a

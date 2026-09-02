@@ -8928,3 +8928,22 @@ the position empty. R-334's "no repeat filler" stands for healthy sessions;
 this is the injured, limited-kit case it left open. Guard:
 `LAW-injured-limited-kit-doubles-up` through chained
 `test:injury-limited-kit`. Receipt: `docs/STATUS_HINGECOD.md`.
+
+**R-356** · The week checker judges what the app could honestly build,
+2026-09-02.
+
+Owner: hingecod. Sam: "yep do all" on the five week-checker notes. (1) An
+injury that withdraws a core-conditioning session with no off-feet
+replacement writes an `injury_restriction` reduction of
+`conditioning_core_frequency` on the week contract (counted as the athlete
+sees the week, after the read-time exposure filter), so an injured week is
+not judged against the healthy target. (2) Two dedicated upper days no
+longer both claim the same four seats; the second takes the vertical push
+and pull. (3) The week's only strength day seats squat, hinge, push and pull
+before the single-leg pair, so the four-compound ceiling never eats its pull
+main. (4) The in-season app-sprint top-up counts high-speed exposures (club
+nights plus games), not distinct days; a game moved onto a club night is two.
+(5) A conditioning day emptied to its warm-up collapses to the honest rest
+shell — at the injury fold and at read. Guard:
+`LAW-week-checker-judges-what-the-app-could-build` through chained
+`test:week-checker-allowances`. Receipt: `docs/STATUS_HINGECOD.md`.

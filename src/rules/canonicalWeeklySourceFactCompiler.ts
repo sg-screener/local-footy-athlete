@@ -2,6 +2,9 @@
  * Live fact acceptance and cold reconstruction supply the same accepted base,
  * fact history and generation inputs. Derived overlays are never fact history.
  */
+import { applyConstraintsToSession, applyConstraintsToTypedComponents } from '../utils/exposureEngine';
+import { compileActiveExposureConstraints } from './canonicalWeeklyConstraintCompiler';
+import { recordInjuryConditioningWithdrawal } from './section18SafetyPolicy';
 import type { OnboardingData, WeekScopedWorkoutOverlay } from '../types/domain';
 import type { CanonicalProgramCompilerInput } from './canonicalProgramCompiler';
 import { compileCanonicalProgram } from './canonicalProgramCompiler';
@@ -271,6 +274,43 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
       recordedLoads: input.recordedLoads,
       ...(historyBeforeISO ? { historyBeforeISO } : {}),
     });
+    // Fix 1 (Sam, 2026-09-02): count the core-conditioning sessions the injury
+    // withdrew outright (accepted day carried a conditioning block; the injured
+    // day carries none) and record them on the week's contract as the
+    // authorised reduction they are. See `recordInjuryConditioningWithdrawal`.
+    let withdrawnCoreSessions = 0;
+    for (const workout of effective.visibleWorkouts) {
+      const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
+      const next = injuryWeek.workoutsByDate[dateISO];
+      const before = equipmentWorkoutsByDate[dateISO];
+      // A core credit is a conditioning block in a core ROLE. The injury may
+      // remove the block outright or turn a hard core run into easy aerobic
+      // work the ledger no longer credits as core — both are withdrawals.
+      const coreCredit = (candidate: typeof before): boolean =>
+        (candidate?.conditioningBlock?.options.length ?? 0) > 0
+        && candidate?.section18Evidence?.conditioningRole === 'core';
+      // The athlete sees the day AFTER the read-time exposure filter, which
+      // can withdraw a hard run the fold left in place (a day the fold already
+      // adjudicated is not filtered again at read). Count what the athlete
+      // sees, not what the fold wrote.
+      const adjudicated = !!next?.injuryAdjustment || (next?.exercises ?? []).some((row) =>
+        !!row.unavailableForInjury || (row as { substitutedFrom?: { cause?: string } }).substitutedFrom?.cause === 'injury');
+      const asRead = (() => {
+        if (!next || adjudicated) return next;
+        try {
+          const exposure = compileActiveExposureConstraints([...constraints]);
+          return applyConstraintsToTypedComponents(
+            applyConstraintsToSession(next, exposure).workout, exposure).workout;
+        } catch {
+          return next;
+        }
+      })();
+      if (coreCredit(before) && !coreCredit(asRead)) withdrawnCoreSessions += 1;
+    }
+    if (withdrawnCoreSessions > 0 && overlays[weekStart]?.exposureContractV2) {
+      overlays[weekStart] = { ...overlays[weekStart], exposureContractV2: recordInjuryConditioningWithdrawal(
+        overlays[weekStart].exposureContractV2!, withdrawnCoreSessions) };
+    }
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
       let next = injuryWeek.workoutsByDate[dateISO];
