@@ -1996,3 +1996,77 @@ families (athlete-added fifth session ownership/edits, scheduled deload
 undo/restart, pre-season speed-substitution mutations, P15 sprint
 questions, full-kit primer options, duplicate-row component identity,
 one off-season restart) — untouched, as asked.
+
+## Athlete-added fifth session — seven cells, two causes, one of them the app (2026-09-03)
+
+**Sam's brief.** Treat the seven `[athlete-owned fifth strength]` cells as one
+root-cause investigation; decide app problem vs stale expectation; prove
+ownership, edits and relaunch survival end to end; leave the other compiler
+families and the double-squat report alone.
+
+**Method.** A throwaway probe (deleted before commit) inlined the block's
+fixture and drove the same doors the phone uses: `applyPlanChange`
+add_category, `executeProgramControlActionDurably` add_exercise,
+`addExerciseAtDate` called directly, `relaunchApp`, then the deriver and the
+door resolver side by side. The generic refusal "nothing on your plan changed"
+hid a throw inside the coach-mutation transaction; the direct call exposed it.
+
+**Cause 1 — stale fixture (tests).** `preseasonAthlete()` had no
+`teamTrainingStopsOverChristmas`. Since 2026-09-01 that answer is part of
+onboarding completeness for a Pre-season athlete with club nights, so
+`coldStartThroughOnboarding` recorded a refusal, `isOnboardingComplete` stayed
+false, and `runQuiescentBoot` rebuilt nothing after relaunch — the fifth
+session vanished on reopen along with everything else. With the answer added
+the install refusal is null and the fifth survives relaunch with its
+`session_add` owner intact. **The same fixture drives the scheduled-deload and
+practice-match restart cells: eight of those went green with it. I changed no
+code in those families.**
+
+**Cause 2 — the app (R-359 addendum).** With the fixture complete, exercise
+Add/Swap were still refused before any relaunch. The direct call threw
+`Section 18 final-week rejection (hard_day_breach:hard_days:6)` from
+`assertLiveWorkoutWrite → requireSection18AcceptedWeek`. The week: Mon
+squat, Tue club + pull, Wed Mobility + athlete-added Full Body Strength, Thu
+club + hinge, Fri push, Sat athlete-added Full Body Strength = six hard days
+against a permitted five. R-359 (this morning) made the generated-week
+contract disclose and said the evaluator "carries the warning" — but
+`section18EffectiveWeekEvaluator` still emitted `hard_day_breach` with
+`severity: 'blocking'`, and `acceptSection18Week` throws on any blocking
+finding under a restoration. So the session Add (a removal constraint, judged
+elsewhere) went through and every exercise edit on that week was refused.
+This is intake's unresolved 2026-08-29 finding, now ruled. Fix: the finding is
+advisory (one word and its detail text); the contract's
+`hardDayMaximumBreach` disclosure is untouched.
+
+**Receipts.**
+- Probe after both fixes: add_exercise `ok:true`, rows 7 → 8, owner
+  `session_add` retained, `exerciseEditedPlacementId` stamped, `dateOverrides`
+  1; after relaunch rows 8, owner intact, override persisted.
+- `test:hard-day-warns` world (4) — the five-gym-day Pre-season athlete with
+  club Tue/Thu adds strength on the strength-free days until the checker
+  reports the breach, then an exercise Add on the added session: **red-first
+  2 red** with the severity flipped back to blocking, **22/22** after.
+- `section18ContractV2Tests` 12b: the six-hard-day breach is a finding, not a
+  blocking violation — **142/142**.
+- `test:canonical-weekly-compiler` slice file: **10562 / 30 → 10577 / 15, 0
+  new reds.** All seven fifth-session cells green. Also green from the fixture
+  alone: the six scheduled-deload cells, "a fixture takes precedence on its
+  occupied day", "practice-match Add survives process death". The 15 that
+  remain are the other families (pre-season speed-substitution mutations,
+  P15 sprint questions, full-kit primer options, duplicate-row component
+  identity, In-season 6-day conditioning maximum, off-season restart, the
+  phase witness) — untouched.
+- `test:compile`: gate PASSED.
+
+**Two findings NOT fixed (outside this family, no ruling asked).**
+1. A merged "Mobility + Full Body Strength" day classifies as `recovery` in
+   `sessionTaxonomy` (its name matches the recovery regex and the function
+   returns early) while the §18 evaluator counts its squat/hinge rows as a hard
+   main-strength day. That is why the suite's loop, counting strength with the
+   visible classifier, added a second session on Saturday. The athlete-visible
+   label of that day is therefore wrong in the same way.
+2. Adding strength onto a day that already has strength ("lower_squat + Full
+   Body Strength") stamps the whole day athlete-added, so the planner-governed
+   main-strength count falls to zero and `required_minimum_shortfall` refuses
+   later edits. Seen in a first draft of world (4); not the athlete's realistic
+   path, recorded for whoever owns session merging.

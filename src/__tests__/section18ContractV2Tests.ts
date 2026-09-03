@@ -847,6 +847,11 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     !has(witnesses.fiveHardDays, 'hard_day_breach') &&
     witnesses.fiveHardDays.advisories.some((finding) => finding.domain === 'hard_days') &&
     has(sixHardDays, 'hard_day_breach'));
+  // R-359 (2026-09-03): the sixth hard day is warned, never refused — the breach
+  // is a finding the athlete sees, not a blocking violation the gateway throws on.
+  ok('12b. the six-hard-day breach is a warning, not a blocking violation (R-359)',
+    sixHardDays.findings.some((finding) => finding.code === 'hard_day_breach' && finding.severity === 'advisory') &&
+    !sixHardDays.blockingViolations.some((finding) => finding.code === 'hard_day_breach'));
 }
 
 console.log('\n-- Section 18 evaluator properties --');

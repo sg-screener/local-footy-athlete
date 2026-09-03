@@ -1559,10 +1559,10 @@ export function evaluateSection18EffectiveWeek(
   const hardBreach = Math.max(0, ledger.restStress.hardDays.length - permittedHardDayMaximum);
   if (hardBreach > 0) {
     addFinding(findings, {
-      code: 'hard_day_breach', severity: 'blocking', domain: 'hard_days',
+      code: 'hard_day_breach', severity: 'advisory', domain: 'hard_days',
       expected: permittedHardDayMaximum,
       actual: ledger.restStress.hardDays.length,
-      detail: 'Hard-day count exceeds the Contract v2 permitted maximum for this phase and mode.',
+      detail: 'Hard-day count exceeds the Contract v2 permitted maximum for this phase and mode. Warned, never refused (R-359): an athlete-added session or a club night can take a week past the maximum, and refusing the week here refused every later exercise edit on it.',
       evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),
     });
   } else if (ledger.restStress.hardDays.length > contract.restStress.preferredHardDayRange.max) {

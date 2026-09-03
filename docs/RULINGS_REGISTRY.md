@@ -9040,6 +9040,27 @@ of opening a new one. Extends R-009, R-007, R-065. · `WORKING` —
 with an accepted shoulder report; five committed days and no sixth opened;
 the cohort's exact Mon/Wed-club shape), red-first at `7dc09008`.
 
+**R-359 addendum, same day (hingecod) — the evaluator's own breach was still
+blocking.** The generated-week contract disclosed, but the §18 effective-week
+evaluator marked `hard_day_breach` BLOCKING, and the accepted-week gateway
+throws on any blocking finding under a restoration — so every exercise edit
+on a week the app had already published past the maximum was refused with
+"nothing on your plan changed" (intake's unresolved 2026-08-29 finding: "Add
+Session permitted the fifth session, then exercise Add refused it"). Witness:
+the Pre-season 5-gym-day athlete with club Tue/Thu who adds strength on
+Wednesday and Saturday (6 hard days, permitted 5). The finding is now
+advisory, as R-359 already said in words; R-274's "athlete-added strength is
+excluded from the Section 18 maximum-breach calculation" stays as written
+for the main-strength maximum. · `WORKING` — `test:hard-day-warns` world (4)
+(red-first: 2 red with the severity flipped back), `section18ContractV2Tests`
+12b, and the seven athlete-owned-fifth cells of
+`test:canonical-weekly-compiler` (30 → 15 red, 0 new). Two findings NOT
+fixed, recorded in `docs/STATUS_HINGECOD.md`: a merged "Mobility + Full Body
+Strength" day reads as recovery to the visible classifier while §18 counts it
+hard; adding strength onto a day that already has strength relabels the whole
+day athlete-added, so the planner-governed count drops and
+`required_minimum_shortfall` refuses later edits.
+
 **R-360** · A new lift borrows its first weight from a logged lift in its
 family, with a cap, 2026-09-03.
 

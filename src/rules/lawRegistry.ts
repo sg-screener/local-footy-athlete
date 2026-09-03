@@ -852,7 +852,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:hard-day-warns',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 7dc09008 on the cohort\'s exact shape (4 gym days, club Mon/Wed): the rollover refused hard_day_permitted_maximum:6 and the shoulder report was refused. Green after: 16/16 across three worlds.',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `hingecod`. RED FIRST at 7dc09008 on the cohort\'s exact shape (4 gym days, club Mon/Wed): the rollover refused hard_day_permitted_maximum:6 and the shoulder report was refused. Green after: 16/16 across three worlds. ADDENDUM 2026-09-03 (hingecod): the effective-week evaluator itself still marked hard_day_breach BLOCKING, so the accepted-week gateway threw on every exercise edit of a week the app had already published — in test:canonical-weekly-compiler the athlete-added fifth session (5 gym days + 2 club nights + the athlete\'s Wednesday and Saturday adds = 6 hard days) was refused with "nothing on your plan changed". The finding is now advisory. RED FIRST: test:hard-day-warns world (4) 1 red with the severity flipped back to blocking; green 22/22 after. Also pinned by section18ContractV2Tests 12b.',
     },
   },
   {

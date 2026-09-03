@@ -229,6 +229,9 @@ function preseasonAthlete(): OnboardingData {
     usualGameDay: undefined,
     gameDay: undefined,
     recentTrainingLoad: 'Very consistent',
+    // A Pre-season athlete with club nights must answer the Christmas question
+    // (2026-09-01) or onboarding never completes and boot rebuilds nothing.
+    teamTrainingStopsOverChristmas: false,
   };
 }
 

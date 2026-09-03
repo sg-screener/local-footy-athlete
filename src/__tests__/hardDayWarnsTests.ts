@@ -35,6 +35,11 @@ import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekE
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
+import { applyPlanChange } from '../utils/planChangeProducer';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
+import { legalAddCandidates, legalAddFamilies } from '../utils/addExerciseCandidates';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
@@ -146,6 +151,67 @@ async function reportShoulder(date: string) {
     setJourneyClock(wednesday);
     const report = await reportShoulder(wednesday);
     check('R-359 (1): a shoulder report on that week is accepted', report.ok === true, String(report.message));
+  }
+
+  // ── (4) The athlete's own sessions take the week PAST the permitted maximum: an exercise edit is still not refused ──
+  // Before 2026-09-03 the effective-week evaluator marked `hard_day_breach`
+  // blocking, so the accepted-week gateway threw on every exercise edit of a
+  // week the app had already published: in test:canonical-weekly-compiler the
+  // athlete-added fifth session was refused with "nothing on your plan changed".
+  // The breach is a warning: the edit lands and the warning stays.
+  {
+    const archetype: Archetype = {
+      id: 'five-day-club-tue-thu', gender: 'male', days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      experience: '5+ years', equipment: 'commercial', initialPhase: 'Pre-season',
+      clubDays: ['Tuesday', 'Thursday'], gameDay: null, extraGame: false,
+    };
+    const { weekStart, refusal } = await walkTo(archetype, 'Pre-season', 2);
+    check('CONTROL: the five-day athlete with two club nights rolled over', refusal === null, String(refusal));
+    setJourneyClock(weekStart);
+    const weekDays = () => quiet(() => deriveVisibleWeekLive(weekStart, weekStart)) as unknown as Day[];
+    let editDate = '';
+    for (const day of weekDays()) {
+      if (judge(weekStart).findings.some((finding) => finding.code === 'hard_day_breach')) break;
+      if (day.workout && classifyVisibleSession(day.workout as never).contributions.mainStrength > 0) continue;
+      const result = quiet(() => applyPlanChange({
+        change: { kind: 'add_category', date: day.date, category: 'strength_full' },
+        visibleWeek: weekDays(), todayISO: weekStart, applyOverride: () => undefined,
+      } as never)) as { ok?: boolean };
+      if (result.ok) editDate = day.date;
+    }
+    const breachBefore = judge(weekStart).findings.find((finding) => finding.code === 'hard_day_breach');
+    check('CONTROL: the athlete\'s own added sessions take the week past the permitted hard-day maximum',
+      !!breachBefore && !!editDate, JSON.stringify({ editDate, findings: judge(weekStart).findings.map((f) => f.code), week: describe(weekDays()) }));
+    const target = () => weekDays().find((day) => day.date === editDate);
+    const names = (target()?.workout?.exercises ?? []).map((r) => r.exercise?.name ?? '').filter(Boolean);
+    const environment = quiet(() => resolveTapSwapEnvironment({
+      date: editDate, profile: useProfileStore.getState().onboardingData,
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints, readinessSignal: null,
+    }));
+    const addArgs = { environment, profile: useProfileStore.getState().onboardingData, existingExerciseNames: names };
+    const candidate = quiet(() => legalAddFamilies(addArgs)
+      .flatMap((family) => family.groups.flatMap((group) => group.leaves.flatMap((leaf) =>
+        legalAddCandidates({ ...addArgs, leaf: leaf.id })))))[0];
+    check('CONTROL: the athlete-added session has a legal Add candidate', names.length > 0 && !!candidate, describe([target() as Day]));
+    const added = candidate
+      ? await quietAsync(() => executeProgramControlActionDurably({
+          type: 'add_exercise',
+          source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+          scope: 'today_only', payload: { date: editDate, exercise: candidate },
+          requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+        } as never, { todayISO: weekStart })) as { ok?: boolean; message?: string }
+      : null;
+    let directError = 'none';
+    if (added?.ok !== true && candidate) {
+      try { quiet(() => require('../utils/coachActions').addExerciseAtDate({ date: editDate, exercise: candidate })); }
+      catch (error) { directError = String((error as Error).message); }
+    }
+    check('R-359 (4): an exercise Add on the week past the hard-day maximum is not refused',
+      added?.ok === true && (target()?.workout?.exercises ?? []).some((r) => r.exercise?.name === candidate?.name),
+      JSON.stringify({ added, directError, week: describe(weekDays()) }));
+    const breachAfter = judge(weekStart).findings.find((finding) => finding.code === 'hard_day_breach');
+    check('R-359 (4): the week checker still carries the hard-day breach, as a warning',
+      !!breachAfter && breachAfter.severity === 'advisory', JSON.stringify(breachAfter ?? null));
   }
 
   // ── (2) At the cap by the athlete's own days: the app opens no sixth day for speed ──
