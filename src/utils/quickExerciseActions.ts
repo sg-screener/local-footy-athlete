@@ -95,11 +95,40 @@ export function rankedQuickSwapChoices(args: {
     reason: candidate.proximity === 'same_leaf'
       ? 'Legal option from the same exercise group.'
       : 'Legal option from the same session family.',
+    /**
+     * ⚠ **A SWAP IS NOT AN ADD, SO IT DOES NOT BRING THE ADD MENU'S DOSE.**
+     *
+     * `swapSuggestionPayload`'s header already states the rule this line was
+     * breaking: *"The DOSE carries over from the row being replaced — sets, rep
+     * range, rest, per-side. A dose belongs to the SLOT the new movement steps
+     * into."* `buildSwapSuggestionPayload` spreads a choice's `prescription`
+     * LAST, so `sets` / `repsMin` / `repsMax` copied out of the Add candidate
+     * displaced the slot's dose every time this source won.
+     *
+     * **SEEN ON GLASS 2026-09-04.** Inside a Recovery session, swapping the
+     * authored `Outdoor Walk` (`1 × 10 min`, the recovery pool's own dose) for
+     * `Light Walk or Stationary Bike` rendered **`2 × 12 min`** — `bandFor`'s
+     * untagged default, wearing the outgoing row's `duration_minutes` unit. Sam
+     * ruled that row at ten minutes (`LAW-standalone-mobility-recovery-session-
+     * parity`: *"one easy-cardio effort at 5-10 minutes"*, shown as one high-end
+     * target), so the Add menu's guess was overwriting a signed dose.
+     *
+     * **WHAT STILL COMES ACROSS IS WHAT BELONGS TO THE EXERCISE, NOT THE SLOT** —
+     * its unit (`prescriptionType`), whether it is per side, its note and its
+     * load. Those are facts about the movement and cannot be inherited from the
+     * row leaving — `perSide` above all, because a unilateral movement stepping
+     * into a bilateral slot must still read "/ side". Rest is named in the
+     * header's dose list, so it stays with the slot too.
+     *
+     * ⚠ **A WIDER DIVERGENCE IS MEASURED AND NOT FIXED HERE.** `bandFor`
+     * re-derives a dose from tags for names whose dose is AUTHORED in
+     * `POOL_REGISTRY` — 88 of the 105 pool names disagree with their own pool
+     * entry (`Face Pull` authored `3 × 15-20`, offered `2 × 10-12`). That is a
+     * second dose owner for authored rows and it belongs to the Add menu, not to
+     * this swap seam; it changes every Add dose in the app and needs its own
+     * ruling and device pass. Reported, not swept.
+     */
     prescription: {
-      sets: candidate.sets,
-      repsMin: candidate.repsMin,
-      repsMax: candidate.repsMax,
-      restSeconds: candidate.restSeconds,
       notes: candidate.notes,
       ...(candidate.weightKg !== null ? { weight: candidate.weightKg } : {}),
       ...(candidate.prescriptionType ? { prescriptionType: candidate.prescriptionType } : {}),

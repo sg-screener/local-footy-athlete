@@ -1411,12 +1411,38 @@ export function buildDerivedSession(
  * `composedOptionalKind` used to die here — the builder consumed the type and
  * emitted name-only identity, so a Gunshow reached the athlete's card as the
  * generic word "Strength". Stamped from the `DerivedSessionType` the builder
- * already receives; the recovery variants stamp nothing (recovery is a
- * charter-deleted type — nothing may carry its identity forward).
+ * already receives.
+ *
+ * ⚠ **THE RECOVERY VARIANTS STAMP IT TOO, AND THAT IS A REVERSAL.** They stamped
+ * nothing while recovery was *"a charter-deleted type — nothing may carry its
+ * identity forward"*. `LAW-standalone-mobility-recovery-session-parity` (Sam,
+ * 2026-08-21) un-deleted it: *"recovery should be it's own session"*. What the
+ * missing stamp left behind was a session whose recovery identity had to be
+ * RE-DERIVED downstream from `workoutType === 'Recovery'`, so any owner that
+ * recomputes a type could lose it.
+ *
+ * **THE PRICE, MEASURED 2026-09-04.** Untagged, a composed Recovery session
+ * reached `finaliseWorkoutAfterMutation`'s full pass, which classifies rows by
+ * NAME: `Light Walk or Stationary Bike` reads as conditioning, so the athlete's
+ * 10-minute easy walk was promoted into a typed conditioning block
+ * (`promoted_to_typed_conditioning`), wore a "Bike" modality subtitle, lost its
+ * `1 × 10 min` dose line and sorted BEHIND the breathing row Sam authored last.
+ * Sam, seeing it: *"a light 10/min walk or bike should not be called
+ * conditioning - recovery walk or bike should be it's own thing and just sit
+ * inside a recovery session as part of it"*.
+ *
+ * **THE STAMP IS THE FIX, NOT A NEW GUARD BESIDE THE OLD ONE.** That pass
+ * already stands down for a session carrying this marker, for exactly this
+ * reason — *"Filling a pattern is authoring, and authoring belongs to the
+ * composer"*. And the reader predates the writer: `projectVisibleWeek`'s
+ * `partHeadline` was ALREADY branching on `optional === 'recovery'`.
  */
 const COMPOSED_OPTIONAL_KIND_BY_TYPE: Partial<
   Record<DerivedSessionType, NonNullable<Workout['composedOptionalKind']>>
 > = {
+  recovery: 'recovery',
+  passive_recovery: 'recovery',
+  extended_recovery: 'recovery',
   arms_pump: 'gunshow',
   prehab_accessories: 'prehab',
   mobility: 'mobility',

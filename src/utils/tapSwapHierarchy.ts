@@ -119,10 +119,22 @@ export interface TapSwapChoice {
     | 'recovery_fallback'
     | 'rest_fallback';
   reason: string;
+  /**
+   * What this CHOICE states for itself. Anything it leaves out is inherited
+   * from the row being replaced — see `swapSuggestionPayload`'s header: *"A dose
+   * belongs to the SLOT the new movement steps into."*
+   *
+   * ⚠ **`sets` / `repsMin` / `repsMax` ARE OPTIONAL, AND THAT IS THE POINT.**
+   * They were required, so every source had to state a dose whether or not it
+   * had one to state — and `add_hierarchy_fallback`, whose only dose is the Add
+   * menu's `bandFor` guess, therefore overwrote authored slot doses (a Recovery
+   * session's signed `1 × 10 min` walk became `2 × 12 min`, seen on glass
+   * 2026-09-04). A choice that knows only WHICH movement now says only that.
+   */
   prescription?: {
-    sets: number;
-    repsMin: number;
-    repsMax: number;
+    sets?: number;
+    repsMin?: number;
+    repsMax?: number;
     weight?: number;
     prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
     restSeconds?: number;

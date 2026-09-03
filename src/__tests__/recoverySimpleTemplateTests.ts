@@ -14,6 +14,11 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { buildDerivedSession, DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { buildSessionTemplate, sessionListLabels } from '../utils/sessionTemplate';
 import { buildSessionExecutionPlan } from '../utils/sessionExecutionChecklist';
+import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { buildSwapSuggestionPayload } from '../utils/swapSuggestionPayload';
+import { rankedQuickSwapChoices } from '../utils/quickExerciseActions';
+import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
+import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
 import { getSessionComponents, getSessionComponentRows } from '../utils/sessionComponents';
 import {
   MOBILITY_REGIONS,
@@ -144,6 +149,141 @@ for (const [name, workout, expectedPresentation, expectedSection] of [
       && plan.sections[0].id === expectedSection
       && plan.sections[0].items.length === workout.exercises.length,
     plan.sections.map((section) => [section.id, section.items.length]));
+}
+
+/**
+ * ⚠ **[4b] EXISTS BECAUSE [4] MEASURED ONE DATE'S DRAW AND CALLED IT THE SHAPE.**
+ *
+ * Every cell above builds `recovery` once, on `DATE`, and asserts against
+ * whatever the pool rotation happened to hand it. On 2026-08-21 that is
+ * `Incline Treadmill Walk`. The easy-cardio pool has THREE members and they do
+ * not behave alike downstream: `Light Walk or Stationary Bike` is the one whose
+ * NAME the conditioning classifier recognises, so it is the one this suite could
+ * never see — and it is the one Sam was looking at on 2026-09-04, filed under a
+ * **Conditioning** heading with its minutes gone:
+ *
+ *   *"a light 10/min walk or bike should not be called conditioning - recovery
+ *   walk or bike should be it's own thing and just sit inside a recovery session
+ *   as part of it ... it also doesn't say how long the light bike or walk should
+ *   be"*.
+ *
+ * ⚠ **AND [4] ASSERTS AGAINST THE BUILDER, NOT THE APP.** `buildDerivedSession`
+ * is not what the athlete's Add door persists: the materialiser runs the built
+ * session through `finaliseWorkoutAfterMutation` before it is stored. That pass
+ * is where the row was promoted (`promoted_to_typed_conditioning`), where the
+ * "Bike" modality subtitle came from, and where the walk sorted BEHIND the
+ * breathing row Sam authored last. **Every cell here runs the write path**, so a
+ * defect that only the writer can cause is inside this suite's reach.
+ *
+ * MUTATION-PROVEN 2026-09-04: removing `recovery` from
+ * `COMPOSED_OPTIONAL_KIND_BY_TYPE` reds the bike world's section, order and
+ * modality cells and nothing else; restoring it returns the suite to green.
+ */
+console.log('\n[4b] Every easy-cardio draw survives the WRITE path, not just the builder');
+for (const cardio of EASY_CARDIO_POOL) {
+  const built = buildDerivedSession(
+    'recovery', DATE, 'microcycle', 'Recovery day', DEFAULT_ATHLETE_CONTEXT,
+  );
+  if (!built) { ok(`${cardio.name}: the session builds`, false); continue; }
+  /* The rotation decides WHICH cardio row a date draws; this suite decides
+     which one it is measuring. Substituting the name in place is the only way
+     to reach all three worlds from one date without asserting against a
+     rotation the product is free to change. */
+  const world = {
+    ...built,
+    exercises: built.exercises.map((row: any) =>
+      EASY_CARDIO_POOL.some((entry) => entry.name === row.exercise?.name)
+        ? { ...row, exercise: { ...row.exercise, name: cardio.name } }
+        : row),
+  };
+  const stored = finaliseWorkoutAfterMutation(
+    world as any, { date: DATE, planIntentValid: false } as any,
+  ).workout;
+  const template = buildSessionTemplate(stored);
+  const plan = buildSessionExecutionPlan({ workout: stored, template, mobilityFlow: null });
+  const items = template.items.filter((item) => item.kind === 'exercise');
+  const cardioItem: any = items.find((item: any) => item.row?.exercise?.name === cardio.name);
+
+  ok(`${cardio.name}: the stored session is one Recovery section`,
+    plan.sections.length === 1 && plan.sections[0].id === 'recovery'
+      && plan.sections[0].items.length === stored.exercises.length,
+    plan.sections.map((section) => [section.id, section.items.length]));
+  ok(`${cardio.name}: no conditioning block is invented on a recovery session`,
+    !stored.conditioningBlock && !stored.conditioningFlavour && !stored.conditioningCategory,
+    stored.conditioningBlock);
+  ok(`${cardio.name}: the row keeps the recovery presentation and a number`,
+    !!cardioItem && cardioItem.presentation === 'recovery'
+      && sessionListLabels(template.items)[items.indexOf(cardioItem)] !== null,
+    cardioItem?.presentation);
+  ok(`${cardio.name}: it wears no conditioning modality subtitle`,
+    !!cardioItem && cardioItem.modalityLabel === undefined, cardioItem?.modalityLabel);
+  ok(`${cardio.name}: its dose is the authored high-end target in minutes`,
+    formatLowLoadSetsReps(cardioItem?.row) === '1 × 10 min',
+    formatLowLoadSetsReps(cardioItem?.row));
+  ok(`${cardio.name}: breathing still finishes the session — Sam's "to finish"`,
+    BREATHING_RESET_POOL.some((entry) =>
+      entry.name === stored.exercises[stored.exercises.length - 1]?.exercise?.name),
+    stored.exercises.map((row: any) => row.exercise?.name));
+}
+
+/**
+ * ⚠ **[4c] A SWAP INSIDE A LOW-LOAD SLOT KEEPS THE SLOT'S DOSE.**
+ *
+ * Seen on glass 2026-09-04: swapping the authored `Outdoor Walk` (`1 × 10 min`)
+ * for `Light Walk or Stationary Bike` rendered `2 × 12 min`. The Add menu's
+ * `bandFor` guess reached `buildSwapSuggestionPayload` as a `prescription` and
+ * that spread wins last, so it displaced a dose Sam signed. The choice source
+ * now states only what belongs to the MOVEMENT; the dose stays with the slot,
+ * which is what `swapSuggestionPayload`'s own header has always said.
+ */
+console.log('\n[4c] A swap into a recovery slot keeps the authored dose');
+{
+  const slot = {
+    prescribedSets: 1, prescribedRepsMin: 5, prescribedRepsMax: 10,
+    prescriptionType: 'duration_minutes', restSeconds: 0,
+    exercise: { name: 'Outdoor Walk' },
+  };
+  /**
+   * ⚠ **THE REAL CHOICE, NOT A HAND-BUILT ONE.** A payload assembled here would
+   * assert this file's own idea of what the swap door emits, and the door is
+   * exactly what was wrong. `rankedQuickSwapChoices` is what the screen calls,
+   * so the prescription under test is the one an athlete's tap produces.
+   */
+  const choices = rankedQuickSwapChoices({
+    originalExercise: 'Outdoor Walk',
+    reason: 'preference',
+    /* Assembled through the environment's OWN owner, not by hand: a literal
+       here would be a fixture asserting this file's guess at the shape, and a
+       missing field reads as "no equipment" rather than as an error. */
+    environment: resolveTapSwapEnvironment({
+      date: DATE,
+      profile: athleteAnswers({ ...ARCHETYPES[6], initialPhase: 'In-season', extraGame: false }),
+      gameDates: [],
+      activeConstraints: [],
+      readinessSignal: null,
+    }),
+    existingExerciseNames: [],
+  });
+  const bike = choices.find((choice) => choice.name === 'Light Walk or Stationary Bike');
+  ok('the swap door really offers the bike in place of the walk', !!bike,
+    choices.map((choice) => choice.name));
+  const payload = buildSwapSuggestionPayload(
+    'Light Walk or Stationary Bike', slot, bike?.prescription ?? {},
+  );
+  ok('the swap inherits the slot sets and rep range',
+    payload.sets === 1 && payload.repsMin === 5 && payload.repsMax === 10,
+    [payload.sets, payload.repsMin, payload.repsMax]);
+  ok('and therefore still reads as the ten-minute target',
+    formatLowLoadSetsReps({
+      prescribedSets: payload.sets,
+      prescribedRepsMin: payload.repsMin,
+      prescribedRepsMax: payload.repsMax,
+      prescriptionType: payload.prescriptionType,
+      exercise: { name: payload.name },
+    }) === '1 × 10 min');
+  ok('no swap choice source may state a dose it does not own',
+    !/\bsets: candidate\.sets\b/.test(
+      fs.readFileSync(path.resolve(__dirname, '../utils/quickExerciseActions.ts'), 'utf8')));
 }
 
 console.log('\n[5] Low-load doses use one high-end target');

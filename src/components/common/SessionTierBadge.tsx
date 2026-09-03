@@ -69,12 +69,30 @@ export const SessionTierBadge: React.FC<SessionTierBadgeProps> = ({ tier, style,
   );
 };
 
+/**
+ * ⚠ **ONE NUMBER, NOT EIGHT REPAINTED COLOURS** (Sam, 2026-09-04: *"these
+ * badges i.e. core, recovery, etc - they're taking up too much attention - drop
+ * their opacity down to 50%"*).
+ *
+ * The chip competes because it is a saturated fill AND a bright bold word in the
+ * same 14pt slot. Fading the whole `View` halves both at once and keeps the four
+ * tones in the same relation to each other; hand-dimming the eight values in
+ * `TIER_CONFIG` would be four pairs of numbers to keep in step, which is how the
+ * DONE badge drifted out of this component's geometry in the first place (see
+ * the header). It also stays correct if a fifth tier is ever added.
+ *
+ * Applied to the badge, never to the row: the session NAME beside it keeps its
+ * full contrast, which is the point — the badge recedes so the name reads first.
+ */
+const BADGE_DE_EMPHASIS = 0.5;
+
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
+    opacity: BADGE_DE_EMPHASIS,
   },
   compactBadge: {
     paddingHorizontal: 6,
