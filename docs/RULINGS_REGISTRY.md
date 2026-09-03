@@ -9063,6 +9063,16 @@ there. R-355's doubling is therefore gated to its own case: it fires only
 when the kit offers no unused legal compound at all; a spent weekly seat
 budget is not limited kit (the 52-week audit caught Barbell Row and
 Pull-Ups doubled in week 22 before the gate).
+**R-355 scope, second correction, 2026-09-03 (hingecod).** The gate above
+over-reached: a lower-back report on a lower day pauses EVERY row, the weekly
+seat budget refuses every unused upper compound, and with doubling gated off
+the day kept nothing and added nothing — so the apply step (R-115: never a
+blank day) left all five unsafe rows standing with "could not be made safe.
+Skip those" (`test:injury-fallback-journey` "lower back, limiting", red from
+`4e2ebbf2`, green at `cee3c49e`). R-355(c)'s own words are "before leaving the
+position empty": doubling now fires when the kit has no unused compound OR
+when the day keeps nothing. The week-22 calf day kept rows, so it still does
+not double (`test:injury-limited-kit` 16/16 unchanged).
 
 **R-361** · The app accent is yellow, 2026-09-03.
 

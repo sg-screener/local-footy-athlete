@@ -398,8 +398,16 @@ export function chooseInjurySessionAdditions(args: {
   // calf injury, week 22): every upper seat was already spent for the week,
   // the selector refused the unused compounds as mains, and the repeat rung
   // then doubled Barbell Row and Pull-Ups on top of the days that had them.
-  // Doubling fires only when the kit offers no unused legal compound at all.
-  if (chosen.length === 0 && compounds.length === 0) {
+  // Doubling fires only when the kit offers no unused legal compound at all —
+  // OR when the day keeps nothing. R-355(c)'s own words: repeat a safe
+  // compound "before leaving the position empty". A lower-back report on a
+  // lower day pauses every row; with the unused bench refused by the weekly
+  // seat budget and no repeat, the day had nothing kept and nothing added, so
+  // the apply step (R-115: never a blank day) left every unsafe row standing
+  // with "could not be made safe" (red at `4e2ebbf2`, `test:injury-fallback-journey`
+  // "lower back, limiting"). The week-22 calf case that gated doubling KEPT
+  // rows on the day, so it still does not double.
+  if (chosen.length === 0 && (compounds.length === 0 || args.keptRowNames.length === 0)) {
     const neverRepeated = new Set([
       ...args.keptRowNames, ...args.pausedRowNames, ...args.excludedByAthlete,
     ].map(normalise));

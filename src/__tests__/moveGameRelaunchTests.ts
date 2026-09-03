@@ -134,6 +134,29 @@ async function shiftPhase(a: any, phase: string, date: string) {
   check('RELAUNCH: the dev persistence gate the simulator flow waits on converges (memory == disk for every semantic store)',
     gate === 'converged', gate);
 
+  // ── THE UNDO AFTER A RELAUNCH (Sam, 2026-09-03) ──
+  // R-271 (Sam, 2026-08-28): session and fixture edits belong to history, not
+  // Active Modifiers — so My Status lists NO "Game moved" card, live or after a
+  // relaunch (`test:modifier-lifecycle` holds that in the release gate). The
+  // undo the athlete keeps is the fixture's own restore door, exercised here
+  // after the relaunch through the same transaction the sheet would call.
+  {
+    const { getActiveProgramModifiers } = require('../utils/activeProgramModifiers');
+    const listed = (getActiveProgramModifiers(ws) as { payload?: { reversibleAdjustmentId?: string } }[])
+      .filter((m) => m.payload?.reversibleAdjustmentId !== undefined);
+    check('RELAUNCH: My Status lists no card for the fixture edit (R-271 — history, not a modifier)', listed.length === 0, String(listed.length));
+    const { clearReversibleAdjustment } = require('../store/reversibleAdjustmentTransaction');
+    const adjustmentId = activeAdjustmentIds()[0];
+    const undone = await quietAsync(() => clearReversibleAdjustment(adjustmentId, useProgramStore.getState().acceptedMaterialContext.revision)) as { outcome: string; reason?: string | null };
+    const afterUndo = dayTypes(ws);
+    check('UNDO after relaunch: the restore is accepted and the game is back on Saturday, Sunday no longer a game',
+      ['restored', 'recomposed'].includes(undone.outcome) && afterUndo[saturday] === 'Game' && afterUndo[sunday] !== 'Game',
+      `${undone.outcome} ${undone.reason ?? ''} ${JSON.stringify(afterUndo)}`);
+    check('UNDO after relaunch: the "Game moved" card is gone, in memory and on disk',
+      memoryNotes().length === 0 && diskNotes().length === 0,
+      `memory=${JSON.stringify(memoryNotes().map((c) => c.id))} disk=${JSON.stringify(diskNotes().map((c) => c.id))}`);
+  }
+
   console.log(`\nMove game relaunch: ${passed} passed, ${failures.length} failed`);
   totalsPrinted(failures.length);
   process.exit(failures.length === 0 ? 0 : 1);

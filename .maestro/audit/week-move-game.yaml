@@ -69,3 +69,60 @@ tags:
 - assertNotVisible:
     id: "day-row-sat-state-fixture"
 - takeScreenshot: artifacts/audit/week-move-game-relaunched
+
+# ── AFTER THE RELAUNCH: NO CARD ON MY STATUS (R-271), AND THE MOVE IS UNDONE
+# ON THE BOARD ──────────────────────────────────────────────────────────────
+# Sam, 2026-09-03: "confirm the Game moved card is visible after relaunch, tap
+# Undo, and prove the game returns to Saturday." R-271 (Sam, 2026-08-28) put
+# session and fixture edits in history, not Active Modifiers — My Status
+# carries no "Game moved" card, live or after a relaunch (`test:modifier-lifecycle`
+# holds it in the release gate), and the undo toast is a timed toast on the
+# action itself. The undo an athlete has after a relaunch is the board: drag
+# the game back. This proves that route; the card question is with Sam.
+- tapOn:
+    id: "modifiers-strip-week-header"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+- assertNotVisible: "Game moved"
+- takeScreenshot: artifacts/audit/week-move-game-my-status-after-relaunch
+- tapOn:
+    id: "coach-status-close"
+- extendedWaitUntil:
+    visible:
+      id: "edit-week-button"
+    timeout: 10000
+- tapOn:
+    id: "edit-week-button"
+- extendedWaitUntil:
+    visible:
+      id: "edit-week-session"
+    timeout: 10000
+- tapOn:
+    id: "edit-week-session"
+- extendedWaitUntil:
+    visible:
+      id: "week-board"
+    timeout: 10000
+- assertVisible:
+    id: "week-board-box-2026-07-19-game"
+- swipe:
+    start: "56%, 74%"
+    end: "56%, 66%"
+    duration: 3000
+- extendedWaitUntil:
+    visible:
+      id: "week-board-box-2026-07-18-game"
+    timeout: 10000
+- assertNotVisible:
+    id: "week-board-box-2026-07-19-game"
+- tapOn:
+    id: "week-board-save"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-sat-state-fixture"
+    timeout: 25000
+- assertNotVisible:
+    id: "day-row-sun-state-fixture"
+- takeScreenshot: artifacts/audit/week-move-game-moved-back

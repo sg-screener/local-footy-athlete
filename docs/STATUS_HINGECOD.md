@@ -1732,3 +1732,69 @@ the stored decision deterministically; no new stored state.
   it was not exercised — no flow or cell covers dismiss-then-relaunch).
 - **Release gate:** unchanged — still 11/27, stops at `compiler-year`
   (census). Not rerun for this fix; nothing in it touches generation.
+
+## 2026-09-03 — Sam: "extend the move-game flow: card visible after relaunch, tap Undo, game back on Saturday. Then the release gate, lower-back regression first"
+
+### The "Game moved" card — a ruling conflict, put to Sam, not decided here
+REGISTRY-GREP: R-262, R-271, R-105, R-115.
+- Headless, the note survives the relaunch (see the section above), and the
+  restore door restores it: `test:move-game-relaunch` now also holds "UNDO
+  after relaunch: the restore is accepted and the game is back on Saturday"
+  and "the card is gone in memory and on disk" — 10/10.
+- On glass, after the relaunch, My Status showed **"0 ACTIVE — No modifiers
+  currently impacting your program"** (screenshot
+  `~/.maestro/tests/2026-09-03_111401`). Headlessly the same: the modifier
+  selector skips every game-change note — "Calendar edits are history, not an
+  athlete-state modifier" (`activeProgramModifiers.ts`, intake, `42ea66268`,
+  2026-08-28). That line is **R-271** (Sam's device findings, 2026-08-28):
+  *"Session and fixture edits belong to history, not Active Modifiers … This
+  narrows R-262's session/fixture inclusion."* Guarded in the RELEASE gate by
+  `test:modifier-lifecycle` ("fixture/accepted game change is absent from
+  athlete-state modifiers", "program survives restart without a modifier").
+- Tried and backed out: removing the skip brings the card back (relaunch
+  suite 11/11, `coach-note-lifecycle` 11→8 red) but reds `test:modifier-lifecycle`
+  in the release gate and contradicts R-271. Reverted; the card stays out
+  until Sam rules.
+- The undo the athlete has after a relaunch: the undo toast is timed on the
+  action itself; My Status has no card (R-271); the board is the route. The
+  flow now proves that: relaunch → My Status shows no "Game moved" (R-271 on
+  glass) → Manage week → drag the game back → save → Saturday fixture, Sunday
+  not. Not loosened: every earlier step (drag, save, checkpoint relaunch,
+  Sunday after relaunch) is unchanged.
+- The inherited reds `coach-note-lifecycle` ("game note appears in affected
+  week") and `game-change-coach-notes` are this same R-262/R-271 seam: those
+  suites still pin R-262's card; the app and the release gate pin R-271.
+
+### The lower-back regression — root cause, fix, receipts
+- Bisect with one probe (the journey's lower-back case alone, the door's
+  result printed): green at `87104399` and `cee3c49e`; red from `4e2ebbf2`
+  ("doubling fires only when the kit has no unused compound", R-355 scope,
+  hingecod 2026-09-02) and at `ec888419`, `0a971be0`, `631b6267`. **My
+  earlier attribution to `631b6267` (R-357/R-358) was wrong** — the probe at
+  its parent is identical.
+- Mechanism: a lower-back report on a lower day pauses all five rows (Leg
+  Press, RDLs, Lateral Lunge, Nordic Lower, Calf Raises). The weekly seat
+  budget refuses every unused upper compound; with doubling gated off, the
+  day keeps nothing and adds nothing, and the apply step's R-115 guard ("never
+  a blank day") returns the day UNCHANGED — five unsafe rows standing and the
+  message "could not be made safe. Skip those and check with a physio." At
+  `87104399` the repeat rung had added Single-Arm DB Floor Press, so the rows
+  were paused and hidden.
+- Fix (`injurySessionAdjustment.ts`, one condition): doubling fires when the
+  kit has no unused compound OR when the day keeps nothing — R-355(c)'s own
+  words, "before leaving the position empty". The week-22 calf day that
+  motivated the gate kept rows, so it still does not double. Registry: R-355
+  scope, second correction.
+- Receipts: `test:injury-fallback-journey` lower-back cells green (the two
+  remaining reds are the inherited coverage cells, red at base);
+  `test:injury-limited-kit` 16/16 unchanged.
+
+### Receipts, this section
+| what | result |
+| --- | --- |
+| `test:move-game-relaunch` | **10/10** — the two new cells after the relaunch: no card on My Status (R-271) and the restore door puts the game back on Saturday with the note gone in memory and on disk |
+| simulator `week-move-game`, extended | **PASS** — drag Sat→Sun, save, checkpoint relaunch, Sunday fixture; then My Status with no "Game moved" (screenshot `week-move-game-my-status-after-relaunch`); then Manage week, drag Sun→Sat, save, Saturday fixture (`week-move-game-moved-back`) |
+| `test:injury-fallback-journey` | lower-back "nothing forbidden left standing" and its CONTROL green; 2 remaining reds are the inherited coverage cells |
+| `test:injury-limited-kit` | 16/16 unchanged (the week-22 gate holds) |
+| `test:compile` | PASSED after the bisect probe file was deleted |
+| release gate `test:release` | run after this section was written — result recorded below |
