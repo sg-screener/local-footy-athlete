@@ -184,3 +184,45 @@ archetype/day edits accept (they were 4/6).
 **Side finding, recorded only (no work done, per Sam's brief):** `Adductor Rockback` has no `EXERCISE_TAGS` entry (the matrix answers `unknown`), and `Tib Raises` is rated `caution` for a knee while `T-Bar Tib Raises` is `good`. Data, not this family.
 
 North star: TOWARD — both app fixes remove a second counter (the swap door judging an unchanged identity; the delivered-day evidence counting a flush the scheduler and the ledger never count). No new stored state.
+
+### The complete canonical compiler command, on the final code (`ef01e15d`)
+`npm run test:canonical-weekly-compiler`, uninterrupted, **exit 0, zero FAIL
+lines**: slice 10605/0 · reset-coach 19/0 · athlete-session-deletion 139/0 ·
+program-hydration-ownership 83/0 · fixture-mutation-transaction 21/0 ·
+temporary-source-facts 90/0 · session-injury-review green ([5] 6/6) ·
+injury-session-adjustment 54/54 · injury-compiler-preview 193/0 + 26/0 +
+12/0 + 59/0 + 10/0 + 32/0 + 13/0 · conditioning-balance-repair 42/0.
+
+### Release gate, first run on the final compiler code
+`npm run test:release`: **18/30 units green**, stopped at unit 19
+`test:injury-fallback-journey`. Green before it: test-truth, compile,
+exercise-intake, readiness-load-retention, session-change-durability,
+undo-reversal, injury-recomposition, deload-law, block-two-progression,
+strength-progression-inputs, training-logging, **compiler-year**,
+**weekly-writer-zero**, approved-icons, **canonical-weekly-compiler**,
+coach-weekly-reduction, deriving-device-commit, fact-horizon.
+
+### Family 3 — the fallback journey's two coverage cells (stale instrument)
+REGISTRY-GREP: R-357, R-353, the 2026-08-13 weekly-set ruling ("the week is
+the unit of coverage"), R-124.
+The suite walks ONE three-day world (Mon/Wed/Fri, 5+ years, commercial gym)
+and records the finer pattern identity of every row an injury makes unsafe
+on its most-affected day; two coverage cells then require single-leg knee
+and trunk among them. Measured: the generated week is Leg Press, RDLs,
+Lateral Lunge, Nordic Lower, Calf Raises / six upper rows / Single-Leg RDL,
+Single-Arm DB Floor Press, Pull-Ups, Landmine Press — the ladder reads
+Lateral Lunge as `squat`, and no strength day carries a trunk row (Crab Hold
+sits in Mobility). Those two coordinates are unreachable in this world as
+composed since the four-compound sessions (a93f3ad2) and the frontal
+completion (R-357). The suite's own precedent for single-leg hip is an
+accepted Add on the lower day; the same door now carries Reverse Lunges
+(knee 6) and Band Pallof Press (lower back 6). Ladder still walked over rows
+a real athlete placed. **Suite green, exit 0; all nine coverage cells ok.**
+`test:compile` PASSED.
+
+**Composition question, recorded only (Sam's brief: no side findings):** by
+the weekly-set ruling the week owes "single-leg knee … and some core"; this
+three-day week's only single-leg knee work is the frontal Lateral Lunge and
+it has no core row on a strength day. The sibling `test:slot-coverage` reds
+hingecod classified as pinned to a superseded composition are the same
+question.

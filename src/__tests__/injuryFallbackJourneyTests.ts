@@ -315,19 +315,35 @@ async function main(): Promise<void> {
   for (const testCase of CASES) {
     console.log(`\n[${testCase.label}]`);
     const weekStart = await install();
-    if (testCase.area === 'hamstring' && testCase.severity === 6) {
-      // Reach the missing single-leg hip coordinate through the actual Add
-      // transaction, not by inserting an exercise into a generated workout.
+    /* Reach a missing coverage coordinate through the actual Add transaction,
+     * not by inserting an exercise into a generated workout. Single-leg hip
+     * came in this way first (hamstring 6). Since the four-compound sessions
+     * (a93f3ad2) and the frontal completion (R-357), this three-day world's
+     * generated week seats its single-leg work as a Lateral Lunge (the ladder
+     * reads it as `squat`) and a Single-Leg RDL, and carries no trunk row on a
+     * strength day — measured 2026-09-03: Leg Press, RDLs, Lateral Lunge,
+     * Nordic Lower, Calf Raises / six upper rows / Single-Leg RDL, floor press,
+     * Pull-Ups, Landmine Press. The sagittal single-leg knee and the trunk
+     * coordinates therefore enter through the same accepted Add, on the day
+     * each case's injury most affects, so the ladder is still walked over
+     * rows a real athlete put there. Whether the generated three-day week
+     * itself owes a core row and a sagittal single-leg knee row is a
+     * composition question for Sam, recorded in docs/STATUS_INTEGRATE.md. */
+    const coverageAdd = testCase.severity === 6
+      ? ({ hamstring: 'Single-Leg RDL', knee: 'Reverse Lunges', 'lower back': 'Band Pallof Press' } as
+        Record<string, string | undefined>)[testCase.area]
+      : undefined;
+    if (coverageAdd) {
       setJourneyClock(weekStart);
       const added = await quietAsync(() => require('../utils/programControlActions')
         .executeProgramControlActionDurably({
           type: 'add_exercise',
           source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
           scope: 'today_only', payload: { date: weekStart,
-            exercise: { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 } },
+            exercise: { name: coverageAdd, sets: 2, repsMin: 8, repsMax: 12 } },
           requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
         }, { todayISO: weekStart })) as { ok: boolean; message?: string };
-      ok('single-leg hip coverage enters through an accepted Add', added.ok, added.message);
+      ok(`${testCase.label} — coverage row ${coverageAdd} enters through an accepted Add`, added.ok, added.message);
     }
     const days = trainingDays(weekStart);
 
