@@ -343,15 +343,19 @@ export function completeWeeklyCore(args: {
     const entry = safe.find((candidate) =>
       canonicalExerciseName(candidate.name) === canonicalExerciseName(choice.identity)) as PoolExercise;
     selector.accept(choice);
-    const row = buildAutomaticStrengthSupportRow(
-      entry,
-      workout.id,
-      Math.max(-1, ...workout.exercises.map((exercise) => exercise.exerciseOrder)) + 1,
-      'core',
-    );
+    // The Bible's session order: midline sits after the accessories and before
+    // the finisher. Appending after an attached conditioning row put the core
+    // row LAST at generation and before the finisher after a fixture repair
+    // re-sorted the session (measured: the slice's move-back cell), so the
+    // row goes in before the first conditioning row and the order is renumbered.
+    const finisherAt = workout.exercises.findIndex((exercise) => exercise.section18Evidence?.role === 'conditioning');
+    const at = finisherAt < 0 ? workout.exercises.length : finisherAt;
+    const row = buildAutomaticStrengthSupportRow(entry, workout.id, at + 1, 'core');
+    const exercises = [...workout.exercises.slice(0, at), row, ...workout.exercises.slice(at)]
+      .map((exercise, index) => exercise.exerciseOrder === index + 1 ? exercise : { ...exercise, exerciseOrder: index + 1 });
     return {
       status: 'added',
-      workoutsByDate: { ...cleaned, [dateISO]: { ...workout, exercises: [...workout.exercises, row] } },
+      workoutsByDate: { ...cleaned, [dateISO]: { ...workout, exercises } },
       dateISO,
       exercise: entry.name,
     };

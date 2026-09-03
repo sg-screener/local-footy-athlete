@@ -3247,9 +3247,9 @@
       "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input→output over the workouts map; no publication. | integrate 2026-09-03 re-review: exception stripping moved to the shared stripExceptionKind so two completion kinds can coexist on one week; behaviour unchanged."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore": {
-      "fingerprint": "f95432b43dace76c6bb4c36749115dfd98db1a3ae7df3f720d985b6a23b783f4",
+      "fingerprint": "4805f414a6f3e2686c2fec926156bc95782626d3988e617f29e06bc7b2839a9d",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion — if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row."
+      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion — if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row. | integrate 2026-09-03 re-review (order): the row is inserted before the first conditioning row and exerciseOrder renumbered, so generation and fixture repair agree on the session order (Bible: midline after accessories, before the finisher). Still pure over its arguments."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#automaticRows": {
       "fingerprint": "971f2deabd80f3e5495c50e27d57cff1062fbf5e2dbb6ac19b0b86280525efc9",

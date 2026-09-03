@@ -545,3 +545,29 @@ automatic-weekly-selection 24, week-checker-allowances 38, hard-day-warns
 22, section18-v2 142, undo-reversal 28, deload-law 78; weekly-scheduler
 141/141 with the same two inherited bye-fixture cells red. The complete
 compiler chain, the release gate and the six flows follow below.
+
+### The chain, the gate, the flows (2026-09-03, after `bab23e12`)
+- **One red on the first chain run**, in the slice suite: "moving the fixture
+  back restores the visible week exactly". Same rows, different ORDER on the
+  full-body day: at generation the core row was appended AFTER the attached
+  flush finisher; after a game move and move-back the repair path re-sorted
+  the session and the core row sat before the finisher. Root cause was the
+  append-at-end in `completeWeeklyCore`. Fix: the row goes in before the
+  first conditioning row and `exerciseOrder` is renumbered, which is the
+  Bible's session order (midline after accessories, before the finisher), so
+  both paths agree. Slice cell green; slot-coverage 92/92 and fallback
+  journey 182/0 unchanged. Census re-reviewed the owner: 1170/1170, exit 0.
+  Observation, not changed (outside the ask): the frontal completion appends
+  at the end the same way and would show the same order drift on a week
+  where R-357 has to place a row after a finisher is attached.
+- **Complete compiler chain** `test:canonical-weekly-compiler`: exit 0, every
+  chained suite green (slice suite 0 failures, injury-session-adjustment
+  54/54, 80/0 on the last chained suite).
+- **Year witness** `test:compiler-year`: every cohort 52/52 weeks, 0 distinct
+  failure keys, gate exit 0.
+- **Release gate** `test:release`: **30/30 units green**, exit 0.
+- **Six audit flows** on simulator B8B2C7B0 against THIS tree's Metro on
+  :8082 (the other seat's :8081 untouched; the app's launch receipt says
+  `resolvedMetroUrl` = 127.0.0.1:8082): bin-undo-toast, block-rollover,
+  full-reset-lands-clean, readiness-ack-never-silent, removal-undo-home,
+  week-move-game — **6 passed, 0 failed**. Metro :8082 stopped afterwards.
