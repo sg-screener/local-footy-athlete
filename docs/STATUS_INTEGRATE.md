@@ -226,3 +226,36 @@ three-day week's only single-leg knee work is the frontal Lateral Lunge and
 it has no core row on a strength day. The sibling `test:slot-coverage` reds
 hingecod classified as pinned to a superseded composition are the same
 question.
+
+### Families 4 and 5 — the last two gate units the candidate recorded red
+Pre-run individually while the second gate run was in its year loop.
+
+**Family 4 — `test:slot-coverage` 87/90 → 90/90 (both stale).**
+REGISTRY-GREP: R-334, R-230, R-342, R-309.
+- The two "[SAM] split PUSH/PULL is horizontal + vertical + core before
+  weekly robustness allocation" cells pinned `filled.length === 3` from
+  before **R-334 (2026-09-02)**, which gave split-upper support rows a
+  direction so a push-affinity support row fills a push accessory seat
+  (filled = horizontal, vertical, push_accessory_2, core). The cells' claim
+  is the ORDER; re-pinned to "horizontal, vertical and core filled, the
+  robustness seat not, nothing missing, six slots".
+- The census ratchet ("no generated day is missing MORE of Sam's ladder",
+  2 deficient against a ceiling of 1) failed only on the "off-season
+  bodyweight" world — `equipmentAnswer.tags: {}` — whose pull day composed to
+  a bare conditioning session (nothing to pull on) and whose push day doubled
+  a core row. **R-230**: the equipment step cannot complete with no strength
+  kit; that world is unreachable. Re-pinned to the catalogue's home kit, the
+  same re-pin R-230 gave the compiler-year archetype. Census 1 deficient of
+  12, inside the ceiling; the ceiling itself untouched.
+
+**Family 5 — `test:session-section-add` 272/274 → 250/0 (stale).**
+REGISTRY-GREP: R-288, R-273, R-297, R-129, R-236.
+The coordinate `['primer', 'optional', 'upper_push']` (R-273, 2026-08-29)
+expected a freshly composed Primer to offer an Optional Work section before
+an Add. **R-288 (2026-08-31, aa81147b)** removed the Primer's three optional
+rows: seven low-fatigue rows, no optional cluster, "athletes who want more
+work add a separate Strength session". Measured on control trees: green at
+`c3f16708`, red from `289a35b8` on — the R-288 commit sits between. The
+coordinate is retired with the ruling named; R-288's own guard holds the
+absence. Chain: Section Add 250/0, session-change-hub 59 green, exit 0.
+`test:compile` PASSED after both.

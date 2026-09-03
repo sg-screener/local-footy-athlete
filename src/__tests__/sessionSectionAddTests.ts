@@ -39,7 +39,15 @@ const coordinates: [PlanChangeCategoryId, AddFamilyId, AddLeafId][] = [
   ['primer', 'primer', 'power'],
   ['prehab', 'accessories', 'upper_accessories'],
   ['recovery', 'recovery', 'breathing'],
-  ['primer', 'optional', 'upper_push'],
+  // A seventh coordinate, `['primer', 'optional', 'upper_push']`, stood here
+  // from R-273 (2026-08-29). R-288 (2026-08-31, aa81147b) removed the Primer's
+  // three optional rows — a Primer is exactly seven low-fatigue rows with no
+  // Optional Work cluster, and "athletes who want more work add a separate
+  // Strength session" — so a freshly composed Primer offers no Optional
+  // section to Add into (measured green at c3f16708, red from 289a35b8 on).
+  // R-288's own guard (`test:primer-session`) holds the absence; the Optional
+  // Work Add route is still exercised by `optional remains no-penalty` below
+  // whenever a coordinate reaches that section.
 ];
 async function main() {
   for (const gender of ['male', 'female'] as const) {

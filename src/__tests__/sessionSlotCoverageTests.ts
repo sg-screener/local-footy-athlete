@@ -140,9 +140,16 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
     row('Tricep Pushdown'), row('Lateral Raise'), row('Ab Wheel'),
   ];
   const pushCov = sessionSlotCoverage(completePush, 'upper_split_push');
+  /* R-334 (2026-09-02): split-upper accessories belong to their direction —
+   * a push-affinity support row fills a push accessory seat. These two cells
+   * pinned `filled.length === 3` from before that ruling, when support rows
+   * filled nothing; the claim they exist for is the ORDER — horizontal,
+   * vertical and core are filled, and the weekly robustness seat is not. */
+  const ladderFilled = (filled: readonly string[], required: readonly string[]) =>
+    required.every((slot) => filled.includes(slot)) && !filled.includes('football_robustness');
   ok('[SAM] split PUSH is horizontal + vertical + core before weekly robustness allocation',
     pushCov.missing.length === 0
-      && pushCov.filled.length === 3
+      && ladderFilled(pushCov.filled, ['horizontal_push', 'vertical_push', 'core'])
       && UPPER_SPLIT_PUSH_SLOTS.length === 6,
     `missing=${JSON.stringify(pushCov.missing)} filled=${JSON.stringify(pushCov.filled)}`);
 
@@ -154,7 +161,7 @@ console.log('\n[3] The complete day — the rule must be satisfiable');
   const pullCov = sessionSlotCoverage(completePull, 'upper_split_pull');
   ok('[SAM] split PULL is horizontal + vertical + core before weekly robustness allocation',
     pullCov.missing.length === 0
-      && pullCov.filled.length === 3
+      && ladderFilled(pullCov.filled, ['horizontal_pull', 'vertical_pull', 'core'])
       && UPPER_SPLIT_PULL_SLOTS.length === 6,
     `missing=${JSON.stringify(pullCov.missing)} filled=${JSON.stringify(pullCov.filled)}`);
 
@@ -586,11 +593,23 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   const CENSUS_WORLDS: Array<[string, unknown]> = [
     ['in-season full gym', { ...CENSUS_BASE, seasonPhase: 'In-season' }],
     ['pre-season full gym', { ...CENSUS_BASE, seasonPhase: 'Pre-season' }],
-    ['off-season bodyweight', {
+    /* R-230 (Sam): "they should not be allowed to use the app bodyweight only"
+     * — the equipment step cannot complete with no strength kit ticked, so a
+     * permanent no-kit world is no longer reachable. This world was that
+     * world (`tags: {}`): its pull day composed to a bare conditioning session
+     * with nothing to pull on and its push day doubled a core row for want of
+     * anything else, and both counted as ladder deficits against a ceiling
+     * measured on a world the app now refuses. Re-pinned to the catalogue's
+     * home kit (dumbbells, bands, bench, pull-up bar), the same re-pin R-230
+     * gave the compiler-year archetype. */
+    ['off-season home kit', {
       ...CENSUS_BASE, seasonPhase: 'Off-season',
-      equipment: ['Bodyweight Only'], teamTrainingDays: [],
-      seasonFinishedOn: '2026-06-15',
-      equipmentAnswer: { tags: {}, modalities: {}, answeredOn: '2026-07-13' },
+      trainingLocation: 'Home', equipment: ['dumbbells', 'bands', 'bench', 'pullup_bar'],
+      teamTrainingDays: [], seasonFinishedOn: '2026-06-15',
+      equipmentAnswer: {
+        tags: { dumbbells: 'have', bands: 'have', bench: 'have', pullup_bar: 'have' },
+        modalities: {}, answeredOn: '2026-07-13',
+      },
     }],
   ];
   // ── A LOWER DAY MUST CONTAIN LOWER WORK ────────────────────────────────
