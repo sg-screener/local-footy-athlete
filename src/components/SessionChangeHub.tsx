@@ -40,6 +40,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Card } from './ui';
+import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { signedCopy, type SignedCopy } from '../rules/signedCopy';
 
@@ -129,7 +130,7 @@ const ACTION_STROKE: Record<ChangeActionId, string> = {
   injured: '#FF7F7F',
   equipment: '#67D7FF',
   injury: '#FF7F7F',
-  add: '#C6FF00',
+  add: colors.accent.lime,
 };
 
 /**

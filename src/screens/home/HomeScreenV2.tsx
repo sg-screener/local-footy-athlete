@@ -48,6 +48,7 @@ import {
 } from '../../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { useAthleteContext } from '../../hooks/useSchedule';
+import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import {
   BlockBoundaryNoticeCard,
@@ -2120,7 +2121,7 @@ const DAY_ROW_ICON_SIZE = 26;
 const DAY_ROW_CHECK_SIZE = 22;
 
 const DAY_ROW_ACCENT = {
-  core: '#C6FF00',
+  core: colors.accent.lime,
   optional: '#5E6268',
   recovery: '#1EA7FF',
   game: '#FFC247',
@@ -5177,7 +5178,7 @@ const styles = StyleSheet.create({
   // stays quiet through weight, tracking and colour without dropping below the
   // readable type floor.
   dayFocusEyebrow: {
-    color: '#C6FF00',
+    color: colors.accent.lime,
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '800',

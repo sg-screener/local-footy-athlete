@@ -64,6 +64,20 @@ run('no active app source or pictogram retains the old lime colours or tints', (
   assert.deepEqual(offenders, []);
 });
 
+// Sam, 2026-09-03, the preview on his phone: *"'today's focus' on day view and
+// the little icons on the weekly view still have the old lime green — why was
+// lime green not completely ripped out of the app?"* The list above named the
+// exact old tokens; three hand-written near-lime literals (#C6FF00) were not on
+// it. Any hex in the lime family — strong red, full green, no blue — is refused
+// in app source from here; the accent is the token, never a literal.
+run('no active app source carries ANY lime-family literal (#8x–#Fx FF 00)', () => {
+  const offenders = productionFiles.flatMap((file) => {
+    const hits = sourceFor(file).match(/#[89a-f][0-9a-f]ff00\b/gi) ?? [];
+    return hits.length ? [`${file}: ${Array.from(new Set(hits)).join(', ')}`] : [];
+  });
+  assert.deepEqual(offenders, []);
+});
+
 run('both shared primary buttons render the exact pressed colour', () => {
   for (const file of ['src/components/ui/Button.tsx', 'src/components/common/Button.tsx']) {
     const source = sourceFor(file);

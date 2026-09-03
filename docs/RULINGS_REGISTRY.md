@@ -9087,6 +9087,14 @@ names so this colour-only ruling does not create a repo-wide API rename.
 Guard: `LAW-the-app-accent-is-yellow-and-the-logo-is-unchanged` through chained
 `test:accent-colour` (7 cells, including an old-lime mutation).
 Receipt: `docs/STATUS_ACCENTYELLOW.md`.
+**R-361 addendum, 2026-09-03 (hingecod), after the phone preview.** Sam:
+*"'today's focus' on day view and the little icons on the weekly view still
+have the old lime green — why was lime green not completely ripped out?"*
+Three hand-written `#C6FF00` literals survived the token change (the week
+view's day-row icon accent and the "Today's focus" eyebrow in `HomeScreenV2`,
+the Add glyph stroke in `SessionChangeHub`); the accent suite only listed the
+exact old tokens. All three now read `colors.accent.lime` (the yellow), and
+`test:accent-colour` refuses ANY lime-family hex literal in app source.
 
 **R-362** · Five rear-shoulder exercises may be selected in Movement Prep,
 2026-09-03.

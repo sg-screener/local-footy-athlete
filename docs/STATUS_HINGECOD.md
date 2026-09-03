@@ -1849,3 +1849,15 @@ installed OVER the existing `com.localfootyathlete.app` on Sam's iPhone 16 Pro
 Max (`AFA21856-…`), so his data survives; Renee's phone not targeted. Launched
 and in the process list (PID 64548). Release gate still red at the census
 (11/27); this is a preview for Sam's eyes only.
+
+### 2026-09-03 — lime still on the phone: three literals the token change missed
+Sam, on the preview: *"'today's focus' on day view and the little icons on the
+weekly view still have the old lime green."* Scan of every colour literal in
+app source, assets, app.json and the iOS project for the lime family
+(`#[89a-f][0-9a-f]ff00`): exactly three hits, all `#C6FF00` —
+`HomeScreenV2` `DAY_ROW_ACCENT.core` (week-view icons), `HomeScreenV2`
+`dayFocusEyebrow` ("Today's focus"), `SessionChangeHub` Add glyph stroke.
+The R-361 suite only listed the exact old tokens, so these passed it. Fix:
+the three read `colors.accent.lime`; the suite now refuses any lime-family
+literal (red-first: named both files; green after). Rebuilt and reinstalled
+over the phone app, data kept.
