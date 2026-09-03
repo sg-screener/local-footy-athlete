@@ -185,12 +185,13 @@ ok('the measured failure census has a valid decision for every reviewed label',
   decisionRegistry.measuredCheckpoint === 'aa2167e2'
     // 193 measured rows + 3 guards promoted 2026-09-03 (seat censusaudit):
     // block-selection-authority, programming-selection-trace-observer,
-    // legality-enforcer-liveness.
-    && Object.keys(decisionRegistry.decisions).length === 196
+    // legality-enforcer-liveness. + 1 on 2026-09-03 (seat integrate, R-363):
+    // injury-matrix-sheet is release unit 31.
+    && Object.keys(decisionRegistry.decisions).length === 197
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 33
+  censusCounts.current_contract === 34
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',
@@ -199,7 +200,7 @@ ok('only witnessed contracts and the explicit ownership/year acceptance requirem
       'test:slot-coverage', 'test:power-counting', 'test:section18-v2', 'test:exercise-intake',
       'test:estimated-1rm', 'test:lived-history-foundations', 'test:session-section-add',
       'test:block-selection-authority', 'test:programming-selection-trace-observer',
-      'test:legality-enforcer-liveness']
+      'test:legality-enforcer-liveness', 'test:injury-matrix-sheet']
       .every(label => decisionRegistry.decisions[label]?.kind === 'current_contract'
         && decisionRegistry.decisions[label]?.witnessScript === label)
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',

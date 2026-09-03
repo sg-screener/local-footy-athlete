@@ -103,6 +103,15 @@ lines = [
      f'{summary["exceptionsLooser"]} looser)', None),
     (f'  adductor/pubalgia conflicts Sam resolved by hand: {summary["conflictsResolved"]}', None),
     ('', None),
+    ('WHAT ENTERED AFTER THE SNAPSHOT (Sam, 2026-09-03)', HEAD),
+    (f'  Intake rows since 2026-07-28: {summary.get("intakeRows", 0)} — their authored ratings are', None),
+    ('  lifted as named exceptions, never re-derived. Retired from code but kept as', None),
+    (f'  rule evidence: {", ".join(summary.get("retiredEvidence", [])) or "none"}.', None),
+    (f'  Untagged pool members: {summary.get("untaggedRows", 0)} rows carry what the rules say and', None),
+    (f'  {summary.get("decisionCells", 0)} DECISION cells. A DECISION cell is never good: the pool says the', None),
+    ('  region is loaded (or the row is a conditioning format with no ruled family) and', None),
+    ('  no rule answers. These rows reach the app only through an intake classification.', None),
+    ('', None),
     ('  Where each final cell comes from:', None),
 ] + [(f'    {source}: {count}', None) for source, count in sorted(
         summary['sourceCounts'].items(), key=lambda kv: -kv[1])] + [
@@ -218,7 +227,7 @@ MUSCLE_HEADER_ROW, _ = build_rule_tab(
 # ═══════════════════════ Tab 4 — Exceptions ═══════════════════════
 ws = wb.create_sheet('Exceptions')
 EXC = ['NAMED EXERCISE EXCEPTIONS — RULED. These beat every rule.',
-       'All 18 stand as authored (Sam, 2026-07-28). None dissolved into the new rules.',
+       'Sam, 2026-07-28 onward: snapshot ratings, dated rulings (rack shoulder 08-26, hamstring 08-27, R-267 support loading 08-28, squat elbow/wrist and Adductor Rockback 09-03) and every intake rating the rules cannot reproduce.',
        'Each is where Sam already made a judgement no general rule can express.']
 for index, line in enumerate(EXC, start=1):
     cell = ws.cell(row=index, column=1, value=line)
@@ -306,7 +315,7 @@ ws = wb.create_sheet('Final matrix')
 FINAL = ['THE DERIVED MATRIX — every exercise x every region, fully authored.',
          'Generated from the rules, exceptions, conditioning rulings and the signed',
          'declaration. Not a ruling surface: change the rules, not these cells.',
-         '(exc) = a named exception decided it. (dec) = the declaration decided it.']
+         '(exc) = exception. (dec) = declaration. DECISION = awaiting Sam; never read as good.']
 for index, line in enumerate(FINAL, start=1):
     cell = ws.cell(row=index, column=1, value=line)
     if index == 1:
@@ -316,11 +325,17 @@ write_header(ws, FINAL_HEADER_ROW, ['Group', 'Exercise', 'Pattern'] + REGIONS)
 row_at = FINAL_HEADER_ROW
 for row in data['strength'] + data['conditioning']:
     row_at += 1
-    for column, value in enumerate([row['group'], row['name'], row['movement']], start=1):
+    pattern = row['movement'] or 'PENDING — no tags row (intake classification)'
+    for column, value in enumerate([row['group'], row['name'], pattern], start=1):
         ws.cell(row=row_at, column=column, value=value)
     for offset, region in enumerate(REGIONS):
         value = row['final'][region]
         source = row['finalSource'][region]
+        if source == 'decision':
+            cell = ws.cell(row=row_at, column=4 + offset,
+                           value=f"DECISION ({row['decisions'][region]})")
+            cell.fill = FILL_BLOCKED
+            continue
         suffix = ' (exc)' if source == 'exception' else ' (dec)' if source == 'declaration' else ''
         cell = ws.cell(row=row_at, column=4 + offset, value=f'{value}{suffix}')
         cell.fill = (FILL_AVOID if value == 'avoid'

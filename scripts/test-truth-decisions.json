@@ -1344,6 +1344,21 @@
       ],
       "witnessScript": "test:legality-enforcer-liveness",
       "evidenceKind": "green_now"
+    },
+    "test:injury-matrix-sheet": {
+      "kind": "current_contract",
+      "reason": "Sam, 2026-09-03: the injury workbook is release unit 31. The witness regenerates nothing; it re-evaluates Sam's ruling model from the workbook's own rule grids, exceptions and declaration, holds the sheet equal to exerciseTags cell for cell in both directions, and holds the catalogue COMPLETE: every pool member the app can place has a full thirteen-region row in code and on the sheet, and no DECISION cell remains. Red until every untagged drill has Sam's intake classification.",
+      "productionPaths": [
+        "src/data/exerciseTags.ts",
+        "src/data/exercisePools.ts",
+        "src/data/muscleExperienceMetadata.ts"
+      ],
+      "contractRefs": [
+        "R-363",
+        "docs/INJURY_MATRIX_RULINGS_2026-07-28.json"
+      ],
+      "witnessScript": "test:injury-matrix-sheet",
+      "evidenceKind": "green_now"
     }
   }
 }

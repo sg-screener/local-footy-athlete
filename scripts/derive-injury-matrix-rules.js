@@ -52,8 +52,37 @@ const OLD_TO_NEW = {
 /* ── Migrate the old 10 keys onto Sam's regions, applying his conflict rulings ── */
 
 const resolutions = ruling.conflictResolutions;
+/** The pool's own contraindication vocabulary, onto Sam's 13 regions. */
+const POOL_TAG_TO_REGION = {
+  groin: 'groin', hip: 'hip', knee: 'knee', hamstring: 'hamstring', calf: 'calf',
+  ankle: 'ankle/foot', ribs: 'ribs', lower_back: 'lowerBack', neck: 'neck',
+  shoulder: 'shoulder', elbow: 'elbow', wrist: 'wrist/hand',
+};
 const rows = data.records.map((r) => {
   const authored = {};
+  // Intake entries (after the snapshot) already author every region in Sam's
+  // 13-region vocabulary; they need no key migration and no conflict ruling.
+  if (r.intake) {
+    return {
+      name: r.name, group: r.group, movement: r.movement, load: r.load,
+      primary: (r.muscle || {}).primary || [],
+      authored: { ...r.explicitRegions }, resolvedConflict: null,
+      evidence: false, intake: true, retired: false,
+    };
+  }
+  if (r.untagged) {
+    const contraindicated = (r.contraindications || []).map((tag) => {
+      const region = POOL_TAG_TO_REGION[tag];
+      if (!region) throw new Error(`untagged "${r.name}" carries unknown pool contraindication "${tag}"`);
+      return region;
+    });
+    return {
+      name: r.name, group: r.group, movement: null, load: null, pool: r.pool,
+      primary: (r.muscle || {}).primary || [],
+      authored: {}, resolvedConflict: null, contraindicated,
+      evidence: false, untagged: true, retired: false,
+    };
+  }
   for (const [key, value] of Object.entries(r.explicit)) {
     if (key === 'adductor' || key === 'pubalgia') continue;
     authored[OLD_TO_NEW[key]] = value;
@@ -77,19 +106,28 @@ const rows = data.records.map((r) => {
     name: r.name, group: r.group, movement: r.movement, load: r.load,
     primary: (r.muscle || {}).primary || [],
     authored, resolvedConflict,
+    evidence: true, retired: !!r.retired,
   };
 });
 
-const strength = rows.filter((r) => r.movement !== 'conditioning');
-const conditioning = rows.filter((r) => r.movement === 'conditioning');
-const PATTERNS = [...new Set(strength.map((r) => r.movement))].sort();
-const MUSCLES = [...new Set(strength.flatMap((r) => r.primary))].sort();
+/* ── Who feeds the rules, and who is evaluated ──
+ *
+ * EVIDENCE = the pinned snapshot, retired lifts included, so the rule grids do
+ * not move when the catalogue changes (Sam, 2026-09-03). EVALUATED = every
+ * exercise the app can place today: snapshot rows still in code, intake rows,
+ * and untagged pool members. A retired lift feeds evidence and is not output.
+ */
+const evidenceStrength = rows.filter((r) => r.evidence && r.movement !== 'conditioning');
+const strength = rows.filter((r) => !r.retired && r.movement !== 'conditioning');
+const conditioning = rows.filter((r) => !r.retired && r.movement === 'conditioning');
+const PATTERNS = [...new Set(evidenceStrength.map((r) => r.movement))].sort();
+const MUSCLES = [...new Set(evidenceStrength.flatMap((r) => r.primary))].sort();
 
 /* ── Evidence rules on the pre-existing regions ── */
 
 function tally(keysOf) {
   const out = {};
-  for (const r of strength) {
+  for (const r of evidenceStrength) {
     for (const key of keysOf(r)) {
       out[key] = out[key] || {};
       for (const region of REGIONS) {
@@ -249,6 +287,10 @@ for (const row of strength) {
         ruleSays: derived === null ? '(no rule matches)' : derived,
         authored,
         direction: derived === null || RANK[authored] > RANK[derived] ? 'stricter' : 'looser',
+        // An intake rating Sam submitted after the snapshot is lifted, never
+        // re-derived: the rules were not tallied from it, so it can only enter
+        // the matrix as the named exception it is.
+        ...(row.intake ? { intakeAuthored: true } : {}),
       });
     }
   }
@@ -305,6 +347,47 @@ for (const row of strength) {
   }
 }
 
+/* ── UNTAGGED POOL MEMBERS: what the rules say, and where Sam must decide ──
+ *
+ * A pool member with no tags row has no pattern and no authored ratings; the
+ * muscle axis and the declaration are all the model can say about it. Two
+ * things the model cannot decide and must not paper over:
+ *   1. the pool's own contraindication names a region the rules leave 'good'
+ *      — Sam authored that the drill loads the region, so 'good' would be the
+ *      blank-means-good trap again. The cell is DECISION, not good.
+ *   2. an easy-cardio walk is a conditioning format, and conditioning is ruled
+ *      by hand per family; no family names it, so every cell is DECISION.
+ * Either way the row cannot land in code: a tags row needs Sam's classification
+ * (pattern, region, load, soreness, stability, eccentric, late-week), which is
+ * the intake's to supply. The verify step reports these as the decision list.
+ */
+const pending = [];
+for (const row of strength) {
+  if (!row.untagged) continue;
+  row.decisions = {};
+  const conditioningFormat = row.pool === 'EASY_CARDIO_POOL';
+  for (const region of REGIONS) {
+    const contradicted = row.contraindicated.includes(region) && row.final[region] === 'good';
+    if (conditioningFormat) {
+      row.final[region] = null;
+      row.finalSource[region] = 'decision';
+      row.decisions[region] = 'conditioning family unruled';
+    } else if (contradicted) {
+      row.final[region] = null;
+      row.finalSource[region] = 'decision';
+      row.decisions[region] = `pool says ${region} is loaded, rules say good`;
+    }
+  }
+  pending.push({
+    exercise: row.name,
+    group: row.group,
+    blocker: 'no tags row — needs Sam\'s classification through intake',
+    decisionCells: Object.entries(row.decisions).map(([region, why]) => ({ region, why })),
+    derived: Object.fromEntries(REGIONS.map((region) => [region,
+      row.final[region] ?? 'DECISION'])),
+  });
+}
+
 // Conditioning: hand ruling joined with whatever is already authored, strictest wins.
 const conditioningContradictions = [];
 for (const row of conditioning) {
@@ -340,7 +423,8 @@ for (const row of conditioning) {
  */
 function bindCount(axis, key, region) {
   let count = 0;
-  for (const row of strength) {
+  for (const row of evidenceStrength) {
+    if (row.retired) continue; // evidence only; never evaluated or output
     if (axis === 'pattern' && row.movement !== key) continue;
     if (axis === 'muscle' && !row.primary.includes(key)) continue;
     if (exceptionMap[`${row.name}|${region}`]) continue;
@@ -376,9 +460,11 @@ for (const [axis, rules] of [['pattern', patternRules], ['muscle', muscleRules]]
 
 const allRows = [...strength, ...conditioning];
 const distribution = {};
+let decisionCells = 0;
 for (const row of allRows) {
   for (const region of REGIONS) {
     const value = row.final[region];
+    if (row.finalSource[region] === 'decision') { decisionCells += 1; continue; }
     distribution[value ?? 'UNRULED'] = (distribution[value ?? 'UNRULED'] || 0) + 1;
   }
 }
@@ -407,6 +493,10 @@ const summary = {
   exceptionsStricter: exceptions.filter((e) => e.direction === 'stricter').length,
   exceptionsLooser: exceptions.filter((e) => e.direction === 'looser').length,
   conflictsResolved: rows.filter((r) => r.resolvedConflict).length,
+  intakeRows: strength.filter((r) => r.intake).length,
+  retiredEvidence: rows.filter((r) => r.retired).map((r) => r.name),
+  untaggedRows: pending.length,
+  decisionCells,
   distribution,
   sourceCounts,
   conditioningContradictions,
@@ -416,7 +506,7 @@ const summary = {
 
 fs.writeFileSync(OUT_JSON, JSON.stringify({
   REGIONS, NEW_REGIONS, PATTERNS, MUSCLES,
-  patternRules, muscleRules, exceptions, rows, strength, conditioning,
+  patternRules, muscleRules, exceptions, rows, strength, conditioning, pending,
   conditioningRuling, routing: ruling.routing, declaration: ruling.declaration, inertRules,
   principle: ruling.conditioning.principle, summary,
 }, null, 2));
@@ -428,6 +518,8 @@ console.log(`exceptions ${summary.exceptions} `
   + `(${summary.exceptionsStricter} stricter, ${summary.exceptionsLooser} looser)`);
 console.log(`conflicts resolved by Sam: ${summary.conflictsResolved}`);
 console.log(`final distribution: ${JSON.stringify(distribution)}`);
+console.log(`intake rows ${summary.intakeRows} | untagged pool rows ${summary.untaggedRows} `
+  + `| decision cells ${summary.decisionCells} | retired evidence: ${summary.retiredEvidence.join(', ') || 'none'}`);
 console.log(`cell sources: ${JSON.stringify(sourceCounts)}`);
 if (inertRules.length > 0) {
   console.log(`INERT RULES (recorded, cannot fire): `

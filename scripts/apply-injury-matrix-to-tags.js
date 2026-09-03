@@ -14,6 +14,13 @@
  * directions, so drift in either fails the build.
  *
  * Idempotent — running it twice produces the same file.
+ *
+ * NEVER A SILENT RE-DECISION (Sam, 2026-09-03). Every cell this rewrite would
+ * CHANGE in code is printed, and the run refuses (exit 2) unless the change is
+ * pure normalisation (same value, one region per line). A ruled change enters
+ * through the ruling file and the rules first, so the pipeline reproduces the
+ * code before it rewrites it; a change that appears here is an unruled edit on
+ * one side or the other, and that is a decision for Sam, not for a codegen step.
  */
 const fs = require('fs');
 const path = require('path');
@@ -36,6 +43,7 @@ let body = source.slice(mapStart);
 
 let rewritten = 0;
 const missing = [];
+const changed = [];
 
 body = body.replace(
   /^( {2}'([^']+)':\s*\{[\s\S]*?)(\n {4}injury:\s*(?:SAFE|inj\(\{[\s\S]*?\}\)|\{[\s\S]*?\n {4}\}),)/gm,
@@ -43,9 +51,14 @@ body = body.replace(
     const row = finalByName.get(name);
     if (!row) { missing.push(name); return whole; }
     rewritten += 1;
+    const before = {};
+    for (const kv of injuryClause.matchAll(/(?:'([^']+)'|(\w+)):\s*'(\w+)'/g)) before[kv[1] || kv[2]] = kv[3];
     const lines = REGIONS.map((region) => {
       const value = row.final[region];
       if (!value) throw new Error(`no final rating for ${name}.${region}`);
+      if (before[region] !== undefined && before[region] !== value) {
+        changed.push(`${name}.${region}: code ${before[region]} -> matrix ${value}`);
+      }
       return `      '${region}': '${value}',`;
     });
     return `${prefix}\n    injury: {\n${lines.join('\n')}\n    },`;
@@ -54,6 +67,12 @@ body = body.replace(
 
 if (missing.length > 0) {
   throw new Error(`exercises in code with no ruled matrix row: ${missing.join(', ')}`);
+}
+if (changed.length > 0) {
+  console.error(`REFUSED: the matrix would change ${changed.length} rating cell(s) already authored in code.`);
+  console.error('A changed cell is a ruling, and a ruling enters through the ruling file first:');
+  for (const line of changed) console.error(`  ${line}`);
+  process.exit(2);
 }
 
 source = head + body;
@@ -87,13 +106,15 @@ source = deleteBlock(
   'the stale Scap Pull Ups note',
   true,
 );
-source = source.replace(
-  /( {2}'Scap Pull Ups': \{)/,
-  '  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every\n'
+// Written ONCE. Re-running the apply step used to prepend this note again each
+// time (four copies by 2026-09-03), so the note is now added only when absent
+// and any duplicates are folded back to one.
+const PRECEDENT_NOTE = '  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every\n'
   + '  // injury key out deliberately, so a reviewed-and-safe rating could not be\n'
   + '  // mistaken for one nobody had looked at. Every entry now does the same, and\n'
-  + '  // the helper that made omission possible is gone.\n$1',
-);
+  + '  // the helper that made omission possible is gone.\n';
+source = source.replace(/(?:  \/\/ Sam, 2026-07-28\. This entry was the PRECEDENT[^\n]*\n(?:  \/\/ [^\n]*\n){3})+/g, '');
+source = source.replace(/( {2}'Scap Pull Ups': \{)/, `${PRECEDENT_NOTE}$1`);
 
 fs.writeFileSync(TAGS, source);
 

@@ -1,19 +1,32 @@
 {
   "_": "Sam's injury-matrix ruling set, 2026-07-28. Collected conversationally and transcribed here by one writer (Claude). This file is the AUTHORED SOURCE: the workbook and the derived matrix are generated from it, never hand-edited. Amended same day to add 'ribs' as a 13th region, superseding the earlier twelve and the 'ribs stay unroutable' line.",
-
   "regions": [
-    "groin", "hip", "quad", "hamstring", "knee", "calf", "ankle/foot",
-    "ribs", "lowerBack", "neck", "shoulder", "elbow", "wrist/hand"
+    "groin",
+    "hip",
+    "quad",
+    "hamstring",
+    "knee",
+    "calf",
+    "ankle/foot",
+    "ribs",
+    "lowerBack",
+    "neck",
+    "shoulder",
+    "elbow",
+    "wrist/hand"
   ],
-  "newRegions": ["hip", "quad", "neck", "ribs"],
-
+  "newRegions": [
+    "hip",
+    "quad",
+    "neck",
+    "ribs"
+  ],
   "declaration": {
     "signed": true,
     "by": "Sam",
     "date": "2026-07-28",
     "text": "Any exercise/region cell with no matching rule and no exception = good. From here, 'good' is always authored, never assumed."
   },
-
   "conflictResolutions": {
     "_": "Ruling 1. All five adductor/pubalgia conflicts resolve to caution. Sam's reasoning on record: caution's severity behaviour (untouched 1-3, reduced 4-5, removed 6+) matches how he would coach it, and the old pubalgia 'avoid' thinking survives in the stricter plyo exceptions, which stand.",
     "Back Squat": "caution",
@@ -22,68 +35,214 @@
     "Walking Lunges": "caution",
     "Nordic Lower": "caution"
   },
-
   "newRegionPatternRules": {
     "_": "Ruling 2 + amendment + ribs follow-up. Every pattern x new-region cell not listed here carries NO rule. Sam added the pressing patterns to ribs on 2026-07-28: bench compression and overhead work are the mechanism.",
-    "quad": ["squat", "lunge", "plyo", "isolation_lower"],
-    "hip": ["squat", "hinge", "lunge", "plyo", "isolation_lower"],
-    "neck": ["carry", "vertical_push"],
-    "ribs": ["core", "carry", "plyo", "squat", "hinge", "horizontal_push", "vertical_push"]
+    "quad": [
+      "squat",
+      "lunge",
+      "plyo",
+      "isolation_lower"
+    ],
+    "hip": [
+      "squat",
+      "hinge",
+      "lunge",
+      "plyo",
+      "isolation_lower"
+    ],
+    "neck": [
+      "carry",
+      "vertical_push"
+    ],
+    "ribs": [
+      "core",
+      "carry",
+      "plyo",
+      "squat",
+      "hinge",
+      "horizontal_push",
+      "vertical_push"
+    ]
   },
-
   "newRegionMuscleRules": {
     "_": "Ruling 2 + amendment. Muscle-axis rules for the new regions. ribs has NO muscle-axis rules by ruling. The Traps -> neck rule was REMOVED on Sam's follow-up ruling: 'Traps' is never a primary muscle, so the rule was unreachable, and an authored rule nothing can reach is a defect, not a keepsake. Neck cover for Shrugs is now a named exception instead.",
-    "quad": ["Quads"],
-    "hip": ["Glutes", "Hips", "Outer hip"],
+    "quad": [
+      "Quads"
+    ],
+    "hip": [
+      "Glutes",
+      "Hips",
+      "Outer hip"
+    ],
     "neck": [],
     "ribs": []
   },
-
   "extraExceptions": {
-    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach. Incline Y Raise joins them on Sam's ruling (2026-07-28) — same bench-compression mechanism, and its own cue says 'Chest on the incline'; it is isolation_upper, which no ribs pattern rule reaches.",
+    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach. Incline Y Raise joins them on Sam's ruling (2026-07-28) — same bench-compression mechanism, and its own cue says 'Chest on the incline'; it is isolation_upper, which no ribs pattern rule reaches. | 2026-08-26 (recorded in commit 63cc38e4, transcribed 2026-09-03): Sam on Front Squat for a bad shoulder — \"remove it from good\". The rack-position squats (Front/Box/High Box) match Back Squat's own shoulder caution. | 2026-08-27 (63958d24, transcribed 2026-09-03): the Bible's hamstring section rules quad-dominant lower work \"usually okay\" and names box squat / controlled squat / step-up as the swaps, so Leg Press, Box Squat, High Box Squat, Goblet Squat, Step Ups and Leg Extension carry hamstring good — LOOSER than the squat pattern rule, by Sam's own text. | 2026-08-28, R-267 (006fa6c1 + 01334a5a, transcribed 2026-09-03): \"Ratings include indirect support/loading.\" Every lower-body lift whose prescribed load is a held or racked free weight (the 19 free-weight load profiles in the load map) cautions shoulder, elbow and wrist/hand where the rules said good; the two Copenhagen planks caution shoulder and elbow for the same support-loading reason. Guard: simpleInjurySafetyTruth in test:canonical-weekly-compiler. No axis of this model reads the prescribed load, so these are named. | 2026-09-03, R-363: Sam ruled the app is right on the squat elbow/wrist cells the sheet had not carried (Back Squat, Front Squat, Box Squat) — already covered by the R-267 block above. Adductor Rockback: Sam ruled its thirteen ratings on 2026-09-03 from the rated drills nearest to it (Horse Stance Hold, Groin Squeeze, Crab Hold, Sleeper Stretch); the Groin muscle rules give groin and knee caution, the declaration gives quad, hamstring, calf, ribs and neck good, and the six cells the model cannot reach are named here: hip, ankle/foot and lower back (kneeling, end-range rock), shoulder, elbow and wrist/hand (weight through the arms, lighter than Crab Hold's avoid).",
     "Shrugs|neck": "caution",
     "Chest Supported Row|ribs": "caution",
     "Chest-Supported DB Row|ribs": "caution",
-    "Incline Y Raise|ribs": "caution"
+    "Incline Y Raise|ribs": "caution",
+    "Front Squat|shoulder": "caution",
+    "Box Squat|shoulder": "caution",
+    "High Box Squat|shoulder": "caution",
+    "Leg Press|hamstring": "good",
+    "Box Squat|hamstring": "good",
+    "High Box Squat|hamstring": "good",
+    "Goblet Squat|hamstring": "good",
+    "Step Ups|hamstring": "good",
+    "Leg Extension|hamstring": "good",
+    "Back Squat|shoulder": "caution",
+    "Back Squat|elbow": "caution",
+    "Back Squat|wrist/hand": "caution",
+    "Front Squat|elbow": "caution",
+    "Front Squat|wrist/hand": "caution",
+    "Box Squat|elbow": "caution",
+    "Box Squat|wrist/hand": "caution",
+    "High Box Squat|elbow": "caution",
+    "High Box Squat|wrist/hand": "caution",
+    "Goblet Squat|shoulder": "caution",
+    "Goblet Squat|elbow": "caution",
+    "Goblet Squat|wrist/hand": "caution",
+    "Bulgarian Split Squats|shoulder": "caution",
+    "Bulgarian Split Squats|elbow": "caution",
+    "Bulgarian Split Squats|wrist/hand": "caution",
+    "Walking Lunges|shoulder": "caution",
+    "Walking Lunges|elbow": "caution",
+    "Walking Lunges|wrist/hand": "caution",
+    "Reverse Lunges|shoulder": "caution",
+    "Reverse Lunges|elbow": "caution",
+    "Reverse Lunges|wrist/hand": "caution",
+    "Step Ups|shoulder": "caution",
+    "Step Ups|elbow": "caution",
+    "Step Ups|wrist/hand": "caution",
+    "Single-Leg Squat (to Box)|shoulder": "caution",
+    "Single-Leg Squat (to Box)|elbow": "caution",
+    "Single-Leg Squat (to Box)|wrist/hand": "caution",
+    "Deadlift|shoulder": "caution",
+    "Deadlift|elbow": "caution",
+    "Deadlift|wrist/hand": "caution",
+    "Trap Bar Deadlift|shoulder": "caution",
+    "Trap Bar Deadlift|elbow": "caution",
+    "Trap Bar Deadlift|wrist/hand": "caution",
+    "RDLs|shoulder": "caution",
+    "RDLs|elbow": "caution",
+    "RDLs|wrist/hand": "caution",
+    "Single-Leg RDL|shoulder": "caution",
+    "Single-Leg RDL|elbow": "caution",
+    "Single-Leg RDL|wrist/hand": "caution",
+    "Hip Thrusts|shoulder": "caution",
+    "Hip Thrusts|elbow": "caution",
+    "Hip Thrusts|wrist/hand": "caution",
+    "Single-Leg Hip Thrust|shoulder": "caution",
+    "Single-Leg Hip Thrust|elbow": "caution",
+    "Single-Leg Hip Thrust|wrist/hand": "caution",
+    "Back Extension|shoulder": "caution",
+    "Back Extension|elbow": "caution",
+    "Back Extension|wrist/hand": "caution",
+    "Kettlebell Swings|shoulder": "caution",
+    "Kettlebell Swings|elbow": "caution",
+    "Kettlebell Swings|wrist/hand": "caution",
+    "Speed Trap Bar Deadlift|shoulder": "caution",
+    "Speed Trap Bar Deadlift|elbow": "caution",
+    "Speed Trap Bar Deadlift|wrist/hand": "caution",
+    "Copenhagen Plank (Half)|shoulder": "caution",
+    "Copenhagen Plank (Half)|elbow": "caution",
+    "Long-Lever Copenhagen|shoulder": "caution",
+    "Long-Lever Copenhagen|elbow": "caution",
+    "Adductor Rockback|hip": "caution",
+    "Adductor Rockback|ankle/foot": "caution",
+    "Adductor Rockback|lowerBack": "caution",
+    "Adductor Rockback|shoulder": "caution",
+    "Adductor Rockback|elbow": "caution",
+    "Adductor Rockback|wrist/hand": "caution"
   },
-
   "conditioning": {
     "_": "Ruling 3 + amendment. Ruled BY HAND, no new taxonomy. STRICTER-WINS: existing avoids (sprint hamstring/calf) stand above these blanket cautions. Sam's authored principle, recorded verbatim for the future quality-grid unit: 'caution any region the modality's equipment or movement meaningfully uses; severity does the rest.'",
     "principle": "caution any region the modality's equipment or movement meaningfully uses; severity does the rest.",
-    "lowerBodyRegions": ["groin", "hip", "quad", "hamstring", "knee", "calf", "ankle/foot"],
+    "lowerBodyRegions": [
+      "groin",
+      "hip",
+      "quad",
+      "hamstring",
+      "knee",
+      "calf",
+      "ankle/foot"
+    ],
     "families": {
       "sprint": {
-        "members": ["Sprint Intervals", "Hill Sprints", "Quality Sprints", "MAS Training"],
-        "caution": ["__LOWER_BODY__", "shoulder", "ribs"],
+        "members": [
+          "Sprint Intervals",
+          "Hill Sprints",
+          "Quality Sprints",
+          "MAS Training"
+        ],
+        "caution": [
+          "__LOWER_BODY__",
+          "shoulder",
+          "ribs"
+        ],
         "note": "lower body per Sam's enumeration (groin, hip, quad, knee, ankle/foot) plus hamstring/calf where existing avoid dominates; shoulder for arm drive; ribs per the amendment."
       },
       "run": {
-        "members": ["Long Run", "6x1km", "Tempo Run", "Flush Run"],
-        "caution": ["__LOWER_BODY__", "ribs"]
+        "members": [
+          "Long Run",
+          "6x1km",
+          "Tempo Run",
+          "Flush Run"
+        ],
+        "caution": [
+          "__LOWER_BODY__",
+          "ribs"
+        ]
       },
       "row": {
-        "members": ["Hard Row Intervals", "Row Intervals", "Easy Row"],
-        "caution": ["shoulder", "wrist/hand"],
+        "members": [
+          "Hard Row Intervals",
+          "Row Intervals",
+          "Easy Row"
+        ],
+        "caution": [
+          "shoulder",
+          "wrist/hand"
+        ],
         "note": "existing lowerBack stands"
       },
       "ski": {
-        "members": ["Hard SkiErg Intervals", "SkiErg Intervals", "Easy Ski"],
-        "caution": ["lowerBack", "wrist/hand"],
+        "members": [
+          "Hard SkiErg Intervals",
+          "SkiErg Intervals",
+          "Easy Ski"
+        ],
+        "caution": [
+          "lowerBack",
+          "wrist/hand"
+        ],
         "note": "existing shoulder stands"
       },
       "bike": {
-        "members": ["Hard Assault Bike Intervals", "Air Bike Sprints", "Assault Bike Intervals"],
-        "caution": ["shoulder"],
+        "members": [
+          "Hard Assault Bike Intervals",
+          "Air Bike Sprints",
+          "Assault Bike Intervals"
+        ],
+        "caution": [
+          "shoulder"
+        ],
         "note": "existing knee stands; NO wrist/hand on bikes"
       },
       "untouched": {
-        "members": ["Easy Bike", "MetCon", "Light Circuits", "Easy Swim"],
+        "members": [
+          "Easy Bike",
+          "MetCon",
+          "Light Circuits",
+          "Easy Swim"
+        ],
         "caution": [],
         "note": "Easy Bike stays unruled-to-good deliberately — it is the escape hatch. MetCon, Light Circuits, Easy Swim: existing cells stand, rest good."
       }
     }
   },
-
   "routing": {
     "_": "Ruling 4 + amendment. Free text -> region. Entries with two targets are BLOCKED: the resolver is single-target in the mechanism, so they are recorded as ruled but NOT implemented, per Sam's own stop condition. Amended 2026-08-02 (Sam, LR-27 divergence table, PARKED_QUESTIONS_2026-08-01 §5): shin/shins -> calf ADDED (single-target), and quadricep (singular) corrected to quad — the knee route was a sheet typo.",
     "single": {
@@ -104,7 +263,6 @@
       "_": "EMPTY BY RULING. Sam ruled routing SINGLE-TARGET everywhere on 2026-07-28: hip flexor -> hip, achilles -> calf, upper back -> shoulder. Duals are off the table; episode-identity semantics (bucket equality in coachInjuryTargetResolver) stay untouched. Logged as a possible future refinement ONLY if athlete complaints expose coverage gaps."
     }
   },
-
   "exceptions": {
     "_": "Ruling 5. All 18 stand as authored. Any that now agree with the new rules dissolve into them automatically.",
     "allStand": true

@@ -571,3 +571,100 @@ compiler chain, the release gate and the six flows follow below.
   `resolvedMetroUrl` = 127.0.0.1:8082): bin-undo-toast, block-rollover,
   full-reset-lands-clean, readiness-ack-never-silent, removal-undo-home,
   week-move-game — **6 passed, 0 failed**. Metro :8082 stopped afterwards.
+
+## Sam, 2026-09-03 — the injury workbook through the pipeline, release unit 31 (R-363)
+
+**Asked:** apply the 13 Adductor Rockback ratings; app is right on the squat
+elbow/wrist conflicts; rebuild the workbook through the existing pipeline;
+resolve its six failures; add the check as release unit 31; run ALL 30 (33)
+unrated drills through the pipeline and identify only the cases needing Sam;
+completeness + parity in unit 31; no invented ratings; stop on any new
+product decision.
+
+### What the pipeline could not see (root causes)
+- The pipeline last ran on 2026-08-03. Three later rulings (rack shoulder
+  08-26, quad-dominant hamstring 08-27, R-267 support loading 08-28 — 65
+  cells) were hand-edited into the sheet and code, never transcribed into the
+  ruling file. The verify step printed only the first FIVE of those drifts
+  (`drift.slice(0, 5)`), which is why my earlier report to Sam said "four
+  squat cells": it was 65. Every one traces by blame to those four dated
+  commits; all transcribed as named exceptions with their citations.
+- The extract step read only the pre-migration snapshot, so 19 intake
+  exercises since 07-28 never entered the workbook; Single-Arm Pulldown was
+  retired from code but still in the sheet.
+- "14 code entries do not author all 13 regions" was a PARSER defect: the
+  verify read quoted keys only; those 14 entries used bare keys. Data was
+  complete (T-Bar pin proved it). Parser now reads both; apply normalised them.
+- The apply step prepended the Scap Pull Ups precedent note on every run (4
+  copies by today). Now written once, duplicates folded.
+- The ruling file has carried shin → calf routing since 08-03; the sheet never
+  showed it (11 → 12 routes).
+
+### Built
+- `scripts/extract-injury-matrix.js`: three record kinds — evidence
+  (snapshot, retired flagged), intake (live entries after the snapshot, 13
+  authored cells carried, never tallied), untagged (pool members with no tags
+  row, authored muscles + pool contraindications). Muscle regex accepts
+  escaped apostrophes.
+- `scripts/derive-injury-matrix-rules.js`: rules tallied from EVIDENCE only
+  (118 rules unchanged, grid diff 0); everything the app can place is
+  evaluated; intake cells lifted as exceptions; untagged rows get the muscle
+  axis + declaration, and a cell the pool says is loaded but the rules leave
+  good becomes DECISION (never good); an easy-cardio walk (conditioning
+  format, no ruled family) is DECISION on every cell.
+- `scripts/build-injury-matrix-sheet.py`: DECISION cells, pending pattern
+  column, dated exception narrative, "what entered after the snapshot" block.
+- `scripts/apply-injury-matrix-to-tags.js`: REFUSES (exit 2) any run that
+  would change an authored code cell — a ruling enters through the ruling file
+  first. This run: 0 changed cells, 167 rows normalised (semantic diff 0/2171).
+  Inline comments INSIDE injury blocks were dropped by the rewrite (their
+  provenance now lives in the ruling file's dated narrative).
+- `docs/INJURY_MATRIX_RULINGS_2026-07-28.json`: 73 named exceptions added
+  with dated narratives (08-26 ×3, 08-27 ×6, R-267 ×56, Rockback ×6; the five
+  squat cells Sam ruled today are inside the R-267 block).
+- `scripts/verify-injury-matrix-sheet.ts` → `test:injury-matrix-sheet`
+  (release unit 31; `verify:` is an alias): parity both directions (reads
+  quoted and bare keys), COMPLETENESS by the REAL pool imports, no DECISION
+  cell, and it prints THE DECISION LIST. Pins re-recorded from the pipeline
+  run: 194 exceptions, 200 rows, 2171 compared cells, 1060/42/1069, 12 routes.
+- `scripts/test-truth-decisions.json`: `test:injury-matrix-sheet` as a
+  current contract (R-363, ruling file). `package.json`: the script.
+- Registry: R-363.
+
+### Receipts
+Pipeline: 200 exercises, 118 rules (38 bind), 194 exceptions (97 intake
+lifts), 44 DECISION cells, retired evidence Single-Arm Pulldown. Sheet
+regenerated. Apply: exit 0, 0 changed cells. Semantic before/after of
+exerciseTags: 167 entries, 0 cell diffs, precedent note ×1. Unit 31:
+**2 failures, both completeness** — 33 pool members without a tags row and
+44 DECISION cells (5 contraindication cells + 3 walks × 13). Everything else
+in the verifier green, including the former six. `test:exercise-intake`
+green (97/97, 56/56, 48/48), `test:t-bar-tib-raises` 10/10, exposure engine
+164/0, `test:compile` PASSED, census 1170/1170 exit 0.
+- The bootstrap (`testTruthAuditTests`) pins the decisions count (196) and the
+  current-contract count (33) with the named list; unit 31 moves them to 197
+  / 34 with a dated comment, the same way the three 2026-09-03 promotions
+  before it did. First gate run went red at unit 1 on exactly those pins.
+- **Compiler chain** `test:canonical-weekly-compiler`: exit 0, 0 reds.
+- **Release gate**, 31 units: **30 / 31 green**. Unit 31
+  (`test:injury-matrix-sheet`) red on exactly the two COMPLETENESS checks —
+  33 pool members without a tags row, 44 DECISION cells — i.e. the decision
+  list for Sam. Parity, pins, structure, snapshot lifts all green.
+- **Six audit flows** on simulator B8B2C7B0 against this tree's Metro on
+  :8082 (launch receipt `resolvedMetroUrl` = 127.0.0.1:8082; the other seat's
+  :8081 untouched): first attempt lost bin-undo-toast to the known Maestro
+  driver hang (8-min watchdog fired, orphans killed); clean rerun
+  **6 passed, 0 failed**. Metro :8082 stopped afterwards.
+
+### For Sam — the decision list (nothing invented)
+1. 33 drills have no tags row (26 mobility incl. Adductor Rockback, 6
+   tissue-quality, 4 breathing, 3 easy-cardio walks). Each needs the intake
+   classification (movement pattern, region, load, soreness, stability,
+   eccentric, late-week) before the app can read a rating. Rockback's 13
+   ratings are ruled and on the sheet; they reach the app with that row.
+2. 5 cells where the pool says a region is loaded and the rules say good:
+   Hip 90/90 knee, Deep Squat Hold ankle/foot, Butterfly Stretch ankle/foot,
+   Jefferson Curl neck, Dumbbell Pullovers ribs.
+3. The 3 walks: which conditioning family (Easy Bike's, or another)?
+Optional, not blocking: R-267 is 56 named exceptions because no axis of the
+model reads the prescribed load; a load axis would express it in one line.

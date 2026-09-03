@@ -9168,3 +9168,36 @@ its sibling. Guard: `LAW-five-rear-shoulder-exercises-can-warm-up-but-face-pulls
 through chained `test:warmup-rear-shoulder` (9 cells, 730 dated upper warm-ups,
 both main/warm-up directions and a removal mutation). Receipt:
 `docs/STATUS_WARMUPREAR.md`.
+
+**R-363** · The injury workbook is release unit 31; completeness and parity
+are gated; Adductor Rockback's thirteen ratings; the squat elbow/wrist cells,
+2026-09-03.
+
+Owner: integrate. Sam ruled four things in one sitting. (1) The injury
+workbook is rebuilt ONLY through the existing matrix pipeline (extract →
+derive → build → apply), never by hand, and its check is release unit 31
+(`test:injury-matrix-sheet`, a current contract in the decisions register).
+(2) Unit 31 holds three things: sheet ↔ code parity cell for cell in both
+directions; COMPLETENESS — every pool member the app can place has a full
+thirteen-region row in code and on the sheet; and no DECISION cell remains
+(a cell the rules cannot decide reads DECISION, never good). It is red until
+every untagged drill has Sam's intake classification; the run prints the
+decision list. (3) Adductor Rockback's thirteen ratings, from the rated drills
+nearest to it: groin, hip, knee, ankle/foot, lower back, shoulder, elbow and
+wrist/hand Caution; quad, hamstring, calf, ribs and neck Good. Recorded as
+named exceptions in the ruling file where the Groin muscle rules and the
+declaration do not already give them. (4) On the squat elbow/wrist cells the
+sheet had not carried (Back, Front and Box Squat), *"the app is right"* —
+these fall under R-267 ("ratings include indirect support/loading", 2026-08-28),
+which had been applied to code and sheet but never transcribed into the ruling
+file; the transcription now carries all 56 R-267 cells, the 2026-08-26 rack
+shoulder cells and the 2026-08-27 quad-dominant hamstring cells, so the
+pipeline reproduces the code exactly (apply step: 0 changed cells, 167 rows
+normalised). Not invented: the 33 untagged pool members (26 mobility drills
+incl. Adductor Rockback, 6 tissue-quality, 4 breathing, 3 easy-cardio walks)
+carry no tags row and cannot until Sam supplies their classification
+(movement pattern, region, load, soreness, stability, eccentric, late-week);
+5 contraindication cells (Hip 90/90 knee, Deep Squat Hold ankle/foot,
+Butterfly Stretch ankle/foot, Jefferson Curl neck, Dumbbell Pullovers ribs)
+and the three walks' conditioning family are his to rule. Guard:
+`test:injury-matrix-sheet` (release unit 31). Receipt: `docs/STATUS_INTEGRATE.md`.

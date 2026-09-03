@@ -254,10 +254,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'moderate',
     unilateral: true, eccentric: 'low', lateWeek: 'caution',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'caution',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
-      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'avoid',
+      'lowerBack': 'avoid',
+      'neck': 'caution',
+      'shoulder': 'avoid',
+      'elbow': 'caution',
       'wrist/hand': 'avoid',
     },
     prescription: {
@@ -276,10 +284,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'moderate', doms: 'low', stability: 'low',
     unilateral: false, eccentric: 'low', lateWeek: 'caution',
     injury: {
-      groin: 'good', hip: 'caution', quad: 'caution',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
-      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'groin': 'good',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'avoid',
+      'lowerBack': 'avoid',
+      'neck': 'caution',
+      'shoulder': 'avoid',
+      'elbow': 'caution',
       'wrist/hand': 'avoid',
     },
     prescription: {
@@ -298,10 +314,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'moderate',
     unilateral: true, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'caution',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'avoid', lowerBack: 'avoid',
-      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'avoid',
+      'lowerBack': 'avoid',
+      'neck': 'caution',
+      'shoulder': 'avoid',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -320,10 +344,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'moderate', doms: 'high', stability: 'low',
     unilateral: false, eccentric: 'high', lateWeek: 'avoid',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'avoid',
-      hamstring: 'good', knee: 'avoid', calf: 'good',
-      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
-      neck: 'good', shoulder: 'good', elbow: 'good',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'avoid',
+      'hamstring': 'good',
+      'knee': 'avoid',
+      'calf': 'good',
+      'ankle/foot': 'caution',
+      'ribs': 'good',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'good',
+      'elbow': 'good',
       'wrist/hand': 'good',
     },
     prescription: {
@@ -341,10 +373,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'moderate',
     unilateral: true, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'good',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
-      neck: 'good', shoulder: 'caution', elbow: 'caution',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'good',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -363,10 +403,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'moderate', doms: 'moderate', stability: 'moderate',
     unilateral: true, eccentric: 'moderate', lateWeek: 'caution',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'good',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
-      neck: 'good', shoulder: 'caution', elbow: 'caution',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'good',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -384,10 +432,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: false, eccentric: 'moderate', lateWeek: 'caution',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'good',
-      hamstring: 'caution', knee: 'caution', calf: 'good',
-      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
-      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'good',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'good',
+      'ankle/foot': 'good',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -405,10 +461,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'moderate',
     unilateral: false, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'good', hip: 'caution', quad: 'good',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
-      neck: 'caution', shoulder: 'avoid', elbow: 'caution',
+      'groin': 'good',
+      'hip': 'caution',
+      'quad': 'good',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'good',
+      'lowerBack': 'caution',
+      'neck': 'caution',
+      'shoulder': 'avoid',
+      'elbow': 'caution',
       'wrist/hand': 'avoid',
     },
     prescription: {
@@ -426,10 +490,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'moderate',
     unilateral: true, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'caution',
-      hamstring: 'caution', knee: 'caution', calf: 'caution',
-      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
-      neck: 'good', shoulder: 'good', elbow: 'good',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'caution',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'good',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'good',
+      'elbow': 'good',
       'wrist/hand': 'good',
     },
     prescription: {
@@ -447,10 +519,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: true, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'caution',
-      hamstring: 'caution', knee: 'good', calf: 'good',
-      'ankle/foot': 'good', ribs: 'good', lowerBack: 'caution',
-      neck: 'good', shoulder: 'good', elbow: 'good',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'good',
+      'calf': 'good',
+      'ankle/foot': 'good',
+      'ribs': 'good',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'good',
+      'elbow': 'good',
       'wrist/hand': 'good',
     },
     prescription: {
@@ -468,10 +548,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: false, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'caution', hip: 'caution', quad: 'caution',
-      hamstring: 'good', knee: 'caution', calf: 'good',
-      'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
-      neck: 'good', shoulder: 'good', elbow: 'good',
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'good',
+      'knee': 'caution',
+      'calf': 'good',
+      'ankle/foot': 'caution',
+      'ribs': 'good',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'good',
+      'elbow': 'good',
       'wrist/hand': 'good',
     },
     prescription: {
@@ -489,10 +577,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: false, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'good', hip: 'good', quad: 'good',
-      hamstring: 'good', knee: 'caution', calf: 'good',
-      'ankle/foot': 'caution', ribs: 'caution', lowerBack: 'caution',
-      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'caution',
+      'calf': 'good',
+      'ankle/foot': 'caution',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'good',
     },
     prescription: {
@@ -510,10 +606,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: true, eccentric: 'low', lateWeek: 'caution',
     injury: {
-      groin: 'good', hip: 'good', quad: 'good',
-      hamstring: 'good', knee: 'good', calf: 'good',
-      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'good',
-      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'good',
+      'calf': 'good',
+      'ankle/foot': 'good',
+      'ribs': 'caution',
+      'lowerBack': 'good',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -531,10 +635,18 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     fatigue: 'low', doms: 'low', stability: 'low',
     unilateral: false, eccentric: 'low', lateWeek: 'good',
     injury: {
-      groin: 'good', hip: 'good', quad: 'good',
-      hamstring: 'good', knee: 'good', calf: 'good',
-      'ankle/foot': 'good', ribs: 'caution', lowerBack: 'caution',
-      neck: 'caution', shoulder: 'caution', elbow: 'caution',
+      'groin': 'good',
+      'hip': 'good',
+      'quad': 'good',
+      'hamstring': 'good',
+      'knee': 'good',
+      'calf': 'good',
+      'ankle/foot': 'good',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'caution',
+      'shoulder': 'caution',
+      'elbow': 'caution',
       'wrist/hand': 'caution',
     },
     prescription: {
@@ -609,9 +721,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: quad-dominant work is the Bible's own hamstring swap
-      // ("Usually okay: non-painful quad-dominant lower work"; deadlift ->
-      // box squat). Matrix exception rules it good.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -634,7 +743,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -679,7 +787,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -768,8 +875,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: the Bible's own swap for single-leg hinge work
-      // ("Single-leg RDL -> step-up"). Quad-dominant hamstring exception.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -866,7 +971,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'caution',
       'lowerBack': 'caution',
       'neck': 'good',
-      // The delivered load profile is a held dumbbell, not an unloaded squat.
       'shoulder': 'caution',
       'elbow': 'caution',
       'wrist/hand': 'caution',
@@ -882,7 +986,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -1027,7 +1130,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'lowerBack': 'caution',
       'neck': 'good',
       'shoulder': 'caution',
-      // Positioning and stabilising the prescribed bar also loads the hands.
       'elbow': 'caution',
       'wrist/hand': 'caution',
     },
@@ -1093,8 +1195,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'ribs': 'good',
       'lowerBack': 'caution',
       'neck': 'good',
-      // This catalogue identity prescribes a held dumbbell; do not silently
-      // treat the loaded version as clearly unaffected bodyweight work.
       'shoulder': 'caution',
       'elbow': 'caution',
       'wrist/hand': 'caution',
@@ -1168,7 +1268,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
-      // Sam, 2026-08-27: quad-dominant hamstring exception — see Box Squat.
       'hamstring': 'good',
       'knee': 'caution',
       'calf': 'caution',
@@ -1241,12 +1340,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       warmup: true, primer: false,
     },
     injury: {
-      // Sam, 2026-09-03: one ruling model rates both tib raises. The 2026-09-02
-      // intake authored these by hand; the ruled matrix (2026-07-28) rates
-      // `Tib Raises` — same movement pattern, same primary muscle, no named
-      // exception — caution on the six lower-body/back regions below, and a
-      // rule on an axis reaches every exercise on that axis. Kept equal to the
-      // `Tib Raises` row above, which is the ruled row.
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'caution',
@@ -2008,18 +2101,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'wrist/hand': 'caution',
     },
   },
-  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every
-  // injury key out deliberately, so a reviewed-and-safe rating could not be
-  // mistaken for one nobody had looked at. Every entry now does the same, and
-  // the helper that made omission possible is gone.
-  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every
-  // injury key out deliberately, so a reviewed-and-safe rating could not be
-  // mistaken for one nobody had looked at. Every entry now does the same, and
-  // the helper that made omission possible is gone.
-  // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every
-  // injury key out deliberately, so a reviewed-and-safe rating could not be
-  // mistaken for one nobody had looked at. Every entry now does the same, and
-  // the helper that made omission possible is gone.
   // Sam, 2026-07-28. This entry was the PRECEDENT: the first to write every
   // injury key out deliberately, so a reviewed-and-safe rating could not be
   // mistaken for one nobody had looked at. Every entry now does the same, and

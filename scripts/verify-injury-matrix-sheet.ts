@@ -26,14 +26,23 @@
  *     fail if the ruling set changes, and the fix is to re-run the pipeline, not
  *     to edit the numbers.
  *
- * Not wired into `test:bible`: the workbook is Phase 1 output, and Phase 2 is
- * where code is held equal to it in both directions.
+ * RELEASE UNIT 31 (Sam, 2026-09-03): `test:injury-matrix-sheet`. Two more
+ * things it holds, beside sheet<->code parity —
+ *   COMPLETENESS: every pool member the app can place has a full thirteen-region
+ *     row in code and on the sheet. An untagged drill is not "safe by absence";
+ *     it is listed, by name, as awaiting Sam's intake classification.
+ *   NO DECISION CELL: a sheet cell the pipeline could not rule (the pool says a
+ *     region is loaded and no rule answers; a conditioning format with no ruled
+ *     family) reads DECISION, never good, and reds this unit until Sam rules.
+ * The tail of the run prints THE DECISION LIST — exactly what Sam has to answer.
  */
 import fs from 'fs';
 import path from 'path';
 
 import { readXlsx, readSheetRecords, XlsxSheet } from '../src/__tests__/support/xlsxReader';
 import { EXERCISE_TAGS } from '../src/data/exerciseTags';
+import { POOL_REGISTRY } from '../src/data/exercisePools';
+import { STRENGTH_POOLS } from '../src/data/exercisePoolsStrength';
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const FILE = path.join(REPO_ROOT, 'docs', 'INJURY_MATRIX_REVIEW_2026-07-28.xlsx');
@@ -82,13 +91,30 @@ function readCode(): CodeExercise[] {
     const injury = /injury:\s*\{([\s\S]*?)\n {4}\}/.exec(block);
     if (!injury) throw new Error(`no explicit injury profile on "${name}"`);
     const ratings: Record<string, string> = {};
-    for (const kv of injury[1].matchAll(/'([^']+)':\s*'(\w+)'/g)) ratings[kv[1]] = kv[2];
+    // Quoted and bare keys are both authored (`'ankle/foot': 'good'`, `groin: 'good'`);
+    // a parser that read only one shape reported fourteen complete entries as
+    // incomplete on 2026-09-03.
+    for (const kv of injury[1].matchAll(/(?:'([^']+)'|(\w+)):\s*'(\w+)'/g)) ratings[kv[1] || kv[2]] = kv[3];
     out.push({ name, movement: /movement:\s*'([^']+)'/.exec(block)![1], ratings });
   }
   return out;
 }
 const code = readCode();
 const byName = new Map(code.map((e) => [e.name, e]));
+
+/** Every exercise the app can place: the pool registry and the strength pools, by the REAL imports. */
+function poolMembers(): Map<string, string> {
+  const members = new Map<string, string>();
+  for (const [pool, entries] of Object.entries(POOL_REGISTRY)) {
+    for (const entry of entries as ReadonlyArray<{ name: string }>) if (!members.has(entry.name)) members.set(entry.name, `pool:${pool}`);
+  }
+  for (const [pool, slot] of Object.entries(STRENGTH_POOLS)) {
+    const entries = [...(slot as any).anchor.entries, ...(slot as any).accessory.entries] as ReadonlyArray<{ name: string }>;
+    for (const entry of entries) if (!members.has(entry.name)) members.set(entry.name, `strength:${pool}`);
+  }
+  return members;
+}
+const members = poolMembers();
 
 /**
  * The PRE-MIGRATION ratings, from the pinned snapshot.
@@ -220,8 +246,14 @@ for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Regi
 // Leg Press, Box Squat, High Box Squat, Goblet Squat, Step Ups and Leg
 // Extension carry hamstring 'good' — the first LOOSER exceptions, because a
 // pattern rule was over-reaching what the Bible authored.
-ok('snapshot', '33 exceptions (incl. singletons lifted when their thin rule died)',
-  exceptionRows.length === 33, `got ${exceptionRows.length}`);
+// 33 → 194 on 2026-09-03 (Sam: the pipeline is re-run, not patched). The
+// three post-08-03 rulings that had been hand-edited into the sheet and the
+// code are now transcribed in the ruling file (rack shoulder ×3, quad-dominant
+// hamstring ×6, R-267 support loading ×56), Sam's 2026-09-03 rulings join them
+// (Adductor Rockback ×6), and every intake rating since the snapshot that the
+// rules cannot reproduce is lifted as a named exception (97) — never re-derived.
+ok('snapshot', '194 exceptions (snapshot lifts, dated rulings, intake lifts)',
+  exceptionRows.length === 194, `got ${exceptionRows.length}`);
 ok('structural', 'every quad-dominant hamstring exception is ruled good',
   ['Leg Press', 'Box Squat', 'High Box Squat', 'Goblet Squat', 'Step Ups', 'Leg Extension']
     .every((name) => exceptions[`${name}|hamstring`] === 'good'));
@@ -235,7 +267,7 @@ ok('structural', 'every bench-compressed exercise carries the ribs exception',
   ['Chest Supported Row', 'Chest-Supported DB Row', 'Incline Y Raise']
     .every((name) => exceptions[`${name}|ribs`] === 'caution'));
 ok('structural', 'every exception names a real exercise and region',
-  exceptionRows.every((r) => EXERCISE_TAGS[r.Exercise] !== undefined && REGIONS.includes(r.Region)));
+  exceptionRows.every((r) => (EXERCISE_TAGS[r.Exercise] !== undefined || members.has(r.Exercise)) && REGIONS.includes(r.Region)));
 
 const declarationRow = sheetNamed('Rules — pattern')!.rows
   .find((row) => (row[0] ?? '').startsWith('DECLARATION'));
@@ -247,22 +279,29 @@ ok('structural', 'the ruling file records the declaration as signed',
 /* ══ CENTREPIECE — sheet <-> code equality, BOTH directions ══ */
 
 const finalRows = readSheetRecords(FILE, 'Final matrix', 5);
-ok('snapshot', '149 rows on the final matrix', finalRows.length === 149, `got ${finalRows.length}`);
+// 149 → 200 on 2026-09-03: 148 snapshot rows still in code (Single-Arm
+// Pulldown retired, kept as rule evidence only), 19 intake rows, and the 33
+// untagged pool members the app can place, shown with what the rules say.
+ok('snapshot', '200 rows on the final matrix', finalRows.length === 200, `got ${finalRows.length}`);
 
 ok('structural', 'every exercise in CODE appears in the sheet',
   code.every((e) => finalRows.some((r) => r.Exercise === e.name)),
   code.filter((e) => !finalRows.some((r) => r.Exercise === e.name)).map((e) => e.name).join(', '));
-ok('structural', 'every exercise in the SHEET appears in code',
-  finalRows.every((r) => byName.has(r.Exercise)),
-  finalRows.filter((r) => !byName.has(r.Exercise)).map((r) => r.Exercise).join(', '));
+// A sheet row with no code entry is legal ONLY for a pool member awaiting its
+// classification; it is reported under COMPLETENESS below, never accepted here.
+ok('structural', 'every exercise in the SHEET is in code or is a pool member awaiting classification',
+  finalRows.every((r) => byName.has(r.Exercise) || members.has(r.Exercise)),
+  finalRows.filter((r) => !byName.has(r.Exercise) && !members.has(r.Exercise)).map((r) => r.Exercise).join(', '));
 
 const drift: string[] = [];
 const distribution: Record<string, number> = {};
+const decisionCells: string[] = [];
 let cells = 0;
 for (const record of finalRows) {
   const entry = byName.get(record.Exercise);
-  if (!entry) continue;
   for (const region of REGIONS) {
+    if (record[region].startsWith('DECISION')) { decisionCells.push(`${record.Exercise}.${region}: ${record[region]}`); continue; }
+    if (!entry) continue;
     const sheetValue = record[region].replace(/ \((exc|dec)\)$/, '');
     const codeValue = entry.ratings[region];
     distribution[sheetValue] = (distribution[sheetValue] ?? 0) + 1;
@@ -273,18 +312,34 @@ for (const record of finalRows) {
     }
   }
 }
-ok('structural', 'sheet and code agree on every cell, both directions',
-  drift.length === 0, drift.slice(0, 5).join(' ; '));
+ok('structural', `sheet and code agree on every cell, both directions (${drift.length} drift)`,
+  drift.length === 0, `${drift.length} cells — ${drift.slice(0, 8).join(' ; ')}`);
+
+/* ══ COMPLETENESS — release unit 31 (Sam, 2026-09-03) ══ */
+
+const missingInCode = [...members.entries()].filter(([name]) => !byName.has(name));
+const missingOnSheet = [...members.keys()].filter((name) => !finalRows.some((r) => r.Exercise === name));
+ok('structural', 'COMPLETENESS: every pool member the app can place appears on the final matrix',
+  missingOnSheet.length === 0, missingOnSheet.join(', '));
+ok('structural', 'COMPLETENESS: every pool member has a full thirteen-region row in code',
+  missingInCode.length === 0, `${missingInCode.length} untagged — ${missingInCode.map(([name]) => name).join(', ')}`);
+ok('structural', 'COMPLETENESS: no DECISION cell remains on the final matrix',
+  decisionCells.length === 0, `${decisionCells.length} cells`);
 ok('structural', 'every code entry authors all 13 regions — no omissions possible',
   code.every((e) => REGIONS.every((r) => e.ratings[r] !== undefined)),
   code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
-ok('structural', '149 x 13 = 1937 cells compared', cells === 1937, `got ${cells}`);
+// Compared = rows in code (167) × 13. Untagged rows have no code cell yet.
+ok('structural', '167 x 13 = 2171 cells compared', cells === 2171, `got ${cells}`);
 // 872/24/1041 → 875/24/1038 on 2026-08-26: the three rack-squat shoulder
 // cells moved good → caution (Sam's ruling above).
 // 875/24/1038 → 869/24/1044 on 2026-08-27: the six quad-dominant hamstring
 // cells moved caution → good (Sam's hamstring over-restriction fix above).
-ok('snapshot', 'final distribution: 869 caution / 24 avoid / 1044 good',
-  distribution.caution === 869 && distribution.avoid === 24 && distribution.good === 1044,
+// 869/24/1044 → 1060/42/1069 on 2026-09-03: the 19 intake rows enter (their
+// authored cells), the R-267 support-loading cells were already in code and
+// the sheet, and the retired Single-Arm Pulldown row leaves. Over the 2171
+// compared cells; DECISION cells are not counted anywhere.
+ok('snapshot', 'final distribution: 1060 caution / 42 avoid / 1069 good',
+  distribution.caution === 1060 && distribution.avoid === 42 && distribution.good === 1069,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
@@ -341,7 +396,9 @@ ok('snapshot', 'sprint family carries hamstring/calf avoid above the blanket cau
 
 const singleRoutes = readSheetRecords(FILE, 'Routing', 5)
   .filter((r) => r.Status?.startsWith('ruled'));
-ok('snapshot', '11 single-target routes ruled', singleRoutes.length === 11,
+// 11 → 12 on 2026-09-03: the ruling file has carried shin -> calf since
+// 2026-08-03 (ffad3bcd); the sheet had not been regenerated since.
+ok('snapshot', '12 single-target routes ruled', singleRoutes.length === 12,
   `got ${singleRoutes.length}`);
 ok('structural', 'every single route targets one of the 13 regions',
   singleRoutes.every((r) => REGIONS.includes(r['RULED region'])));
@@ -361,6 +418,18 @@ ok('structural', 'no Traps rule survives — an unreachable authored rule is a d
 
 /* ── Result ── */
 
+if (missingInCode.length > 0 || decisionCells.length > 0) {
+  console.log('\nTHE DECISION LIST — what Sam has to answer before this unit is green:');
+  if (missingInCode.length > 0) {
+    console.log(`  ${missingInCode.length} pool member(s) have no tags row. Each needs an intake classification`
+      + ' (movement pattern, region, load, soreness, stability, eccentric, late-week) before the app can read a rating:');
+    for (const [name, where] of missingInCode) console.log(`    - ${name}  [${where}]`);
+  }
+  if (decisionCells.length > 0) {
+    console.log(`  ${decisionCells.length} matrix cell(s) the rules cannot decide:`);
+    for (const line of decisionCells) console.log(`    - ${line}`);
+  }
+}
 if (failures === 0) { console.log('\nMATRIX VERIFIED — 0 failures'); process.exit(0); }
 console.log(`\n${failures} FAILURES (${snapshotFailures} ruled-snapshot pins)`);
 process.exit(1);
