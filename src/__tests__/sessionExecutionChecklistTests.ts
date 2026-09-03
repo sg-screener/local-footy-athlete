@@ -1048,10 +1048,12 @@ ok('[10] the NUMBER lives in the gutter, not beside the name',
   /<View style=\{styles\.exerciseNumberGutter\}>[\s\S]{0,160}exerciseLabelText/.test(cardSource)
     && !/exerciseLabelBadge/.test(headerRow),
   'the number as a sibling of the name is what put lines 2 and 3 under it');
-ok('[10] the number is centred beside a subtle lime separator',
+// R-361 (2026-09-03): the app accent is yellow #D8D800 — the translucent
+// separator reads the yellow (216, 216, 0), never the retired lime (200, 255, 0).
+ok('[10] the number is centred beside a subtle yellow separator (R-361)',
   /exerciseNumberGutter:\s*\{[^}]*alignItems:\s*'center'[^}]*justifyContent:\s*'center'[^}]*alignSelf:\s*'stretch'/.test(screen)
     && /exerciseNumberGutter:\s*\{[^}]*borderRightWidth:\s*StyleSheet\.hairlineWidth/.test(screen)
-    && /exerciseNumberGutter:\s*\{[^}]*borderRightColor:\s*'rgba\(200, 255, 0, 0\.35\)'/.test(screen)
+    && /exerciseNumberGutter:\s*\{[^}]*borderRightColor:\s*'rgba\(216, 216, 0, 0\.35\)'/.test(screen)
     && /exerciseLabelText:\s*\{[^}]*width:\s*'100%'[^}]*textAlign:\s*'center'/.test(screen),
   'the gutter includes the card padding, so the number centres between the visible edge and divider');
 ok('[10] ALL THREE text lines are children of the ONE content column',

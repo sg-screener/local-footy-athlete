@@ -259,3 +259,16 @@ work add a separate Strength session". Measured on control trees: green at
 coordinate is retired with the ruling named; R-288's own guard holds the
 absence. Chain: Section Add 250/0, session-change-hub 59 green, exit 0.
 `test:compile` PASSED after both.
+
+### Release gate, second run (on the tree after families 3-5)
+**21/30 units green**, stopped at unit 22 `test:session-execution` — a unit
+the candidate's earlier runs never reached.
+
+### Family 6 — `test:session-execution` [10] "a subtle lime separator" (stale)
+REGISTRY-GREP: R-361 and its addendum.
+The cell pinned `borderRightColor: 'rgba(200, 255, 0, 0.35)'` on the exercise
+number gutter. **R-361 (2026-09-03)** made the accent yellow (#D8D800) and
+`e4452275` changed the gutter's translucent separator to (216, 216, 0);
+the candidate's own accent commit `f385dc75` then refused the whole lime
+family. Re-pinned to the yellow rgba with the ruling named. 212/0;
+`test:compile` PASSED.
