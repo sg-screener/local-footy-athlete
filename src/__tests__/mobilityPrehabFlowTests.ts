@@ -252,7 +252,8 @@ console.log("\n[1] Sam's D17 menus — the counts are law, the app picks which")
     for (const movement of flow?.movements ?? []) {
       const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[movement.category];
       const entry = EXERCISE_MUSCLE_METADATA.find((e) => e.exercise === movement.exercise.name);
-      const poolOk = !!entry && mapping.pools.includes(entry.pool);
+      const poolOk = !!entry && (mapping.pools.includes(entry.pool)
+        || (mapping.alsoEligibleExercises ?? []).includes(entry.exercise));
       const groupOk = !!entry &&
         [...entry.primary, ...entry.secondary].some((g) => mapping.muscleGroups.includes(g));
       if (!poolOk || !groupOk) {
@@ -261,7 +262,7 @@ console.log("\n[1] Sam's D17 menus — the counts are law, the app picks which")
     }
   }
   ok(
-    "every movement is in its slot's authored pool AND muscle group",
+    "every movement has authored slot eligibility AND the required muscle group",
     misplaced.length === 0,
     misplaced.join('; '),
   );
@@ -763,7 +764,8 @@ console.log('\n[7] Performed warm-up movements survive a re-derivation');
     const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[movement.category];
     const entry = EXERCISE_MUSCLE_METADATA.find((e) => e.exercise === movement.exercise.name);
     if (!mapping || !entry) { misplaced.push(movement.exercise.name); continue; }
-    const poolOk = mapping.pools.includes(entry.pool);
+    const poolOk = mapping.pools.includes(entry.pool)
+      || (mapping.alsoEligibleExercises ?? []).includes(entry.exercise);
     const groupOk = [...entry.primary, ...entry.secondary]
       .some((g) => mapping.muscleGroups.includes(g));
     if (!poolOk || !groupOk) misplaced.push(`${movement.exercise.name} in ${movement.category}`);

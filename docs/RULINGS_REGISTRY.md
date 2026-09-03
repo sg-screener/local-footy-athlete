@@ -9076,3 +9076,19 @@ names so this colour-only ruling does not create a repo-wide API rename.
 Guard: `LAW-the-app-accent-is-yellow-and-the-logo-is-unchanged` through chained
 `test:accent-colour` (7 cells, including an old-lime mutation).
 Receipt: `docs/STATUS_ACCENTYELLOW.md`.
+
+**R-362** · Five rear-shoulder exercises may be selected in Movement Prep,
+2026-09-03.
+
+Owner: warmuprear. Sam named `Incline Y Raise`, `Face Pull`,
+`Cable Face Pull`, `Rear Delt Fly` and `Band Pull-Apart`: all five remain in
+their existing Arms/shoulders catalogue ownership and are also eligible for
+the shoulder-prehab slots in an upper or full-body warm-up. Existing equipment,
+injury, experience and game-proximity filters still apply. `Face Pull` and
+`Cable Face Pull` are two versions of one exercise family: either may be used,
+but both may never appear on the same day, across warm-up and main work as well
+as within the warm-up. A performed warm-up Face Pull outranks a fresh redraw of
+its sibling. Guard: `LAW-five-rear-shoulder-exercises-can-warm-up-but-face-pulls-never-pair`
+through chained `test:warmup-rear-shoulder` (9 cells, 730 dated upper warm-ups,
+both main/warm-up directions and a removal mutation). Receipt:
+`docs/STATUS_WARMUPREAR.md`.

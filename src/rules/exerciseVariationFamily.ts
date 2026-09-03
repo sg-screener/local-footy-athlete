@@ -14,6 +14,7 @@ export type ExerciseVariationFamily =
   | 'chest_supported_row'
   | 'bodyweight_vertical_pull'
   | 'bodyweight_horizontal_push'
+  | 'face_pull'
   | 'tib_raise'
   | 'lat_pulldown'
   | 'romanian_deadlift';
@@ -42,6 +43,7 @@ const FAMILY_MEMBERS: Readonly<Record<ExerciseVariationFamily, readonly string[]
   ],
   bodyweight_vertical_pull: ['Pull-Ups', 'Band-Assisted Pull-Up', 'Chin-Ups'],
   bodyweight_horizontal_push: ['Push-ups', 'Incline Push-Up'],
+  face_pull: ['Face Pull', 'Cable Face Pull'],
   tib_raise: ['Tib Raises', 'T-Bar Tib Raises'],
   lat_pulldown: [
     'Lat Pulldown',

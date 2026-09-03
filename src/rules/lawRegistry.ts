@@ -3397,6 +3397,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BORN GUARDED 2026-09-03 by seat `accentyellow`. RED FIRST: 5/7 failed — both theme tokens, 42 active files/pictograms and both shared primary-button pressed bindings still carried the old treatment. THE CHANGE: exact primary/pressed values, every active literal and translucent tint, six traced pictograms, and the two shared button primitives moved together; historical ruling text and logo assets were not edited. MUTATION: replacing the primary theme token with the old lime kills both its exact-value cell and the no-old-lime census. Receipt: docs/STATUS_ACCENTYELLOW.md.',
     },
   },
+  {
+    id: 'LAW-five-rear-shoulder-exercises-can-warm-up-but-face-pulls-never-pair',
+    law: 'R-362: Incline Y Raise, Face Pull, Cable Face Pull, Rear Delt Fly and Band Pull-Apart keep their existing catalogue ownership and are additionally eligible for shoulder-prehab warm-up slots through the normal equipment, injury, experience and game-proximity filters. Face Pull and Cable Face Pull are one typed variation family and may never share a day across warm-up and main work; performed warm-up work outranks a fresh sibling draw.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-362',
+    guard: {
+      state: 'guarded',
+      by: 'test:warmup-rear-shoulder',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-03 by seat `warmuprear`. RED FIRST: 2/8 green, 6 red — none of the five reached the shoulder-prehab candidate door, neither Face Pull name had variation-family identity, the main/warm-up exclusion was vacuous, and the band-only candidate was absent. THE CHANGE: one explicit alsoEligibleExercises relation on the existing shoulder-prehab slot plus one face_pull identity in the existing variation-family owner; the flow selector now applies exact and family collision checks to the main workout, fresh picks, performed retention and selection receipts. AFTER: 9/9, all five observed across 730 dated upper warm-ups, no Face Pull pair, both main/warm-up directions exercised, performed work retained, original catalogue pools pinned and equipment filters preserved. MUTATION: emptying the extra eligibility relation kills its list, candidate-door and actual-selection cells. Receipt: docs/STATUS_WARMUPREAR.md.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

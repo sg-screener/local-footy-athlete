@@ -5,6 +5,7 @@ import {
   FLOW_CATEGORY_MUSCLE_MAPPING,
   SESSION_FLOW_MENUS,
   resolveLowerDayMenu,
+  type FlowCategoryMapping,
   type FlowDayType,
   type FlowSlotCategory,
   type SessionFlowMenu,
@@ -25,6 +26,7 @@ import {
   type AutomaticProgrammingSelectionTrace,
 } from '../rules/programmingSelectionTrace';
 import { getMondayForDate } from './sessionResolver';
+import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
 
 /**
  * D13/D17 — the Mobility & Prehab flow that sits collapsed at the top of a session.
@@ -225,8 +227,9 @@ export function flowDayTypeFor(workout: Partial<Workout>): FlowDayType | null {
 }
 
 /**
- * The candidates for one authored slot: D17's pools ∩ D17's muscle groups, then
- * this athlete's equipment and injuries.
+ * The candidates for one authored slot: its pools (plus any explicitly ruled
+ * cross-pool exercises) intersected with its muscle groups, then this athlete's
+ * equipment and injuries.
  *
  * Walks `EXERCISE_MUSCLE_METADATA` in sheet order, so the rotation is over Sam's
  * own ordering rather than over an order this file invented.
@@ -236,14 +239,13 @@ export function flowSlotCandidates(
   athlete: AthleteContext,
 ): PoolExercise[] {
   const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[category];
-  const pools = new Set<string>(mapping.pools);
   const wanted = new Set<MuscleGroup>(mapping.muscleGroups);
   const eligible = new Set(
     filterPoolEntriesForAthlete([...POOL_ENTRY_BY_NAME.values()], athlete).map((e) => e.id),
   );
   const out: PoolExercise[] = [];
   for (const entry of EXERCISE_MUSCLE_METADATA) {
-    if (!pools.has(entry.pool)) continue;
+    if (!flowCategoryIncludesExercise(mapping, entry)) continue;
     if (![...entry.primary, ...entry.secondary].some((group) => wanted.has(group))) continue;
     const poolEntry = POOL_ENTRY_BY_NAME.get(canonicalExerciseName(entry.exercise));
     if (!poolEntry || !eligible.has(poolEntry.id)) continue;
@@ -254,6 +256,28 @@ export function flowSlotCandidates(
     out.push(poolEntry);
   }
   return out;
+}
+
+function flowCategoryIncludesExercise(
+  mapping: FlowCategoryMapping,
+  entry: (typeof EXERCISE_MUSCLE_METADATA)[number],
+): boolean {
+  return mapping.pools.includes(entry.pool)
+    || (mapping.alsoEligibleExercises ?? [])
+      .some((name) => canonicalExerciseName(name) === canonicalExerciseName(entry.exercise));
+}
+
+/** Exact identity and typed variation identity both count as already on the day. */
+function exerciseConflictsWithDay(
+  candidate: string,
+  existingCanonicalNames: ReadonlySet<string>,
+): boolean {
+  const canonicalCandidate = canonicalExerciseName(candidate);
+  return existingCanonicalNames.has(canonicalCandidate)
+    || exerciseVariationConflictsWithSession({
+      candidate,
+      existingExerciseNames: [...existingCanonicalNames],
+    });
 }
 
 /**
@@ -274,6 +298,7 @@ function fillMenu(
 ): MobilityPrehabFlowMovement[] {
   const movements: MobilityPrehabFlowMovement[] = [];
   const taken = new Set<string>();
+  const namesThisDay = new Set(sessionExerciseNames);
   let slotIndex = 0;
   for (const slot of menu.slots) {
     const candidates = flowSlotCandidates(slot.category, athlete);
@@ -288,8 +313,9 @@ function fillMenu(
       // place to prescribe the same exercise. Filter at the selector so the
       // slot can take its next legal authored candidate instead of deleting a
       // duplicate after composition and needlessly shrinking the menu.
-      if (sessionExerciseNames.has(canonicalExerciseName(candidate.name))) continue;
+      if (exerciseConflictsWithDay(candidate.name, namesThisDay)) continue;
       taken.add(candidate.id);
+      namesThisDay.add(canonicalExerciseName(candidate.name));
       movements.push({ exercise: candidate, category: slot.category });
       filled += 1;
     }
@@ -313,7 +339,7 @@ function authoredCategoryOf(exercise: PoolExercise): FlowSlotCategory | null {
   if (!entry) return null;
   for (const category of Object.keys(FLOW_CATEGORY_MUSCLE_MAPPING) as FlowSlotCategory[]) {
     const mapping = FLOW_CATEGORY_MUSCLE_MAPPING[category];
-    if (!mapping.pools.includes(entry.pool)) continue;
+    if (!flowCategoryIncludesExercise(mapping, entry)) continue;
     if (![...entry.primary, ...entry.secondary].some((g) => mapping.muscleGroups.includes(g))) {
       continue;
     }
@@ -354,6 +380,7 @@ function retainPerformed(
   const present = new Set(filled.map((movement) => movement.exercise.id));
   const restored: MobilityPrehabFlowMovement[] = [];
   const seen = new Set<string>();
+  const namesThisDay = new Set(sessionExerciseNames);
   for (const id of performedMovementIds) {
     if (present.has(id) || seen.has(id)) continue;
     seen.add(id);
@@ -365,16 +392,23 @@ function retainPerformed(
     // it must not manufacture two visible prescriptions for one exercise. The
     // load-bearing session row wins this one collision; every non-conflicting
     // completed warm-up movement retains the established behavior below.
-    if (sessionExerciseNames.has(canonicalExerciseName(exercise.name))) continue;
+    if (exerciseConflictsWithDay(exercise.name, namesThisDay)) continue;
     const category = authoredCategoryOf(exercise);
     if (!category) continue;
     restored.push({ exercise, category });
+    namesThisDay.add(canonicalExerciseName(exercise.name));
   }
   if (restored.length === 0) return filled;
 
   // Performed work leads, then as much of the fresh fill as the count allows.
   const capacity = Math.max(filled.length, restored.length);
-  return [...restored, ...filled].slice(0, capacity);
+  const merged = [...restored];
+  for (const movement of filled) {
+    if (exerciseConflictsWithDay(movement.exercise.name, namesThisDay)) continue;
+    merged.push(movement);
+    namesThisDay.add(canonicalExerciseName(movement.exercise.name));
+  }
+  return merged.slice(0, capacity);
 }
 
 export function selectMobilityPrehabFlow(
@@ -420,12 +454,11 @@ export function selectMobilityPrehabFlow(
   // An empty draw is no flow rather than an empty one.
   if (movements.length === 0) return null;
 
-  const seenByCategory = new Map<FlowSlotCategory, Set<string>>();
+  const seenNames = new Set<string>();
   const traces: AutomaticProgrammingSelectionTrace[] = movements.map((movement, seatIndex) => {
-    const seen = seenByCategory.get(movement.category) ?? new Set<string>();
     const candidates = flowSlotCandidates(movement.category, context.athlete).map((candidate) => {
-      const alreadyOnDay = seen.has(candidate.id)
-        || sessionExerciseNames.has(canonicalExerciseName(candidate.name));
+      const alreadyOnDay = exerciseConflictsWithDay(candidate.name,
+        new Set([...sessionExerciseNames, ...seenNames]));
       return {
         name: candidate.name,
         eligible: !alreadyOnDay,
@@ -441,8 +474,7 @@ export function selectMobilityPrehabFlow(
         },
       };
     });
-    seen.add(movement.exercise.id);
-    seenByCategory.set(movement.category, seen);
+    seenNames.add(canonicalExerciseName(movement.exercise.name));
     return {
       schemaVersion: 1,
       decisionId: `mobility-flow:${context.date}:${movement.category}:${seatIndex}`,

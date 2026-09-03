@@ -160,6 +160,11 @@ export const FLOW_DOSING = {
 export interface FlowCategoryMapping {
   /** Authored metadata pools this category draws from. */
   readonly pools: readonly string[];
+  /**
+   * Named exercises Sam also permits in this warm-up slot without moving their
+   * catalogue ownership. Equipment, injury and experience filters still apply.
+   */
+  readonly alsoEligibleExercises?: readonly string[];
   /** Muscle tags that additionally qualify an exercise for this category. */
   readonly muscleGroups: readonly MuscleGroup[];
   /** Sam's own description of the category, from D17. */
@@ -217,8 +222,15 @@ export const FLOW_CATEGORY_MUSCLE_MAPPING: Readonly<
   },
   shoulder_prehab: {
     pools: ['Shoulder health'],
+    alsoEligibleExercises: [
+      'Incline Y Raise',
+      'Face Pull',
+      'Cable Face Pull',
+      'Rear Delt Fly',
+      'Band Pull-Apart',
+    ],
     muscleGroups: ['Shoulders'],
-    authoredDescription: 'Shoulder prehab: the shoulder-health pool.',
+    authoredDescription: 'Shoulder prehab: the shoulder-health pool plus the ruled rear-shoulder warm-up choices.',
   },
 };
 
