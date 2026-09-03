@@ -272,3 +272,45 @@ number gutter. **R-361 (2026-09-03)** made the accent yellow (#D8D800) and
 the candidate's own accent commit `f385dc75` then refused the whole lime
 family. Re-pinned to the yellow rgba with the ruling named. 212/0;
 `test:compile` PASSED.
+
+### Release gate, final run on `119eb983`
+`npm run test:release`, from the top, uninterrupted: **RELEASE GATE RESULT:
+30/30 units green, RELEASE_GATE_EXIT=0.** (test-truth, compile, and the 28
+current-contract witnesses including compiler-year, weekly-writer-zero and
+the complete canonical-weekly-compiler chain.) The two earlier runs on
+intermediate trees stopped at 18/30 and 21/30; every unit they passed is
+unchanged by the later test re-pins.
+
+### The six simulator flows, on the integrated code (`119eb983`)
+Metro for THIS worktree on `:8082` (`QA_METRO_PORT=8082 npm run lfa:dev`;
+the finished seat's `:8081` Metro was left untouched), the installed
+iPhone 17 Pro build (native unchanged by every commit here — TS, tests,
+scripts and docs only), each flow through `run-maestro-ios.sh` with
+`--device` and `E2E_METRO_URL=http://127.0.0.1:8082`, 8-minute watchdog.
+Proof the flows ran this tree: the app's launch receipt in its container
+plist reads `resolvedMetroUrl: http://127.0.0.1:8082`, and the app's own
+WARN lines landed in that Metro's log.
+
+| flow | result |
+| --- | --- |
+| bin-undo-toast | **PASS** (40s) |
+| block-rollover | **PASS** (30s) |
+| full-reset-lands-clean | **PASS** (35s) |
+| readiness-ack-never-silent | **PASS** (20s) |
+| removal-undo-home | **PASS** (35s) |
+| week-move-game | **PASS** (55s) — drag on the board, save, checkpoint relaunch, Sunday fixture after it, Undo, game back on Saturday |
+
+**6 / 6 PASS.** Every step in every flow log reads `COMPLETED`; no watchdog fired.
+
+### Where the candidate stands
+Branch `candidate/2026-09-03-integrated`, tip `119eb983` (+ this docs commit),
+six commits on top of `ed8298af`: the merge of `6031df4a`+`05f1cc44`, two
+app fixes (fixture repair craft ranking; injury dose-edit door + delivered-
+flush counting), and test re-pins in the injury, fallback, slot-coverage,
+section-add and session-execution suites, each naming its ruling.
+`test:compile` 0/0/0 · `test:canonical-weekly-compiler` exit 0 · `test:release`
+**30/30** · six flows **6/6** · writer census 1166/1166. Nothing outside the
+reds' own families was touched; the composition question (a three-day week's
+single-leg knee / core rows) and the two tag inconsistencies are recorded
+above, not worked. Ready for a phone build in my reading; the preview build
+and install are the next seat's step, as they were for the last candidate.
