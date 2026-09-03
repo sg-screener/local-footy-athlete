@@ -1241,15 +1241,21 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       warmup: true, primer: false,
     },
     injury: {
-      'groin': 'good',
-      'hip': 'good',
-      'quad': 'good',
-      'hamstring': 'good',
-      'knee': 'good',
+      // Sam, 2026-09-03: one ruling model rates both tib raises. The 2026-09-02
+      // intake authored these by hand; the ruled matrix (2026-07-28) rates
+      // `Tib Raises` — same movement pattern, same primary muscle, no named
+      // exception — caution on the six lower-body/back regions below, and a
+      // rule on an axis reaches every exercise on that axis. Kept equal to the
+      // `Tib Raises` row above, which is the ruled row.
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'caution',
+      'hamstring': 'caution',
+      'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',
       'ribs': 'good',
-      'lowerBack': 'good',
+      'lowerBack': 'caution',
       'neck': 'good',
       'shoulder': 'good',
       'elbow': 'good',

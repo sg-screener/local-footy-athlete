@@ -1133,7 +1133,8 @@ export function buildAutomaticStrengthSupportRow(
   exercise: PoolExercise,
   workoutId: string,
   order: number,
-  slot: 'football_robustness',
+  /** R-357's frontal completion seat, and (Sam, 2026-09-03) the week's one core row. */
+  slot: 'football_robustness' | 'core',
 ): WorkoutExercise {
   return {
     ...poolExerciseToWorkoutExercise(exercise, workoutId, order, {

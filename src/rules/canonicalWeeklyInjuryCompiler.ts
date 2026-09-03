@@ -16,7 +16,7 @@ import {
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
 import { workoutExerciseWasAutomaticallySelected } from './automaticWeeklyExerciseSelection';
-import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
+import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
 import { getMondayISOForDate } from '../utils/programBlockState';
 import { filterConstraintsForDate } from '../utils/readinessConstraints';
 import {
@@ -178,16 +178,22 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
   }
   const dates = Object.keys(workoutsByDate).sort();
   const completed = dates.length > 0
-    ? completeWeeklyLowerBodyFrontal({
-        weekStartISO: getMondayISOForDate(dates[0]),
-        workoutsByDate,
-        profile: args.profile,
-        activeConstraints: args.constraints,
-        gameDates: Object.entries(workoutsByDate)
-          .filter(([, workout]) => workout.workoutType === 'Game')
-          .map(([date]) => date),
-        placeableFromISO: args.historyBeforeISO,
-      }).workoutsByDate
+    ? (() => {
+        const weeklyCompletionArgs = {
+          weekStartISO: getMondayISOForDate(dates[0]),
+          profile: args.profile,
+          activeConstraints: args.constraints,
+          gameDates: Object.entries(workoutsByDate)
+            .filter(([, workout]) => workout.workoutType === 'Game')
+            .map(([date]) => date),
+          placeableFromISO: args.historyBeforeISO,
+        };
+        const frontal = completeWeeklyLowerBodyFrontal({ ...weeklyCompletionArgs, workoutsByDate });
+        // One core row per week (Sam, 2026-09-03), re-answered after the injury
+        // fold the same way the frontal plane is: an injury that withdrew the
+        // week's core row gets a safe one back on a day not yet done.
+        return completeWeeklyCore({ ...weeklyCompletionArgs, workoutsByDate: frontal.workoutsByDate }).workoutsByDate;
+      })()
     : workoutsByDate;
   const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, workout]) => {
     const reasons = new Set<UsefulStrengthReductionReason>(

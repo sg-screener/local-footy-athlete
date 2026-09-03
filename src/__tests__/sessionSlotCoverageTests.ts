@@ -677,6 +677,48 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     deficient.length <= DEFICIENT_CEILING,
     `${deficient.length} deficient of ${laddered} (ceiling ${DEFICIENT_CEILING})\n     ${deficient.join('\n     ')}`);
 
+  /* ── ONE CORE ROW PER WEEK — Sam, 2026-09-03 ──────────────────────────────
+   * R-087's weekly set ends "… upper accessory · lower accessory · core". The
+   * ladders a three-day week uses (LOWER, UPPER_FULL, FULL_BODY) carry no core
+   * seat — only the split-upper ladders do — so a Mon/Wed/Fri athlete never saw
+   * trunk work on a strength day (measured 2026-09-03: Leg Press · RDLs ·
+   * Lateral Lunge · Nordic Lower · Calf Raises / six upper rows / four
+   * full-body rows). Sam's ruling: guarantee ONE core row per week, not one
+   * per lower day. The week is the unit; a week that already carries one is
+   * untouched. Counted with the ladder's own slot vocabulary. */
+  const CORE_WORLDS: Array<[string, unknown]> = [
+    ...CENSUS_WORLDS,
+    ['off-season three-day', {
+      ...CENSUS_BASE, seasonPhase: 'Off-season', trainingDaysPerWeek: 3,
+      preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+      teamTrainingDays: [], seasonFinishedOn: '2026-06-15',
+    }],
+  ];
+  const weeksWithoutCore: string[] = [];
+  let coreWeeks = 0;
+  for (const [label, profile] of CORE_WORLDS) {
+    const program = generateProgramLocally(profile as never, {
+      todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
+    });
+    const workouts = program?.microcycles?.[0]?.workouts ?? [];
+    // Every day carrying strength rows — the full-body coverage day has no
+    // fixed ladder kind, and the week's one core row may land on it.
+    const strengthDays = workouts.filter((workout) => (workout.exercises ?? []).some((row) =>
+      row.section18Evidence?.role === 'main_strength' || row.section18Evidence?.role === 'strength_accessory'));
+    if (strengthDays.length === 0) continue;
+    coreWeeks += 1;
+    const coreRows = strengthDays.flatMap((workout) => (workout.exercises ?? [])
+      .filter((row) => slotsFilledByRow(row).includes('core'))
+      .map((row) => `${workout.name}: ${row.exercise?.name ?? '?'}`));
+    if (coreRows.length === 0) {
+      weeksWithoutCore.push(`${label} -> ${strengthDays.map((workout) =>
+        `${workout.name} [${(workout.exercises ?? []).map((row) => row.exercise?.name).join(', ')}]`).join(' | ')}`);
+    }
+  }
+  ok('[non-vacuity] the core census reached generated strength weeks', coreWeeks >= 4, `weeks: ${coreWeeks}`);
+  ok('[SAM] every generated week carries one core row — the three-day week too',
+    weeksWithoutCore.length === 0, `weeks without a core row:\n     ${weeksWithoutCore.join('\n     ')}`);
+
   // THE FLOOR, BENEATH THE LADDER RATCHET ABOVE. A day of curls named
   // "Lower Squat" is a different kind of wrong from a day missing one slot, and
   // the ratchet cannot say it — it counts deficiencies, not absurdities.

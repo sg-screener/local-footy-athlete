@@ -46,3 +46,16 @@ which invokes `test:t-bar-tib-raises`.
 
 - Independent clinical validation of the supplied ratings and restrictions.
 - Physical-iPhone acceptance or external video playback.
+
+---
+
+**Addendum, 2026-09-03 (seat `integrate`, on Sam's "build all three fixes").**
+The injury ratings above were authored by hand at intake. The ruled injury
+matrix (2026-07-28, Sam's rules on the movement-pattern and primary-muscle
+axes, strictest rule wins, named exceptions only) rates `Tib Raises` — the
+same movement pattern and primary muscle, with no named exception — caution
+on groin, hip, quad, hamstring, knee and lower back. One ruling model rates
+both tib raises: `T-Bar Tib Raises` now carries the same row as `Tib Raises`
+in `exerciseTags.ts`, and `test:t-bar-tib-raises` holds the two equal. The
+workbook itself was last built 2026-08-27 and does not yet list the
+post-08-27 intakes; `verify:injury-matrix-sheet` reports that gap.

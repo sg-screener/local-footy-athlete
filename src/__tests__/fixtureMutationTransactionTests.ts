@@ -796,6 +796,102 @@ async function main(): Promise<void> {
       && marks[SUNDAY] === 'game', JSON.stringify(marks));
   });
 
+  /* ── 19a/19b — THE ADDED STRENGTH DAY IS THE WEEK'S MISSING PURPOSE (Sam, 2026-09-03) ──
+   * Cohort F004: a four-day athlete's Saturday game moved to Sunday freed the
+   * G-1 Friday; the repair copied the target's FIRST strength day onto it —
+   * a second squat day beside Monday's combined lower, Leg Press twice, one
+   * hinge, and a full lower on G-2. The ranking is one pure owner
+   * (`rankStrengthTemplatesForWeek`): uncovered patterns first (R-087), then
+   * Sam's pairs matched (R-089), then the fewest repeats. */
+  await run('19a the missing purpose outranks a copy of the target\'s first day', () => {
+    const { rankStrengthTemplatesForWeek } = require('../rules/fixtureStrengthPurposeSelection') as
+      typeof import('../rules/fixtureStrengthPurposeSelection');
+    const day = (name: string, patterns: string[]) => ({
+      id: name, dayOfWeek: 1, name, exercises: [],
+      strengthIntent: { archetype: 'lower', primaryPattern: patterns[0], plannedPatterns: patterns, effectivePatterns: [] },
+    } as never);
+    // A week holding squat, push and pull owes a hinge — whatever the target lists first.
+    const target = [day('lower_squat', ['squat']), day('upper_pull', ['pull']), day('lower_hinge', ['hinge']), day('upper_push', ['push'])];
+    const owesHinge = rankStrengthTemplatesForWeek(
+      [day('lower_squat', ['squat']), day('upper_pull', ['pull']), day('upper_push', ['push'])], target);
+    assert(owesHinge[0].workout.name === 'lower_hinge',
+      `got ${owesHinge.map((r) => `${r.workout.name}:${r.uncovered.length}/${r.imbalance}/${r.repeated.length}`).join(' > ')}`);
+    // The cohort's exact shape: Monday's combined lower (squat + hinge) plus two
+    // club-night uppers. Everything is covered once, so Sam's pairs decide: a
+    // second squat day unbalances squat/hinge; the balanced repeat wins.
+    const accepted = [day('lower', ['squat', 'hinge']), day('upper_pull', ['pull']), day('upper_push', ['push'])];
+    const balanced = rankStrengthTemplatesForWeek(accepted, [day('lower_squat', ['squat']), day('lower', ['squat', 'hinge'])]);
+    assert(balanced[0].workout.name === 'lower',
+      `a balanced week prefers the balanced repeat, got ${balanced.map((r) => `${r.workout.name}:${r.imbalance}`).join(' > ')}`);
+    const secondSquat = rankStrengthTemplatesForWeek(accepted, target);
+    assert(secondSquat[0].workout.name !== 'lower_squat' || secondSquat[0].imbalance <= secondSquat[1].imbalance,
+      `a second squat day outranked a better-paired candidate: ${secondSquat.map((r) => `${r.workout.name}:${r.imbalance}`).join(' > ')}`);
+  });
+
+  await run('19c a copied day re-selects the lift the kept days already spend (R-317/R-318)', () => {
+    const { reselectRepeatedStrengthIdentities } = require('../rules/fixtureStrengthPurposeSelection') as
+      typeof import('../rules/fixtureStrengthPurposeSelection');
+    const row = (name: string, role: string, slot: string, automatic: boolean) => ({
+      id: `${name}-row`, workoutId: 'w', exerciseId: name, exerciseOrder: 1, prescribedSets: 3, prescribedRepsMin: 5, prescribedRepsMax: 8,
+      restSeconds: 90, exercise: { id: name, name, description: '' }, section18Evidence: { protocolVersion: 1, role, slot },
+      ...(automatic ? { automaticSelection: true } : {}),
+    });
+    const accepted = [{ id: 'mon', dayOfWeek: 1, name: 'lower', composedDayShape: 'lower',
+      exercises: [row('Leg Press', 'main_strength', 'squat', true), row('RDLs', 'main_strength', 'hinge', true)] }];
+    const template = { id: 'fri', dayOfWeek: 5, name: 'lower_squat', composedDayShape: 'lower_squat',
+      exercises: [row('Leg Press', 'main_strength', 'squat', true), row('Calf Raises', 'strength_accessory', 'football_robustness', true)] };
+    const result = reselectRepeatedStrengthIdentities({
+      template: template as never, accepted: accepted as never, dateISO: FRIDAY, profile: profile(), gameDates: [SUNDAY],
+    });
+    assert(result.replaced.length === 1 && result.replaced[0].from === 'Leg Press' && result.replaced[0].to !== 'Leg Press',
+      JSON.stringify(result.replaced));
+    const names = result.workout.exercises.map((entry) => entry.exercise?.name);
+    assert(!names.includes('Leg Press') && names.includes('Calf Raises') && names.length === 2,
+      `the day kept its shape with the repeated lift replaced: ${names.join(', ')}`);
+    // R-317: Monday spent the squat main seat, so the replacement is typed
+    // SUPPORT from the squat pool's accessories — never a second main squat.
+    assert(result.workout.exercises[0].section18Evidence?.slot === 'squat' && result.workout.exercises[0].prescribedSets === 3
+      && result.workout.exercises[0].section18Evidence?.role === 'strength_accessory',
+      `the replacement kept the seat and the dose as typed support: ${JSON.stringify(result.workout.exercises[0].section18Evidence)}`);
+    assert(!['Back Squat', 'Front Squat', 'Box Squat', 'High Box Squat'].includes(result.replaced[0].to),
+      `a spent main seat was re-spent with ${result.replaced[0].to}`);
+    // CONTROL — nothing repeated, nothing touched, object for object.
+    const untouched = reselectRepeatedStrengthIdentities({
+      template: { ...template, exercises: [row('Back Squat', 'main_strength', 'squat', true)] } as never,
+      accepted: accepted as never, dateISO: FRIDAY, profile: profile(), gameDates: [SUNDAY],
+    });
+    assert(untouched.replaced.length === 0 && untouched.workout.exercises[0].exercise?.name === 'Back Squat', 'a day with no repeats is left alone');
+  });
+
+  await run('19b a moved game never leaves two squat purposes against one hinge, or one lift twice', async () => {
+    const { ARCHETYPES, athleteAnswers } = require('./compilerYear/catalog') as typeof import('./compilerYear/catalog');
+    const { coldStartThroughOnboarding, quietAsync, setJourneyClock } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const base = ARCHETYPES.find((athlete) => athlete.id === 'male-5-two-fixtures')!;
+    const fourDay = athleteAnswers({ ...base, id: 'four-day-move', days: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      clubDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday', initialPhase: 'In-season', extraGame: false });
+    const installed = await quietAsync(() => coldStartThroughOnboarding({ profile: fourDay, installDayISO: WEEK_START }));
+    assert(!installed.onboardingRefusal, installed.onboardingRefusal ?? 'onboarding refused');
+    setJourneyClock(WEEK_START);
+    const moved = await quietAsync(() => executeFixtureMutationTransaction(input({
+      action: 'move', fixtureKind: 'game', sourceDate: SATURDAY, targetDate: SUNDAY,
+      source: source('cohort-f004:saturday-to-sunday'),
+    })));
+    assert(moved.outcome === 'accepted', JSON.stringify(moved));
+    const week = deriveVisibleWeekLive(WEEK_START, WEEK_START);
+    const strengthDays = week.flatMap((day) => day.workout?.strengthIntent?.plannedPatterns?.length ? [day] : []);
+    const purposes = strengthDays.flatMap((day) => day.workout!.strengthIntent!.plannedPatterns as string[]);
+    const count = (pattern: string) => purposes.filter((entry) => entry === pattern).length;
+    assert(count('squat') === count('hinge'),
+      `squat purposes ${count('squat')} vs hinge ${count('hinge')}: ${strengthDays.map((day) => `${day.date} ${day.workout!.name}`).join(' | ')}`);
+    const mains = strengthDays.flatMap((day) => day.workout!.exercises
+      .filter((row) => row.section18Evidence?.role === 'main_strength')
+      .map((row) => row.exercise?.name ?? ''));
+    assert(new Set(mains).size === mains.length, `a main lift appears twice in the week: ${mains.join(', ')}`);
+    const fridayLower = week.find((day) => day.date === FRIDAY)?.workout;
+    assert(!(fridayLower?.strengthIntent?.plannedPatterns ?? []).some((pattern) => pattern === 'squat' || pattern === 'hinge'),
+      `a full lower session sits on Friday, two days before the Sunday game: ${fridayLower?.name}`);
+  });
+
   await run('20 restart and Undo preserve two genuine fixtures as two facts', async () => {
     const athlete = profile();
     await seedAcceptedWeek({ athlete });

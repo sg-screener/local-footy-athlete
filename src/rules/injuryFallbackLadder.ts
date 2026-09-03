@@ -790,7 +790,20 @@ export function walkInjuryFallbackLadder(request: InjuryFallbackRequest): {
 export function finerPatternIdentityOf(exerciseName: string): string {
   const candidate = candidateFor(exerciseName);
   if (!candidate) return 'unknown';
-  return candidate.pool?.group ?? patternToSlot(candidate.tags.movement) ?? candidate.tags.movement;
+  if (candidate.pool?.group) return candidate.pool.group;
+  // Sam, 2026-09-03: a one-legged squat or lunge IS single-leg knee work, and a
+  // one-legged hinge IS single-leg hip work — the same answer
+  // `slotsForExerciseName` already gives the composer and the ladder oracle.
+  // `PATTERN_TO_SLOT` folds `lunge` into `squat` for the POOL lookup, which is
+  // right for choosing a pool and wrong for naming the pattern: Lateral Lunge
+  // and Cossack Squat (unilateral, no pool group) reported `squat`, so the
+  // coverage instruments saw no single-leg knee in a week that seated one, and
+  // the ladder shopped bilateral squats to replace a lunge. The sideways-first
+  // rule (R-347) is untouched — only the name the instruments read changes.
+  const { movement, unilateral } = candidate.tags;
+  if (unilateral === true && (movement === 'squat' || movement === 'lunge')) return 'single_leg_knee';
+  if (unilateral === true && movement === 'hinge') return 'single_leg_hip';
+  return patternToSlot(movement) ?? movement;
 }
 
 export function injuryOmissionExplanation(exercise: string): string {

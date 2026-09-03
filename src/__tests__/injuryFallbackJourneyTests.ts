@@ -317,21 +317,12 @@ async function main(): Promise<void> {
     const weekStart = await install();
     /* Reach a missing coverage coordinate through the actual Add transaction,
      * not by inserting an exercise into a generated workout. Single-leg hip
-     * came in this way first (hamstring 6). Since the four-compound sessions
-     * (a93f3ad2) and the frontal completion (R-357), this three-day world's
-     * generated week seats its single-leg work as a Lateral Lunge (the ladder
-     * reads it as `squat`) and a Single-Leg RDL, and carries no trunk row on a
-     * strength day — measured 2026-09-03: Leg Press, RDLs, Lateral Lunge,
-     * Nordic Lower, Calf Raises / six upper rows / Single-Leg RDL, floor press,
-     * Pull-Ups, Landmine Press. The sagittal single-leg knee and the trunk
-     * coordinates therefore enter through the same accepted Add, on the day
-     * each case's injury most affects, so the ladder is still walked over
-     * rows a real athlete put there. Whether the generated three-day week
-     * itself owes a core row and a sagittal single-leg knee row is a
-     * composition question for Sam, recorded in docs/STATUS_INTEGRATE.md. */
+     * comes in this way (hamstring 6). Single-leg knee and trunk come from the
+     * generated week itself (Sam, 2026-09-03): the frontal Lateral Lunge now
+     * reads as single-leg knee in the ladder's own vocabulary, and every
+     * generated week carries one core row. */
     const coverageAdd = testCase.severity === 6
-      ? ({ hamstring: 'Single-Leg RDL', knee: 'Reverse Lunges', 'lower back': 'Band Pallof Press' } as
-        Record<string, string | undefined>)[testCase.area]
+      ? ({ hamstring: 'Single-Leg RDL' } as Record<string, string | undefined>)[testCase.area]
       : undefined;
     if (coverageAdd) {
       setJourneyClock(weekStart);

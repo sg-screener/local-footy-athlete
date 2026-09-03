@@ -98,9 +98,14 @@ run('all supplied demand and injury ratings are exact', () => {
     doms: 'moderate', stability: 'high', unilateral: false,
     eccentric: 'moderate', lateWeek: 'caution',
   });
+  // Sam, 2026-09-03: one ruling model rates both tib raises. The intake's
+  // hand-authored row (knee/hip/quad/hamstring/groin/lower back "good") was
+  // superseded by the ruled matrix's row for the same movement pattern and
+  // primary muscle; the two rows are held equal, region for region.
+  assert.deepEqual(tags.injury, EXERCISE_TAGS['Tib Raises']!.injury);
   assert.deepEqual(tags.injury, {
-    groin: 'good', hip: 'good', quad: 'good', hamstring: 'good', knee: 'good',
-    calf: 'caution', 'ankle/foot': 'caution', ribs: 'good', lowerBack: 'good',
+    groin: 'caution', hip: 'caution', quad: 'caution', hamstring: 'caution', knee: 'caution',
+    calf: 'caution', 'ankle/foot': 'caution', ribs: 'good', lowerBack: 'caution',
     neck: 'good', shoulder: 'good', elbow: 'good', 'wrist/hand': 'good',
   });
 });

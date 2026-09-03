@@ -53,7 +53,8 @@ import {
 } from '../rules/automaticWeeklyExerciseSelection';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
 import { isoDateForWeekday } from './appDate';
-import { completeWeeklyLowerBodyFrontal } from '../rules/canonicalWeeklyPlaneCompletion';
+import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from '../rules/canonicalWeeklyPlaneCompletion';
+import { rankStrengthTemplatesForWeek, reselectRepeatedStrengthIdentities } from '../rules/fixtureStrengthPurposeSelection';
 
 export { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
 
@@ -859,15 +860,25 @@ function addStrengthDeltaVariants(args: {
       ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
       : []),
   ]);
+  // THE WEEK'S MISSING PURPOSE, NOT THE TARGET'S FIRST DAY (Sam, 2026-09-03).
+  // This took `generated` in the target's own order, so a four-day athlete
+  // whose Saturday game moved to Sunday gained a second squat day beside
+  // Monday's combined lower — Leg Press twice, one hinge (cohort F004). The
+  // target's days are ranked by what the accepted week still lacks (R-087),
+  // then by Sam's pairs (R-089); a chosen day's repeated identities are
+  // re-selected below (R-317/R-318) when it is placed.
+  const acceptedStrengthDays = args.source.filter((workout) => hasMainStrength(workout));
+  const rankedGenerated = rankStrengthTemplatesForWeek(
+    acceptedStrengthDays,
+    generated.filter((workout) => !displacedIds.has(workout.planEntryId ?? workout.id)),
+  ).map((rank) => rank.workout);
   const templates = [
     ...displaced.map(({ workout, fixtureDisplacement }) => ({
       workout,
       preserveIdentity: true,
       fixtureDisplacement,
     })),
-    ...generated
-      .filter((workout) => !displacedIds.has(workout.planEntryId ?? workout.id))
-      .map((workout) => ({ workout, preserveIdentity: false, fixtureDisplacement: undefined })),
+    ...rankedGenerated.map((workout) => ({ workout, preserveIdentity: false, fixtureDisplacement: undefined })),
   ];
   if (templates.length < shortfall) return [];
   const sourceMap = byDay(args.source);
@@ -890,17 +901,34 @@ function addStrengthDeltaVariants(args: {
     })
     .sort((left, right) =>
       Number(!args.releasedDays.has(left)) - Number(!args.releasedDays.has(right)) || left - right);
-  return combinations(placementDays, shortfall).map((days) => [
-    ...args.source.filter((workout) => !days.includes(workout.dayOfWeek)),
-    ...days.map((day, index) => relocateNewStrength(
-      templates[index].workout,
-      day,
-      args.input.weekStart,
-      contract,
-      templates[index].preserveIdentity,
-      templates[index].fixtureDisplacement,
-    )),
-  ]);
+  return combinations(placementDays, shortfall).map((days) => {
+    const kept = args.source.filter((workout) => !days.includes(workout.dayOfWeek));
+    return [
+      ...kept,
+      ...days.map((day, index) => {
+        const template = templates[index];
+        // A relocated accepted session keeps its identity; a copied compiler
+        // day re-selects any lift the kept days already spend (R-317/R-318).
+        const workout = template.preserveIdentity
+          ? template.workout
+          : reselectRepeatedStrengthIdentities({
+              template: template.workout,
+              accepted: kept.filter((candidate) => hasMainStrength(candidate)),
+              dateISO: isoDateForWeekday(args.input.weekStart, day),
+              profile: args.input.profile,
+              gameDates: args.input.proposedFixtures.map((fixture) => fixture.date),
+            }).workout;
+        return relocateNewStrength(
+          workout,
+          day,
+          args.input.weekStart,
+          contract,
+          template.preserveIdentity,
+          template.fixtureDisplacement,
+        );
+      }),
+    ];
+  });
 }
 
 function workoutHasAppCoreConditioning(
@@ -1261,7 +1289,15 @@ export function buildFixtureMinimalReplan(
     profile: args.profile,
     gameDates: args.proposedFixtures.map((fixture) => fixture.date),
   });
-  const source = Object.values(sourceCompletion.workoutsByDate);
+  // One core row per week (Sam, 2026-09-03): the repaired week answers for it
+  // the way it answers for the frontal plane — on the source, before the search.
+  const sourceWithCore = completeWeeklyCore({
+    weekStartISO: args.weekStart,
+    workoutsByDate: sourceCompletion.workoutsByDate,
+    profile: args.profile,
+    gameDates: args.proposedFixtures.map((fixture) => fixture.date),
+  });
+  const source = Object.values(sourceWithCore.workoutsByDate);
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
   const gameMinusOneDays = gameMinusOneDayNumbers(args);

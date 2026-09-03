@@ -49,6 +49,22 @@ import {
 import { classifySessionImpact } from '../rules/sessionImpactBands';
 import { getExerciseTags } from '../data/exerciseTags';
 import { injuryTriggerMatchesConditioningModality } from '../rules/injuryExerciseRisk';
+import { BREATHING_RESET_POOL, MOBILITY_POOL, TISSUE_QUALITY_POOL } from '../data/exercisePools';
+import { canonicalExerciseName } from './exerciseCanonicalisation';
+
+/**
+ * The authored recovery pools, by canonical name. A member is a stretch, a
+ * tissue drill or a breathing reset whatever muscle its name carries, and the
+ * exposure classifier reads membership before it reads a word.
+ */
+const RECOVERY_POOL_MEMBERS: ReadonlySet<string> = new Set(
+  [...MOBILITY_POOL, ...TISSUE_QUALITY_POOL, ...BREATHING_RESET_POOL]
+    .map((entry) => canonicalExerciseName(entry.name).toLowerCase()),
+);
+
+export function isRecoveryPoolMember(rawName: string): boolean {
+  return RECOVERY_POOL_MEMBERS.has(canonicalExerciseName(rawName).toLowerCase());
+}
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -243,6 +259,16 @@ export interface ProgramValidationResult {
  */
 export function classifyExerciseExposures(rawName: string): Exposure[] {
   if (!rawName) return [];
+  // ── THE TYPED POOL IS ASKED BEFORE ANY WORD IN THE NAME ──────────────────
+  //
+  // Sam, 2026-09-03. A row the app authored from the mobility, tissue-quality
+  // or breathing pools is a stretch or a drill, whatever muscle its name
+  // carries. `Adductor Rockback` (MOBILITY_POOL, no strength tags) matched the
+  // adductor rule below on the word "adductor" and was withdrawn from a groin
+  // 6/10 Mobility day like a loaded Copenhagen, while `Butterfly Stretch` and
+  // `Hip 90/90 Stretch` — the same intent — read `mobility` because their
+  // names say "stretch". Membership is the fact; the name is not.
+  if (isRecoveryPoolMember(rawName)) return ['mobility'];
   const n = rawName.toLowerCase();
   const out: Set<Exposure> = new Set();
   // ── THE REGISTRY IS ASKED BEFORE THE ERG REGEXES BELOW ───────────────────

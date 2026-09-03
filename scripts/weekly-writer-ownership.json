@@ -762,9 +762,9 @@
       "reason": "Diagnostic session recorder builds feedback from real visible components and submits the same session outcome transaction as the app."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryWeek": {
-      "fingerprint": "28ac40e4f8a4a7f24f7a9f4c38982005e986bb04c8ae9214506cf2a0b00db3d4",
+      "fingerprint": "396ba4e3c62b9c3b47bd1b91aa95d1cdaf726890a5202e7e30973a6b83fdc1d5",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-354/R-357 drift): folds dated injury stages over the week in order, then the weekly frontal completion (never before historyBeforeISO) and the useful-strength contract with typed reduction reasons. Works on a local copy of the map; no publication."
+      "reason": "hingecod 2026-09-03 re-review (R-354/R-357 drift): folds dated injury stages over the week in order, then the weekly frontal completion (never before historyBeforeISO) and the useful-strength contract with typed reduction reasons. Works on a local copy of the map; no publication. | integrate 2026-09-03 re-review: after the frontal completion it now also runs the week-level core completion (one core row per week, Sam 2026-09-03), same placeable boundary. Pure over its inputs."
     },
     "src/utils/coachRevisionTemplates.ts#buildEngineTemplateWorkout": {
       "fingerprint": "0ebb7ebf8d49acbdad64c38332298b0afc5015e629f0a1e13d7f1f6ea72c198c",
@@ -1017,9 +1017,9 @@
       "reason": "Private fixture search derives relocation templates from accepted removals and supplied visible displacement; no live state or persistence."
     },
     "src/utils/fixtureMinimalReplan.ts#addStrengthDeltaVariants": {
-      "fingerprint": "bb0fd22288883836e69212b6101ac7357a4cf9fe66a72eb7283507a6f9a1a2fa",
+      "fingerprint": "eb2090010dc4f4fe2566a28014a505678a55a5b75e1e5aac5f0e257bd6cd09d4",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: private fixture compiler enumerates legal strength placements from displaced or generated templates. Pure candidates."
+      "reason": "hingecod 2026-09-03 re-review: private fixture compiler enumerates legal strength placements from displaced or generated templates. Pure candidates. | integrate 2026-09-03 re-review: the compiler-target strength days are ranked by the accepted week's missing purpose (rankStrengthTemplatesForWeek) and a copied day re-selects identities the kept days already spend (reselectRepeatedStrengthIdentities) before relocation. Still enumerates candidates only; no store."
     },
     "src/utils/fixtureMinimalReplan.ts#buildConditioning": {
       "fingerprint": "a90ab1961d8386051d2513eb5a4e18f707b68c037e88af665f6c1645a7dee7d7",
@@ -1037,9 +1037,9 @@
       "reason": "Private fixture strength relocation binds supplied template identities and typed fixture dependency history to the destination."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan": {
-      "fingerprint": "11e54d21fc9fda717d4eae2275634de564bc726e436a3a4cf6c65f0719b4654e",
+      "fingerprint": "db37aee46a8be8d7239dcd55c027d6b861254063da64406b82750896e9a940a9",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03 re-review (the compiler's own week competes with a craft-violating minimal repair): the fixture specialist enumerates, evaluates and ranks candidate weeks; when the best minimal candidate still carries a strong craft violation, the regeneration from the compiler target is ranked by the same cost. Returns the chosen candidate and diagnostics. No store writes."
+      "reason": "integrate 2026-09-03 re-review (the compiler's own week competes with a craft-violating minimal repair): the fixture specialist enumerates, evaluates and ranks candidate weeks; when the best minimal candidate still carries a strong craft violation, the regeneration from the compiler target is ranked by the same cost. Returns the chosen candidate and diagnostics. No store writes. | integrate 2026-09-03 re-review: the planner source also answers for the week's core row (completeWeeklyCore) beside the frontal plane before the search. No store writes."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan.regenerateFromCompilerTarget": {
       "fingerprint": "2a761cb1049e3107cbae64aeac009b16e44921d180df8c5111de13d26cb77857",
@@ -2577,9 +2577,9 @@
       "reason": "hingecod 2026-09-03 re-review (R-358 drift): top-level pure program compiler now derives the athlete's recorded loads from feedback dated before asOfISO (unless supplied), compiles the weeks, applies exclusions and canonical progression. Publishes selection traces (diagnostics) only."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "d4b9f902a910464d515317c613e110906455f3979657a85af4823928e1318123",
+      "fingerprint": "576babbdc789592db814bd735a6e63240246b906cbe12c26848cc856849b6696",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler — injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays. | integrate 2026-09-03 re-review (delivered-day evidence): a pinned history day is handed to the scheduler as app-programmed core conditioning only when its typed conditioningRole is not an optional one (flush / recovery aerobic / non-core) — the same rule the scheduler counts its own authored days by. No new write path."
+      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler — injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays. | integrate 2026-09-03 re-review (delivered-day evidence): a pinned history day is handed to the scheduler as app-programmed core conditioning only when its typed conditioningRole is not an optional one (flush / recovery aerobic / non-core) — the same rule the scheduler counts its own authored days by. No new write path. | integrate 2026-09-03 re-review: runs completeWeeklyCore after the frontal completion on every authored week (one core row per week). No new write path."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "fingerprint": "14adcabb3f5b4ca2edfc14d1712253ef6d2844600f54f757f177621ec70d4f68",
@@ -3242,9 +3242,14 @@
       "reason": "hingecod 2026-09-03: after the fixture change has committed, derives the game-change note from the before/after visible weeks and records it through upsertGameChangeCoachNoteFromDiff (coach-updates constraint transaction). A note that cannot derive is disclosed on the trace, never a veto. The per-run trace id no longer rides on the note."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyLowerBodyFrontal": {
-      "fingerprint": "8bea1440a415193ad189866ebfe00acf6ca25b529922c26bde37cbb05410b5e9",
+      "fingerprint": "d560f2f873d90029f601121790faf0e83b00a239f03951f01f8be1e349c2925a",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input→output over the workouts map; no publication."
+      "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input→output over the workouts map; no publication. | integrate 2026-09-03 re-review: exception stripping moved to the shared stripExceptionKind so two completion kinds can coexist on one week; behaviour unchanged."
+    },
+    "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore": {
+      "fingerprint": "f95432b43dace76c6bb4c36749115dfd98db1a3ae7df3f720d985b6a23b783f4",
+      "classification": "canonical_compiler",
+      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion — if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#automaticRows": {
       "fingerprint": "971f2deabd80f3e5495c50e27d57cff1062fbf5e2dbb6ac19b0b86280525efc9",
@@ -3262,9 +3267,14 @@
       "reason": "hingecod 2026-09-03: pure predicate over the automatic rows' movement planes."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#withException": {
-      "fingerprint": "3fc873f72979bd77fefeebfdaad8b915739ef19b03dcf44b243c9139763f3187",
+      "fingerprint": "157613d9b3cf8924870768efbeddeefc348fa4e79b4b61447995bbb49992cd61",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: compiler-stage transform — returns a copied week with the typed plane exception stamped on its first strength day (sorts a local copy of the entries only). No publication."
+      "reason": "hingecod 2026-09-03: compiler-stage transform — returns a copied week with the typed plane exception stamped on its first strength day (sorts a local copy of the entries only). No publication. | integrate 2026-09-03 re-review: appends the exception beside another kind instead of overwriting; still a pure projection."
+    },
+    "src/rules/canonicalWeeklyPlaneCompletion.ts#stripExceptionKind": {
+      "fingerprint": "9a947d32cf011375d82ec1f93d9b31ebc17b6f51f9dffc3c7972f2148d0afca9",
+      "classification": "projection_display",
+      "reason": "integrate 2026-09-03: removes one completion kind's exception from a week's workouts before that completion re-answers. Pure projection, no domain construction."
     },
     "src/rules/acceptedLoadCarry.ts#carryOwnAcceptedLoads": {
       "fingerprint": "1ac36d231f3a5534f424018d28e176d14a9d40c8be89c0cbf1902f0b4c2176a8",
@@ -3597,9 +3607,9 @@
       "reason": "hingecod 2026-09-03: hard-stop guard over assessProgramEditWrites, returning ok/message. No writes."
     },
     "src/utils/sessionBuilder.ts#buildAutomaticStrengthSupportRow": {
-      "fingerprint": "34e4a71907dd6a8cc3a59d839a48b2302faa55cb825d8d02cc46887c6f26fc06",
+      "fingerprint": "5ed00f970a91fa747148341312be82aeae5c07c04abcd04aadb3b3659b994a1d",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 (R-357): builds one automatically selected support row from a pool exercise with composer-declared evidence. Pure constructor."
+      "reason": "hingecod 2026-09-03 (R-357): builds one automatically selected support row from a pool exercise with composer-declared evidence. Pure constructor. | integrate 2026-09-03 re-review: the seat may now be the core seat as well as football_robustness; same pool prescription and typed authorship."
     },
     "src/utils/sessionBuilder.ts#pickPowerEntries": {
       "fingerprint": "db2e61c96642d8b5577e39393bb8d9e02c35ba36a13cb075db92cc4ce047acd7",
@@ -3625,6 +3635,16 @@
       "fingerprint": "35a99d820a457ea29ea62109135f61c2a2d3592199ce45c6aa3add1c18adec6b",
       "classification": "canonical_input_writer",
       "reason": "hingecod 2026-09-03: dev-only seed coordinator module — imports plus the DEFAULT_DEPS table binding the coordinator to the public doors (profile setters, accepted-state transaction, outcome transaction, injury episode, checkpoint/session harness). No load-time writes."
+    },
+    "src/rules/fixtureStrengthPurposeSelection.ts#rankStrengthTemplatesForWeek": {
+      "fingerprint": "8b4403d9e452d09067547dad933731eb8e31573b78fbfe0674803a136ecdccff",
+      "classification": "canonical_compiler",
+      "reason": "integrate 2026-09-03: pure ranking of compiler-target strength days by the accepted week's uncovered patterns (R-087), Sam's pairs (R-089) and repeats. Reads typed plannedPatterns only."
+    },
+    "src/rules/fixtureStrengthPurposeSelection.ts#reselectRepeatedStrengthIdentities": {
+      "fingerprint": "af7000a43c30847f190b5c0c349296cb19d9fad5985ce4eeac3d6c47d75dfa62",
+      "classification": "canonical_compiler",
+      "reason": "integrate 2026-09-03: re-selects a copied day's main/accessory identities the kept days already spend, through the weekly selector and the tap-swap safety gate from the seat's own pool; replacement load from loadForReplacementExercise. Pure over its arguments; no store. | 2026-09-03 (integrate): replacement requested as typed support (R-317), a replaced main row becomes strength_accessory."
     }
   }
 }

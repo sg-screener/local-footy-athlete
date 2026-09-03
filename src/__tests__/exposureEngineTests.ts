@@ -129,6 +129,21 @@ ok('Bicep Curl → low_load_accessory + elbow_loading', hasExp('Bicep Curl', 'lo
 ok('Hack Squat → machine_supported', hasExp('Hack Squat', 'machine_supported'));
 ok('Unknown name → empty', classifyExerciseExposures('Frobnicate Wibble').length === 0);
 
+// ── THE TYPED POOL BEFORE THE WORD (Sam, 2026-09-03) ──────────────────────
+// `Adductor Rockback` is a MOBILITY_POOL stretch. Its name matched the
+// adductor rule and a groin 6/10 withdrew it from a Mobility day while
+// `Butterfly Stretch` (same intent, "stretch" in the name) stayed. Membership
+// in the authored recovery pools now decides before any keyword does.
+ok('Adductor Rockback (mobility pool) → mobility only, never adductor_groin',
+  JSON.stringify(classifyExerciseExposures('Adductor Rockback')) === JSON.stringify(['mobility']),
+  JSON.stringify(classifyExerciseExposures('Adductor Rockback')));
+ok('Butterfly Stretch (mobility pool) → mobility only',
+  JSON.stringify(classifyExerciseExposures('Butterfly Stretch')) === JSON.stringify(['mobility']));
+ok('CONTROL — Groin Squeeze (a loaded adductor drill, not a recovery pool member) still carries adductor_groin',
+  classifyExerciseExposures('Groin Squeeze').includes('adductor_groin'));
+ok('CONTROL — Long-Lever Copenhagen still carries adductor_groin',
+  classifyExerciseExposures('Long-Lever Copenhagen').includes('adductor_groin'));
+
 // ═════════════════════════════════════════════════════════════════════
 // 2. SHOULDER 8/10 — pressing / overhead / explosive push REMOVED
 // ═════════════════════════════════════════════════════════════════════

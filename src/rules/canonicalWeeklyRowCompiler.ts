@@ -3,7 +3,7 @@
  * Existing scheduler, composer, adapter and dose specialists retain their policies. */
 import { OnboardingData, type DayOfWeek, type ConditioningEquipmentModality, type Workout, type Microcycle, type WeekKind } from '../types/domain';
 import { buildWorkoutsFromCoach, type CoachGeneratedWorkoutInput } from '../data/defaultProgram';
-import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
+import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
 import { effectiveAnchorParticipation } from '../rules/weeklyExposureContractV2';
 import { composedIdentityFor } from '../rules/composedRowLegality';
 import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
@@ -899,9 +899,22 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
           .map(([day]) => dateForWeekday(blockState.weekStart, Number(day))),
         ...(boundary ? { placeableFromISO: boundary.governedFromISO } : {}),
       });
+      // ONE CORE ROW PER WEEK (Sam, 2026-09-03), by the same rule and at the
+      // same point: the week, not the day, owes "some core" (R-087); a week
+      // that already carries a core row is untouched.
+      const withCore = completeWeeklyCore({
+        weekStartISO: blockState.weekStart,
+        workoutsByDate: completed.workoutsByDate,
+        profile,
+        activeConstraints: args.activeConstraints,
+        gameDates: Object.entries(compiledDaysToGame)
+          .filter(([, days]) => days === 0)
+          .map(([day]) => dateForWeekday(blockState.weekStart, Number(day))),
+        ...(boundary ? { placeableFromISO: boundary.governedFromISO } : {}),
+      });
       workouts = workouts.map((workout) => {
         const dateISO = dateForWeekday(blockState.weekStart, workout.dayOfWeek);
-        const next = completed.workoutsByDate[dateISO];
+        const next = withCore.workoutsByDate[dateISO];
         return next && firstWorkoutByDate.get(dateISO) === workout ? next : workout;
       });
     }

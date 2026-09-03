@@ -467,3 +467,81 @@ identical, whichever way Sam's rules resolve them), (2) put
 chain so an intake cannot diverge silently, (3) until then, align Tib Raises
 to T-Bar Tib Raises only by Sam's word — the caution row is his ruled matrix,
 not a typo.
+
+## 2026-09-03 (later) — Sam: "Build all three fixes … one core row per week, not per lower day … count Lateral Lunge as single-leg knee without changing the sideways-first rule … replace fixture-day copying with selection of the week's missing movement purpose"
+
+REGISTRY-GREP: R-087, R-089, R-317, R-318, R-347, R-357, Section 17.C, R-354.
+Four slices, each red-first, no unrelated change.
+
+### Slice 1 — the fixture repair adds the week's missing purpose (`fixtureStrengthPurposeSelection.ts`, `fixtureMinimalReplan.ts`)
+- `rankStrengthTemplatesForWeek(accepted, targetDays)` — pure: the compiler
+  target's strength days ranked by the accepted week's uncovered patterns
+  (R-087), then Sam's pairs matched after the add (R-089: squat↔hinge,
+  single-leg knee↔hip, push↔pull), then fewest repeats, then target order.
+- `reselectRepeatedStrengthIdentities` — a copied day's main/accessory lifts
+  the kept days already spend are re-selected through the weekly selector
+  and the tap-swap safety gate from the seat's own pool, requested as typed
+  SUPPORT (R-317: a spent main seat is never re-spent; a replaced main row
+  becomes `strength_accessory`), load from `loadForReplacementExercise`.
+- `addStrengthDeltaVariants` ranks `generated` and re-selects on placement;
+  displaced accepted sessions keep their identity as before.
+- Cells: `test:fixture-mutation-transaction` 19a (ranking: a week holding
+  squat/push/pull owes a hinge; the cohort shape prefers the balanced repeat),
+  19c (re-selection: Leg Press repeated on Friday becomes a squat-pool
+  support row, the dose and seat kept, a day with no repeat untouched), 19b
+  (the four-day Saturday→Sunday move through the door: squat purposes equal
+  hinge purposes, no main lift twice, no full lower on the G-2 Friday).
+  Suite **24 / 0**.
+
+### Slice 2 — one core row per week (`canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore`)
+Mirrors R-357's frontal completion: a week whose strength days carry no
+core-slot row (the ladder's own `slotsFilledByRow` vocabulary) gets one
+selector-approved trunk-pool row on the first strength day under WC-048's
+seven-movement ceiling (lower day first, then by date), else the honest
+`weekly_core_unavailable` exception beside the frontal one. Runs in the row
+compiler after the frontal completion, in the injury compiler (a withdrawn
+core row is re-answered on a day not yet done, R-354) and on the fixture
+repair's planner source. `buildAutomaticStrengthSupportRow` accepts the
+`core` seat. Measured on the three-day world: Friday full-body gains
+`Plank`. Cell: `test:slot-coverage` "[SAM] every generated week carries one
+core row — the three-day week too" (red-first: the three-day world was the
+one week without one) — **92 / 0**.
+
+### Slice 3 — Lateral Lunge counts as single-leg knee (`injuryFallbackLadder.ts#finerPatternIdentityOf`)
+A pool group still wins; otherwise a unilateral squat/lunge names
+`single_leg_knee` and a unilateral hinge `single_leg_hip` — the answer
+`slotsForExerciseName` already gives the composer. `PATTERN_TO_SLOT`'s
+`lunge → squat` fold stays for the POOL lookup. R-347's sideways-first rule
+is untouched. `test:injury-fallback-journey` now walks single-leg knee (the
+frontal Lateral Lunge) and trunk (the week's core row) from the generated
+world; the knee/lower-back Add devices I added earlier today are retired,
+the hamstring one stays. Suite green, all nine coverage cells ok.
+
+### Slice 4 — the two tags
+- `exposureEngine.classifyExerciseExposures` asks the typed recovery pools
+  (mobility, tissue quality, breathing) before any keyword: a member is
+  `mobility`, full stop. `Adductor Rockback` no longer reads `adductor_groin`;
+  `Groin Squeeze` and `Long-Lever Copenhagen` still do (controls).
+  `test:exposure-engine` 164 / 0.
+- `T-Bar Tib Raises` carries `Tib Raises`' ruled injury row (same movement
+  pattern and primary muscle, no named exception → the same rule outcome);
+  `test:t-bar-tib-raises` holds the two rows equal, 10 / 0; the intake doc
+  carries a dated addendum. Not done, by design: a hand-authored tags entry
+  for Adductor Rockback (13 regions are Sam's to rate; both authorities now
+  agree it is allowed) and chaining `verify:injury-matrix-sheet` (the
+  workbook predates every post-08-27 intake and fails today on that gap).
+
+### Receipts
+`test:compile` PASSED (0/0/0). Writer census: eleven owners re-reviewed
+(new: `completeWeeklyCore`, `stripExceptionKind`,
+`rankStrengthTemplatesForWeek`, `reselectRepeatedStrengthIdentities`);
+**1170/1170, 0 unresolved, gate exit 0.** Blast radius, all green:
+injury-recomposition 186, session-injury-review, injury-session-adjustment
+54/54, injury-compiler-preview chain, temporary-source-facts 90,
+g1-move-durability 35, accumulated-away 20, move-game-relaunch 10,
+chained-mutation-continuity 927, session-change-durability 59,
+plane-and-load-memory 20, full-body-balance, exercise-intake 64 (chain),
+automatic-weekly-selection 24, week-checker-allowances 38, hard-day-warns
+22, section18-v2 142, undo-reversal 28, deload-law 78; weekly-scheduler
+141/141 with the same two inherited bye-fixture cells red. The complete
+compiler chain, the release gate and the six flows follow below.
