@@ -362,9 +362,27 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
       .map((workout) => {
         const evidence = energySystemExposureEvidenceForWorkout(workout);
+        // A DELIVERED DAY IS COUNTED BY THE RULE THE SCHEDULER COUNTS ITS OWN
+        // DAYS BY. `appProgrammed` feeds `deliveredAppDays`, which the scheduler
+        // adds to the week's core-conditioning demand exactly as it adds the
+        // days it authors — and those exclude the recovery flush
+        // (`conditioningCategory !== 'recovery_flush'`), as the §18 ledger
+        // excludes every optional role from the core count. The visible
+        // classifier credits any conditioning unit, flush included, so a
+        // pinned Tuesday squat + flush read as a delivered core exposure: a
+        // knee reported on Friday recompiled the remainder against a demand of
+        // four (Tue flush + Thu core + club + game), the contract promised a
+        // planner target of four above the in-season maximum of three, the
+        // week the athlete saw held three, and every later exercise edit on it
+        // was refused as `planner_selected_target_miss` (measured 2026-09-03,
+        // test:injury-compiler-preview, female-6-sunday-fixture). The typed
+        // role the evaluator reads is the one owner of "core or optional".
+        const role = workout.section18Evidence?.conditioningRole;
+        const optionalConditioning = role === 'optional_flush'
+          || role === 'optional_recovery_aerobic' || role === 'optional_noncore';
         return {
           dayOfWeek: workout.dayOfWeek,
-          appProgrammed: evidence.appProgrammedConditioningCredits > 0,
+          appProgrammed: evidence.appProgrammedConditioningCredits > 0 && !optionalConditioning,
           anchorConditioning: evidence.conditioningCredits
             > evidence.appProgrammedConditioningCredits,
           sprintHighSpeed: evidence.sprintHighSpeedCredits > 0,

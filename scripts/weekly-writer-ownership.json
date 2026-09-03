@@ -2577,9 +2577,9 @@
       "reason": "hingecod 2026-09-03 re-review (R-358 drift): top-level pure program compiler now derives the athlete's recorded loads from feedback dated before asOfISO (unless supplied), compiles the weeks, applies exclusions and canonical progression. Publishes selection traces (diagnostics) only."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "41b05e9406b0ea585b12a841557cb1e3cb271dc09d308085d5beeb43741e86f6",
+      "fingerprint": "d4b9f902a910464d515317c613e110906455f3979657a85af4823928e1318123",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler — injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays."
+      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler — injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays. | integrate 2026-09-03 re-review (delivered-day evidence): a pinned history day is handed to the scheduler as app-programmed core conditioning only when its typed conditioningRole is not an optional one (flush / recovery aerobic / non-core) — the same rule the scheduler counts its own authored days by. No new write path."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "fingerprint": "14adcabb3f5b4ca2edfc14d1712253ef6d2844600f54f757f177621ec70d4f68",

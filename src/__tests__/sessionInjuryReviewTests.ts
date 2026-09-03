@@ -199,6 +199,30 @@ function unsafeCountFor(area: string, severity: number, date: string): number {
   return quiet(() => unsafeRowsForInjury({ workout, environment })).length;
 }
 
+/* ⚠ THE OWNER THE ATHLETE READS. Cell [5] used to call a day "quiet" when
+ * `unsafeRowsForInjury` — the matrix's substitution list — named nothing. The
+ * preview the review is BUILT from also runs the typed exposure filter, which
+ * withdraws rows the matrix never names (measured 2026-09-03: a groin 6 on a
+ * Mobility day — matrix 0 unsafe rows, the preview withdrew Adductor Rockback,
+ * and the review honestly said "take out Adductor Rockback" while this search
+ * had promised nothing would change; the row has no tag, so the matrix answers
+ * `unknown`). A quiet day is one the PREVIEW leaves byte-identical, rows and
+ * conditioning both — the same owner the review reads — and the review's words
+ * are then judged against that. */
+function previewLeavesDayUntouched(area: string, severity: number, date: string): boolean {
+  let constraint;
+  try { constraint = constraintFor(area, severity, date); } catch { return false; }
+  const preview = quiet(() => compileSessionInjuryPreview({ date, constraint })) as
+    ReturnType<typeof compileSessionInjuryPreview>;
+  if (!preview) return false;
+  const rows = (workout: NonNullable<typeof preview>['before']) =>
+    JSON.stringify(workout.exercises.map((row) => row.exercise?.name ?? ''));
+  const conditioning = (workout: NonNullable<typeof preview>['before']) =>
+    JSON.stringify(workout.conditioningBlock?.options.map((option) => option.title) ?? []);
+  return rows(preview.before) === rows(preview.workout)
+    && conditioning(preview.before) === conditioning(preview.workout);
+}
+
 async function main(): Promise<void> {
   /* ══ THE WORLD ═════════════════════════════════════════════════════════ */
   const weekStart = await install();
@@ -419,7 +443,7 @@ async function main(): Promise<void> {
         .find(candidate => candidate.date === day);
       if (candidateDay?.workout?.conditioningBlock?.options.length) continue;
       for (const candidate of CANDIDATE_AREAS) {
-        if (unsafeCountFor(candidate, SEVERITY, day) === 0) { quietDay = day; quietArea = candidate; break; }
+        if (previewLeavesDayUntouched(candidate, SEVERITY, day)) { quietDay = day; quietArea = candidate; break; }
       }
       if (quietDay) break;
     }

@@ -153,8 +153,15 @@ async function main(): Promise<void> {
   const conditioningReview = quiet(() => buildSessionInjuryReview({
     date: conditioningDate, constraint: conditioningConstraint,
   }));
-  ok('home athlete reaches a conditioning replacement in the injury review',
-    conditioningReview.conditioningChanges.some(change => !!change.to), conditioningReview.conditioningChanges);
+  /* R-356 (2026-09-02, measured on the home-kit archetypes' knee weeks): an
+   * injury that withdraws on-feet core conditioning and has NO off-feet erg to
+   * move it to writes a conditioning reduction and the day rests. This cell
+   * used to expect a replacement for a home athlete with no bike, rower or
+   * ski — the review now says the session is withdrawn, and says so plainly. */
+  ok('home athlete\'s knee withdraws the on-feet conditioning, and no replacement is invented without an erg (R-356)',
+    conditioningReview.conditioningChanges.length > 0
+      && conditioningReview.conditioningChanges.every(change => !!change.from && change.to === null),
+    conditioningReview.conditioningChanges);
   ok('a conditioning-only change is not described as nothing changing',
     !conditioningReview.nothingChanges && conditioningReview.headline.includes('conditioning'));
   const conditioningAccepted = await declare(conditioningConstraint, conditioningDate);
@@ -170,8 +177,14 @@ async function main(): Promise<void> {
 
   console.log('\n[1] CONTROL — the world this suite is about');
   {
-    ok('the athlete has a lower-body session with something safe in it',
-      beforeRows.length >= 5 && safeRows.length > 0, beforeRows);
+    /* Bible Section 8, 6-7 band: "remove risky work through the area; keep
+     * unaffected work". The tags rate every squat, hinge, lunge, single-leg,
+     * calf and plyo row `caution` or `avoid` for a knee (34 + 3 of 37 measured
+     * 2026-09-03), so a four-compound lower session (a93f3ad2) holds no
+     * knee-`good` row at 7. The control is the session, not a safe row in it;
+     * [7] below reads `safeRows` and answers for the empty case honestly. */
+    ok('the athlete has a real lower-body session (five rows or more) for this knee to adjust',
+      beforeRows.length >= 5, beforeRows);
   }
 
   const constraint = constraintFor('Knee', 'moderate', TARGET);
@@ -305,8 +318,11 @@ async function main(): Promise<void> {
     ok('every paused row has LEFT the active session — no greyed-out cards',
       review.paused.every((change) => !afterRows.includes(change.from)),
       { afterRows });
-    ok('the safe row the athlete already had is untouched',
-      safeRows.length > 0 && safeRows.every(name => afterRows.includes(name)), { safeRows, afterRows });
+    ok('the safe rows the athlete already had are untouched — and when the 6-7 band leaves none, every original row was paused, not silently dropped',
+      safeRows.length > 0
+        ? safeRows.every(name => afterRows.includes(name))
+        : beforeRows.every(name => review.paused.some((change) => change.from === name)),
+      { safeRows, afterRows, paused: review.paused.map((c) => c.from) });
     ok('the added block is on the session',
       review.added.every((candidate) => afterRows.includes(candidate.name)),
       { added: review.added.map((c) => c.name), afterRows });

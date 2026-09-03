@@ -21,7 +21,7 @@ import { compileInjuryConditioning } from '../rules/canonicalInjuryConditioning'
 import { applyConstraintsToTypedComponents } from '../utils/exposureEngine';
 import { compileActiveExposureConstraints } from '../rules/canonicalWeeklyConstraintCompiler';
 import { scheduleWeek, scheduleRefused } from '../rules/weeklyScheduler';
-import { GLOBAL_RULES } from '../rules/weeklyProgrammingContract';
+import { GLOBAL_RULES, OFFSEASON_OVERLAYS } from '../rules/weeklyProgrammingContract';
 import { isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
 import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
@@ -63,7 +63,12 @@ async function main() {
             day.conditioning === 'sprint_high_speed' || day.sprintComponent).map(day => day.dayOfWeek));
           check(`${label} preserves running floor and ceiling`, runningDays.size >= GLOBAL_RULES.running.min &&
             runningDays.size <= GLOBAL_RULES.running.max, JSON.stringify([...runningDays]));
-          check(`${label} keeps phase conditioning target`, result.demand.coreConditioning === 5);
+          // R-303 (2026-09-01): normal Off-season app energy-system density is
+          // FOUR days, Speed inside it. This pinned the old five-exposure
+          // literal; it reads the contract's own overlay now, as the scheduler does.
+          check(`${label} keeps phase conditioning target`,
+            result.demand.coreConditioning === OFFSEASON_OVERLAYS.normal_build.conditioningTarget.max,
+            JSON.stringify(result.demand));
         }
       }
     }
@@ -91,6 +96,16 @@ async function main() {
   const cooked = await quietAsync(() => executeProgramControlActionDurably(
     readinessActionForKind('cooked_week', { anchorDateISO: YEAR_START, todayISO: YEAR_START }), { todayISO: YEAR_START }));
   check('readiness persistence witness accepts a real fatigue report', cooked.ok, cooked.message);
+  // R-275 (2026-08-30) superseded R-038's rolling window: one cooked report is
+  // rest on its own date and derives NO constraint; any two consecutive dated
+  // reports deload from the second date through Sunday, and THAT is the
+  // derived fatigue constraint this witness persists and restores. Second
+  // report, next calendar day.
+  const secondTiredDay = plusDays(YEAR_START, 1);
+  setJourneyClock(secondTiredDay);
+  const flat = await quietAsync(() => executeProgramControlActionDurably(
+    readinessActionForKind('flat_today', { anchorDateISO: secondTiredDay, todayISO: secondTiredDay }), { todayISO: secondTiredDay }));
+  check('readiness persistence witness accepts the second consecutive tired day (R-275)', flat.ok, flat.message);
   const liveSignals = useReadinessStore.getState().signalsByDate;
   check('readiness persistence witness reaches derived signals',
     Object.values(liveSignals).some(signal => !!signal.temporarySourceFactIds?.length));
@@ -122,7 +137,11 @@ async function main() {
       const rolesBefore = new Map(quiet(() => deriveVisibleWeekLive(YEAR_START, date)).flatMap(day =>
         day.workout?.exercises.map(row => [row.id, { name: row.exercise?.name, role: row.section18Evidence?.role }] as const) ?? []));
       check(`${label} reached a real session`, !!day()?.exercises.length);
-      const healthy = signature(day());
+      // What the 7/10 pass withdrew on this day. The improving-injury cell used
+      // to fire on "the day differs from healthy", which the athlete's own
+      // accepted set edit (below, after the 7) now also makes true — a day the
+      // knee never touched then owed "restored rows" it never lost.
+      let withdrawnAtSeven = 0;
       for (const severity of [7, 3]) {
         const constraint = buildGuidedInjuryConstraint({ region: 'lower_body', area: 'knee', severity,
           severityBand: severity === 7 ? 'moderate' : 'mild',
@@ -132,8 +151,10 @@ async function main() {
         const preview = quiet(() => compileSessionInjuryPreview({ date, constraint }));
         const review = quiet(() => buildSessionInjuryReview({ date, constraint }));
         check(`${label}/${severity} preview has no side effects`, before === completeAcceptedStateFingerprint());
-        if (severity === 3 && signature(day()) !== healthy) check(`${label} improving-injury review discloses restored rows`,
-          !review.nothingChanges && review.restored.length > 0 && review.headline.includes('bring back'));
+        if (severity === 7) withdrawnAtSeven = review.paused.length + review.changes.length + review.withdrawn.length;
+        if (severity === 3 && withdrawnAtSeven > 0) check(`${label} improving-injury review discloses restored rows`,
+          !review.nothingChanges && review.restored.length > 0 && review.headline.includes('bring back'),
+          JSON.stringify({ withdrawnAtSeven, restored: review.restored, headline: review.headline }));
         const accepted = await quietAsync(() => executeProgramControlActionDurably({ type: 'set_injury_modifier',
           source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
           scope: 'current_and_future', payload: { constraint }, requiresRebuild: false,

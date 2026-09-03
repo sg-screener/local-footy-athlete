@@ -477,7 +477,17 @@ export function assessTapSwapCandidateSafety(
   }
 
   const canonical = resolveExerciseName(name);
-  if (sourceBoundRegressionTarget(canonical) && !sourceBoundRegressionAllows({
+  // KEEPING THE ROW'S OWN EXERCISE IS NOT A REGRESSION CHOICE. A prescription
+  // edit travels through this door as a swap to the same name (sets +1 on the
+  // row the athlete already has). When the app itself had placed a source-bound
+  // regression on that row (Incline Push-Up for a 1-2 year athlete), the edit
+  // was refused as "available only from its approved source exercise" — the
+  // source being the row's own name (test:injury-compiler-preview,
+  // female-5-home, measured 2026-09-03). The relation governs CHOOSING the
+  // regression from its source; an unchanged identity has nothing to choose.
+  const keepsOwnExercise = !!context?.sourceExercise
+    && resolveExerciseName(context.sourceExercise) === canonical;
+  if (!keepsOwnExercise && sourceBoundRegressionTarget(canonical) && !sourceBoundRegressionAllows({
     target: canonical,
     source: context?.sourceExercise,
     profile: environment,

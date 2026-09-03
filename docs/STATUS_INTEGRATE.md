@@ -101,3 +101,86 @@ before `74ef3174` was a coincidence of the blocker, not a rule.
 
 North star: TOWARD — no new stored state; the craft verdict the gateway
 already derives now ranks the repair instead of being disclosed after it.
+
+### Canonical compiler chain, second run (after family 1)
+temporary-source-facts 90/0; conditioning-balance-repair 42/0. Red, identical
+in the pre-fix control tree: session-injury-review [5] ×2,
+injury-session-adjustment 51/54, injury-compiler-preview (12 running-budget
+cells + a persistence witness that throws). All inherited from before the
+fork; all in the injury family.
+
+### Family 2 — the injury suites: four stale pins, two app defects
+REGISTRY-GREP: R-275, R-303, R-356, R-095, R-124, Section 8 (6-7 band).
+
+**Stale pins (test re-pinned, ruling named in the cell):**
+1. `injuryCompilerPreviewTests` "keeps phase conditioning target" ×12 pinned
+   `coreConditioning === 5` for normal Off-season; **R-303 (2026-09-01)** set
+   that density to four. Re-pinned to the contract's own
+   `OFFSEASON_OVERLAYS.normal_build.conditioningTarget.max`, never a literal.
+2. `injuryCompilerPreviewTests` "persistence witness reaches a derived fatigue
+   constraint" expected one cooked report to derive a constraint; **R-275
+   (2026-08-30)** superseded R-038: one cooked report is rest on its own date
+   and derives nothing, two consecutive dated reports deload through Sunday.
+   The witness now files the second tired day (flat, next date) and reaches
+   the R-275 sequence constraint; the crash behind the generic "nothing
+   changed" (`temporarySourceFactIds` of `undefined`) was the test's own
+   non-null assertion on a constraint that does not exist.
+3. `injurySessionAdjustmentTests` "home athlete reaches a conditioning
+   replacement": **R-356 (1)+(5)** — on a kit with no erg the withdrawn
+   on-feet session has no replacement and the day rests. Re-pinned: the
+   review withdraws the hard intermittent with `to: null` and does not say
+   nothing changed.
+4. `injurySessionAdjustmentTests` [1] CONTROL "a lower-body session with
+   something safe in it" and [7] "the safe row is untouched": the tags rate
+   every squat/hinge/lunge/single-leg/calf/plyo row `caution` or `avoid` for a
+   knee (34 + 3 of 37, measured), so a four-compound lower session (a93f3ad2)
+   holds no knee-`good` row at 7 and the Bible's 6-7 band pauses them all.
+   Re-pinned: CONTROL is the session (≥5 rows); [7] holds safe rows untouched
+   when any exist, else every original row paused, never silently dropped.
+5. `sessionInjuryReviewTests` [5] "the review proposes nothing": the quiet-day
+   search read `unsafeRowsForInjury` (the matrix) alone; the preview the
+   review is built from also runs the typed exposure filter, which withdrew
+   `Adductor Rockback` on a groin 6 Mobility day (the row has no tag; the
+   matrix says `unknown`). The review honestly said "take out Adductor
+   Rockback" while the helper had promised silence. The search now asks the
+   preview owner (`compileSessionInjuryPreview`, before == after, rows and
+   conditioning); the cell keeps judging the review's words. [5] 6/6.
+
+**APP defect A — a dose edit refused as a "regression choice"
+(`tapSwapHierarchy.assessTapSwapCandidateSafety`).** A prescription edit
+travels through the swap door as a swap to the row's own name. When the app
+itself had placed a source-bound regression (Incline Push-Up for the 1-2 year
+female-5-home athlete), `sets +1` on it was refused: "available only from its
+approved source exercise" — the source being the row's own name. Fix: keeping
+the row's own exercise is not a regression choice; the relation governs
+CHOOSING the regression from its source. Every other safety check still runs.
+
+**APP defect B — an injury recompile promised a fourth conditioning day
+(`canonicalWeeklyRowCompiler`, the delivered-day evidence).** female-6
+(In-season, club Wed, Sunday game) reports a knee 7 on Friday. The fold
+recompiles the remainder with Mon-Thu pinned as delivered history; the pinned
+Tuesday squat + optional flush was handed to the scheduler as
+`appProgrammed: true` (the visible classifier credits any conditioning unit),
+so `deliveredAppDays` = Tue + Thu, demand = 2 + club + game = **4**, the
+overlay contract's `plannerSelectedTarget` = 4 above its own
+`permittedMaximum` 3, while the week the athlete saw held 3. The injury door
+accepted (facts are never vetoed); every later exercise edit on the week hit
+`planner_selected_target_miss:conditioning` at the write boundary and was
+refused as "nothing on your plan changed" — the R-359-addendum class again,
+through a different count. The scheduler counts its OWN authored days without
+the recovery flush, and the §18 ledger counts every optional role outside the
+core; the delivered-day producer now reads the same typed
+`section18Evidence.conditioningRole` and excludes the optional roles. Measured:
+the overlay contract's target 4 → 3, the write boundary accepts, all six
+archetype/day edits accept (they were 4/6).
+
+**Receipts (family 2).**
+- `test:session-injury-review` green, [5] 6/6 (was 4/6). `test:injury-session-adjustment` **54 / 0** (was 51/54).
+- `test:injury-compiler-preview` chain: the first file **193 / 0** (was 12 running-budget reds + a throw at the persistence witness; once past the throw it reached the archetype loop, where the two dose-edit refusals above were red and, after them, the "improving-injury" cell — re-pinned to fire only when the 7/10 pass withdrew rows on that day, since the athlete's own accepted set edit now also makes the day differ from healthy); derived-exercise durability 26/0, travel 12/0, strength templates 59/0, team-night 10/0 + 32/0, derived repair ownership 13/0. Chain exit 0.
+- `test:compile` PASSED (0/0/0) after every step.
+- Blast radius on the fixed tree: tap-swap-hierarchy 25/1 (**the one red, "hamstring issue avoids sprint, heavy hinge and Nordic suggestions", is identical on the pre-fix control tree** — inherited, diagnostic), temporary-source-facts 90/0, section18-v2 142/0, hard-day-warns 22/0, week-checker-allowances 38/0, fatigue-sequence 18/0, weekly-scheduler 141/141 + fresh speed 14/14 + 2/2 with generated-scheduler-fixtures 9/11 (**the same two bye-week released-day cells red on the control tree**; hingecod recorded them as HEAD's), injury-recomposition 186/0, readiness-load-retention 58/0, fixture-mutation-transaction 21/0.
+- Writer census: `compileCanonicalProgramWeeks` re-reviewed (canonical_compiler, reason extended); **1166/1166, 0 unresolved, gate exit 0.**
+
+**Side finding, recorded only (no work done, per Sam's brief):** `Adductor Rockback` has no `EXERCISE_TAGS` entry (the matrix answers `unknown`), and `Tib Raises` is rated `caution` for a knee while `T-Bar Tib Raises` is `good`. Data, not this family.
+
+North star: TOWARD — both app fixes remove a second counter (the swap door judging an unchanged identity; the delivered-day evidence counting a flush the scheduler and the ledger never count). No new stored state.
