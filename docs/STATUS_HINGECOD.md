@@ -1901,3 +1901,43 @@ names and the registry (R-271 reaffirmed line). No behaviour change.
   one red ("a three-set secondary lift exists in the control") is identical at
   the base `f385dc75`. `test:compile` 0 errors. The full 52-week club run is
   being rerun in the background for the acceptance's own F003 check.
+
+## 2026-09-03 — THE WRITER CENSUS, REVIEWED TO ZERO (Sam: "then return to the census")
+
+The release gate's unit 12 (`compiler-year`) stopped on its prerequisite: the
+executable writer-ownership census (`scripts/weekly-writer-census.js`,
+registry `scripts/weekly-writer-ownership.json`). Before this pass: 1166
+capability owners, 999 reviewed, **167 unresolved** (82 never reviewed, 85
+reviewed but changed since — body, callee list or operation inventory) and
+one error (a review naming `fixtureMutationTransaction#acceptedVisibleRows`,
+which I moved on 2026-09-03).
+
+**Method — individual review, no bulk refresh** (the census owner's rule,
+`docs/STATUS_TESTTRUTH.md`: "review live writers individually and refresh
+fingerprints only after review"). Every owner's current source was dumped
+with the same TypeScript AST the census uses (scratch `census-dump.js`),
+read, and given a classification with a dated reason; fingerprints were taken
+from the census's own output for that exact body (scratch
+`census-review.py`). For the 85 "changed" owners the diff since their prior
+review was checked with `git log/diff` per file before the prior
+classification was kept or corrected. Zero-operation callers then resolved
+through their reviewed callee graph, as the census is designed to do.
+
+| | before | after |
+| --- | --- | --- |
+| capability owners | 1166 | 1166 |
+| reviewed | 999 | **1166** |
+| unresolved | 167 | **0** |
+| errors | 1 (absent capability) | 0 |
+| rival authors / derived-output writers | 0 / 0 (zero NOT proven) | **0 / 0, proven over the whole denominator** |
+| census verdict | RED | **ok** |
+
+Classification totals after: canonical_input_writer 207 · canonical_compiler
+203 · persistence_boundary 277 · projection_display 455 · legacy_ingress 20 ·
+dormant_quarantined 4 (the four fixed owners). No function was classified as
+a rival author or a derived-output writer; nothing was found that needed
+one. What the review turned up that was NOT a census matter is already fixed
+above today (the eased-conditioning option ids, the lime literals).
+
+Receipts: `node scripts/weekly-writer-census.js --json` → `unresolvedOwners: 0`,
+`errors: []`, `ok: true`. Release gate rerun recorded below.
