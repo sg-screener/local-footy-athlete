@@ -18,6 +18,15 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
   const workout = quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START))
     .find(day => day.workout?.conditioningBlock?.intent === 'high-intensity')?.workout;
   if (!workout?.conditioningBlock?.options.length) throw Error('Real hard-conditioning component not reached');
+  /* THE CENSUS COVERS EVERY AUTHORED TEMPLATE, HOWEVER MANY THE SHEET HOLDS.
+   * The literal `55` written here on 2026-08-20 (R-117's census) went stale on
+   * 2026-09-02 when the three COD sessions became sections of the one combined
+   * Change of Direction session (R-331; registry now 52). A count is not the property;
+   * the property is one distinct identity per authored template and every one
+   * of them walked — so that is what is asserted (hingecod, 2026-09-03). */
+  const authoredIdentities = new Set(CONDITIONING_TEMPLATES.map(template => template.name));
+  const everyTemplateDistinct = CONDITIONING_TEMPLATES.length > 0
+    && authoredIdentities.size === CONDITIONING_TEMPLATES.length;
   const misclassified = CONDITIONING_TEMPLATES.flatMap(template => {
     const rows = composeConditioningRows(template, YEAR_START);
     const evidenced = withSection18WorkoutEvidence({ ...workout, exercises: rows });
@@ -26,7 +35,7 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
       .map(row => `${template.name}/${row.exercise.name}`);
   });
   ok('authored conditioning rows retain conditioning evidence including every warm-up',
-    CONDITIONING_TEMPLATES.length === 55 && misclassified.length === 0, JSON.stringify(misclassified));
+    everyTemplateDistinct && misclassified.length === 0, JSON.stringify(misclassified));
   const constraint = buildInjuryConstraint({ region: 'knee', severity: 7 });
   for (const modality of ['bike', 'row', 'ski'] as const) {
     const failures = CONDITIONING_TEMPLATES.filter(template => {
@@ -35,7 +44,7 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
       return !applyConstraintsToTypedComponents(candidate, [constraint]).workout.conditioningBlock?.options.length;
     });
     ok(`${modality}: typed off-leg identity survives every authored title mutation`,
-      CONDITIONING_TEMPLATES.length === 55 && failures.length === 0, JSON.stringify(failures.map(t => t.name)));
+      everyTemplateDistinct && failures.length === 0, JSON.stringify(failures.map(t => t.name)));
     const renamed = CONDITIONING_TEMPLATES.filter(template => {
       const candidate = { ...workout, name: template.name, exercises: workout.exercises.map(row => ({ ...row,
         exercise: { ...row.exercise, name: template.name }, section18Evidence: { ...row.section18Evidence, role: 'conditioning' as const } })),
@@ -46,7 +55,7 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
         swapped.conditioningBlock.options.some(option => option.title !== template.name || String(option.modality) !== modality);
     });
     ok(`${modality}: modality changes preserve every authored template identity and set the typed mode`,
-      CONDITIONING_TEMPLATES.length === 55 && renamed.length === 0, JSON.stringify(renamed.map(t => t.name)));
+      everyTemplateDistinct && renamed.length === 0, JSON.stringify(renamed.map(t => t.name)));
   }
   const running = { ...workout, conditioningBlock: { ...workout.conditioningBlock,
     options: workout.conditioningBlock.options.map(option => ({ ...option, modality: 'running' as const, title: 'Bike intervals' })) } };

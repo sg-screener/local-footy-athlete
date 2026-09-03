@@ -1951,3 +1951,48 @@ Receipts: `node scripts/weekly-writer-census.js --json` → `unresolvedOwners: 0
   options, sparse sprint opportunities, duplicate-row component identity).
   Log: scratch `release-gate-after-census.log`. Units 16–27 have not run
   yet — the runner stops at the first red.
+
+## 2026-09-03 — canonical compiler: the machine-conditioning family (ski / rower / bike / air bike), one root cause
+
+Sam: *"Start with the canonical compiler's machine-conditioning restart and
+identity failures for ski, rower, bike and air bike. Treat them as one
+root-cause family. … don't bulk-fix all 45 at once."*
+
+**The family (15 of the 45 reds in `test:canonical-weekly-compiler`):**
+8 × "flush-restart/<gender>/<machine>: all seven distinct flush templates were
+actually delivered and restarted", and 7 × the modality-exposure cells
+("authored conditioning rows retain conditioning evidence including every
+warm-up"; "<bike|row|ski>: typed off-leg identity survives every authored
+title mutation"; "<bike|row|ski>: modality changes preserve every authored
+template identity and set the typed mode").
+
+**Root cause — one, and it is in the tests, not the app.** Both supports
+hard-coded the shape of the conditioning template registry as it stood on
+2026-08-20 (R-117's census: 55 templates, seven flush templates). The
+registry then changed under two of Sam's rulings:
+- **R-266 (2026-08-28)** retired `Easy Aerobic Flush` from automatic
+  selection — the rotation can never deliver it, so six flushes are
+  selectable, not seven. Every per-date flush cell (rollover accepted, one
+  owned machine, complete card, history recorded, exact restart) was already
+  green for all eight machine/gender pairs; only the literal seven was red.
+- **R-331 (2026-09-02)** combined the three COD sessions into the one
+  `Change of Direction` session with three sections — the exported registry
+  went 55 → 52. The exposure cells' real checks (no misclassified row, no
+  identity lost under a title mutation or a modality change) returned `[]` —
+  all passing; only the `length === 55` conjunct was red.
+
+**The correction.** The two supports now read the registry instead of a
+literal: the exposure cells require one distinct identity per authored
+template and walk them all; the flush journey requires every *selectable*
+flush (currently six) and adds a CONTROL per machine/gender that a retired
+flush is never delivered. No product code changed; no test was loosened —
+each cell's behavioural assertion is intact and the count is derived from the
+same registry the app selects from.
+
+**Receipts.** `test:canonical-weekly-compiler` slice: 10539 passed / 45 failed
+→ **10562 passed / 30 failed**; zero family cells remain red; the 8 new
+CONTROL cells pass. `test:compile` 0 errors. The remaining 30 reds are other
+families (athlete-added fifth session ownership/edits, scheduled deload
+undo/restart, pre-season speed-substitution mutations, P15 sprint
+questions, full-kit primer options, duplicate-row component identity,
+one off-season restart) — untouched, as asked.

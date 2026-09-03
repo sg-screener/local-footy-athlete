@@ -1,4 +1,5 @@
 import { athleteAnswers, ARCHETYPES } from '../compilerYear/catalog';
+import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp, rolloverIfDue, setJourneyClock } from './athleteJourney';
 import { presetEquipmentAnswer } from './equipmentAnswerFixture';
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
@@ -73,6 +74,21 @@ export async function flushRestartJourney(storage: Map<string, string>, ok: (lab
         boot.ok && JSON.stringify(restarted) === JSON.stringify(displayed),
         JSON.stringify({ displayed, restarted }));
     }
-    ok(`flush-restart/${gender}/${machine}: all seven distinct flush templates were actually delivered and restarted`, seen.size === 7, JSON.stringify([...seen]));
+    /* EVERY FLUSH THE APP CAN SELECT, NOT A LITERAL SEVEN. `Easy Aerobic Flush`
+     * was retired from automatic selection on 2026-08-28 (R-266, Sam's settled
+     * flush/retirement decisions); a retired template is one the rotation must never deliver,
+     * so the journey asks the registry which flushes are selectable and requires
+     * all of them — and none of the retired (hingecod, 2026-09-03). */
+    const selectableFlushes = CONDITIONING_TEMPLATES
+      .filter(template => template.quality === 'flush' && template.automaticSelection !== 'retired')
+      .map(template => template.name);
+    const retiredFlushes = CONDITIONING_TEMPLATES
+      .filter(template => template.quality === 'flush' && template.automaticSelection === 'retired')
+      .map(template => template.name);
+    ok(`flush-restart/${gender}/${machine}: every selectable flush template (${selectableFlushes.length}) was actually delivered and restarted`,
+      selectableFlushes.every(name => seen.has(name)) && seen.size === selectableFlushes.length,
+      JSON.stringify({ seen: [...seen], selectable: selectableFlushes }));
+    ok(`flush-restart/${gender}/${machine}: CONTROL — a retired flush template is never delivered`,
+      retiredFlushes.length > 0 && retiredFlushes.every(name => !seen.has(name)), JSON.stringify(retiredFlushes));
   }
 }
