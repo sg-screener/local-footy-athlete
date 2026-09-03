@@ -1941,3 +1941,13 @@ above today (the eased-conditioning option ids, the lime literals).
 
 Receipts: `node scripts/weekly-writer-census.js --json` → `unresolvedOwners: 0`,
 `errors: []`, `ok: true`. Release gate rerun recorded below.
+- **Release gate after the census (`39214120`):** `compiler-year` **GREEN**
+  (416/416, 0 failure keys — the census prerequisite passes),
+  `weekly-writer-zero` **GREEN**. Gate **14/27**, now stops at unit 15
+  `test:canonical-weekly-compiler` — 10539 passed / **45 failed**, the same
+  45 inherited cells classified in the diagnostic table above (flush-restart
+  on ski/row/bike, typed off-leg identity through title mutations, the
+  athlete-added fifth session's ownership/edits/restart, full-kit primer
+  options, sparse sprint opportunities, duplicate-row component identity).
+  Log: scratch `release-gate-after-census.log`. Units 16–27 have not run
+  yet — the runner stops at the first red.
