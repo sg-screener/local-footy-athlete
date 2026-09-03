@@ -619,10 +619,20 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
     'every movement reuses Strength prescription, cues, load and video presentation',
     /<StrengthExerciseCard/.test(mobilityRenderer) &&
       /prescriptionLabel=\{mobilityFlowMovementDose\(exercise\)\}/.test(mobilityRenderer) &&
-      /cueTextOverride=\{exercise\.notes\}/.test(mobilityRenderer) &&
       /expandedCues=\{expandedCues\}/.test(mobilityRenderer) &&
       /formatWeight=\{formatWeight\}/.test(mobilityRenderer) &&
       /onSelectExercise=\{onSelectExercise\}/.test(mobilityRenderer),
+  );
+  /* ⚠ **A WARM-UP ROW READS THE SAME CUE SOURCE AS A STRENGTH ROW.** This cell
+   * used to require the OPPOSITE — `cueTextOverride={exercise.notes}` — which
+   * handed the pool's shorthand ("Slow reps") to the athlete while the curated
+   * cue for the same movement went unread. Sam ruled 2026-09-04: the long cues
+   * show everywhere, so the override is gone and this cell now guards its
+   * absence on every route. */
+  ok(
+    'a mobility row does not override the curated cue with its pool note',
+    !/cueTextOverride\s*[=?,]/.test(mobilityRenderer),
+    'the curated cue layer owns every athlete-visible coaching word',
   );
 
   ok(

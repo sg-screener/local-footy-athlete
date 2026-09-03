@@ -181,8 +181,17 @@ if [[ -n "$CONTAINER" && -f "$MANIFEST" ]]; then
 fi
 
 # 5. Launch the app. This is the step that makes the command's name true.
-echo "[lfa:dev] Launching $BUNDLE_ID..."
-xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
+#
+# ⚠ **THE PORT IS PASSED TO THE APP, NOT ONLY TO METRO.** `QA_METRO_PORT` used to
+# move Metro and nothing else: the app still opened its baked-in `:8081`, so a
+# seat that moved off 8081 to dodge another checkout's Metro got that other
+# checkout's BUNDLE anyway — the same screen, silently, with its own edits
+# missing. It cost a seat twenty minutes of screenshots of someone else's app on
+# 2026-09-04, and the symptom (code changes that never appear) reads as a
+# product bug rather than a wiring one. `-RCT_jsLocation` is passed ALWAYS, even
+# on the default port, so the bundle's origin is stated rather than assumed.
+echo "[lfa:dev] Launching $BUNDLE_ID against Metro on :${PORT}..."
+xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" -RCT_jsLocation "127.0.0.1:${PORT}"
 
 echo
 echo "[lfa:dev] Running. To reset to a deterministic week:"

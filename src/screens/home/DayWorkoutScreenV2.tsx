@@ -148,7 +148,6 @@ import {
 import {
   buildCueText,
   cueForImplement,
-  cleanNotes,
   formatLowLoadSetsReps,
   formatStrengthSetsReps,
   formatConditioningRowPrescription,
@@ -2782,7 +2781,6 @@ function MobilityExerciseList({
               label={`${index + 1}`}
               isGrouped={false}
               prescriptionLabel={mobilityFlowMovementDose(exercise)}
-              cueTextOverride={exercise.notes}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               editingWeightId={editingWeightId}
@@ -2904,9 +2902,6 @@ function SessionList({
         label={sectionLabel ?? labels[index] ?? ''}
         isGrouped={!!item.superset}
         prescriptionLabel={isLowLoad ? formatLowLoadSetsReps(item.row) : undefined}
-        cueTextOverride={item.presentation === 'mobility' && !item.row.sessionSection
-          ? cleanNotes(item.row?.notes ?? item.row?.exercise?.description)
-          : undefined}
         isLastInGroup={
           !item.superset || item.superset.index === item.superset.size - 1
         }
@@ -3419,7 +3414,6 @@ interface StrengthExerciseCardProps {
   isGrouped: boolean;
   isLastInGroup?: boolean;
   prescriptionLabel?: string;
-  cueTextOverride?: string | null;
   /**
    * R-104. Which implement the athlete actually picks up for THIS row on THIS
    * day's kit. Optional so the combined-day picker and add-on rows, which have
@@ -3453,7 +3447,6 @@ function StrengthExerciseCard({
   isGrouped,
   isLastInGroup = true,
   prescriptionLabel,
-  cueTextOverride,
   selectedImplement,
   availableEquipment,
   expandedCues,
@@ -3486,7 +3479,16 @@ function StrengthExerciseCard({
     selectedImplement?.implement ?? null,
     availableEquipment,
   );
-  const cueText = cueTextOverride !== undefined ? cueTextOverride : resolvedCue.text;
+  // ⚠ **ONE CUE SOURCE, EVERY ROW.** There used to be a `cueTextOverride` here,
+  // and the mobility routes passed the row's `notes` into it — so a warm-up row
+  // rendered the pool's short shorthand ("Slow reps") while the curated cue for
+  // the same movement ("Tuck your chin and slowly roll down one segment at a
+  // time. Add small weight when easy") existed and was never shown. Two sets of
+  // athlete-visible words for one exercise, with the screen quietly preferring
+  // the shorter. Sam ruled 2026-09-04: show the long cues everywhere. The
+  // override is DELETED rather than defaulted, so no route can reintroduce a
+  // second authority over the words the athlete reads.
+  const cueText = resolvedCue.text;
   // ── SAM'S UI CORRECTION: TYPED ALWAYS, SHOWN ONLY WHEN IT EXPLAINS A CHANGE.
   //
   // ⚠ **AND A LOADED ROW IS NEVER LABELLED "BODYWEIGHT".** Sam named the

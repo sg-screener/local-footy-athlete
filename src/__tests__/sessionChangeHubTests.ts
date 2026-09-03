@@ -198,9 +198,14 @@ console.log('\n[5b] Quick add: one plus per section, in the one section owner');
     /const sections = executionPlan.sections;/.test(live)
       && /sections.map\(\(section\) => \([\s\S]*?onQuickAdd=\{quickAddFor\(section.id\)\}/.test(live)
       && /mobilityContent/.test(live));
-  ok('manually added mobility uses authored cues rather than its catalogue description',
-    /cueTextOverride=\{item\.presentation === 'mobility' && !item\.row\.sessionSection/.test(live)
-      && /const cueText = cueTextOverride !== undefined \? cueTextOverride : resolvedCue\.text/.test(live));
+  /* ⚠ **THE OVERRIDE THIS CELL USED TO REQUIRE IS DELETED.** It preferred the
+   * row's note over the curated cue, which is how a manually added mobility row
+   * and a Movement Prep row both showed the pool's shorthand while Sam's real
+   * cue sat unread. Ruled 2026-09-04: the long cues show everywhere, on every
+   * route, from the one curated source. */
+  ok('manually added mobility reads the one curated cue source, not its row note',
+    /const cueText = resolvedCue\.text;/.test(live)
+      && !/cueTextOverride\s*[=?,]/.test(live));
   ok('mixed mobility rows are numbered within their visible section',
     live.includes('label={sectionLabel ?? labels[index] ??')
       && live.includes('String(section.items.findIndex(item => item.id === executionItem.id) + 1)'));

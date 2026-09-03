@@ -418,11 +418,21 @@ ok('mobility reuses the complete Strength exercise presentation',
   /<ExecutionChecklistItem/.test(mobilityRenderer)
     && /<StrengthExerciseCard/.test(mobilityRenderer)
     && /prescriptionLabel=\{mobilityFlowMovementDose\(exercise\)\}/.test(mobilityRenderer)
-    && /cueTextOverride=\{exercise\.notes\}/.test(mobilityRenderer)
     && /formatWeight=\{formatWeight\}/.test(mobilityRenderer)
     && /incrementWeight=\{incrementWeight\}/.test(mobilityRenderer)
     && /decrementWeight=\{decrementWeight\}/.test(mobilityRenderer)
     && /onSelectExercise=\{onSelectExercise\}/.test(mobilityRenderer));
+/* ⚠ **ONE CUE SOURCE ON EVERY ROW — this used to require the opposite.** The
+ * mobility route passed `cueTextOverride={exercise.notes}`, so a warm-up row
+ * printed the pool shorthand and the curated cue for the same movement was
+ * never seen. Sam ruled 2026-09-04: show the long cues everywhere. */
+/* The predicate matches the prop's SYNTAX (`=`, `?:`, `,`), not the bare word —
+ * the screen still NAMES the deleted override in the comment that explains why
+ * it is gone, and a cell that reds on its own tombstone would push the next
+ * reader to delete the explanation. */
+ok('no route overrides the curated cue with a row note',
+  !/cueTextOverride\s*[=?,]/.test(screen)
+    && /const cueText = resolvedCue\.text;/.test(screen));
 ok('Team Training expands as a plain checklist row, not an accent card',
   /function TeamTrainingRow/.test(screen) && /styles\.exerciseCard/.test(screen) &&
     !/function TeamTrainingBanner|teamTrainingCard|teamTrainingBody/.test(screen));

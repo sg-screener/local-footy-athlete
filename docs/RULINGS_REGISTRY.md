@@ -9275,3 +9275,40 @@ restoring the fix returned the suite to its two pre-existing reds.
 pinned the EXCEPTION's source text (`restLabel && exercise?.role !== 'power'`)
 rather than the rule. A cell that asserts an exception cannot see the rule break.
 It is INVERTED here, not deleted.
+
+---
+
+**R-366** · *"show the long cues everywhere"* (Sam, 2026-09-04, on finding
+`Jefferson Curl` reading **"Slow reps"** on his phone while the curated cue for
+the same movement — *"Tuck your chin and slowly roll down one segment at a time.
+Add small weight when easy"* — existed and was never rendered) · **THE CURATED
+CUE LAYER OWNS EVERY ATHLETE-VISIBLE COACHING WORD ON EVERY ROW. A ROW'S OWN
+NOTE MAY NOT STAND IN FOR IT.**
+
+The screen carried a `cueTextOverride` prop, and both mobility routes passed the
+row's `notes` into it: the Movement Prep list passed `exercise.notes`, and the
+shared session mapper passed `cleanNotes(...)` for any row presented as mobility
+without a `sessionSection`. Those notes are the static strings on the pool rows
+in `exercisePools.ts` — shorthand written for the pool, not for the athlete. So
+one exercise had two sets of athlete-visible words and the screen silently
+preferred the shorter, on exactly the rows an athlete reads while warming up.
+
+**The override is DELETED, not defaulted.** Every row — strength, recovery,
+mobility, add-on, manually added — now reaches `resolvedCue.text`, which is
+`buildCueText` through canonicalisation, which is Sam's master sheet. A prop
+that can be passed is a second authority waiting to be used again; the only way
+this stays one source is for the second door not to exist.
+
+Coverage checked before the change, not after: all 94 pool rows resolve to a
+real curated cue, so no row lost its words. **The pool `notes` field is
+untouched** — it is still read by the conditioning dose line, the visible read
+model and the coach; only its role as a *form cue* is retired.
+
+Guard: `test:session-execution-checklist` (no route overrides the curated cue
+with a row note), `test:mobility-flow` (a mobility row does not override the
+curated cue with its pool note) and `test:session-change-hub` (manually added
+mobility reads the one curated cue source). All three cells previously asserted
+the OPPOSITE — they pinned `cueTextOverride={exercise.notes}` as required — and
+are INVERTED here, not deleted. Proven on glass 2026-09-04: `Jefferson Curl`
+and `Bosch Hold` both read their curated cue in Movement Prep.
+Receipts: `docs/STATUS_LONGCUES.md`.
