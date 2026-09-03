@@ -747,3 +747,18 @@ exemption. "Mobility must not mean safe for every injury."
 | the same six flows through `scripts/dev-e2e/run-maestro-ios.sh <flow> --device B8B2C7B0…` on this tree's Metro :8082 | — | bin-undo-toast, full-reset-lands-clean, readiness-ack-never-silent, removal-undo-home, week-move-game PASS; block-rollover hit the 8-min watchdog (Maestro driver hang, kotlinx coroutine stack), rerun alone: exit 0, flow COMPLETED. Launch receipt `resolvedMetroUrl` = 127.0.0.1:8082. |
 | `npm run test:content-reconciliation` / `test:locked-list` | 1 / 1 | 19/20 and 32/33 — the same single red each at 5442efdd in a control tree (unrelated, reported above) |
 Not run: `test:bible` (diagnostic fleet, no release authority).
+
+### Phone install, 2026-09-04 (Sam: "build to my phone", then "do it over wifi")
+- Checkout `26e382c1`, clean worktree. `pod install` (LANG=en_US.UTF-8) exit 0
+  in this worktree; fresh isolated `xcodebuild clean build`, Release/iphoneos,
+  `-allowProvisioningUpdates`: BUILD SUCCEEDED. `codesign --verify --deep
+  --strict` OK, team 66M7FZ6G37. Bundle com.localfootyathlete.app 1.0.0 (1);
+  main.jsbundle 8,579,365 bytes sha256 68f8718f92fe6f48…; executable sha256
+  c22a7b803335ecd4….
+- Sam's iPhone (AFA21856…) dropped to `unavailable` at the first attempt; over
+  Wi-Fi it reappeared, one control-channel timeout and two "unable to locate"
+  errors, then `devicectl device install app` succeeded IN PLACE (no
+  uninstall, reset, data clearing or launch): bundle container
+  EBB8FEF8-0E14-4994-8E2C-036FC204FA0C. Receipt:
+  `docs/PHONE_INSTALL_RECEIPT_26e382c1_2026-09-04.json`. Renee's phone:
+  unavailable, not installed.

@@ -1,0 +1,37 @@
+{
+  "info" : {
+    "arguments" : [
+      "devicectl",
+      "device",
+      "install",
+      "app",
+      "--device",
+      "AFA21856-881E-587B-96D5-60817FD11018",
+      "/private/tmp/lfa-phone-26e382c1.I96lbq/DerivedData/Build/Products/Release-iphoneos/LocalFootyAthlete.app",
+      "--json-output",
+      "/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/022f4931-d0e2-4500-9a81-f8e8884b49ce/scratchpad/phone-install-26e382c1.json"
+    ],
+    "commandType" : "devicectl.device.install.app",
+    "environment" : {
+
+    },
+    "jsonVersion" : 3,
+    "outcome" : "success",
+    "version" : "506.7"
+  },
+  "result" : {
+    "deviceIdentifier" : "AFA21856-881E-587B-96D5-60817FD11018",
+    "installedApplications" : [
+      {
+        "bundleID" : "com.localfootyathlete.app",
+        "databaseSequenceNumber" : 1820,
+        "databaseUUID" : "E01700D7-416F-49D5-98A0-9A1C180DBA8C",
+        "installationURL" : "file:///private/var/containers/Bundle/Application/EBB8FEF8-0E14-4994-8E2C-036FC204FA0C/LocalFootyAthlete.app/",
+        "launchServicesIdentifier" : "unknown",
+        "options" : {
+
+        }
+      }
+    ]
+  }
+}
