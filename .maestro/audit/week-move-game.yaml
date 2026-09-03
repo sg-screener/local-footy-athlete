@@ -1,50 +1,71 @@
 appId: com.localfootyathlete.app
-name: AUDIT - the weekly menu moves the game (Sam's phone finding)
+name: AUDIT - moving the game lives inside Manage week, saves, and survives a relaunch
 tags:
   - e2e
   - audit
 ---
-# Sam, on his phone, 2026-08-26: "there's no way to move a game on weekly
-# view." The ⋯ sheet gains the entry (bye → MOVE game → add a game). This
-# proves the door on glass: open the week menu, tap Move, land on the picker,
-# tap Sunday, and the game is on Sunday.
+# Sam's phone finding (2026-08-26, `93fa246b`): the weekly menu moves the game.
+# Since `d77cb459` (2026-08-26, week controls) the week ⋯ sheet offers
+# "I'm going away" and "Manage week"; moving the game is a drag on the
+# Manage-week board, finished by Save changes. Sam, 2026-09-03: "Move-game is
+# inside Manage week now … drag the game, save, relaunch, confirm it stayed
+# moved." Re-pinned to that route on 2026-09-03, proven by hand first.
+#
+# The seed's game is Saturday 2026-07-18. The drag starts on the game card
+# (`week-board-box-<date>-game`) and ends on the empty Sunday row
+# (`week-board-day-<date>`); the board's drag activates after a 220 ms hold,
+# so the swipe is slow. After Save, the week view shows the fixture on Sunday
+# and Saturday is no longer the fixture; the checkpoint reload proves it is
+# persisted, not just drawn.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: standard-in-season-week
-
-# Switch to the WEEK view (the seed lands day-first), then the ⋯ menu.
 - tapOn:
     id: "program-view-week"
 - tapOn:
     id: "edit-week-button"
 - extendedWaitUntil:
     visible:
-      id: "edit-week-move-fixture"
+      id: "edit-week-session"
     timeout: 10000
-# Sam's order: bye first, then move, then add.
-- assertVisible:
-    id: "edit-week-bye"
-- assertVisible:
-    id: "edit-week-add-fixture"
 - tapOn:
-    id: "edit-week-move-fixture"
-# The picker mode is live — tap Sunday to land the game there.
-- extendedWaitUntil:
-    visible: "Tap to move here"
-    timeout: 10000
-# In picker mode a target row renames to its fixture-target identity.
-# WEDNESDAY, deliberately: it sits mid-screen. Sunday lives below the fold
-# and an off-screen tap reports COMPLETED while hitting nothing (two failure
-# frames proved it) — a flow taps what a thumb can reach.
-- tapOn:
-    id: "fixture-target-2026-07-15"
-# The game day's state token is 'fixture' (dayStateToken), and Saturday
-# reverting to rest is the other half of the move.
+    id: "edit-week-session"
 - extendedWaitUntil:
     visible:
-      id: "day-row-wed-state-fixture"
-    timeout: 25000
+      id: "week-board"
+    timeout: 10000
 - assertVisible:
-    id: "day-row-sat-state-rest"
-- takeScreenshot: artifacts/audit/week-move-game
+    id: "week-board-box-2026-07-18-game"
+- swipe:
+    start: "56%, 66%"
+    end: "56%, 74%"
+    duration: 3000
+- extendedWaitUntil:
+    visible:
+      id: "week-board-box-2026-07-19-game"
+    timeout: 10000
+- assertNotVisible:
+    id: "week-board-box-2026-07-18-game"
+- tapOn:
+    id: "week-board-save"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-sun-state-fixture"
+    timeout: 25000
+- assertNotVisible:
+    id: "day-row-sat-state-fixture"
+- takeScreenshot: artifacts/audit/week-move-game-saved
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "program-view-week"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-sun-state-fixture"
+    timeout: 25000
+- assertNotVisible:
+    id: "day-row-sat-state-fixture"
+- takeScreenshot: artifacts/audit/week-move-game-relaunched

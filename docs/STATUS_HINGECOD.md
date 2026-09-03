@@ -1581,3 +1581,82 @@ week ⋯ sheet's move-game entry (regression or deliberate), and the three
 flows re-pinned to the current surfaces if the surfaces are right. Metro is
 left running from the candidate on :8081 with the app installed on the
 iPhone 17 Pro simulator.
+
+## 2026-09-03 — CANDIDATE CLASSIFICATION (Sam: "for every red … classify first, fix nothing")
+
+Candidate `candidate/2026-09-03-combined` at `895dde2a` (+ flow re-pins).
+Base commits used as proof: `main` = `723b2792` (2026-08-24), and the
+commit this seat inherited = `8d68d6dd` (2026-09-02 10:17, tip of
+`codex/four-confirmed-fixes`; my first commit `b63b87b1` sits on it).
+Inherited-base sweep: `scratchpad/base-inherited-reds.log`; main sweep:
+`scratchpad/base-main-reds.log`.
+
+### Six-athlete report, corrected
+The six simulations completed, but **all six formal acceptance commands
+(`programming-final-year-acceptance.cjs`) exited red (8/13 checks)** and the
+budget analyzer's verdict is FAIL by construction. Separation:
+- HARNESS (the pair tools were written for two 52-week pair athletes):
+  `exact_source_revision` (the cohort runner patches the driver, so
+  `driver.sourceDiff` is never empty), `two_athletes` (one athlete per run),
+  `*_accepted_programming_inputs` (expects the pair's six training days),
+  `*_team_training_anchors` (expects the pair driver's Christmas window; the
+  cohort runner declares a one-week busy fact for 2026-12-14 only, and the
+  app honoured exactly that), `male_calendar_restart_projection` (156 weeks
+  ≠ 52; 156/156 restarts clean, 0 projection errors),
+  `female_full_equipment_travel_restore` (her normal kit IS minimal; the
+  check expects the pair's full gym), plus the four builder mistakes the
+  evidence itself records in `audit-tool-mistakes.csv`.
+- GENUINE, from the saved evidence (`findings.csv`, `conditioning-rows.csv`):
+  **FY-CCA-F003 (P1)** — for the club-effort athlete, 11 Tuesday conditioning
+  cards over weeks 12–25 ("Controlled 10–20 min Blocks", "Steady 5 min
+  Blocks", "Steady Blocks 3×8/4×6") render with no modality, no effort scale
+  and running "% MAS" copy on a bike — the standalone Bike flush routed
+  through the low-load exercise card; also red as `male_conditioning_copy`.
+  **FY-CCA-F004 (P1)** — automatic weekly-selection findings for the three
+  4-day athletes (12–13 each): Back Squat on both lower days in moved-game
+  weeks 29/41/47 (the double squat, on hold), Calf Raises/Walking Lunges
+  repeated; and minimal-kit `week40_nested_conditioning`. The 2-day, 3-day
+  and beginner athletes show 0 selection findings and 0 plane findings.
+  No athlete is "passed": the acceptance is red for every one of them.
+
+### Release gate `test:release` — 11/27, stops at unit 12
+| red | kind | athlete impact | proof it was red before this week | to turn green |
+| --- | --- | --- | --- | --- |
+| `test:compiler-year` — 416/416 athlete-weeks green, exits red on its census prerequisite `canonical_only` (157/1164 unresolved writer owners; "executable ownership is not yet proven") | unfinished architecture gate | none directly: no week is red; the gate refuses to accept a year while writer ownership is unproven | `8d68d6dd`: `weekly-writer-zero` red (census) and `compiler-year` itself could not onboard the 3-day archetype (`OnboardingPipelineError required_minimum_shortfall:main_strength:2`) — worse than now | review the 157 candidate owners in `scripts/weekly-writer-ownership.json` (each line a human decision), then the census and this unit go green together |
+| `test:weekly-writer-zero` — same census, 157 unresolved | unfinished architecture gate | none directly | `8d68d6dd` red (script absent at `main`) | as above |
+| `test:injury-fallback-journey` — 4 cells: "lower back, limiting — nothing the injury forbids is left standing" + its CONTROL (the injury removed nothing: Leg Press, RDLs, Lateral Lunge, Nordic, Calf Raises still on the day), and two coverage cells (no world exercised single-leg-knee / trunk) | the two coverage cells: under-fed test worlds (red at `4712a17a` and every commit since); **the two lower-back cells: REAL and MINE** — red at `4712a17a`, FIXED by R-354 `87104399` (only the 2 coverage cells red there and at `cee3c49e`), **re-broken by `631b6267` (R-357 frontal completion for every week + R-358 recorded loads)**; which of the two rules does it is not yet isolated (no thrown error: the report lands, the day is simply unchanged) | an athlete reporting a limiting lower-back injury on that world's day is still shown Leg Press and RDLs | green at `87104399`/`cee3c49e`; red from `631b6267` (bisect `scratchpad/injury-bisect*.log`) | isolate R-357 vs R-358 on that world, make the injury fold win over the completion/record on the reported day, then feed the two coverage worlds |
+| `test:slot-coverage` — 3 cells: split PUSH/PULL "horizontal + vertical + core before weekly robustness allocation", "no generated day is missing more of Sam's ladder" | test pinned to a superseded composition (R-351/R-317 seat budget); likely stale, unverified | if real: a split upper day could carry a robustness row before its core row | `8d68d6dd`: 81/84 red, same three cells | re-pin the three cells to the seat-budget composition after Sam confirms the split-upper ladder order |
+| `test:session-section-add` — 2 cells: male/female "primer/optional: the rendered session actually offers this section" | stale test or real: the Add door may not offer a Primer on an optional session | an athlete adding a Primer to an optional day might not get the option | `8d68d6dd`: 272/274, same two | open the Add door on an optional session in a real world and decide |
+| `test:canonical-weekly-compiler` — 45 cells (54 at `64fbace0`): scheduled-deload undo/restart/dose (6), flush-restart on ski/row/bike/air-bike (8), typed off-leg identity through title mutations (6), athlete-added fifth session ownership/edits (5), practice-match Add survives process death, full-kit primer heavy options (2), sparse sprint opportunities, phase witness, typed duplicate-row identity | mixed: the flush-restart and off-leg identity cells are the same family as FY-CCA-F003 (machine conditioning rendered wrong) — likely REAL; the deload/undo/fifth-session cells are contract cells whose worlds predate R-356/357 — unverified | machine (bike/row/ski) conditioning cards losing identity across restart and title edits; a scheduled deload possibly stacking dose after undo or restart | `8d68d6dd` red (the typed duplicate-row cell shown first; count not summarised there); script absent at `main` | one root-cause pass per family: (a) machine conditioning identity (with F003), (b) scheduled-deload undo/restart, (c) athlete-added fifth session ownership |
+
+### On glass — the move-game route, by hand and by flow
+By hand on the candidate build: Week → ⋯ → Manage week → the game card
+dragged from Saturday 18 Jul to Sunday 19 Jul (the board's 220 ms-hold drag)
+→ Save changes → the week view shows Sunday Game Day, Saturday Gunshow, Friday
+Rest. **Relaunch: the app's boot convergence check refused to start** —
+"Persisted semantic state did not converge: coach-updates — memory
+activeConstraints [] vs disk [game-change reversible adjustment
+game_fixture_move 2026-07-18→2026-07-19 'Game moved']". The moved game is on
+disk as a coach-updates adjustment; the rebuilt in-memory state does not
+carry it. That check is a development gate; in a release build the athlete
+would boot without the harness screen and the app's rebuilt state would lack
+the adjustment — the move is at risk of not surviving a relaunch. **REAL
+DEFECT, P1, on the exact route Sam asked for.** Not fixed (Sam: no
+programming fixes yet). Same family as the base-red `test:fixture-identity`
+(published week ≠ derived week; 0/6 at `main`, 1/7 at `8d68d6dd`); whether
+this on-glass symptom predates the candidate is unproven (no base build was
+put on the simulator).
+The `week-move-game` flow is rewritten to that route with the checkpoint
+relaunch at the end; it passes every step up to the relaunch and fails
+there on this defect — it proves the promised behaviour, it is not loosened.
+
+### Diagnostic suites red (not release units)
+| red | kind | impact | proof | to green |
+| --- | --- | --- | --- | --- |
+| `test:weekly-scheduler` — 2 cells: "the healthy bye puts the hard replacement exposure on the released fixture day", "released-day provenance places the hard bye exposure even when strength uses other days" | **REAL, MINE — introduced by `b1b6c3e6` (2026-09-02, "repeat sprints become a hard conditioning demand"), bisected: 11/11 at `db534496`, 9/11 from `b1b6c3e6` on** | on a healthy bye week the hard replacement session no longer lands on the freed game day | green at `8d68d6dd` (11/11); red from `b1b6c3e6` | revisit how the repeat-sprint demand and the released fixture day share the placement; re-run the two cells |
+| `test:fixture-identity` — 3 cells (3/5/6) | stale/broken test | none proven | `main`: 0/6; `8d68d6dd`: 1/7 — worse before | rewrite against the accepted-state deriver |
+| `test:surface-agreement` — 3 cells ((2) hard conditioning added to G+1 Sunday lands on every surface, (4) a rest day is offered its shape's capabilities, (5) every migrated word is signed) | unverified; (5) is a copy-signing gate | (2)/(4): an added session on a rest day may show on one surface but not another | `8d68d6dd`: same three; `main`: green | inspect the three surfaces in one world |
+| `test:visible-surfaces` — 1 cell (Pigeon Stretch keeps its cue when a bench exists) | likely real, small | one stretch card may lose its cue text on a bench kit | `8d68d6dd`: 69/1 same | one cue-resolution fix |
+| `test:bible-anchors` — 15 (anchor markers expecting deleted `coachingEngine` helpers and a severity-band owner) | unfinished architecture gate (deletion anchors) | none | `8d68d6dd`: 280/295 same; `main`: 292/295 | finish the coachingEngine demolition the anchors describe |
+| `test:full-body-balance` — 1 | unverified | a full-body day's compound balance | `8d68d6dd`: 7/8 same | one root-cause look |
+| `test:ruling-registry` — 3 cells, `test:law-registry` — 21 unenforced laws | process gates | none | red on the base tree | build the enforcers / clear the re-asks |

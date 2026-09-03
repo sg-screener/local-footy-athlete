@@ -72,6 +72,16 @@ tags:
     timeout: 20000
 
 # ── THE PROMISED HOME HOLDS THE DECISION ──────────────────────────────────
+# 2026-09-03 re-pin: the removal now finishes ON the session screen (the
+# Done leaves the athlete there), and the day header's modifier strip — the
+# doorway to My Status where the removal can be undone — lives on Home. The
+# flow goes back the way the athlete would (the Back chevron), then through
+# the same strip it always did. The promise is unchanged.
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-strip-day-header"
+    timeout: 15000
 - tapOn:
     id: "modifiers-strip-day-header"
 - extendedWaitUntil:

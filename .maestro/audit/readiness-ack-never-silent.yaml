@@ -34,9 +34,24 @@ tags:
 # The success ack container carries the sentence. "Bit tired" is record-only
 # in this seed world, so the honest sentence is the logged one; the adjustment
 # clause may only appear on a result that changed the program.
+# 2026-08-31 (Sam, physical-device correction to R-275, `1aa24fdb`): a
+# record-only "tired today" report is acknowledged on the sheet itself, in
+# the signed sentence below, with a Done button — never a silent close and
+# never an error. The old "Got it — logged how you're feeling." ack no
+# longer renders for this report; the flow was re-pinned on 2026-09-03.
 - extendedWaitUntil:
     visible:
-      id: "home-week-readiness-ack-success"
+      id: "home-week-readiness-confirmed"
     timeout: 10000
-- assertVisible: "Got it — logged how you're feeling."
+- assertVisible: "You should be okay to train as planned, but if you start feeling flatter, let me know and we’ll pull things back."
+- assertNotVisible:
+    id: "home-week-readiness-ack-error"
+- tapOn:
+    id: "home-week-readiness-confirmed-done"
+# The report is recorded, not just acknowledged: the day's modifier strip
+# now carries it.
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-strip-day"
+    timeout: 10000
 - takeScreenshot: artifacts/audit/readiness-honest-ack
