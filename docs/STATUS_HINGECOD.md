@@ -2177,3 +2177,5 @@ authors, 0 derived-output writers; `test:weekly-writer-zero` exit 0.
 10605 passed / 0 failed** (two runs on the final code). `test:compile` gate
 PASSED (product 0, devtools 0, tests 0). `test:weekly-scheduler` 141/141 (+
 fresh speed 14/14 and 2/2, COD 19/19; the 2 fixture reds above are HEAD's).
+
+**Year gate on the final code.** `run-compiler-year`: **416 green / 416 athlete-weeks, 0 distinct failure keys** (a first run reported one key — the census prerequisite, cleared by the four re-reviews above).
