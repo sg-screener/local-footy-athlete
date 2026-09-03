@@ -314,3 +314,156 @@ reds' own families was touched; the composition question (a three-day week's
 single-leg knee / core rows) and the two tag inconsistencies are recorded
 above, not worked. Ready for a phone build in my reading; the preview build
 and install are the next seat's step, as they were for the last candidate.
+
+## 2026-09-03 (later) — Sam: "investigate the held double-squat issue, the three-day program missing core/single-leg-knee work, and the two inconsistent injury tags; root causes and recommended fixes only; change nothing"
+Read-only. Probes lived in the scratchpad and imported the tree by absolute
+path; no file under src/, scripts/ or docs/RULINGS_REGISTRY.md was touched.
+REGISTRY-GREP: R-087, R-089, R-095, R-317, R-318, R-334, R-342, R-347, R-348,
+R-351, R-352, R-353, R-357, Section 17.C.
+
+### 1. The double squat (cohort F004: Back Squat on both lower days in moved-game weeks 29/41/47)
+**What the evidence says.** In `output/athlete-cohort-895dde2a/*/run/male-year.json`
+every offending Friday carries `planEntryId: fixture-replan:<week>:friday:strength`
+inside a `week-overlay:…:one_off_game:<Sunday>` — the fixture repair's
+added-strength path, never the scheduler. The compiler's own target for that
+Sunday-game week planned THREE strength days (`sched:…:1:lower`, `:2:upper_pull`,
+`:4:upper_push`, Friday `rest_or_recovery`).
+
+**Root cause — `fixtureMinimalReplan.addStrengthDeltaVariants`.** When the
+game moves Saturday→Sunday the G-1 Gunshow Friday is released and the
+contract's main-strength target (4 gym days) exceeds the accepted week's three,
+so the repair adds one strength day. Its template list is `displaced` (none)
+then `generated` = the target microcycle's main-strength workouts in list
+order, and the added day takes `templates[index]` — i.e. the target's FIRST
+strength day — with no regard to (a) which main patterns the accepted week
+already covers (R-087/R-089: uncovered slots first; squat paired with hinge),
+(b) R-317/R-318 weekly identity budget (the same lift on two days), or (c)
+Section 17.C (Friday before a Sunday game is G-2). Reproduced on the pre-fix
+merge `35fe7f38` with the phone's own move door (4-day athlete, Mon/Tue/Thu/Fri,
+club Tue/Thu): Monday `lower` (Leg Press, RDLs, …) kept, Friday
+`fixture-replan:…:friday:strength` = `lower_squat` (Leg Press, Cossack, …) —
+Leg Press twice, two squat purposes, one hinge, a full lower on G-2. The origin
+the row is stamped with, `pattern_balance_repair`, names a balance no code
+computes.
+
+**Where the integrated candidate stands.** The same move on `119eb983` now
+regenerates the week (Mon lower_squat · Tue upper_pull · Thu lower_hinge ·
+Fri upper_push): the family-1 fix ranks the minimal candidate's strong craft
+finding (`g2_hard_lower` on that Friday) and lets the compiler's week win. A
+bye (game removed) and a Saturday→Wednesday move also regenerate cleanly. So
+the three cohort instances are almost certainly gone — they were all
+Saturday→Sunday moves whose added Friday is G-2 — **but the template choice is
+unchanged and will recur wherever the added day is not G-1/G-2/G+1 and the
+regeneration is not cheaper** (a released mid-week day, a longer horizon).
+Verify with the cohort rerun (`scripts/athlete-cohort-year.cjs` at `119eb983`).
+
+**Recommended fix (one owner, no new counter).** The added day should be
+AUTHORED for the week, not copied: hand the composer the accepted strength days
+as history (the row compiler already does exactly this for a remainder compile
+via `acceptedAutomaticHistory` and `pinHistoryDays`) and ask it for the one
+missing purpose, chosen by the week's uncovered main patterns (R-087 order:
+the seat the week lacks — here `lower_hinge`, since Monday's `lower` already
+spent squat and hinge, the next uncovered pair is single-leg) under the R-317
+identity budget. Minimum viable version inside the replan: rank `generated`
+templates by "patterns not yet covered by the accepted strength days" and drop
+any whose main identity already appears in the week, before `templates[index]`
+is read. Guard: a `test:fixture-mutation-transaction` cell on the 4-day
+Saturday→Sunday world asserting one squat purpose + one hinge purpose and no
+repeated main identity, plus a `test:ladder-wide`-style weekly pairing count
+over the replan's output.
+
+### 2. The three-day program: no core row, no sagittal single-leg-knee row
+**Measured world** (`injuryFallbackJourneyTests`' athlete: Mon/Wed/Fri, 5+
+years, commercial gym, Off-season): Mon `lower` = Leg Press · RDLs · Lateral
+Lunge · Nordic Lower · Calf Raises; Wed `upper` = six push/pull rows; Fri
+`full_body` = Single-Leg RDL · Single-Arm DB Floor Press · Pull-Ups · Landmine
+Press. Sam's R-087 weekly set ends "…upper accessory · lower accessory · core".
+
+**Root cause A — core: no ladder a three-day week uses has a core seat.**
+`sessionSlotCoverage.ts`: `LOWER_SLOTS` = squat · hinge · single_leg_knee ·
+single_leg_hip · football_robustness; `UPPER_FULL_SLOTS` = the four planes ·
+push_accessory_1 · pull_accessory_1 · football_robustness; `FULL_BODY_A/B` =
+four mains · football_robustness. `core` exists only on the SPLIT upper
+ladders (`UPPER_SPLIT_PUSH/PULL_SLOTS`). A trunk row can still reach a lower day
+by accident through the robustness seat, but `FOOTBALL_ROBUSTNESS_CATEGORIES`
+is hamstring → adductor/groin → calf → knee-capacity (no trunk category), and
+R-352 gives the last robustness seat to "the first uncovered football
+category", which is why the lower day ends in Nordic Lower + Calf Raises. The
+five-day athletes get Band Pallof Press on a hinge day only because the split
+ladders and their seats differ. So the three-day athlete never sees core work
+on a strength day — by ladder construction, not by selection.
+
+**Root cause B — single-leg knee: seated, but as a frontal lift the instruments
+read as "squat".** The composer DID fill the lower day's `single_leg_knee` seat —
+with Lateral Lunge (`section18Evidence.slot: single_leg_knee`), because R-347
+favours the frontal pair while the week lacks a frontal-plane lift and R-357
+requires every week to answer for the frontal plane; the sagittal
+Reverse/Walking Lunge or Bulgarian only wins that seat once the frontal plane is
+already covered elsewhere. Two vocabularies then disagree: `slotsForExerciseName`
+(composer/oracle) maps a unilateral `lunge` to `single_leg_knee`, while
+`injuryFallbackLadder.finerPatternIdentityOf` maps `movement: 'lunge'` through
+`PATTERN_TO_SLOT` (`lunge: 'squat'`) and never reads `unilateral`, so every
+lunge reports `squat`. The coverage instruments (fallback journey, injury
+ladder) therefore see no single-leg knee in a week that has one. R-087's
+"single-leg knee" is Sam's word for the seat; whether a lateral lunge satisfies
+it is a coaching call he has not been asked.
+
+**Recommended fixes.**
+- Core: put the core seat into the ladders the three-day week uses — either a
+  `core` slot on `LOWER_SLOTS`, `UPPER_FULL_SLOTS` and the full-body ladders
+  (R-087 says the WEEK owes "some core"), or, cleaner, a week-level core
+  seat the composer spends once wherever a robustness seat is free, exactly
+  as R-357's frontal completion works for the plane. Ask Sam only whether
+  "some core" means one row per week or one per lower day; the ladder change
+  is mechanical either way. Guard: `test:slot-coverage` census on the three-day
+  world.
+- Single-leg knee: make `finerPatternIdentityOf` read `unilateral` (a
+  unilateral squat/lunge is `single_leg_knee`, as `slotsForExerciseName`
+  already says) so the ladder and the oracle share one vocabulary — this is a
+  measurement fix, no composition change. Separately, if Sam wants a sagittal
+  single-leg knee row every week alongside the frontal one, R-347's
+  "frontal favoured only while the week lacks a frontal lift" is the knob;
+  today the three-day week has one single-leg-knee seat and R-357 spends it
+  on the frontal plane.
+
+### 3. The two injury tags
+**Adductor Rockback (no `EXERCISE_TAGS` entry, withdrawn on a groin 6).**
+Two authorities, by design and by accident. The tags file deliberately omits
+stretches ("34 of 90 pooled exercises have no entry … the rest are stretches";
+a missing tag reads `unknown`, and callers treat unknown as allowed). The
+typed exposure engine classifies BY NAME: `classifyExerciseExposures` matches
+`/(copenhagen|adductor|groin|pancake)/` → `adductor_groin` before its
+mobility rule (`/(mobility|stretch|foam roll|…)/` → `mobility`), and the
+groin policy blocks `adductor_groin` from 6/10. "Adductor Rockback" contains
+"adductor" and not "stretch", so a `recovery_support` rock-back on a Mobility
+day is withdrawn like a loaded Copenhagen, while Butterfly Stretch and Hip
+90/90 Stretch (same intent) read `mobility` and stay. Root cause: the exposure
+classifier has no role/intensity input — a mobility row and a loaded row
+with the same muscle word get the same exposure. Recommended: classify by the
+row's typed role first (`section18Evidence.role === 'recovery_support'` or the
+pool's mobility membership → `mobility`, never a loading exposure), and give
+Adductor Rockback a tags entry so the matrix and the engine agree. A ruling is
+needed only on whether a groin at 6/10 should keep gentle adductor mobility;
+the classification defect stands either way.
+
+**Tib Raises `knee: caution` vs T-Bar Tib Raises `knee: good`.** Both are
+authored, at different times, by different instruments. Tib Raises' row was
+rewritten on 2026-07-28 by `scripts/apply-injury-matrix-to-tags.js` from Sam's
+ruled matrix (`docs/INJURY_MATRIX_REVIEW_2026-07-28.xlsx`): before the
+migration it was `inj({ calf: 'caution', ankle: 'caution' })` with every other
+region defaulting to good; the ruled matrix's blanket rules set groin, hip,
+quad, hamstring, knee and lower back to caution for it. T-Bar Tib Raises was
+authored on 2026-09-02 through the exercise-intake template
+(`docs/EXERCISE_INTAKE_T_BAR_TIB_RAISES_2026-09-02.md`: knee Good, calf and
+ankle Caution) and never passed through the matrix pipeline — the workbook
+was last changed 2026-08-27 and `npm run verify:injury-matrix-sheet` reports
+6 failures today, including "every exercise in CODE appears in the sheet"
+naming T-Bar Tib Raises among the post-08-27 intakes. Root cause: two
+authoring pipelines for one field, and the guard that holds code equal to the
+workbook is not in any chain. Recommended: (1) re-run the matrix pipeline
+over the new intakes so one ruling model rates both tib raises (they will land
+identical, whichever way Sam's rules resolve them), (2) put
+`verify:injury-matrix-sheet` (or its Phase-2 equality test) into the release
+chain so an intake cannot diverge silently, (3) until then, align Tib Raises
+to T-Bar Tib Raises only by Sam's word — the caution row is his ruled matrix,
+not a typo.
