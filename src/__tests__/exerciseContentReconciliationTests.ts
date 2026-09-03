@@ -98,10 +98,11 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
   // "Zero exemptions of any kind" is enforced for the class that CAN hide a
   // hole — the pending/awaiting kinds, which exist to defer work. The three
   // remaining kinds are Sam's own BY-DESIGN rulings, not deferrals:
-  // conditioning formats have no videos by design (his locked-list note),
-  // zone-1 walks are not movements to demo, and stretching carries none of the
-  // STRENGTH taxonomy's properties. Deleting those would not close holes; it
-  // would demand videos for 36 session formats and tags for 26 stretches.
+  // conditioning formats have no videos by design (his locked-list note) and
+  // zone-1 walks are not movements to demo. `mobility_untagged` was RETIRED on
+  // 2026-09-04 (Sam, R-364): every mobility, tissue and breathing drill now
+  // carries tags and injury ratings through the complete intake, and nothing
+  // waives tags any more.
   const PENDING_KINDS = Object.keys(EXEMPTION_KINDS).filter((kind) =>
     /_pending$|^awaiting_/.test(kind));
 
@@ -114,7 +115,6 @@ console.log('\n[0] EXEMPTIONS — zero pending holes, every kind Sam-attributed'
   const AUTHORISED_KINDS = [
     'conditioning_format',
     'zone1_recovery',
-    'mobility_untagged',
     'power_pool_pending',
     'load_ruling_pending',
     // R-129/R-130 (Sam, 2026-08-23): rows a signed session authors by name —

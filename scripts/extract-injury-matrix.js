@@ -119,7 +119,8 @@ const liveNames = new Set();
 const REGIONS_NOW = ['groin', 'hip', 'quad', 'hamstring', 'knee', 'calf', 'ankle/foot',
   'ribs', 'lowerBack', 'neck', 'shoulder', 'elbow', 'wrist/hand'];
 const intakeRecords = [];
-for (const [, name, blockBody] of liveBody.matchAll(/^  '([^']+)':\s*\{([\s\S]*?)^  \},/gm)) {
+for (const [, rawName, blockBody] of liveBody.matchAll(/^  '((?:[^'\\]|\\.)+)':\s*\{([\s\S]*?)^  \},/gm)) {
+  const name = unescapeName(rawName);
   liveNames.add(name);
   if (records.some((r) => r.name === name)) continue;
   const injury = /injury:\s*\{([\s\S]*?)\n {4}\}/.exec(blockBody);

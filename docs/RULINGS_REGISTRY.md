@@ -9201,3 +9201,29 @@ carry no tags row and cannot until Sam supplies their classification
 Butterfly Stretch ankle/foot, Jefferson Curl neck, Dumbbell Pullovers ribs)
 and the three walks' conditioning family are his to rule. Guard:
 `test:injury-matrix-sheet` (release unit 31). Receipt: `docs/STATUS_INTEGRATE.md`.
+
+**R-364** · The complete intake supersedes the 24 July untagged exemption for
+the 33 recovery exercises, 2026-09-04.
+
+Owner: integrate. Sam: *"'Mobility' must not mean 'safe for every injury.' For
+example, an athlete with a knee issue should not be offered ATG Split Squats
+merely because they sit in the mobility group. Every exercise needs injury
+behaviour based on what it physically demands."* For the 30 mobility,
+tissue-quality and breathing drills and the three zone-1 walks, the complete
+intake process (classification + thirteen-region injury ratings, the same as
+the six mobility drills of 2 September) supersedes the 24 July
+`mobility_untagged` exemption, which is retired. Each row is classified from
+its actual movement, loading and existing contraindications — no blanket
+ratings. Every pool contraindication Sam authored is preserved or
+strengthened: it is Avoid on the tags row (refused as a swap and withheld from
+an existing session at every severity) AND it stays on the pool entry (refused
+at selection). ATG Split Squat is unavailable whenever a knee injury is active.
+No equipment, equipment type, question or filter is added; the pool entry
+still owns each dose. The three walks join the conditioning ruling as the
+`walk` family (lower body Caution). Adductor Rockback's R-363 ratings enter
+through this intake with groin strengthened to Avoid. Guards:
+`test:exercise-intake` (the 33 rows equal the intake document; every
+contraindication refuses selection, swap and retention; mutations
+`recovery_rating` and `atg_knee`), `test:injury-matrix-sheet` (release unit
+31: parity + completeness, green). Intake: `docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md`.
+Receipt: `docs/STATUS_INTEGRATE.md`.

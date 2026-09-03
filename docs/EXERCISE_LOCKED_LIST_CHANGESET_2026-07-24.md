@@ -437,6 +437,8 @@ Exemptions are TYPED KINDS, never a bare name whitelist, so an exemption states
 | `conditioning_format` | cue, video | A session format, not a movement to demo. Renders the conditioning family cue. |
 | `zone1_recovery` | video | Zone-1 cyclical recovery: walking, skipping. Not a movement to demo. |
 | `mobility_untagged` | tags | `EXERCISE_TAGS` is the strength taxonomy; stretching/breathing/tissue work carries none of its properties. |
+
+> **Superseded 2026-09-04 (Sam, R-364):** `mobility_untagged` is retired. All 30 mobility, tissue-quality and breathing drills (and the three zone-1 walks) carry tags and thirteen-region injury ratings through the complete intake (`docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md`). The row above is history.
 | `power_pool_pending` | pool | Cue + video ship; pool placement is owned by `POWER_EXERCISE_POOL_SPEC`. Excluded from the AI vocabulary until placed. |
 
 Both directions fail the build (`exerciseLockedListTests` §5,

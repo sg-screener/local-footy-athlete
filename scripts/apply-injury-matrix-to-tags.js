@@ -46,8 +46,9 @@ const missing = [];
 const changed = [];
 
 body = body.replace(
-  /^( {2}'([^']+)':\s*\{[\s\S]*?)(\n {4}injury:\s*(?:SAFE|inj\(\{[\s\S]*?\}\)|\{[\s\S]*?\n {4}\}),)/gm,
-  (whole, prefix, name, injuryClause) => {
+  /^( {2}'((?:[^'\\]|\\.)+)':\s*\{[\s\S]*?)(\n {4}injury:\s*(?:SAFE|inj\(\{[\s\S]*?\}\)|\{[\s\S]*?\n {4}\}),)/gm,
+  (whole, prefix, rawName, injuryClause) => {
+    const name = rawName.replace(/\\'/g, "'");
     const row = finalByName.get(name);
     if (!row) { missing.push(name); return whole; }
     rewritten += 1;

@@ -78,7 +78,7 @@
     "ribs": []
   },
   "extraExceptions": {
-    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach. Incline Y Raise joins them on Sam's ruling (2026-07-28) — same bench-compression mechanism, and its own cue says 'Chest on the incline'; it is isolation_upper, which no ribs pattern rule reaches. | 2026-08-26 (recorded in commit 63cc38e4, transcribed 2026-09-03): Sam on Front Squat for a bad shoulder — \"remove it from good\". The rack-position squats (Front/Box/High Box) match Back Squat's own shoulder caution. | 2026-08-27 (63958d24, transcribed 2026-09-03): the Bible's hamstring section rules quad-dominant lower work \"usually okay\" and names box squat / controlled squat / step-up as the swaps, so Leg Press, Box Squat, High Box Squat, Goblet Squat, Step Ups and Leg Extension carry hamstring good — LOOSER than the squat pattern rule, by Sam's own text. | 2026-08-28, R-267 (006fa6c1 + 01334a5a, transcribed 2026-09-03): \"Ratings include indirect support/loading.\" Every lower-body lift whose prescribed load is a held or racked free weight (the 19 free-weight load profiles in the load map) cautions shoulder, elbow and wrist/hand where the rules said good; the two Copenhagen planks caution shoulder and elbow for the same support-loading reason. Guard: simpleInjurySafetyTruth in test:canonical-weekly-compiler. No axis of this model reads the prescribed load, so these are named. | 2026-09-03, R-363: Sam ruled the app is right on the squat elbow/wrist cells the sheet had not carried (Back Squat, Front Squat, Box Squat) — already covered by the R-267 block above. Adductor Rockback: Sam ruled its thirteen ratings on 2026-09-03 from the rated drills nearest to it (Horse Stance Hold, Groin Squeeze, Crab Hold, Sleeper Stretch); the Groin muscle rules give groin and knee caution, the declaration gives quad, hamstring, calf, ribs and neck good, and the six cells the model cannot reach are named here: hip, ankle/foot and lower back (kneeling, end-range rock), shoulder, elbow and wrist/hand (weight through the arms, lighter than Crab Hold's avoid).",
+    "_": "Sam's follow-up ruling. Named exercise exceptions authored directly rather than reverse-engineered from an existing rating. Shrugs is the most neck-loading lift in the pool but has primary 'Upper back' and pattern isolation_upper, so it matched no neck rule and fell to the declaration. The two chest-supported rows are bench-compressed PULLS, which the pressing rule cannot reach. Incline Y Raise joins them on Sam's ruling (2026-07-28) — same bench-compression mechanism, and its own cue says 'Chest on the incline'; it is isolation_upper, which no ribs pattern rule reaches. | 2026-08-26 (recorded in commit 63cc38e4, transcribed 2026-09-03): Sam on Front Squat for a bad shoulder — \"remove it from good\". The rack-position squats (Front/Box/High Box) match Back Squat's own shoulder caution. | 2026-08-27 (63958d24, transcribed 2026-09-03): the Bible's hamstring section rules quad-dominant lower work \"usually okay\" and names box squat / controlled squat / step-up as the swaps, so Leg Press, Box Squat, High Box Squat, Goblet Squat, Step Ups and Leg Extension carry hamstring good — LOOSER than the squat pattern rule, by Sam's own text. | 2026-08-28, R-267 (006fa6c1 + 01334a5a, transcribed 2026-09-03): \"Ratings include indirect support/loading.\" Every lower-body lift whose prescribed load is a held or racked free weight (the 19 free-weight load profiles in the load map) cautions shoulder, elbow and wrist/hand where the rules said good; the two Copenhagen planks caution shoulder and elbow for the same support-loading reason. Guard: simpleInjurySafetyTruth in test:canonical-weekly-compiler. No axis of this model reads the prescribed load, so these are named. | 2026-09-03, R-363: Sam ruled the app is right on the squat elbow/wrist cells the sheet had not carried (Back Squat, Front Squat, Box Squat) — already covered by the R-267 block above. Adductor Rockback: Sam ruled its thirteen ratings on 2026-09-03 from the rated drills nearest to it (Horse Stance Hold, Groin Squeeze, Crab Hold, Sleeper Stretch); the Groin muscle rules give groin and knee caution, the declaration gives quad, hamstring, calf, ribs and neck good, and the six cells the model cannot reach are named here: hip, ankle/foot and lower back (kneeling, end-range rock), shoulder, elbow and wrist/hand (weight through the arms, lighter than Crab Hold's avoid). | 2026-09-04, R-364: Adductor Rockback's six named cells moved OUT of this list — the drill now enters through the complete intake like the other 32 recovery exercises, so its thirteen ratings are authored on its tags row (docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md) and the pipeline lifts them as intake exceptions. Under R-364's preserve-every-contraindication clause its groin cell is Avoid (the pool contraindication), stricter than R-363's Caution.",
     "Shrugs|neck": "caution",
     "Chest Supported Row|ribs": "caution",
     "Chest-Supported DB Row|ribs": "caution",
@@ -149,16 +149,10 @@
     "Copenhagen Plank (Half)|shoulder": "caution",
     "Copenhagen Plank (Half)|elbow": "caution",
     "Long-Lever Copenhagen|shoulder": "caution",
-    "Long-Lever Copenhagen|elbow": "caution",
-    "Adductor Rockback|hip": "caution",
-    "Adductor Rockback|ankle/foot": "caution",
-    "Adductor Rockback|lowerBack": "caution",
-    "Adductor Rockback|shoulder": "caution",
-    "Adductor Rockback|elbow": "caution",
-    "Adductor Rockback|wrist/hand": "caution"
+    "Long-Lever Copenhagen|elbow": "caution"
   },
   "conditioning": {
-    "_": "Ruling 3 + amendment. Ruled BY HAND, no new taxonomy. STRICTER-WINS: existing avoids (sprint hamstring/calf) stand above these blanket cautions. Sam's authored principle, recorded verbatim for the future quality-grid unit: 'caution any region the modality's equipment or movement meaningfully uses; severity does the rest.'",
+    "_": "Ruling 3 + amendment. Ruled BY HAND, no new taxonomy. STRICTER-WINS: existing avoids (sprint hamstring/calf) stand above these blanket cautions. Sam's authored principle, recorded verbatim for the future quality-grid unit: 'caution any region the modality's equipment or movement meaningfully uses; severity does the rest.' | 2026-09-04, R-364: the three zone-1 walks join as the 'walk' family — on-feet locomotion cautions the lower body like the run family, without ribs (no impact); they were never matrix rows before because they carried no tags.",
     "principle": "caution any region the modality's equipment or movement meaningfully uses; severity does the rest.",
     "lowerBodyRegions": [
       "groin",
@@ -240,6 +234,16 @@
         ],
         "caution": [],
         "note": "Easy Bike stays unruled-to-good deliberately — it is the escape hatch. MetCon, Light Circuits, Easy Swim: existing cells stand, rest good."
+      },
+      "walk": {
+        "members": [
+          "Light Walk or Stationary Bike",
+          "Incline Treadmill Walk",
+          "Outdoor Walk"
+        ],
+        "caution": [
+          "__LOWER_BODY__"
+        ]
       }
     }
   },

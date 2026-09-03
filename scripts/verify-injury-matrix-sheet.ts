@@ -86,8 +86,9 @@ function readCode(): CodeExercise[] {
   const body = fs.readFileSync(TAGS_SOURCE, 'utf8');
   const map = body.slice(body.indexOf('export const EXERCISE_TAGS'));
   const out: CodeExercise[] = [];
-  for (const entry of map.matchAll(/^ {2}'([^']+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
-    const [, name, block] = entry;
+  for (const entry of map.matchAll(/^ {2}'((?:[^'\\]|\\.)+)':\s*\{([\s\S]*?)^ {2}\},/gm)) {
+    const [, rawName, block] = entry;
+    const name = rawName.replace(/\\'/g, "'"); // keys may escape an apostrophe
     const injury = /injury:\s*\{([\s\S]*?)\n {4}\}/.exec(block);
     if (!injury) throw new Error(`no explicit injury profile on "${name}"`);
     const ratings: Record<string, string> = {};
@@ -252,8 +253,12 @@ for (const record of exceptionRows) exceptions[`${record.Exercise}|${record.Regi
 // hamstring ×6, R-267 support loading ×56), Sam's 2026-09-03 rulings join them
 // (Adductor Rockback ×6), and every intake rating since the snapshot that the
 // rules cannot reproduce is lifted as a named exception (97) — never re-derived.
-ok('snapshot', '194 exceptions (snapshot lifts, dated rulings, intake lifts)',
-  exceptionRows.length === 194, `got ${exceptionRows.length}`);
+// 194 → 343 on 2026-09-04 (R-364): the 33 recovery exercises entered through
+// the complete intake; every authored cell the rules cannot reproduce is
+// lifted (149 more), and Adductor Rockback's six named cells left this file
+// for its intake row.
+ok('snapshot', '343 exceptions (snapshot lifts, dated rulings, intake lifts)',
+  exceptionRows.length === 343, `got ${exceptionRows.length}`);
 ok('structural', 'every quad-dominant hamstring exception is ruled good',
   ['Leg Press', 'Box Squat', 'High Box Squat', 'Goblet Squat', 'Step Ups', 'Leg Extension']
     .every((name) => exceptions[`${name}|hamstring`] === 'good'));
@@ -328,8 +333,9 @@ ok('structural', 'COMPLETENESS: no DECISION cell remains on the final matrix',
 ok('structural', 'every code entry authors all 13 regions — no omissions possible',
   code.every((e) => REGIONS.every((r) => e.ratings[r] !== undefined)),
   code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
-// Compared = rows in code (167) × 13. Untagged rows have no code cell yet.
-ok('structural', '167 x 13 = 2171 cells compared', cells === 2171, `got ${cells}`);
+// Compared = rows in code × 13. 167 → 200 on 2026-09-04 (R-364): nothing the
+// app can place is untagged any more.
+ok('structural', '200 x 13 = 2600 cells compared', cells === 2600, `got ${cells}`);
 // 872/24/1041 → 875/24/1038 on 2026-08-26: the three rack-squat shoulder
 // cells moved good → caution (Sam's ruling above).
 // 875/24/1038 → 869/24/1044 on 2026-08-27: the six quad-dominant hamstring
@@ -338,8 +344,11 @@ ok('structural', '167 x 13 = 2171 cells compared', cells === 2171, `got ${cells}
 // authored cells), the R-267 support-loading cells were already in code and
 // the sheet, and the retired Single-Arm Pulldown row leaves. Over the 2171
 // compared cells; DECISION cells are not counted anywhere.
-ok('snapshot', 'final distribution: 1060 caution / 42 avoid / 1069 good',
-  distribution.caution === 1060 && distribution.avoid === 42 && distribution.good === 1069,
+// 1060/42/1069 → 1199/74/1327 on 2026-09-04 (R-364): the 33 recovery rows
+// enter; every pool contraindication is Avoid (+32), loaded/stretched regions
+// Caution, the rest Good. Over the 2600 compared cells.
+ok('snapshot', 'final distribution: 1199 caution / 74 avoid / 1327 good',
+  distribution.caution === 1199 && distribution.avoid === 74 && distribution.good === 1327,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
@@ -370,7 +379,9 @@ ok('structural', 'Back Squat shoulder and Front Squat wrist survive as exception
 /* ── Conditioning: hand-ruled, stricter-wins over what code authored ── */
 
 const conditioningRows = readSheetRecords(FILE, 'Conditioning', 5);
-ok('snapshot', '21 conditioning rows', conditioningRows.length === 21,
+// 21 → 24 on 2026-09-04 (R-364): the three zone-1 walks, ruled as the `walk`
+// family (lower body caution).
+ok('snapshot', '24 conditioning rows', conditioningRows.length === 24,
   `got ${conditioningRows.length}`);
 const loosened: string[] = [];
 for (const record of conditioningRows) {

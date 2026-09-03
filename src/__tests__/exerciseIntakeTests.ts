@@ -28,6 +28,10 @@ import { ATHLETE_CHOSEN_LOAD_EXERCISES, BAND_RESISTANCE_EXERCISES, TRUE_BODYWEIG
 import { getAthleteExclusions } from '../store/athletePreferencesStore';
 import { SECTION_LABELS } from '../utils/sessionExecutionChecklist';
 import { walkInjuryFallbackLadder } from '../rules/injuryFallbackLadder';
+import { POOL_REGISTRY } from '../data/exercisePools';
+import { resolveInjuryRegion } from '../data/injuryRegions';
+import { EXEMPTION_KINDS } from '../data/selectableExerciseVocabulary';
+import { injuryPermitsExerciseAtSeverity, injuryWithholdsExistingRow } from '../rules/injuryExerciseRisk';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { getCoachRevisionTemplateContext } from '../utils/coachRevisionTemplateContext';
@@ -95,6 +99,13 @@ if (mutation === 'hop_inseason') {
 }
 if (mutation === 'hop_dose') EXERCISE_TAGS['Single-Leg Hop and Stick']!.prescription!.repsMax = 6;
 if (mutation === 'hop_load') TRUE_BODYWEIGHT_EXERCISES.delete('Single-Leg Hop and Stick');
+// R-364 proofs: a representative recovery rating drifts from the intake; ATG's knee protection is dropped.
+if (mutation === 'recovery_rating') EXERCISE_TAGS['Pigeon Stretch'].injury.hip = 'good';
+if (mutation === 'atg_knee') {
+  EXERCISE_TAGS['ATG Split Squat'].injury.knee = 'good';
+  const atg = require('../data/exercisePools').POOL_REGISTRY.mobility.find((row: any) => row.name === 'ATG Split Squat');
+  if (atg) atg.contraindications = atg.contraindications.filter((tag: string) => tag !== 'knee');
+}
 let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
@@ -167,6 +178,98 @@ for (const [name, video] of submitted) {
   }
 }
 check('Bird Dogs stay deferred', !vocabulary.has('Band-Resisted Bird Dogs'));
+
+/* ══ R-364 (Sam, 2026-09-04): the 33 recovery exercises through the complete intake ══
+ *
+ * "Mobility must not mean safe for every injury." Every mobility, tissue-quality,
+ * breathing and zone-1 recovery pool member carries a tags row with thirteen
+ * authored ratings, equal to docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md; every
+ * pool contraindication Sam authored is Avoid AND still on the pool entry, so it
+ * refuses selection, swap and retention at every severity. The pool entry owns
+ * the dose (no tags prescription); the intake adds no equipment. */
+const recoveryIntake = readFileSync(resolve(__dirname, '../../docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md'), 'utf8');
+const RECOVERY_POOLS = ['mobility', 'tissue_quality', 'breathing_reset', 'easy_cardio'] as const;
+const POOL_TAG_TO_REGION: Record<string, string> = {
+  groin: 'groin', hip: 'hip', knee: 'knee', hamstring: 'hamstring', calf: 'calf', ankle: 'ankle/foot',
+  ribs: 'ribs', lower_back: 'lowerBack', neck: 'neck', shoulder: 'shoulder', elbow: 'elbow', wrist: 'wrist/hand',
+};
+/** A body-area answer that the app's own resolver routes to `region`. */
+function areaFor(region: string): string {
+  const candidates = ['groin', 'hip', 'knee', 'hamstring', 'calf', 'ankle', 'ankle/foot', 'ribs', 'lower back', 'lowerBack',
+    'neck', 'shoulder', 'elbow', 'wrist', 'wrist/hand'];
+  const area = candidates.find(candidate => resolveInjuryRegion(candidate) === region);
+  if (!area) throw new Error(`no body-area answer resolves to ${region}`);
+  return area;
+}
+const recoveryEntries = RECOVERY_POOLS.flatMap(pool => POOL_REGISTRY[pool].map(entry => ({ pool, entry })));
+check('R-364: thirty-three recovery pool members', recoveryEntries.filter(({ entry }) => !EXERCISE_TAGS[entry.name]?.prescription).length === 33
+  && new Set(recoveryEntries.map(({ entry }) => entry.name)).size === recoveryEntries.length);
+const healthySwapWorld = {
+  injurySeverities: {}, primaryInjury: null,
+  availableEquipment: ['bodyweight', 'dumbbell', 'barbell', 'band', 'machine', 'cable'],
+  availableEquipmentTags: ['bodyweight', 'dumbbells', 'barbell', 'bands', 'machine', 'cables', 'bike_or_treadmill', 'foam_roller', 'pullup_bar', 'bench'],
+  capacity: 'normal', hasEquipmentConstraint: false, medicalStop: false,
+} as any;
+for (const { pool, entry } of recoveryEntries) {
+  const name = entry.name;
+  const tags = EXERCISE_TAGS[name];
+  if (tags?.prescription) continue; // the six 2 September intakes are held above
+  check(`${name}: selectable`, vocabulary.has(name));
+  check(`${name}: tags row with strengthRole none, no prescription (the pool owns the dose)`,
+    !!tags && tags.programming?.strengthRole === 'none' && tags.prescription === undefined);
+  check(`${name}: full thirteen-region ratings`, Object.keys(tags?.injury ?? {}).length === 13);
+  check(`${name}: authored muscles and experience`, EXERCISE_MUSCLE_METADATA.filter(row => row.exercise === name).length === 1);
+  check(`${name}: pool equipment is the authored equipment, no equipment sheet entry added`,
+    entry.equipment.length > 0 && equipmentRequiredFor(name) === null);
+  check(`${name}: primary cue`, !!EXERCISE_CUES[name]?.primaryCue);
+  const section = recoveryIntake.split(/^## \d+\. /m).find(part => part.startsWith(name + '\n'));
+  check(`${name}: intake section`, !!section);
+  if (pool !== 'easy_cardio') {
+    check(`${name}: exact confirmed video URL`, EXERCISE_DEMO_VIDEOS[name] === section?.match(/^\- \*\*Video:\*\* (\S+)/m)?.[1]);
+  } else {
+    check(`${name}: zone-1 walk stays video-exempt`, EXERCISE_DEMO_VIDEOS[name] === undefined && /zone1_recovery/.test(section ?? ''));
+  }
+  check(`${name}: exact supplied primary cue`, EXERCISE_CUES[name]?.primaryCue === section?.match(/^\- \*\*Primary cue:\*\* (.+)$/m)?.[1]);
+  check(`${name}: intake movement pattern`, section?.includes(`**Movement pattern (tags):** ${tags?.movement}; region ${tags?.region}; late-week ${tags?.lateWeek}.`));
+  const ratings = [...(section ?? '').matchAll(/^\| ([^|]+) \| (Good|Caution|Avoid) \|$/gm)];
+  check(`${name}: intake rating table found`, ratings.length === 13);
+  for (const [, region, rating] of ratings) {
+    const key = region === 'Lower back' ? 'lowerBack' : region.toLowerCase();
+    check(`${name}: supplied ${region} rating`, tags?.injury[key as keyof typeof tags.injury] === rating.toLowerCase());
+  }
+  const dosePart = section?.match(/^\- \*\*Prescription:\*\* (.+?)\. Owned by the existing pool entry\.$/m)?.[1] ?? '';
+  const doseText = entry.prescriptionType === 'duration'
+    ? `${entry.sets} × ${entry.repsMin}${entry.repsMax !== entry.repsMin ? `–${entry.repsMax}` : ''} seconds${entry.perSide ? ' per side' : ''}; ${entry.restSeconds} seconds rest`
+    : entry.prescriptionType === 'duration_minutes' ? `${entry.sets} × ${entry.repsMin}–${entry.repsMax} minutes; no rest`
+    : `${entry.sets} × ${entry.repsMin}${entry.repsMax !== entry.repsMin ? `–${entry.repsMax}` : ''} reps${entry.perSide ? ' per side' : ''}; ${entry.restSeconds} seconds rest`;
+  check(`${name}: the intake dose is the pool's own dose`, dosePart.startsWith(doseText));
+  check(`${name}: healthy athlete can still swap to it`, assessTapSwapCandidateSafety(name, healthySwapWorld).safe);
+  // The pool's contraindication list itself is pinned to the intake document, so
+  // dropping one from the pool entry is caught even where the rating survives.
+  const pinned = section?.match(/^\- \*\*Pool contraindications \(Avoid, kept on the pool entry\):\*\* (.+)\.$/m)?.[1] ?? '';
+  check(`${name}: pool contraindications equal the intake document`,
+    pinned === (entry.contraindications.length ? entry.contraindications.join('; ') : 'none'));
+  // EVERY contraindication Sam authored: Avoid on the row, and refused on all three doors.
+  for (const tag of entry.contraindications) {
+    const region = POOL_TAG_TO_REGION[tag];
+    check(`${name}: contraindicated ${tag} is rated Avoid`, tags?.injury[region as keyof typeof tags.injury] === 'avoid');
+    for (const severity of [1, 5, 10]) {
+      const world = { ...healthySwapWorld, injurySeverities: { [region]: severity },
+        primaryInjury: { bucket: region, severity, seriousSymptoms: false } };
+      check(`${name}: never a swap for ${region} ${severity}/10`, !assessTapSwapCandidateSafety(name, world).safe);
+      check(`${name}: withheld from an existing session for ${region} ${severity}/10`, injuryWithholdsExistingRow(name, region as any, severity));
+      check(`${name}: never selected for ${region} ${severity}/10`, !filterPoolForAthlete(pool, {
+        injuries: [{ bodyArea: areaFor(region), description: '', severityScore: severity }],
+        equipmentTags: derivedEquipmentChecklistTags() as any, daysToGame: null,
+      }).some(row => row.name === name));
+    }
+  }
+}
+check('R-364: ATG Split Squat is unavailable at every knee severity', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].every(severity =>
+  !injuryPermitsExerciseAtSeverity('ATG Split Squat', 'knee', severity) && injuryWithholdsExistingRow('ATG Split Squat', 'knee', severity)));
+check('R-364: no mobility, tissue, breathing or zone-1 exemption waives tags any more',
+  !('mobility_untagged' in EXEMPTION_KINDS) && !EXEMPTION_KINDS.zone1_recovery.waives.includes('tags'));
+check('R-364: every pool member the app can place is rated', Object.values(POOL_REGISTRY).flat().every(entry => !!EXERCISE_TAGS[entry.name]));
 async function main() {
   const date = '2026-08-31';
   const profile = athleteAnswers({ ...ARCHETYPES[6], initialPhase: 'Pre-season', extraGame: false });
@@ -936,6 +1039,8 @@ async function main() {
     ['hop_inseason', /Single-Leg Hop and Stick: ordinary lower-power pool entry with exact gates/],
     ['hop_dose', /Single-Leg Hop and Stick: signed dose, rest, unit and side/],
     ['hop_load', /Single-Leg Hop and Stick: exact power catalogue muscles and bodyweight loading/],
+    ['recovery_rating', /Pigeon Stretch: (supplied Hip rating|contraindicated hip is rated Avoid|never a swap for hip)/],
+    ['atg_knee', /ATG Split Squat: (pool contraindications equal the intake document|supplied Knee rating)|R-364: ATG Split Squat is unavailable at every knee severity/],
   ] as const) {
     const child = spawnSync(resolve(__dirname, '../../node_modules/.bin/sucrase-node'), [__filename], {
       encoding: 'utf8', env: { ...process.env, LFA_INTAKE_MUTATION: name }, timeout: 120000,

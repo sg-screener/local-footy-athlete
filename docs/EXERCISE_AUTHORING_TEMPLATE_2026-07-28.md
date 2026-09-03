@@ -83,7 +83,7 @@ Verify with: `npm run test:muscle-experience` (`src/__tests__/muscleExperienceEq
 ### B2. Strength/movement tags — `src/data/exerciseTags.ts`, `EXERCISE_TAGS['<name>']`
 
 Required **unless** the exercise is exempt as a `conditioning_format`, `zone1_recovery`, or
-`mobility_untagged` entry (typed exemption kinds, see Section D). If in doubt, fill it in — the
+the typed exemption kinds (see Section D; `mobility_untagged` was retired on 2026-09-04 under R-364). If in doubt, fill it in — the
 exemptions exist for genuine by-design gaps, not as a shortcut.
 
 | Field | Plain English | Allowed values | What breaks if missing |
@@ -233,7 +233,7 @@ The key must be the exact canonical name from A0 — same string used in `exerci
    — a load-ruling table entry.
 
 **Typed exemption kinds** (the only legitimate way to skip a file above — not a workaround for
-laziness): `conditioning_format`, `zone1_recovery`, `mobility_untagged`, `power_pool_pending`,
+laziness): `conditioning_format`, `zone1_recovery`, `power_pool_pending`,
 `load_ruling_pending` (content completeness, `src/data/selectableExerciseVocabulary.ts:55-60`), and
 separately `not_an_exercise`, `session_label`, `recovery_flow`, `conditioning_prescription`,
 `dead_mock_fixture`, `awaiting_sam_ruling` (hardcoded-literal lock,
@@ -268,7 +268,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 - Experience Level (`everyone` / `everyone (regression)` / `1+ years` / `2+ years` / `advanced only`): ________________________________
 - Notes (prefix ⚑ if debatable): ________________________________
 
-**B2. Strength/movement tags** (`src/data/exerciseTags.ts`) — *skip this whole block only if B4 places the exercise as `conditioning_format`, `zone1_recovery`, or `mobility_untagged`*
+**B2. Strength/movement tags** (`src/data/exerciseTags.ts`) — *skip this whole block only if B4 places the exercise as `conditioning_format`. Since 2026-09-04 (Sam, R-364) mobility, tissue, breathing and zone-1 recovery exercises carry tags and thirteen-region ratings like every other exercise*
 - movement: ________________________________
 - region: ________________________________
 - load: ________________________________
@@ -316,7 +316,7 @@ npm run test:locked-list              # load-ruling table, if applicable (B8)
 - Experience Level (`everyone` / `everyone (regression)` / `1+ years` / `2+ years` / `advanced only`): ________________________________
 - Notes (prefix ⚑ if debatable): ________________________________
 
-**B2. Strength/movement tags** (`src/data/exerciseTags.ts`) — *skip this whole block only if B4 places the exercise as `conditioning_format`, `zone1_recovery`, or `mobility_untagged`*
+**B2. Strength/movement tags** (`src/data/exerciseTags.ts`) — *skip this whole block only if B4 places the exercise as `conditioning_format`. Since 2026-09-04 (Sam, R-364) mobility, tissue, breathing and zone-1 recovery exercises carry tags and thirteen-region ratings like every other exercise*
 - movement: ________________________________
 - region: ________________________________
 - load: ________________________________

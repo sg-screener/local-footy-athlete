@@ -434,16 +434,23 @@ async function main(): Promise<void> {
     const days2 = trainingDays(weekStart2);
     let quietDay = '';
     let quietArea = '';
-    for (const day of days2) {
-      setJourneyClock(day);
-      // unsafeRowsForInjury counts exercise substitutions, not modality changes.
-      // Find a genuine no-conditioning control instead of calling zero unsafe
-      // lifts proof that a combined day cannot change its Run to Bike.
-      const candidateDay = quiet(() => resolveWeekWithConditioning(weekStart2, buildScheduleStateImperative()))
-        .find(candidate => candidate.date === day);
-      if (candidateDay?.workout?.conditioningBlock?.options.length) continue;
-      for (const candidate of CANDIDATE_AREAS) {
-        if (previewLeavesDayUntouched(candidate, SEVERITY, day)) { quietDay = day; quietArea = candidate; break; }
+    let quietSeverity = SEVERITY;
+    // Since R-364 (2026-09-04) every recovery row carries ratings, so a 6/10
+    // touches nearly every day; the mild world (caution rows stay) is searched
+    // next. Either is a real world where the review must say "nothing changes".
+    for (const severity of [SEVERITY, 3]) {
+      for (const day of days2) {
+        setJourneyClock(day);
+        // unsafeRowsForInjury counts exercise substitutions, not modality changes.
+        // Find a genuine no-conditioning control instead of calling zero unsafe
+        // lifts proof that a combined day cannot change its Run to Bike.
+        const candidateDay = quiet(() => resolveWeekWithConditioning(weekStart2, buildScheduleStateImperative()))
+          .find(candidate => candidate.date === day);
+        if (candidateDay?.workout?.conditioningBlock?.options.length) continue;
+        for (const candidate of CANDIDATE_AREAS) {
+          if (previewLeavesDayUntouched(candidate, severity, day)) { quietDay = day; quietArea = candidate; quietSeverity = severity; break; }
+        }
+        if (quietDay) break;
       }
       if (quietDay) break;
     }
@@ -451,7 +458,7 @@ async function main(): Promise<void> {
       Boolean(quietDay) && Boolean(quietArea), { quietDay, quietArea });
     if (quietDay) {
       setJourneyClock(quietDay);
-      const quietConstraint = constraintFor(quietArea, SEVERITY, quietDay);
+      const quietConstraint = constraintFor(quietArea, quietSeverity, quietDay);
       const quietReview = quiet(() =>
         buildSessionInjuryReview({ date: quietDay, constraint: quietConstraint })) as SessionInjuryReview;
       ok('[5] the review proposes nothing, and says so',
@@ -1027,13 +1034,13 @@ async function main(): Promise<void> {
         'bike_or_treadmill'],
       capacity: 'normal', hasEquipmentConstraint: false, medicalStop: false,
     };
-    const tagMap = EXERCISE_TAGS as Record<string, unknown>;
+    // Rated-or-not is asked case-insensitively: the family map lower-cases
+    // names, and a title-case guess misread `QL Back Extension` (rated since
+    // R-364, 2026-09-04) as unrated.
+    const ratedLower = new Set(Object.keys(EXERCISE_TAGS).map((key: string) => key.toLowerCase()));
     const unratedAdmitted = (Array.from(everyPlacedExerciseFamily().keys()) as string[])
       .concat(['Breathing Reset'])
-      .filter((name) => {
-        const titled = name.replace(/\b\w/g, (c: string) => c.toUpperCase());
-        return !tagMap[titled] && !tagMap[name];
-      })
+      .filter((name) => !ratedLower.has(name.toLowerCase()))
       .filter((name) => assessTapSwapCandidateSafety(name, severeWorld).safe);
     ok('[11] CONTROL — the severe world really does refuse rated risky work too',
       assessTapSwapCandidateSafety('Back Squat', severeWorld).safe === false,

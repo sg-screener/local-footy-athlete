@@ -53,7 +53,6 @@ import { CONDITIONING_META } from './exerciseTags';
 export type ContentExemptionKind =
   | 'conditioning_format'
   | 'zone1_recovery'
-  | 'mobility_untagged'
   | 'power_pool_pending'
   | 'load_ruling_pending'
   | 'session_authored_row';
@@ -75,19 +74,13 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
       + 'conditioning family cue rather than a per-movement one.',
   },
   zone1_recovery: {
-    waives: ['video', 'tags'],
+    waives: ['video'],
     ruling:
-      'Zone-1 cyclical recovery — walking, skipping, easy cycling. Not movements '
-      + 'to demo, and they carry none of the strength taxonomy\'s properties. '
+      'Zone-1 cyclical recovery — walking, easy cycling. Not movements to demo. '
       + 'Sam\'s original ruling, formalised with his attribution 2026-07-27 when '
-      + 'the reconciliation gate began requiring one for every exemption kind.',
-  },
-  mobility_untagged: {
-    waives: ['tags'],
-    ruling:
-      'EXERCISE_TAGS is the STRENGTH taxonomy (movement pattern, load, fatigue, '
-      + 'DOMS, injury ratings). Stretching, breathing and tissue work carry none '
-      + 'of those properties. Sam 2026-07-24: by design, not an orphan.',
+      + 'the reconciliation gate began requiring one for every exemption kind. '
+      + 'Sam 2026-09-04 (R-364): the three walks now carry tags and thirteen-region '
+      + 'injury ratings through the complete intake; only the video is waived.',
   },
   power_pool_pending: {
     waives: ['pool', 'cue', 'video'],
@@ -155,23 +148,13 @@ const ZONE_1_RECOVERY = new Set<string>([
   'Outdoor Walk',
 ]);
 
-/**
- * Mobility / breathing / tissue work — cued and demoed, outside the strength
- * taxonomy.
+/*
+ * The `mobility_untagged` kind and its 30-name set were RETIRED on 2026-09-04
+ * (Sam, R-364): "mobility must not mean safe for every injury". Every mobility,
+ * tissue-quality, breathing and zone-1 recovery exercise now carries tags and
+ * thirteen-region injury ratings through the complete intake
+ * (docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md). Nothing waives tags any more.
  */
-const MOBILITY_UNTAGGED = new Set<string>([
-  '90/90 Breathing', 'Adductor Rockback', 'ATG Split Squat', 'Box Breathing',
-  'Butterfly Stretch', 'Calf Stretch', 'Cat-Cow',
-  'Chest / Pec Stretch (Doorway)',
-  "Child's Pose with Breathing", 'Couch Stretch', 'Crocodile Breathing',
-  'Dead Hang', 'Deep Squat Hold', 'Dumbbell Pullovers', 'Elephant Walks',
-  'Foam Roll — Calves & Outer Shins', 'Foam Roll — Hip Flexor, Quad, Adductors',
-  'Foam Roll — IT Band', 'Foam Roll — Lats', 'Foam Roll — T-Spine',
-  'Hip 90/90 Stretch', 'Jefferson Curl', 'Lacrosse Ball Glute Release',
-  'Lat Stretch', 'Open Book Thoracic Rotation', 'Pigeon Stretch',
-  'Pissing Dog Against Wall', 'QL Back Extension',
-  'Toe Stretch', "World's Greatest Stretch",
-]);
 
 /**
  * The power block's vocabulary. `buildPowerBlock` names these directly; the
@@ -211,7 +194,6 @@ export function exemptionsFor(name: string): ContentExemptionKind[] {
   if (CONDITIONING_META[name]) kinds.push('conditioning_format');
   if (ZONE_1_RECOVERY.has(name)) kinds.push('zone1_recovery');
   if (POWER_POOL_PENDING.has(name)) kinds.push('power_pool_pending');
-  if (MOBILITY_UNTAGGED.has(name)) kinds.push('mobility_untagged');
   if (LOAD_RULING_PENDING.has(name)) kinds.push('load_ruling_pending');
   if (SESSION_AUTHORED_ROWS.has(name)) kinds.push('session_authored_row');
   return kinds;

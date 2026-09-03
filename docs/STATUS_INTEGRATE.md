@@ -668,3 +668,82 @@ green (97/97, 56/56, 48/48), `test:t-bar-tib-raises` 10/10, exposure engine
 3. The 3 walks: which conditioning family (Easy Bike's, or another)?
 Optional, not blocking: R-267 is 56 named exceptions because no axis of the
 model reads the prescribed load; a load axis would express it in one line.
+
+## Sam, 2026-09-04 — R-364: the 33 recovery exercises through the complete intake
+
+**Ruling:** for the 30 mobility / tissue-quality / breathing drills and the 3
+zone-1 walks, the complete intake supersedes the 24 July `mobility_untagged`
+exemption. "Mobility must not mean safe for every injury."
+
+### Root-cause families, in order
+1. **The exemption.** `mobility_untagged` (kind + 30-name set) retired from
+   `selectableExerciseVocabulary.ts`; `zone1_recovery` now waives video only.
+   Pins moved: reconciliation test's authorised-kinds list; authoring
+   template; the 07-24 changeset carries a dated supersession note.
+2. **The intake.** `docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md` — 33
+   sections in the 2 September format, generated from ONE classification
+   spec together with the 33 tags rows (`exerciseTags.ts`, new RECOVERY
+   block), so neither is a hand copy. Classification: from each drill's
+   actual movement, loading and existing contraindications. Rules applied:
+   every pool contraindication → **Avoid** (kept on the pool entry too);
+   loaded/stretched/weight-bearing regions → Caution (R-267 "indirect
+   support/loading", the Rockback precedent for kneeling and hands-on-floor);
+   otherwise Good. Patterns follow the six precedents (Horse Stance →
+   isolation_lower, Sleeper → isolation_upper, Crab/Bench → core); walks are
+   `conditioning` and join the ruling file as the `walk` family (lower body
+   Caution). No tags prescription: the pool entry owns the dose, as before.
+   No equipment sheet entry: the intake test reads each pool entry's own
+   equipment. `programming` = strengthRole none, warmup true, primer true —
+   the routes each drill already had (measured: load authority, load
+   control, all four route answers and healthy-athlete swap identical for all
+   33 before and after; only the injury answers changed).
+3. **The pipeline.** Extract/verify/apply now read keys with an escaped
+   apostrophe (`World\'s Greatest Stretch`, `Child\'s Pose…` had been
+   reported untagged). Adductor Rockback's six named exceptions left the
+   ruling file (its ratings are on its intake row; groin strengthened to
+   Avoid under this ruling). Pipeline rerun: 200 exercises, 0 untagged, 0
+   DECISION cells, 343 exceptions, 24 conditioning rows; apply exit 0 with 0
+   changed cells (normalisation only). Unit 31 pins re-recorded.
+4. **The guards.** `test:exercise-intake`: 33-row block — selectable, tags
+   row (strengthRole none, no prescription), 13 ratings equal to the doc,
+   muscles, pool equipment with no equipment-sheet entry, cue, exact video
+   (walks stay video-exempt), movement line, dose equal to the pool's own,
+   healthy swap still allowed; for EVERY contraindication: Avoid, and refused
+   as a swap, withheld from an existing session and never selected at 1, 5
+   and 10/10; ATG Split Squat unavailable at every knee severity; no kind
+   waives tags; every pool member rated. Mutations `recovery_rating`
+   (Pigeon Stretch hip → good) and `atg_knee` (rating + pool
+   contraindication dropped) are in the intake test's own mutation loop.
+   `sessionInjuryReviewTests`: [11] compares rated names case-insensitively
+   (`QL Back Extension` was misread as unrated by title-casing); [5] searches
+   the mild world after the severe one, because rated recovery rows now touch
+   nearly every day at 6/10.
+
+### Unrelated, reported not fixed (pre-existing at 5442efdd, control tree)
+- `test:content-reconciliation`: "every selectable entry has defined load
+  handling" — Band-Assisted Pull-Up is `unauthored`.
+- `test:locked-list`: "every unruled addition lands in a no-load class" —
+  Banded TKE, Bosch Hold, Crab Walks (and the same for Elephant Walks, QL
+  Back Extension, whose load authority is unchanged by this work: unloaded
+  via PREHAB_NO_LOAD_EXERCISES, not `bodyweight`).
+- `git worktree list` shows ~160 worktrees on this machine.
+
+### Receipts (R-364), exact commands
+| command | exit | result |
+| --- | --- | --- |
+| `npm run test:injury-matrix-sheet` | 0 | MATRIX VERIFIED — 0 failures (parity 2600/2600 cells, 0 untagged, 0 DECISION) |
+| `npm run test:exercise-intake` | 0 | 2146 passed / 0 failed (incl. mutations `recovery_rating`, `atg_knee`) |
+| `LFA_INTAKE_MUTATION=recovery_rating` child | 1 | 8 intended failures (Pigeon Stretch hip: doc rating, Avoid, swap/withhold at 1, 5, 10) |
+| `LFA_INTAKE_MUTATION=atg_knee` child | 1 | 3 intended failures (Knee rating, pool contraindications ≠ doc, unavailable at every knee severity) |
+| on-disk flip Pigeon Stretch hip avoid→good, `npm run test:injury-matrix-sheet` | 1 | 1 FAILURE: "Pigeon Stretch.hip: sheet avoid, code good"; restored → VERIFIED |
+| `npm run test:session-injury-review` | 0 | Pass 80 / Fail 0 |
+| `npm run test:injury-fallback-journey` | 0 | Pass 182 / Fail 0 |
+| `npm run test:exposure-engine` | 0 | Pass 164 |
+| `npm run test:compile` | 0 | PASSED |
+| `node scripts/weekly-writer-census.js` | 0 | 1170/1170, 0 unresolved |
+| `npm run test:canonical-weekly-compiler` | 0 | 0 FAIL lines |
+| `npm run test:release` | 0 | **31/31 units green** |
+| `npm run qa:audit-flows` (E2E_METRO_URL=:8082) | 1 | 0/6 — the script cannot pass `--device`, which the guarded runner requires ("Pass an explicit --device simulator UUID"). Pre-existing; not changed. |
+| the same six flows through `scripts/dev-e2e/run-maestro-ios.sh <flow> --device B8B2C7B0…` on this tree's Metro :8082 | — | bin-undo-toast, full-reset-lands-clean, readiness-ack-never-silent, removal-undo-home, week-move-game PASS; block-rollover hit the 8-min watchdog (Maestro driver hang, kotlinx coroutine stack), rerun alone: exit 0, flow COMPLETED. Launch receipt `resolvedMetroUrl` = 127.0.0.1:8082. |
+| `npm run test:content-reconciliation` / `test:locked-list` | 1 / 1 | 19/20 and 32/33 — the same single red each at 5442efdd in a control tree (unrelated, reported above) |
+Not run: `test:bible` (diagnostic fleet, no release authority).
