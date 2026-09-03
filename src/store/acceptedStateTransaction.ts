@@ -2130,6 +2130,8 @@ export interface RollingHorizonFixtureRepairProjection {
 
 export interface RollingHorizonFixtureCandidateScore {
   blockingWeeks: number;
+  /** Weeks whose chosen repair carries a strong craft violation — see `FixtureReplanEditCost.craftBlockers`. */
+  craftBlockingWeeks: number;
   unavailableDayUses: number;
   boundaryHardTransitions: number;
   staleDependencies: number;
@@ -2156,6 +2158,7 @@ export interface RollingHorizonFixtureRepairResult {
 
 const HORIZON_SCORE_ORDER: readonly (keyof RollingHorizonFixtureCandidateScore)[] = [
   'blockingWeeks',
+  'craftBlockingWeeks',
   'unavailableDayUses',
   'boundaryHardTransitions',
   'staleDependencies',
@@ -2184,6 +2187,7 @@ function compareRollingHorizonFixtureScores(
 function emptyRollingHorizonFixtureScore(): RollingHorizonFixtureCandidateScore {
   return {
     blockingWeeks: 0,
+    craftBlockingWeeks: 0,
     unavailableDayUses: 0,
     boundaryHardTransitions: 0,
     staleDependencies: 0,
@@ -2204,6 +2208,7 @@ function sumFixtureEditCosts(
 ): FixtureReplanEditCost {
   const seed: FixtureReplanEditCost = {
     section18Blockers: 0,
+    craftBlockers: 0,
     unavailableDayUses: 0,
     changedCoreSessions: 0,
     changedDays: 0,
@@ -2247,6 +2252,8 @@ function scoreRollingHorizonFixtureCandidate(args: {
   return {
     blockingWeeks: projections.filter((projection) =>
       projection.replan.gateway.evaluation.blockingViolations.length > 0).length,
+    craftBlockingWeeks: projections.filter((projection) =>
+      projection.replan.editCost.craftBlockers > 0).length,
     unavailableDayUses: costs.unavailableDayUses,
     boundaryHardTransitions,
     staleDependencies,

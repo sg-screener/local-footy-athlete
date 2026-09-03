@@ -1027,9 +1027,9 @@
       "reason": "Private fixture conditioning adapter invokes the common row materialiser with explicit day, dose and role, then records provenance."
     },
     "src/utils/fixtureMinimalReplan.ts#scoreCandidate": {
-      "fingerprint": "f2aeb62064b9240c1154774e10ea6dd58e247340fc6fb77ce18a0b4d02739af5",
+      "fingerprint": "c89b4ed8f1eac04274d8bebcf9c7dc683e03de58397112997995a6e9fb17ca42",
       "classification": "projection_display",
-      "reason": "Read-only fixture candidate cost evaluator compares identities, contracts and placement; does not mutate candidates."
+      "reason": "integrate 2026-09-03 re-review (craft verdict ranks the candidate): read-only fixture candidate cost evaluator — compares identities, contracts and placement, and now copies the gateway's craft-tier blocking count (`craftBlockers`) into the cost; does not mutate candidates."
     },
     "src/utils/fixtureMinimalReplan.ts#relocateNewStrength": {
       "fingerprint": "86f194bd6bab815b026d4911a07c816bd714032e747bcb40a3800a5b832c3fa7",
@@ -1037,9 +1037,14 @@
       "reason": "Private fixture strength relocation binds supplied template identities and typed fixture dependency history to the destination."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan": {
-      "fingerprint": "9213dc207cd38d6449eef5ab35ade71e8a965c026dae9b2c85e87ad1699d036b",
+      "fingerprint": "11e54d21fc9fda717d4eae2275634de564bc726e436a3a4cf6c65f0719b4654e",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-357 drift: the frontal completion runs over the planner source before the search): the fixture specialist enumerates, evaluates and ranks candidate weeks; returns the chosen candidate and diagnostics. No store writes."
+      "reason": "integrate 2026-09-03 re-review (the compiler's own week competes with a craft-violating minimal repair): the fixture specialist enumerates, evaluates and ranks candidate weeks; when the best minimal candidate still carries a strong craft violation, the regeneration from the compiler target is ranked by the same cost. Returns the chosen candidate and diagnostics. No store writes."
+    },
+    "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan.regenerateFromCompilerTarget": {
+      "fingerprint": "2a761cb1049e3107cbae64aeac009b16e44921d180df8c5111de13d26cb77857",
+      "classification": "canonical_compiler",
+      "reason": "integrate 2026-09-03: the former inline full-regeneration fallback as a local closure — runs the accepted-week gateway over the compiler's complete target for these fixtures and scores it. Pure over its arguments; no store writes."
     },
     "src/utils/visibleWorkoutIdentity.ts#normalizeVisibleWorkoutIdentity": {
       "fingerprint": "1eb69409e7a754cf176f11530bed6499acbab34720da80a56e5575e5ba429192",

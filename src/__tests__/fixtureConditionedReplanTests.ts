@@ -753,6 +753,7 @@ async function main(): Promise<void> {
   await run('19 deterministic edit-cost prefers the released-day candidate', () => {
     const base = {
       section18Blockers: 0,
+      craftBlockers: 0,
       unavailableDayUses: 0,
       changedCoreSessions: 0,
       changedDays: 2,

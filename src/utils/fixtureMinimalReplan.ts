@@ -59,6 +59,13 @@ export { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelative
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
+  /**
+   * Strong Section 17 craft violations the gateway found on the candidate
+   * (`gateway.craft.blocking`: G-2 hard lower, G-2 hard conditioning, the
+   * G-1 shape) — ranked directly after the contract's own blockers, ahead of
+   * every edit-size dimension. See `scoreCandidate`.
+   */
+  craftBlockers: number;
   unavailableDayUses: number;
   changedCoreSessions: number;
   changedDays: number;
@@ -134,6 +141,7 @@ export class RequiredCoreRelocationError extends Error {
 
 const EDIT_COST_ORDER: readonly (keyof FixtureReplanEditCost)[] = [
   'section18Blockers',
+  'craftBlockers',
   'unavailableDayUses',
   'changedCoreSessions',
   'changedDays',
@@ -1146,6 +1154,21 @@ function scoreCandidate(args: {
   );
   return {
     section18Blockers: args.gateway.evaluation.blockingViolations.length,
+    // THE CRAFT TIER'S VERDICT RANKS THE CANDIDATE; IT DOES NOT VETO THE FACT.
+    //
+    // Until 2026-09-03 the ranking read the contract's blockers only, and the
+    // hard-day breach was one of them — so the "keep every session" candidate
+    // lost whenever a new fixture made a sixth hard day, and the restructure
+    // that won happened to satisfy G-2 too. R-359 made that breach advisory,
+    // and the keep-everything candidate won on edit size while publishing a
+    // full hinge session on G-2 of the athlete's new Friday game
+    // (`test:fixture-mutation-transaction` 17). The gateway already assesses
+    // every candidate against the Section 17 craft tier (R-095: G-2 outranks
+    // even the injury exception); that verdict now ranks the candidate, second
+    // only to the contract's blockers, so an avoidable strong violation loses
+    // to a repair without one — and when every candidate carries one, the
+    // fixture still publishes with the violation disclosed, never refused.
+    craftBlockers: args.gateway.craft.blocking.length,
     unavailableDayUses: args.addedDays.filter((day) => !available.has(day)).length,
     changedCoreSessions: adjustedCoreChanges,
     changedDays: changedDays.length,
@@ -1446,6 +1469,84 @@ export function buildFixtureMinimalReplan(
     affectedWeek: args.weekStart,
     boundary: 'buildFixtureMinimalReplan',
   });
+  // THE COMPILER'S OWN WEEK FOR THESE FIXTURES. Minimal preservation
+  // candidates exhausted (or, below, every one of them publishing a strong
+  // craft violation): recompile from the compiler's complete target, not the
+  // same failed source split again. Accepted edits still belong to the
+  // transaction's override/constraint fold; a regenerated base is never
+  // permission to erase an edit.
+  const regenerateFromCompilerTarget = (): FixtureMinimalReplanResult => {
+    const fallbackGateway = runSection18AcceptedWeekGateway({
+      contract,
+      workouts: args.targetMicrocycle.workouts,
+      weekStart: args.weekStart,
+      profile: args.profile,
+      activeFixtureDates: args.activeFixtureDates,
+      surfaces: args.surfaces,
+      resolveVisibleWorkouts: visibleResolver(args),
+    });
+    const changes = changedDaySets(args.sourceWorkouts, fallbackGateway.canonicalWorkouts);
+    const cost = scoreCandidate({
+      source: args.sourceWorkouts,
+      candidate: fallbackGateway.canonicalWorkouts,
+      gateway: fallbackGateway,
+      availability: args.availability,
+      addedDays: changes.addedDays,
+      preferredReplacementDay,
+    });
+    return {
+      path: 'full_regeneration',
+      usedFullRegeneration: true,
+      workouts: fallbackGateway.canonicalWorkouts,
+      gateway: fallbackGateway,
+      editCost: cost,
+      ...changes,
+      preservedCorePlanEntryIds: [],
+      availability: args.availability,
+      rejectedCandidateSignatures: Array.from(new Set(rejectedCandidateSignatures)),
+      candidateDiagnostics,
+      sourcePlanEntryIds: args.sourceWorkouts.flatMap((workout) =>
+        workout.planEntryId ? [workout.planEntryId] : []),
+      alternatives: [{
+        workouts: fallbackGateway.canonicalWorkouts,
+        gateway: fallbackGateway,
+        editCost: cost,
+        ...changes,
+        preservedCorePlanEntryIds: [],
+      }],
+    };
+  };
+  // A MINIMAL REPAIR THAT PUBLISHES A STRONG CRAFT VIOLATION COMPETES WITH THE
+  // COMPILER'S WEEK, ON THE SAME COST. Until 2026-09-03 the keep-everything
+  // candidate for a Friday game added beside the Saturday one was `impossible`
+  // (six hard days blocked) and this regeneration answered instead — a week
+  // with no full hinge on G-2. R-359 made that breach a warning, the minimal
+  // candidate was accepted on edit size, and the hinge stayed two days before
+  // the new game (`test:fixture-mutation-transaction` 17). The craft verdict
+  // now ranks first among accepted candidates (`craftBlockers`), and when the
+  // best of them still carries one, the compiler's own week for these fixtures
+  // is ranked by the same cost: a violation-free regeneration wins; a
+  // regeneration that is itself blocked or equally flawed loses on edit size.
+  if (winner && winner.cost.craftBlockers > 0) {
+    const regenerated = regenerateFromCompilerTarget();
+    if (compareFixtureReplanEditCost(regenerated.editCost, winner.cost) < 0) {
+      emitAthleteActionEvent(trace, 'repair_candidate_selected', {
+        candidateId: athleteActionDiagnosticHash({
+          weekId: args.weekStart,
+          canonical: regenerated.workouts.map((workout) => workout.planEntryId ?? workout.id),
+        }),
+        candidateScore: regenerated.editCost,
+        preservationCost: regenerated.editCost,
+        candidateChanges: changedDaySets(args.sourceWorkouts, regenerated.workouts),
+        affectedWeek: args.weekStart,
+        repairKinds: regenerated.gateway.repairs.map((repair) => repair.kind),
+        repairCount: regenerated.gateway.repairs.length,
+        outcome: regenerated.gateway.status,
+        boundary: 'buildFixtureMinimalReplan',
+      });
+      return regenerated;
+    }
+  }
   if (winner) {
     const changes = changedDaySets(args.sourceWorkouts, winner.gateway.canonicalWorkouts);
     const retained = new Set(winner.gateway.canonicalWorkouts.map((workout) => workout.planEntryId));
@@ -1677,47 +1778,5 @@ export function buildFixtureMinimalReplan(
   // typed channel all along. Letting it flow is the whole fix: the OWNER
   // decides what a rejected week means, instead of five callers each
   // catching an exception and inventing their own answer.
-  const fallbackGateway = runSection18AcceptedWeekGateway({
-    contract,
-    // Minimal preservation candidates were exhausted. Recompile from the
-    // compiler's complete target, not the same failed source split again.
-    // Accepted edits still belong to the transaction's override/constraint
-    // fold; a regenerated base is never permission to erase an edit.
-    workouts: args.targetMicrocycle.workouts,
-    weekStart: args.weekStart,
-    profile: args.profile,
-    activeFixtureDates: args.activeFixtureDates,
-    surfaces: args.surfaces,
-    resolveVisibleWorkouts: visibleResolver(args),
-  });
-  const changes = changedDaySets(args.sourceWorkouts, fallbackGateway.canonicalWorkouts);
-  const cost = scoreCandidate({
-    source: args.sourceWorkouts,
-    candidate: fallbackGateway.canonicalWorkouts,
-    gateway: fallbackGateway,
-    availability: args.availability,
-    addedDays: changes.addedDays,
-    preferredReplacementDay,
-  });
-  return {
-    path: 'full_regeneration',
-    usedFullRegeneration: true,
-    workouts: fallbackGateway.canonicalWorkouts,
-    gateway: fallbackGateway,
-    editCost: cost,
-    ...changes,
-    preservedCorePlanEntryIds: [],
-    availability: args.availability,
-    rejectedCandidateSignatures: Array.from(new Set(rejectedCandidateSignatures)),
-    candidateDiagnostics,
-    sourcePlanEntryIds: args.sourceWorkouts.flatMap((workout) =>
-      workout.planEntryId ? [workout.planEntryId] : []),
-    alternatives: [{
-      workouts: fallbackGateway.canonicalWorkouts,
-      gateway: fallbackGateway,
-      editCost: cost,
-      ...changes,
-      preservedCorePlanEntryIds: [],
-    }],
-  };
+  return regenerateFromCompilerTarget();
 }
