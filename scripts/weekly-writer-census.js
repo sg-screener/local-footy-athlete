@@ -405,6 +405,26 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
   function opaqueTarget(node) {
     return (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && opaqueReceiver(node.expression);
   }
+  // AN `any`-TYPED STORE SELECTOR HIDES ITS ACTION. `useStore((s: any) => s.setX)`
+  // reaches a real door, but the parameter's declared type is gone, so the typed
+  // domain-callable check never fires and the census sees a read of nothing.
+  // Measured 2026-09-03: `useDayWorkout` called the reviewed load-input door
+  // `setWeightOverride` six times through such a selector and carried no site.
+  // Recover the state type from the hook's OWN signature (the selector overload
+  // `(state: State) => U`), never from the arrow's annotation.
+  function anySelectorStateType(identifier) {
+    const declaration = checker.getSymbolAtLocation(identifier)?.valueDeclaration;
+    if (!declaration || !ts.isParameter(declaration)) return null;
+    const selector = declaration.parent;
+    if (!ts.isFunctionLike(selector) || selector.parameters[0] !== declaration) return null;
+    const call = selector.parent;
+    if (!ts.isCallExpression(call) || call.arguments[0] !== selector) return null;
+    const selectorParameter = checker.getResolvedSignature(call)?.getParameters()[0];
+    if (!selectorParameter) return null;
+    const stateParameter = checker.getTypeOfSymbolAtLocation(selectorParameter, call)
+      .getCallSignatures()[0]?.getParameters()[0];
+    return stateParameter ? checker.getTypeOfSymbolAtLocation(stateParameter, call) : null;
+  }
 
   for (const file of files) {
     const sf = program.getSourceFile(file);
@@ -425,6 +445,20 @@ function scanSources({ root = ROOT, sources, registry = { schemaVersion: 1, owne
             !readOnlyBuiltinCollectionMember(symbol) &&
             checker.getTypeAtLocation(node).getCallSignatures().length > 0) {
           site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
+        }
+      }
+      if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && unit &&
+          (checker.getTypeAtLocation(node.expression).flags & ts.TypeFlags.Any)) {
+        const stateType = anySelectorStateType(node.expression);
+        if (stateType && domainType(stateType)) {
+          const property = checker.getPropertyOfType(stateType, node.name.text);
+          const target = property && symbolUnit(property);
+          if (target && target !== unit && fileSet.has(target.sf.fileName)) {
+            unit.calls.add(target.id);
+          } else if (property && !readOnlyBuiltinCollectionMember(property) &&
+              checker.getTypeOfSymbolAtLocation(property, node).getCallSignatures().length > 0) {
+            site(node, 'opaque_domain_callable_requires_review', node.getText(sf));
+          }
         }
       }
       if (ts.isBindingElement(node) && ts.isObjectBindingPattern(node.parent)) {

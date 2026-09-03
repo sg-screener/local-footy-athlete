@@ -180,7 +180,11 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
   { clauseId: 'WC-048', enforcedElsewhere: 'composer daily movement ceiling' },
   { clauseId: 'WC-062', enforcedElsewhere: 'coachingInputsToSchedulerInputs — declared club nights only' },
   { clauseId: 'WC-110', enforcedElsewhere: 'WC-043 spacing above' },
-  { clauseId: 'WC-135', enforcedElsewhere: 'appSprintDay placement' },
+  // 2026-09-03: this row named `appSprintDay`, an exported function with zero
+  // callers — a ghost enforcer. The app sprint is placed inside `scheduleWeek`
+  // (the WC-135/WC-124 block: `plannedSprintDay` via `selectFreshSpeedDay`),
+  // and `test:clause-enforcement` now proves every owner named here is live.
+  { clauseId: 'WC-135', enforcedElsewhere: 'scheduleWeek — app-sprint placement (plannedSprintDay via selectFreshSpeedDay)' },
 ];
 
 /**

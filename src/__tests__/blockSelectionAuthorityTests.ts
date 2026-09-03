@@ -78,7 +78,53 @@ function athlete(): OnboardingData {
 }
 
 function resetHistory(): void {
-  useBlockSelectionHistoryStore.setState({ selections: [] } as never);
+  useBlockSelectionHistoryStore.setState({
+    selections: [], conditioningSelections: [], powerSelections: [],
+  } as never);
+}
+
+/**
+ * THE POWER HISTORY IS IDENTITY AND ROTATION INPUT, NEVER WORKOUT CONTENT.
+ *
+ * `c3b5f71b` (2026-08-31) added `powerSelections` beside the exercise and
+ * conditioning histories. It is the same class of row — which identity each
+ * power seat chose for a block — persisted as a rotation INPUT so a boot cannot
+ * re-derive a different Primer. The store's own header rules out a program
+ * snapshot ("No dose, no sets, no load"), but nothing checked the NEW array:
+ * the writer census (`docs/WEEKLY_WRITER_CENSUS_AUDIT_2026-09-03.md` §4.3.2)
+ * found no cell holding it to identity only. This is that cell.
+ *
+ * It reads the bytes the persist middleware would write (`partialize`), not
+ * the in-memory rows, because the law is about what reaches disk.
+ */
+const POWER_ROW_KEYS = ['blockStartISO', 'exerciseName', 'family', 'seatIndex'] as const;
+const GENERATED_CONTENT_KEYS = [
+  'sets', 'reps', 'repsMin', 'repsMax', 'prescribedSets', 'prescribedRepsMin', 'prescribedRepsMax',
+  'prescribedWeightKg', 'prescribedRestSeconds', 'weight', 'weightKg', 'load', 'restSeconds',
+  'exercise', 'exercises', 'workout', 'workouts', 'notes', 'cues', 'description', 'id', 'workoutId',
+  'durationMinutes', 'intensity',
+];
+
+/** The `powerSelections` slice exactly as the persist middleware would store it. */
+function persistedPowerRows(): unknown[] {
+  const options = (useBlockSelectionHistoryStore as unknown as {
+    persist: { getOptions: () => { partialize?: (state: unknown) => { powerSelections?: unknown[] } } };
+  }).persist.getOptions();
+  const persisted = options.partialize
+    ? options.partialize(useBlockSelectionHistoryStore.getState())
+    : (useBlockSelectionHistoryStore.getState() as { powerSelections?: unknown[] });
+  return JSON.parse(JSON.stringify(persisted.powerSelections ?? [])) as unknown[];
+}
+
+/** Every key at every depth of a JSON value. */
+function keysDeep(value: unknown, into: Set<string> = new Set()): Set<string> {
+  if (Array.isArray(value)) { for (const item of value) keysDeep(item, into); return into; }
+  if (value && typeof value === 'object') {
+    for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
+      into.add(key); keysDeep(inner, into);
+    }
+  }
+  return into;
 }
 
 /**
@@ -188,6 +234,42 @@ if (authored) {
   ok('a PROBE records nothing',
     blockSelectionHistory().length === 0,
     `probe wrote ${blockSelectionHistory().length} rows into the athlete's history`);
+  ok('a PROBE records no power seats either',
+    persistedPowerRows().length === 0,
+    `probe wrote ${persistedPowerRows().length} power rows into the athlete's history`);
+
+  /* ── CELL 5 — persisted power selections are identity + rotation input only. ──
+   * Anchor first: the authoring door must actually record power seats for this
+   * athlete, or the shape cells below would pass over an empty array. */
+  resetHistory();
+  generate('author', null);
+  const powerRows = persistedPowerRows();
+  ok('SETUP — the authoring door recorded at least one power seat for the block',
+    powerRows.length > 0
+      && powerRows.every((row) => (row as { blockStartISO?: string }).blockStartISO === BLOCK_START),
+    `power rows recorded: ${JSON.stringify(powerRows)}`);
+  const powerKeysDeep = keysDeep(powerRows);
+  const leakedContentKeys = GENERATED_CONTENT_KEYS.filter((key) => powerKeysDeep.has(key));
+  ok('a persisted power selection carries NO generated workout content (no dose, load, rows or ids)',
+    leakedContentKeys.length === 0,
+    `generated-content keys found in the persisted power history: ${leakedContentKeys.join(', ')}`);
+  const offShape = powerRows.filter((row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return true;
+    const keys = Object.keys(row as Record<string, unknown>).sort();
+    if (keys.join(',') !== [...POWER_ROW_KEYS].sort().join(',')) return true;
+    const typed = row as Record<string, unknown>;
+    return typeof typed.blockStartISO !== 'string' || typeof typed.family !== 'string'
+      || typeof typed.exerciseName !== 'string' || typeof typed.seatIndex !== 'number';
+  });
+  ok('every persisted power selection is exactly {blockStartISO, family, seatIndex, exerciseName} of primitives',
+    offShape.length === 0,
+    `rows off the identity/rotation shape: ${JSON.stringify(offShape)}`);
+  ok('each power seat is recorded once per block (rotation key family+seatIndex is unique)',
+    new Set(powerRows.map((row) => {
+      const typed = row as { family: string; seatIndex: number };
+      return `${typed.family}:${typed.seatIndex}`;
+    })).size === powerRows.length,
+    `duplicate family/seat keys in ${JSON.stringify(powerRows)}`);
 }
 
 console.log(`\nBlock selection authority: passed=${pass} failures=${fail}`);
