@@ -97,6 +97,7 @@
     "test:conditioning-modality-by-day": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningModalityByDayTests.ts",
     "test:conditioning-rotation": "sucrase-node src/__tests__/conditioningRotationTests.ts",
     "test:programming-selection-trace": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingSelectionTraceTests.ts",
+    "test:programming-selection-trace-observer": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingSelectionTraceObserverGuardTests.ts",
     "test:programming-final-composition": "TZ=Australia/Melbourne sucrase-node src/__tests__/programmingFinalCompositionTests.ts",
     "test:conditioning-template-modality": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningTemplateModalityCompatibilityTests.ts",
     "test:conditioning-modality-persistence": "npm run test:conditioning-template-modality && npm run test:conditioning-intensity-modality && npm run test:conditioning-intensity-routes && TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningModalityPersistenceTests.ts && node scripts/test-erg-flush-final-modality.cjs",
