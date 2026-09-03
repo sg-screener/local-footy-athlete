@@ -105,13 +105,14 @@ the no-team-training eligibility ruling. See
 `docs/PROGRAMMING_GAP_CLOSURE_2026-08-28.md` for the diagnostic classification.
 
 **R-004** · *"that way the app isn't guessing"* · The Christmas break is set by
-ASKING: ~10 Dec *"when is your last team training?"*, ~3 Jan *"when does team
-training go back?"*. The dates are defaults for WHEN TO ASK, never inferred
-answers. · `BUILT` — `src/rules/christmasBreakAsk.ts` holds both halves keyed to
-one break year, with **production readers** (`screens/home/useHomeScreen.ts:79`
-imports `decideChristmasBreakAsk` and returns it at `:1584`;
-`screens/home/HomeScreenV2.tsx:118` consumes it), held by `test:christmas-break`
-**44/0**.
+ASKING: ~10 Dec *"When does team training finish before Christmas?"*, ~3 Jan
+*"When does team training start again?"*. The dates are defaults for WHEN TO
+ASK, never inferred answers. **Sam, 2026-09-03:** retain 3 January and present
+the live question as a compact top-of-Program notification in both Day and Week,
+using the missed-session question shape and a yellow calendar-and-snowflake icon.
+· `BUILT` — `src/rules/christmasBreakAsk.ts` holds both halves keyed to one break
+year, with production readers in Home; `test:christmas-break` holds the calendar
+and program effects, and its focused first arm holds the 9-cell presentation.
 **⚠ THIS ROW SAID `UNENFORCED` FOR HOURS AFTER THE WORK LANDED, AND THAT IS THE
 DEFECT THIS REGISTRY EXISTS TO PREVENT.** Its status still pointed at *"SEAT_INBOX
 item 31 part 5"* while item 31 read *"ALL THREE ARE BUILT — VERIFIED, NOT REBUILT.

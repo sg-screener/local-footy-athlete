@@ -39,7 +39,7 @@ console.log('\n[1] Exactly three answers, and they are the signed words');
   const end = home.indexOf('function missedQuestion', start);
   ok('notice region found', start >= 0 && end > start);
   const prompt = start >= 0 && end > start ? home.slice(start, end) : '';
-  ok('exactly three chips', (prompt.match(/<MissedChip\b/g) ?? []).length === 3);
+  ok('exactly three chips', (prompt.match(/<NoticeChip\b/g) ?? []).length === 3);
   ok('yes reads the signed row', prompt.includes("signedCopy('missed.prompt.yes')"));
   ok('no reads the signed row', prompt.includes("signedCopy('missed.prompt.no')"));
   ok('move reads the signed row', prompt.includes("signedCopy('missed.prompt.move')"));

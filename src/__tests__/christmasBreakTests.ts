@@ -592,9 +592,9 @@ async function main(): Promise<void> {
   run('[10] the Program screen mounts the ask',
     /testID="home-christmas-break-ask"/.test(screen) &&
     /christmasBreakAsk && \(/.test(screen));
-  run('[10b] it asks Sam\'s two questions in his words',
-    /When is your last team training\?/.test(screen) &&
-    /When does team training go back\?/.test(screen));
+  run('[10b] it asks the two agreed questions in plain words',
+    /When does team training finish before Christmas\?/.test(screen) &&
+    /When does team training start again\?/.test(screen));
   // THE DISMISSAL IS ON THE DECEMBER HALF ONLY. Dismissing the January question
   // would strand a break the athlete already declared, with nothing left in the
   // app able to end it.
@@ -603,11 +603,32 @@ async function main(): Promise<void> {
     ? screen.slice(Math.max(0, dismissAt - 400), dismissAt)
     : '';
   run('[10c] only the December question can be dismissed',
-    dismissAt >= 0 && /christmasBreakAsk\.kind === 'last_team_training'/.test(dismissGate));
+    dismissAt >= 0 && /ask\.kind === 'last_team_training'/.test(dismissGate));
   // AND THE SHEET DOES THE OFF-BY-ONE, both directions, in one place.
   run('[10d] the sheet turns his two dates into the days with no club',
     /from: addDaysISO\(dateISO, 1\), until: null/.test(screen) &&
     /until: addDaysISO\(dateISO, -1\)/.test(screen));
+
+  // ── [10e] THE ASK IS A TOP NOTIFICATION, NOT A LARGE CONTENT CARD ────────
+  // Sam, 3 Sep: keep 3 January, but present both questions like the compact
+  // modifier / missed-session notices, with a small yellow calendar icon. The
+  // question is useful setup work, not a warning and not a success state.
+  const christmasNoticeAt = screen.indexOf('function ChristmasBreakNotice(');
+  const christmasNoticeEnd = screen.indexOf('function missedQuestion', christmasNoticeAt);
+  const christmasNotice = christmasNoticeAt >= 0 && christmasNoticeEnd > christmasNoticeAt
+    ? screen.slice(christmasNoticeAt, christmasNoticeEnd)
+    : '';
+  const christmasMountAt = screen.indexOf('<ChristmasBreakNotice');
+  const dayWeekBranchAt = screen.indexOf('{dayFirst ? (', christmasMountAt);
+  run('[10e] Christmas uses the same compact question-notice owner as missed sessions',
+    christmasNoticeAt >= 0 &&
+    /<ProgramQuestionNotice/.test(christmasNotice) &&
+    !/phaseSkewCard/.test(christmasNotice));
+  run('[10f] the Christmas notice is mounted once at the top for both Day and Week',
+    christmasMountAt >= 0 && dayWeekBranchAt > christmasMountAt &&
+    (screen.match(/<ChristmasBreakNotice\b/g) ?? []).length === 1);
+  run('[10g] its calendar-and-snowflake icon uses the app accent yellow',
+    /function ChristmasBreakNoticeIcon\([\s\S]*?stroke="#D8D800"/.test(screen));
 
   // ── [10h] AND IT OPENS ON THE MONTH THE ANSWER IS IN ─────────────────────
   // FOUND ON GLASS, not by reading. The first device run of this ask (10

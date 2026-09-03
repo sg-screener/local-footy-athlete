@@ -1283,6 +1283,18 @@ export default function HomeScreenV2() {
           />
         )}
 
+        {/* The calendar already knows WHEN to ask; this is only the compact,
+            top-of-Program doorway into the existing Christmas date sheet. It
+            shares the same question-notice owner as missed sessions so a third
+            notification cannot quietly grow a third card style. */}
+        {isNormal && christmasBreakAsk && (
+          <ChristmasBreakNotice
+            ask={christmasBreakAsk}
+            onOpen={() => { setScheduleAck(null); setChristmasSheetVisible(true); }}
+            onTrainThrough={handleDismissChristmasBreakAsk}
+          />
+        )}
+
         {/* ── The week ──
             ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
             place a day is drawn at full size; the day-first view calls it once
@@ -1630,58 +1642,6 @@ export default function HomeScreenV2() {
 
         {/* Add fixture and Away now live under the Week-only Edit this week
             menu above. Their existing pickers and writers are unchanged. */}
-
-        {/* ── ITEM 31 PART 5: THE APP ASKS ABOUT THE CHRISTMAS BREAK ──
-            Sam, 2026-08-13: *"maybe around the 10th of December … an athlete
-            can select when their last team training is, and then around the 3rd
-            of Jan they should be ask when does team training go back? that way
-            the app isn't guessing"*.
-
-            A QUESTION, NOT A BUTTON, and the difference is the whole item. Away
-            sits there permanently because only the athlete knows a trip is
-            coming. The club shutting for Christmas is something the CALENDAR
-            knows is due; what it does not know is the dates, and those are the
-            two things being asked for.
-
-            WHICH QUESTION IS LIVE IS NOT DECIDED HERE. `decideChristmasBreakAsk`
-            owns that — the December ask, the January ask, and the "nothing to
-            ask" that is true for eleven months of the year.
-
-            THE JANUARY CARD HAS NO DISMISS. Its question is the only thing that
-            can end a break the athlete already declared, so a way to make it go
-            away unanswered would be a way to lose the club for good. */}
-        {isNormal && !dayFirst && christmasBreakAsk && (
-          <View style={styles.phaseSkewCard} testID="home-christmas-break-ask">
-            <Text style={styles.phaseSkewTitle}>
-              {christmasBreakAsk.kind === 'last_team_training'
-                ? 'When is your last team training?'
-                : 'When does team training go back?'}
-            </Text>
-            <Text style={styles.phaseSkewBody}>
-              {christmasBreakAsk.kind === 'last_team_training'
-                ? 'Christmas is coming. Tell us when your club stops and team training comes off your weeks until you say it is back.'
-                : 'Team training has been off since the break. Tell us the day it starts again and your weeks go back to normal.'}
-            </Text>
-            <Button
-              label={christmasBreakAsk.kind === 'last_team_training'
-                ? 'Pick the date'
-                : 'Pick the day it is back'}
-              size="md"
-              testID="home-christmas-break-open"
-              onPress={() => { setScheduleAck(null); setChristmasSheetVisible(true); }}
-            />
-            {christmasBreakAsk.kind === 'last_team_training' && (
-              <Button
-                label="We train through Christmas"
-                variant="secondary"
-                size="md"
-                testID="home-christmas-break-dismiss"
-                onPress={() => handleDismissChristmasBreakAsk(christmasBreakAsk.dismissId)}
-                style={{ marginTop: spacing.sm }}
-              />
-            )}
-          </View>
-        )}
 
         {/* ── Block-rollover honest refusal (Sam's interim ruling, 2026-07-31) ──
             NOT gated on isNormal: a program that stopped must say so whatever
@@ -3796,7 +3756,95 @@ function SheetOption({
   );
 }
 
-// ── Missed-session follow-up card ──
+// ── Compact questions at the top of Program ──
+interface ProgramQuestionNoticeProps {
+  testID: string;
+  questionTestID: string;
+  question: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}
+
+/**
+ * One visual owner for questions the athlete still needs to answer.
+ *
+ * Active modifiers are information, while these cards ask for a decision. The
+ * surfaces deliberately share their quiet card proportions, but question
+ * notices carry an action row and a subject-specific icon.
+ */
+function ProgramQuestionNotice({
+  testID,
+  questionTestID,
+  question,
+  icon,
+  children,
+}: ProgramQuestionNoticeProps) {
+  return (
+    <View style={styles.questionNoticeCard} testID={testID}>
+      <View style={styles.questionNoticeIcon}>{icon}</View>
+      <View style={styles.questionNoticeRow}>
+        <Text style={styles.questionNoticeTitle} testID={questionTestID}>
+          {question}
+        </Text>
+        <View style={styles.questionNoticeActions}>{children}</View>
+      </View>
+    </View>
+  );
+}
+
+interface ChristmasBreakNoticeProps {
+  ask: ChristmasBreakAsk;
+  onOpen: () => void;
+  onTrainThrough: (dismissId: string) => void;
+}
+
+/**
+ * The Christmas ask is a notification doorway, not another content card.
+ * `decideChristmasBreakAsk` still owns whether December, January or silence is
+ * correct; this component only gives the live question the agreed compact
+ * presentation. January has no dismiss because only an answer can safely end
+ * an open team-training break.
+ */
+function ChristmasBreakNotice({ ask, onOpen, onTrainThrough }: ChristmasBreakNoticeProps) {
+  const askingForFinish = ask.kind === 'last_team_training';
+  const question = askingForFinish
+    ? 'When does team training finish before Christmas?'
+    : 'When does team training start again?';
+  return (
+    <ProgramQuestionNotice
+      testID="home-christmas-break-ask"
+      questionTestID="home-christmas-break-question"
+      question={question}
+      icon={<ChristmasBreakNoticeIcon />}
+    >
+      <NoticeChip
+        testID="home-christmas-break-open"
+        label={askingForFinish ? 'Pick date' : 'Pick return date'}
+        primary
+        onPress={onOpen}
+      />
+      {ask.kind === 'last_team_training' && (
+        <NoticeChip
+          testID="home-christmas-break-dismiss"
+          label="We train through Christmas"
+          onPress={() => onTrainThrough(ask.dismissId)}
+        />
+      )}
+    </ProgramQuestionNotice>
+  );
+}
+
+function ChristmasBreakNoticeIcon() {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
+      stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" />
+      <Path d="M12 11v7M9 12.5l6 4M15 12.5l-6 4" />
+    </Svg>
+  );
+}
+
+// ── Missed-session follow-up question ──
 interface MissedSessionNoticeProps {
   /** The most recent unlogged commitment. One question on screen at a time. */
   notice: MissedSession;
@@ -3844,51 +3892,39 @@ interface MissedSessionNoticeProps {
  * already. This component composes no character of what the athlete reads.
  */
 function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: MissedSessionNoticeProps) {
+  // Same quiet proportions as Active modifiers, but a question-mark icon: this
+  // notice asks for an answer while the modifier strip only reports a count.
   return (
-    <View style={styles.missedCard} testID="home-missed-session-prompt">
-      {/* ── THE ACTIVE-MODIFIER BOX'S OWN SHAPE — Sam, 2026-08-22: *"MAKE THE POP
-          UP MORE LIKE THE STYLE OF THE ACTIVE MODIFIER BOX"* ──
-          Same quiet surface, same border, same 16pt glyph in the same 16pt
-          gutter, same 14/700 line. It read as a loud outlined card with a 16pt
-          white headline and two big pills — a second kind of notice, two boxes
-          apart from the one directly above it.
-          THE GLYPH IS A QUESTION MARK, not the modifier's info `i`: this box
-          ASKS something, and the two circles would otherwise be one shape
-          saying two things. It is drawn here rather than imported because
-          `ModifiersStrip` owns a count and a doorway, not a question — sharing
-          the component would mean giving it a second job to do. */}
-      <View style={styles.missedIcon}>
+    <ProgramQuestionNotice
+      testID="home-missed-session-prompt"
+      questionTestID={`missed-session-question-${notice.date}-${notice.kind}`}
+      question={missedQuestion(notice, visibleWeek)}
+      icon={(
         <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
           stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <Circle cx="12" cy="12" r="9" />
           <Path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.5.2-.8.7-.8 1.2v.4" />
           <Path d="M12 17h.01" />
         </Svg>
-      </View>
-      <View style={styles.missedRow}>
-        <Text style={styles.missedTitle} testID={`missed-session-question-${notice.date}-${notice.kind}`}>
-          {missedQuestion(notice, visibleWeek)}
-        </Text>
-        <View style={styles.missedActions}>
-          <MissedChip
+      )}
+    >
+          <NoticeChip
             testID={`missed-session-did-it-${notice.date}-${notice.kind}`}
             label={signedCopy('missed.prompt.yes')}
             primary
             onPress={() => onLog(notice)}
           />
-          <MissedChip
+          <NoticeChip
             testID={`missed-session-skipped-it-${notice.date}-${notice.kind}`}
             label={signedCopy('missed.prompt.no')}
             onPress={() => onSkip(notice)}
           />
-          <MissedChip
+          <NoticeChip
             testID={`missed-session-move-it-${notice.date}-${notice.kind}`}
             label={signedCopy('missed.prompt.move')}
             onPress={() => onMove(notice)}
           />
-        </View>
-      </View>
-    </View>
+    </ProgramQuestionNotice>
   );
 }
 
@@ -3928,7 +3964,7 @@ function weekdayNameForISO(dateISO: string): string {
   return WEEKDAY_NAMES[Number.isNaN(parsed.getTime()) ? 0 : parsed.getDay()];
 }
 
-function MissedChip({ testID, label, primary, onPress }: {
+function NoticeChip({ testID, label, primary, onPress }: {
   testID: string;
   label: string;
   primary?: boolean;
@@ -3940,12 +3976,15 @@ function MissedChip({ testID, label, primary, onPress }: {
       accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.missedChip,
-        primary && styles.missedChipPrimary,
+        styles.questionNoticeChip,
+        primary && styles.questionNoticeChipPrimary,
         pressed && { opacity: 0.72 },
       ]}
     >
-      <Text style={[styles.missedChipText, primary && styles.missedChipPrimaryText]}>
+      <Text style={[
+        styles.questionNoticeChipText,
+        primary && styles.questionNoticeChipPrimaryText,
+      ]}>
         {label}
       </Text>
     </Pressable>
@@ -4446,7 +4485,9 @@ function ChristmasBreakSheet({ visible, ask, onClose, onDone }: ChristmasBreakSh
       <View>
         <SheetHeader
           title="Christmas break"
-          subtitle={asking ? 'When is your last team training?' : 'When does team training go back?'}
+          subtitle={asking
+            ? 'When does team training finish before Christmas?'
+            : 'When does team training start again?'}
         />
         <SheetDescription>
           {asking
@@ -4658,25 +4699,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
     marginVertical: spacing.sm,
   },
-  /* The strip's `text` column: it takes the rest of the row. */
-  missedRow: { flex: 1, gap: 10 },
-  /* ⚠ **THESE ARE `ModifiersStrip`'S OWN VALUES, TO THE NUMBER** — Sam,
-     2026-08-22: *"MAKE THE POP UP MORE LIKE THE STYLE OF THE ACTIVE MODIFIER
-     BOX"*. Surface, border, radius and padding are that box's `strip`; the row
-     below is its `text` and `count`. They are written here rather than imported
-     because the two boxes are different components, and a shared style object
-     for "a notice at the top of Program" is the abstraction to make WHEN there
-     is a third — not before. If either moves, this comment is the pointer.
-     `spacing.sm` above it is the day screen's one gap. */
-  missedCard: {
+  /* One compact owner for Program questions. This began as the missed-session
+     shape and became shared when the Christmas prompt became the third top
+     notice. Its values still match ModifiersStrip's quiet card exactly. */
+  questionNoticeRow: { flex: 1, gap: 10 },
+  questionNoticeCard: {
     marginTop: spacing.sm,
     flexDirection: 'row',
-    /* CENTRED, like the modifier box's `i` — Sam, 2026-08-22: *"THE LITTLE
-       QUESTION MARK ICON SHOULD BE ON THE SIDE AND CENTRED NOT AT THE TOP"*.
-       `alignItems: 'center'` is `strip`'s own line, and it was the one value
-       not copied across: the glyph was pinned to the first text line instead,
-       which put it level with the question while the modifier's sits level with
-       its whole box. */
+    /* CENTRED, like the modifier box's `i` and the missed-session question
+       mark. Christmas inherits that same side gutter for its calendar icon. */
     alignItems: 'center',
     gap: 10,
     paddingVertical: 12,
@@ -4686,27 +4717,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1F1F1F',
   },
-  /* The strip's own gutter, so the two glyphs sit on one vertical line — 21pt
-     since Sam, 2026-08-22 (*"INCREASE SIZE OF BOTH ICONS BY 30% OR SO"*), and
-     it has to move in step with `ModifiersStrip`'s `icon` or the two boxes stop
-     lining up. Nothing here pushes the glyph up or down: the row centres it. */
-  missedIcon: { width: 21, alignItems: 'center' },
-  /* The strip's `count` line, to the value: 14/700 on #E8EAED. It was 16pt
-     white, which made a question louder than the day's own title. */
-  missedTitle: { color: '#E8EAED', fontSize: 14, fontWeight: '700', lineHeight: 19 },
-  missedBody: {
-    color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 19,
-    marginBottom: spacing.sm,
-  },
-  missedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  questionNoticeIcon: { width: 21, alignItems: 'center' },
+  questionNoticeTitle: { color: '#E8EAED', fontSize: 14, fontWeight: '700', lineHeight: 19 },
+  questionNoticeActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   /* Smaller than they were, to sit inside a quiet box rather than fill a card. */
-  missedChip: {
+  questionNoticeChip: {
     paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999,
     borderWidth: 1, borderColor: '#2A2A2A',
   },
-  missedChipPrimary: { backgroundColor: '#D8D800', borderColor: '#D8D800' },
-  missedChipText: { color: '#C9CCC9', fontSize: 12, fontWeight: '700' },
-  missedChipPrimaryText: { color: '#0B0B0B' },
+  questionNoticeChipPrimary: { backgroundColor: '#D8D800', borderColor: '#D8D800' },
+  questionNoticeChipText: { color: '#C9CCC9', fontSize: 12, fontWeight: '700' },
+  questionNoticeChipPrimaryText: { color: '#0B0B0B' },
 
   // Active Coach Notes — compact control-panel cards derived from typed
   // active constraints. Hidden entirely when nothing is shaping the program.
