@@ -133,3 +133,55 @@ Own Metro on `:8092` from this checkout, app launched with
   task about a recovery walk.
 - The shared simulator is now pointed at `:8092`. Whoever owns
   `lfa-hingecod-8d68` will need to relaunch against `:8081`.
+
+---
+
+# R-365 — rest is a conditioning and speed line only
+
+Sam, same session, on `2:00 rest` under `Hamstring Curl` and `Nordic Lower`:
+*"did we not remove all fucking rest periods from being shown on sessions
+besides conditioning?"* → *"I don't want it to show for any strength exercise -
+ever"* → *"shouldn't happen in mobility or recovery either - the only thing that
+has rest is conditioning and speed"*.
+
+**He was remembering R-116, which did not say that.** R-116 (2026-08-20) hid the
+line for POWER alone, on the stated premise *"Power was the only role whose rest
+cleared the 90-second display threshold"*. That is a MEASUREMENT of the doses of
+the day, written down as if it were the rule — and it stopped being true the
+moment a compiler dosed a hamstring row at 90 s+.
+
+**⚠ AND THE GUARD WAS GREEN THROUGHOUT THE LEAK.** Its cell pinned the
+EXCEPTION's source text — `/restLabel && exercise\?\.role !== 'power' \?/` — so
+it went on confirming the exception while the rule broke around it. **A cell that
+asserts an exception cannot see the rule leak.** Inverted, not deleted.
+
+**THE GATE IS THE CARD.** `StrengthExerciseCard` renders strength, mobility,
+recovery, accessories, prehab and primer; conditioning and speed have their own
+`ConditioningPhaseRow` with its own rest wording. Deleting the line from the
+shared card states Sam's rule by construction — no role list to keep in step.
+`restLabel`, the gated `Text`, the `formatRest` import and the `restHint` style
+are all gone; `formatRest` survives in `dayWorkoutHelpers` for conditioning.
+`restSeconds` on the row is untouched.
+
+**Receipts.** `test:session-execution-checklist` **212 passed, 2 failed** — the
+same two reds the control run carries. Four new cells. **MUTATION-PROVEN:**
+restoring the screen → **209/5**, the three extra reds being exactly the new
+cells; restored → 212/2.
+
+`test:law-registry` 13/1, `test:ruling-registry` 5/3, `test:copy-rulings-binding`
+7/2, `test:repo-law-guards` 51/12, `test:session-template` 87/1,
+`test:mobility-flow` 75/3, `test:visible-surfaces` 69/1 — **every one measured on
+the reverted tree and identical**. `test:recovery-template` 61/0,
+`test:dead-affordances` 6/0. `test:compile` product 0 / devtools 0.
+
+**⚠ ONE CELL READ MY OWN COMMENT.** The new "no role-gated rest survives" cell
+first red because the prose above the deleted line QUOTES `role !== 'power'` to
+say why it went. It reads `codeOnly(strengthCard)` now — a cell that reds when
+someone explains themselves is not a gate.
+
+## NOT COVERED
+
+- **The rest line was never reproduced on the seeded week.** Every row here doses
+  under 90 s, before and after. Sam saw it on his own program; the removal is
+  proven by the source cells plus mutation, and the device run proves only that
+  the session still renders correctly without it.

@@ -1372,14 +1372,42 @@ ok('[10] the colours moved with the glyphs — one table, not a second palette',
     && !/rowIconColor/.test(screen),
   'the Session screen takes RowIcon\'s own colour and never overrides it');
 
-// ── POWER IS AN ORDINARY ROW.
-ok('[10] Power shows no rest line — the one format that made it look special',
-  /restLabel && exercise\?\.role !== 'power' \?/.test(screen), 'the rest Text is role-gated');
-ok('[10] and hiding it DELETES NO DATA — restSeconds is still read, unchanged',
-  /const restLabel = exercise\.restSeconds[\s\S]{0,80}formatRest\(exercise\.restSeconds\)/
-    .test(strengthCard)
-    && !/restSeconds:\s*(null|undefined|0)\b/.test(strengthCard),
-  strengthCard.split('\n').filter((l: string) => /restSeconds/.test(l)));
+/**
+ * ── REST BELONGS TO CONDITIONING AND SPEED. NOTHING ELSE PRINTS IT. ─────────
+ *
+ * SAM, 2026-09-04, seeing `2:00 rest` under `Hamstring Curl` and `Nordic
+ * Lower`: *"I don't want it to show for any strength exercise - ever"*, then
+ * *"shouldn't happen in mobility or recovery either - the only thing that has
+ * rest is conditioning and speed"*.
+ *
+ * ⚠ **THIS INVERTS R-116's REST CELL RATHER THAN DELETING IT, AND THE OLD CELL
+ * WAS PASSING THE WHOLE TIME.** R-116 gated the line on `role !== 'power'`
+ * because *"Power was the only role whose rest cleared the 90-second display
+ * threshold"* — a MEASUREMENT of the doses of the day, asserted as if it were
+ * the rule. The cell then pinned the gate's exact source text, so it went on
+ * confirming the exception while the doses moved underneath it and two hamstring
+ * rows crossed 90 s. **A cell that pins an exception cannot see the rule leak.**
+ *
+ * The replacement asserts the RULE: this card prints no rest at all, and the
+ * only components that may are the two Sam named. That holds no matter what a
+ * compiler doses next week.
+ */
+ok('[10] no strength-family row prints a rest line — strength, mobility or recovery',
+  !/restLabel/.test(strengthCard) && !/formatRest/.test(strengthCard),
+  strengthCard.split('\n').filter((l: string) => /rest/i.test(l)));
+ok('[10] and the whole screen keeps no rest hint outside conditioning and speed',
+  !/styles\.restHint/.test(screen) && !/formatRest/.test(codeOnly(screen)),
+  'the rest line is deleted, not re-gated on another role');
+ok('[10] deleting the LINE deleted no PRESCRIPTION — restSeconds is untouched',
+  !/restSeconds:\s*(null|undefined|0)\b/.test(strengthCard)
+    && withPower.items.length > 0,
+  'the card must not zero, clear or stop storing the row\'s rest');
+/* `codeOnly`, because the prose above the deleted line QUOTES the old gate to
+   say why it went. A cell that reads a comment is a cell that reds when someone
+   explains themselves. */
+ok('[10] Power needs no rest exception any more — the rule covers it',
+  !/role !== 'power'/.test(codeOnly(strengthCard)),
+  'a role-gated rest line is the exception this ruling replaced');
 ok('[10] Power has no separate row component and no section of its own',
   (screen.match(/function StrengthExerciseCard/g) ?? []).length === 1
     && !/function PowerRow|function PowerExerciseCard/.test(screen)

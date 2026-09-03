@@ -9227,3 +9227,51 @@ contraindication refuses selection, swap and retention; mutations
 `recovery_rating` and `atg_knee`), `test:injury-matrix-sheet` (release unit
 31: parity + completeness, green). Intake: `docs/EXERCISE_INTAKE_RECOVERY_2026-09-04.md`.
 Receipt: `docs/STATUS_INTEGRATE.md`.
+
+---
+
+**R-365** · *"I don't want it to show for any strength exercise - ever"*, then
+*"shouldn't happen in mobility or recovery either - the only thing that has rest
+is conditioning and speed"* (Sam, 2026-09-04, on finding `2:00 rest` under
+`Hamstring Curl` and `Nordic Lower`) · **REST IS A CONDITIONING AND SPEED LINE.
+NO OTHER ROW PRINTS ONE.**
+
+⚠ **THIS SUPERSEDES R-116's REST CLAUSE, AND THE CLAUSE'S PREMISE IS THE
+LESSON.** R-116 (2026-08-20) hid the line for POWER alone, reasoning that
+*"Power was the only role whose rest cleared the 90-second display threshold"*.
+That was a MEASUREMENT of the doses of the day written down as if it were the
+rule. It stopped being true the moment a compiler dosed anything else at 90 s+,
+and it did: two hamstring rows. **R-116's other clauses are untouched** — the
+checkbox beside the stepper, the play button beside the name, sets × reps then
+Form cues, no separate Power row format or section. Only the rest clause falls.
+
+⚠ **THE GATE IS THE CARD, NOT A CONDITION INSIDE IT.** `StrengthExerciseCard`
+renders strength, mobility, recovery, accessories, prehab and primer rows;
+conditioning and speed have their own `ConditioningPhaseRow`, which owns its own
+rest wording. Deleting the line from the shared card therefore states Sam's rule
+BY CONSTRUCTION — there is no role list left to keep in step, and no future dose
+change can leak a rest line back onto a strength row. `formatRest` and the
+`restHint` style are removed from the screen with it; `formatRest` survives in
+`dayWorkoutHelpers` for the conditioning owner.
+
+⚠ **A LINE IS DELETED; A PRESCRIPTION IS NOT.** `restSeconds` is untouched on
+the row — still stored, still generated, still read by everything that reads it.
+Same boundary R-116 drew for Power.
+
+**Search words:** rest, rest line, rest period, rest hint, 2:00 rest, restSeconds,
+formatRest, restHint, 90 second threshold, Hamstring Curl, Nordic Lower, power
+rest, conditioning rest, speed rest.
+
+· `BUILT src/screens/home/DayWorkoutScreenV2.tsx` — the `restLabel` computation,
+the gated `Text`, the `formatRest` import and the `restHint` style are all gone.
+**Guarded by `test:session-execution-checklist` [10]** — four cells: the shared
+card prints no rest line at all; the screen keeps no rest hint outside
+conditioning and speed; the card still stores `restSeconds` unchanged; and no
+role-gated rest survives anywhere. **MUTATION-PROVEN 2026-09-04:** restoring the
+screen reddened exactly those cells (209/5 against 212/2) and nothing else;
+restoring the fix returned the suite to its two pre-existing reds.
+
+⚠ **THE OLD CELL WAS GREEN THE WHOLE TIME THE RULE WAS LEAKING**, because it
+pinned the EXCEPTION's source text (`restLabel && exercise?.role !== 'power'`)
+rather than the rule. A cell that asserts an exception cannot see the rule break.
+It is INVERTED here, not deleted.

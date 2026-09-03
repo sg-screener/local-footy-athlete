@@ -149,7 +149,6 @@ import {
   buildCueText,
   cueForImplement,
   cleanNotes,
-  formatRest,
   formatLowLoadSetsReps,
   formatStrengthSetsReps,
   formatConditioningRowPrescription,
@@ -3476,7 +3475,6 @@ function StrengthExerciseCard({
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
   const setsReps = prescriptionLabel ?? formatStrengthSetsReps(exercise);
-  const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
   // R-104: the cue must fit the implement in the athlete's hands. `RDLs` is
   // authored for barbell OR dumbbells and its cue says "bar slides down leg" —
   // on a dumbbell day that names equipment they have not got, so it is
@@ -3792,25 +3790,30 @@ function StrengthExerciseCard({
       </View>
 
 
-      {/* ⚠ **POWER SHOWS NO REST LINE — SAM, 2026-08-20 (R-116).** *"Power is
-          visually an ordinary Strength row. Remove its unique visible rest line
-          (`2:00 rest`). Do not give Power a separate row format or section."*
-          Power was the only role whose rest cleared the 90s threshold, so the
-          line WAS the special format — one row in the list wearing an extra
-          line nothing else had.
+      {/* ⚠ **NO STRENGTH ROW SHOWS A REST LINE — SAM, 2026-09-04.** *"I don't
+          want it to show for any strength exercise - ever"*, on finding
+          `Hamstring Curl` and `Nordic Lower` wearing one.
 
-          ⚠ **THIS HIDES A LINE; IT DELETES NO DATA.** *"hiding Power's rest line
-          must not delete its domain prescription."* `restSeconds` is untouched
-          on the row, still stored, still generated, still read by everything
-          that reads it — `restLabel` above is computed exactly as before and a
-          guard asserts the row still carries its rest. Only this Text is
-          gated. */}
-      {restLabel && exercise?.role !== 'power' ? (
-        <View style={styles.detailsRow}>
-          <Text style={styles.restHint}>{restLabel}</Text>
-        </View>
-      ) : null}
+          ⚠ **THIS SUPERSEDES R-116's REST CLAUSE, WHOSE PREMISE WAS WRONG.**
+          That ruling (2026-08-20) hid the line for POWER alone, on the stated
+          reason that *"Power was the only role whose rest cleared the 90-second
+          display threshold"*. It was not: any row the compiler doses at 90 s+
+          cleared it, so the exception was written against a measurement rather
+          than against the rule Sam actually wanted. Role-gating one row was
+          always going to leak — and it did, twice, to two hamstring rows.
 
+          ⚠ **THE GATE IS THE CARD, NOT A CONDITION INSIDE IT.** This component
+          renders strength, mobility, recovery, accessories, prehab and primer
+          rows; conditioning and speed have their own `ConditioningPhaseRow`,
+          which owns its own rest wording. So deleting the line here says
+          "no rest line outside conditioning" by construction, with nothing left
+          to keep in step — instead of a `role !== 'power'` list that grows a
+          name every time the doses move.
+
+          ⚠ **THIS DELETES A LINE, NOT A PRESCRIPTION.** `restSeconds` is
+          untouched on the row: still stored, still generated, still read by
+          everything that reads it. Only the athlete's card stops printing it,
+          which is the same boundary R-116 drew. */}
       {/* Curated coaching cue, collapsed by default (Sam, run-7 ruling 2).
           Generator per-exercise notes are still deliberately NOT rendered: the
           curated layer owns every athlete-visible word; generation provides
@@ -6110,12 +6113,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 16,
-  },
-  restHint: {
-    color: '#6A6A6A',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
   },
 
   // ── Cue toggle ──
