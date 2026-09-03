@@ -312,7 +312,6 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   /** Acknowledged producer metadata for fixture-derived Coach Notes. */
   fixtureMutationSource?: FixtureMutationSourceMetadata;
   /** Trace root that owns fixture mutation plus this note projection. */
-  fixtureMutationTraceId?: string;
   appliesToDate?: string;
   /** Optional Mon-Sun ISO of the affected week. */
   weekStartISO?: string;

@@ -294,6 +294,35 @@ function compileFixtureDecisionGroup(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { commitCanonicalAcceptedFixtureEditEffect } =
     require('./acceptedStateTransaction');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { acceptedVisibleRowsForWeeks, upsertGameChangeCoachNoteForAcceptedEffect } =
+    require('../utils/gameChangeCoachNotes');
+  const { getMondayForDate } = require('../utils/sessionResolver');
+  const profile = useProfileStore.getState().onboardingData;
+  // THE NOTE IS PART OF THE DECISION. The live transaction lands the effect and
+  // then derives the "Game moved/added/removed" coach note (the undo card) from
+  // the week before and after. Replay must do both, or the athlete relaunches
+  // into the right week with the note gone and disk disagreeing with memory
+  // (found on the simulator 2026-09-02; held by `test:move-game-relaunch`).
+  const landWithNote = (effect: CanonicalAcceptedFixtureEditEffect): void => {
+    const weekStarts = [getMondayForDate(effect.targetDate)];
+    const before = profile ? acceptedVisibleRowsForWeeks(profile, weekStarts) : [];
+    const result = commitCanonicalAcceptedFixtureEditEffect(effect);
+    if (!profile) return;
+    try {
+      upsertGameChangeCoachNoteForAcceptedEffect({
+        effect,
+        adjustmentId: result.reversibleAdjustmentId,
+        before,
+        after: acceptedVisibleRowsForWeeks(profile, weekStarts),
+      });
+    } catch (error) {
+      logger.warn('[quiescentBoot] fixture-edit coach note replay failed', {
+        entry: effect.targetDate,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
   const upgradeRows = completeLedger.filter((entry) =>
     entry.decision.kind === 'legacy_fixture_effect_upgrade');
   const upgrades: Array<{
@@ -307,14 +336,14 @@ function compileFixtureDecisionGroup(
     });
     const effect = state.effects[0];
     if (effect) {
-      commitCanonicalAcceptedFixtureEditEffect(effect);
+      landWithNote(effect);
       continue;
     }
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { replayLegacyFixtureEntryToEffect } =
       require('./legacyFixtureEffectMigration');
     const acceptedEffect = replayLegacyFixtureEntryToEffect(entry);
-    commitCanonicalAcceptedFixtureEditEffect(acceptedEffect);
+    landWithNote(acceptedEffect);
     upgrades.push({ sourceEntryId: entry.id, acceptedEffect });
   }
   return upgrades;

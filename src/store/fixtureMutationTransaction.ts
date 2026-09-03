@@ -4,14 +4,13 @@ import type {
   FixtureMutationKind,
   FixtureMutationSourceMetadata,
 } from '../types/fixtureMutation';
-import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
-import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
   canonicalFixtureKind,
   targetWeekFixtures,
 } from '../rules/fixtureConditionedAvailability';
 import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import {
+  acceptedVisibleRowsForWeeks as acceptedVisibleRows,
   gameChangeActionFromRebuild,
   upsertGameChangeCoachNoteFromDiff,
   type GameChangeVisibleDay,
@@ -309,36 +308,6 @@ function materializedWeekStarts(): string[] {
   ])).sort();
 }
 
-function acceptedVisibleRows(
-  profile: OnboardingData,
-  weekStarts: readonly string[],
-): GameChangeVisibleDay[] {
-  const state = useProgramStore.getState();
-  const markedDays = state.acceptedMaterialContext.markedDays;
-  return weekStarts.flatMap((weekStart) => {
-    const accepted = rebaseAcceptedEffectiveWeek({
-      surfaces: storedWorldSurfaces(state),
-      weekStart,
-      profile,
-      markedDays,
-    });
-    const byDay = new Map(accepted.visibleWorkouts.map((workout) =>
-      [workout.dayOfWeek, workout]));
-    return Array.from({ length: 7 }, (_, offset): GameChangeVisibleDay => {
-      const date = addDaysISO(weekStart, offset);
-      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-      const workout = byDay.get(dayOfWeek);
-      return {
-        date,
-        dayOfWeek,
-        workoutName: workout?.name ?? null,
-        workoutType: workout?.workoutType ?? null,
-        sessionTier: workout?.sessionTier ?? null,
-      };
-    });
-  });
-}
-
 function beginFixtureMutationTrace(
   input: FixtureMutationTransactionInput,
   resolvedTargetDate: string,
@@ -513,7 +482,6 @@ function deriveAcknowledgedCoachNote(args: {
       todayISO: args.resolved.todayISO,
       adjustmentId: args.result.reversibleAdjustmentId,
       source,
-      traceId: args.trace.traceId,
     });
     return { noteId, source };
   } catch (error) {
@@ -857,12 +825,6 @@ export async function executeFixtureMutationTransaction(
       traceId: trace.traceId,
     };
   });
-}
-
-function addDaysISO(date: string, offset: number): string {
-  const parsed = new Date(`${date.slice(0, 10)}T12:00:00`);
-  parsed.setDate(parsed.getDate() + offset);
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
 }
 
 /** Exposed only for permanent ownership/static tests. */

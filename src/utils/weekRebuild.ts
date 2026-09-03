@@ -77,7 +77,10 @@ import {
 } from './programBlockState';
 import { logger } from './logger';
 import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
-import { reversibleAdjustmentId as createReversibleAdjustmentId } from '../rules/reversibleAdjustmentLedger';
+import {
+  reversibleAdjustmentId as createReversibleAdjustmentId,
+  reversibleAdjustmentNonceFor,
+} from '../rules/reversibleAdjustmentLedger';
 import {
   canonicalFixtureKind,
   resolveProfileTargetWeekAvailability,
@@ -607,9 +610,20 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         args.clearOverlayDate ?? 'none',
         targetDate,
       ].join(':');
+      // The accepted effect is the decision; live and replay both land it
+      // through this door, so the id is minted from the effect and the same
+      // effect always yields the same adjustment (see `reversibleAdjustmentNonceFor`).
+      const effectSeed = args.acceptedFixtureEffect
+        ? [args.acceptedFixtureEffect.action, args.acceptedFixtureEffect.fixtureKind,
+            args.acceptedFixtureEffect.sourceDate ?? 'none', args.acceptedFixtureEffect.targetDate,
+            args.acceptedFixtureEffect.acceptedAt, sourceActionOrIntentId].join('|')
+        : null;
       const adjustmentId = createReversibleAdjustmentId({
         kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
         sourceActionOrIntentId,
+        ...(args.acceptedFixtureEffect && effectSeed
+          ? { createdAt: args.acceptedFixtureEffect.acceptedAt, nonce: reversibleAdjustmentNonceFor(effectSeed) }
+          : {}),
       });
       // R5.3 LEG (i), 2026-08-06: THE DOOR PUBLISHES ITS DECLARATION, NEVER ITS
       // CONTENT (option 2, approved on measurement —

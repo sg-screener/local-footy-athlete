@@ -5,7 +5,7 @@ import { acceptedProfileForContext, normalizeAcceptedMaterialContext } from './a
 import { commitAcceptedStateTransaction } from './acceptedStateTransaction';
 import { canonicalProgramInputFromProfile } from '../services/api/generateProgram';
 import { compileCanonicalSourceFactWeeks, sourceFactRequiresCompilation, type CanonicalWeeklySourceFactInput } from '../rules/canonicalWeeklySourceFactCompiler';
-import { composeTemporarySourceFactCompatibility, type TemporarySourceFact } from '../rules/temporarySourceFact';
+import { composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint, type TemporarySourceFact } from '../rules/temporarySourceFact';
 import { getAthletePrefs } from './athletePreferencesStore';
 import { recordedLoadsFromFeedback } from '../rules/blockBoundaryProgression';
 import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
@@ -61,12 +61,20 @@ export function compileAcceptedSourceFacts(facts: readonly TemporarySourceFact[]
   const input = captureSourceFactCompilerInput(state, facts);
   const compiled = compileCanonicalSourceFactWeeks(input);
   const compatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: facts });
+  // THIS COMPILER OWNS THE FACT-DERIVED CONSTRAINTS AND ONLY THOSE. A
+  // constraint that is not a fact's projection — the "Game moved" note that
+  // carries a fixture decision's undo — is an input this compiler must carry
+  // forward untouched, exactly as persistence does (`constraintInputsForPersistence`).
+  // Until 2026-09-03 the whole list was replaced, so every fact compilation —
+  // including boot's — silently swept the note (held by `test:move-game-relaunch`).
+  const retainedInputs = normalizeAcceptedMaterialContext(state.acceptedMaterialContext)
+    .activeConstraints.filter((constraint) => !isTemporarySourceFactConstraint(constraint));
   commitAcceptedStateTransaction({
     reason: 'canonical_source_fact_compilation', operation: 'forward_decision',
     program: { weekScopedOverlays: compiled.weekScopedOverlays, dateOverrides: { ...compiled.dateOverrides } },
     sourceFactCompilerInput: input,
     temporarySourceFacts: [...facts], injuryEpisodes: compatibility.injuryEpisodes,
-    activeConstraints: compatibility.activeConstraints,
+    activeConstraints: [...retainedInputs, ...compatibility.activeConstraints],
     readinessSignalsByDate: compatibility.readinessSignalsByDate,
     profile: input.profile, preserveExactAcceptedWorkouts: true, skipConstraintProjection: true,
     validateWeekStarts: compiled.affectedWeekStarts,

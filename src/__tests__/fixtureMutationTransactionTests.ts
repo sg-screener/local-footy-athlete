@@ -503,8 +503,13 @@ async function main(): Promise<void> {
       constraint.id === result.noteId);
     assert(note?.type === 'schedule' && note.fixtureMutationSource?.commandId === metadata.commandId,
       `Coach Note source metadata missing: ${JSON.stringify({noteId: result.noteId, notes: useCoachUpdatesStore.getState().activeConstraints})}`);
-    assert(note?.fixtureMutationTraceId === result.traceId,
-      'Coach Note trace acknowledgement missing');
+    // 2026-09-03: the per-run trace id no longer rides on the note. It had no
+    // reader, and a value that differs every process made the replayed note
+    // (boot re-derives it from the decision) never match the persisted one.
+    // The acknowledgement the note keeps is the decision's source metadata,
+    // asserted above; `test:move-game-relaunch` holds the relaunch.
+    assert(!('fixtureMutationTraceId' in (note ?? {})),
+      'Coach Note must not carry a per-run trace id');
     assert(note?.noteProof?.kind === 'game_change' && note.noteProof.after.length > 0,
       'Coach Note proof was not derived from acknowledged visible rows');
   });

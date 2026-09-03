@@ -1660,3 +1660,75 @@ there on this defect — it proves the promised behaviour, it is not loosened.
 | `test:bible-anchors` — 15 (anchor markers expecting deleted `coachingEngine` helpers and a severity-band owner) | unfinished architecture gate (deletion anchors) | none | `8d68d6dd`: 280/295 same; `main`: 292/295 | finish the coachingEngine demolition the anchors describe |
 | `test:full-body-balance` — 1 | unverified | a full-body day's compound balance | `8d68d6dd`: 7/8 same | one root-cause look |
 | `test:ruling-registry` — 3 cells, `test:law-registry` — 21 unenforced laws | process gates | none | red on the base tree | build the enforcers / clear the re-asks |
+
+## 2026-09-03 — MOVE-GAME RELAUNCH FIXED (Sam: "Fix the move-game relaunch problem first, then rerun all six simulator flows")
+
+**Scope held:** this and only this. No programming (generation) fix; the
+double-squat report stays on hold. REGISTRY-GREP: R-105 (move legality),
+R-120 (add menu), no ruling touches a note's replay — nothing re-asked.
+
+### The defect, headless, before any fix
+Reproduced through the phone's own doors (`executeFixtureMutationTransaction`
+move Sat→Sun, then `relaunchApp`): the game came back on Sunday, the ledger
+held the active move adjustment, but the coach-updates constraints in memory
+were `[]` while disk still held
+`schedule:game-change:reversible-adjustment:game_fixture_move…`. That is the
+exact divergence the dev persistence gate refuses ("Persisted semantic state
+did not converge: coach-updates"), which is why the flow never saw
+`e2e-reload-ready`. **Athlete-visible effect on a real phone:** the moved
+game survives, but the "Game moved" card that carries the undo is gone after
+a relaunch — and every stack-trace write during boot was traced to find why.
+
+### Three layers, each found only after the previous was fixed and the cell stayed red
+1. **Boot replayed the decision without its projection.** `quiescentBoot.compileFixtureDecisionGroup`
+   re-lands the accepted fixture effect (the week is right) but never
+   re-derived the note. Fix: `upsertGameChangeCoachNoteForAcceptedEffect`
+   (new, `gameChangeCoachNotes.ts`) derives from the effect exactly what the
+   live transaction derives from the request; the live rows helper
+   `acceptedVisibleRowsForWeeks` moved out of the transaction so both read the
+   same rows. Replay upserts through the same constraint transaction as live.
+2. **The source-fact compiler replaced the whole constraint list.**
+   `compileAcceptedSourceFacts` wrote `activeConstraints: compatibility.activeConstraints`
+   (facts only) — at boot and on every live injury/illness compile — sweeping
+   any non-fact constraint. Fix: carry forward `!isTemporarySourceFactConstraint`,
+   the same definition persistence already uses for "input".
+3. **A replayed decision minted a fresh random id.** `reversibleAdjustmentId`
+   used `new Date()` + a random nonce, so the replayed adjustment — and the
+   note `game-change:<id>` that links to it — could never equal the persisted
+   one; boot writes nothing to disk by law, so memory and disk stayed apart
+   for ever. Fix: when the rebuild lands an accepted effect it mints from the
+   effect (`createdAt = acceptedAt`, nonce = djb2 over action/kind/dates/
+   acceptedAt/commandId — `reversibleAdjustmentNonceFor`). Same effect, same
+   id, live and at every relaunch; the ledger's "existing id → return" branch
+   now makes replay idempotent. Also removed `fixtureMutationTraceId` from the
+   note: written by the live path, read by nobody, different every process.
+   `fixtureMutationTransactionTests` cell 10 re-pinned to assert its absence.
+
+North star: moved TOWARD — the note and the adjustment are now derived from
+the stored decision deterministically; no new stored state.
+
+### Receipts
+| what | result |
+| --- | --- |
+| `test:move-game-relaunch` (new, in the bible chain) | red-first 4/7 (memory `[]`; disk note; gate refused) → after layer 1: 4/7 → after layer 2: 5/7 (note back, ids differ) → after layer 3: **7/7** including the real `waitForDevE2EPersistence` gate |
+| `test:compile` | PASSED, 0 errors against baseline, at every step |
+| `test:fixture-mutation-transaction` 21/21 · `test:g1-move-durability` 35/35 · `test:accumulated-away-transaction` 20/20 · `test:temporary-source-facts` 90/90 · `test:test-truth` green | unchanged green |
+| `test:game-change-coach-notes` 5 red · `test:coach-note-lifecycle` 11 red · `test:fixture-conditioned-replan` 19 red · `test:quiescent-boot` 6 red · `test:injury-fallback-journey` 4 red | **byte-identical red lists at the unmodified base `63f377d4`** (control worktree `/private/tmp/lfa-hingecod-ctrl`; md5 of the sorted FAIL lines equal: 97b039b8…, f96dfa5e…, ef4224c4…, 34cab681…). Inherited, not mine. The first four were not in yesterday's diagnostic table and are added to it here. |
+| simulator `week-move-game` alone | **PASS** — drag on the Manage week board, save, Sunday fixture, checkpoint relaunch, `e2e-reload-ready`, Sunday fixture still there (`artifacts/audit/week-move-game-relaunched`) |
+| all six audit flows, in order, `--device` + `E2E_METRO_URL`, 8-min watchdog each | **6/6 PASS** — bin-undo-toast, block-rollover, full-reset-lands-clean, readiness-ack-never-silent, removal-undo-home, week-move-game (log: scratch `audit-flows-after-fix.log`; no flow was loosened — week-move-game still ends with the checkpoint relaunch and the Sunday fixture after it) |
+
+### What this changes in yesterday's classification
+- **On glass, move-game:** was "REAL DEFECT, P1, not fixed" → **WORKING**,
+  held by `test:move-game-relaunch` (headless, through the phone's doors) and
+  by the `week-move-game` flow (on glass).
+- **Diagnostic suites red** gains four inherited rows, all proven identical at
+  `63f377d4`: `game-change-coach-notes` 5, `coach-note-lifecycle` 11,
+  `fixture-conditioned-replan` 19 (already listed), `quiescent-boot` 0/6.
+  The quiescent-boot reds ("boot appends nothing", "world is its inputs") are
+  the same architecture family as `fixture-identity`; they were red before
+  this fix and are unchanged by it.
+- **Unverified:** a dismissed game-change note after a relaunch (the note is
+  re-derived from the decision; whether the dismissal record still matches
+  it was not exercised — no flow or cell covers dismiss-then-relaunch).
+- **Release gate:** unchanged — still 11/27, stops at `compiler-year`
+  (census). Not rerun for this fix; nothing in it touches generation.

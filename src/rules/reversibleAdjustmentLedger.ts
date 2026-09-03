@@ -324,6 +324,22 @@ export function normalizeReversibleAdjustmentLedger(args: {
   };
 }
 
+/**
+ * A REPLAYED DECISION MINTS THE SAME ID. The reversible adjustment behind an
+ * accepted fixture effect is derived from that effect at boot, so its id — and
+ * the id of the "Game moved" note that links to it — must be a function of the
+ * decision, never of the clock or a random nonce. Otherwise every relaunch
+ * carries a note whose identity disk has never seen (found 2026-09-03; held by
+ * `test:move-game-relaunch`). djb2 over the seed, base36.
+ */
+export function reversibleAdjustmentNonceFor(seed: string): string {
+  let hash = 5381;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = ((hash * 33) ^ seed.charCodeAt(index)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 export function reversibleAdjustmentId(args: {
   kind: ReversibleAdjustmentKind;
   sourceActionOrIntentId: string;

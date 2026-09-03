@@ -10,6 +10,8 @@ import type {
   Workout,
 } from '../types/domain';
 import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
+import type { OnboardingData } from '../types/domain';
+import type { CanonicalAcceptedFixtureEditEffect } from '../rules/canonicalWeeklyFixtureEditState';
 import {
   addDays,
   getMondayForDate,
@@ -39,7 +41,6 @@ export interface GameChangeCoachNoteInput {
   todayISO?: string;
   adjustmentId?: string | null;
   source?: FixtureMutationSourceMetadata;
-  traceId?: string;
 }
 
 const DAY_NAMES: DayOfWeek[] = [
@@ -196,7 +197,6 @@ export function buildGameChangeCoachNoteConstraint(
     reasonLabel: title,
     source,
     ...(input.source ? { fixtureMutationSource: { ...input.source } } : {}),
-    ...(input.traceId ? { fixtureMutationTraceId: input.traceId } : {}),
     weekStartISO: input.weekStartISO,
     rules: effects,
     safeFocus: [],
@@ -241,6 +241,79 @@ export function upsertGameChangeCoachNoteFromDiff(input: GameChangeCoachNoteInpu
   }
   store.upsertActiveConstraint(constraint);
   return constraint.id;
+}
+
+/**
+ * The rows the athlete sees for the given weeks, read from the accepted world
+ * as it stands right now. Read once BEFORE and once AFTER a fixture effect
+ * lands so the note describes the real difference. Lived privately in the
+ * fixture transaction until 2026-09-03; boot replay reads the same rows.
+ */
+export function acceptedVisibleRowsForWeeks(
+  profile: OnboardingData,
+  weekStarts: readonly string[],
+): GameChangeVisibleDay[] {
+  /* eslint-disable @typescript-eslint/no-var-requires */
+  const { useProgramStore } = require('../store/programStore');
+  const { rebaseAcceptedEffectiveWeek } = require('../rules/acceptedEffectiveWeek');
+  const { storedWorldSurfaces } = require('./liveEvaluationSurfaces');
+  /* eslint-enable @typescript-eslint/no-var-requires */
+  const state = useProgramStore.getState();
+  const markedDays = state.acceptedMaterialContext.markedDays;
+  return weekStarts.flatMap((weekStart) => {
+    const accepted = rebaseAcceptedEffectiveWeek({
+      surfaces: storedWorldSurfaces(state),
+      weekStart,
+      profile,
+      markedDays,
+    });
+    const byDay = new Map<number, Workout>(accepted.visibleWorkouts.map((workout: Workout) =>
+      [workout.dayOfWeek, workout]));
+    return Array.from({ length: 7 }, (_, offset): GameChangeVisibleDay => {
+      const date = addDays(weekStart, offset);
+      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+      const workout = byDay.get(dayOfWeek);
+      return {
+        date,
+        dayOfWeek,
+        workoutName: workout?.name ?? null,
+        workoutType: (workout as { workoutType?: string } | undefined)?.workoutType ?? null,
+        sessionTier: (workout as { sessionTier?: string | null } | undefined)?.sessionTier ?? null,
+      };
+    });
+  });
+}
+
+/**
+ * THE NOTE IS PART OF THE DECISION'S REPLAY. Boot re-lands every accepted
+ * fixture effect from the decision ledger and the athlete's week comes back
+ * right — but until 2026-09-03 the "Game moved" note was never re-derived, so
+ * after a relaunch memory held no note while disk still did: the undo card was
+ * gone and the dev persistence gate refused the relaunch as non-convergent.
+ * This derives from the accepted effect exactly what the live transaction
+ * derives from the request. Held by `test:move-game-relaunch`.
+ */
+export function upsertGameChangeCoachNoteForAcceptedEffect(args: {
+  effect: CanonicalAcceptedFixtureEditEffect;
+  adjustmentId: string | undefined;
+  before: readonly GameChangeVisibleDay[];
+  after: readonly GameChangeVisibleDay[];
+}): string | null {
+  const action: GameChangeAction = args.effect.action === 'remove'
+    ? 'removed'
+    : args.effect.action === 'move' ? 'moved' : 'added';
+  return upsertGameChangeCoachNoteFromDiff({
+    action,
+    fixtureKind: args.effect.fixtureKind,
+    targetDate: args.effect.targetDate,
+    previousDate: args.effect.sourceDate,
+    weekStartISO: getMondayForDate(args.effect.targetDate),
+    before: args.before,
+    after: args.after,
+    todayISO: args.effect.acceptedAt.slice(0, 10),
+    adjustmentId: args.adjustmentId,
+    source: args.effect.source,
+  });
 }
 
 export function resolvedDaysToGameChangeRows(
