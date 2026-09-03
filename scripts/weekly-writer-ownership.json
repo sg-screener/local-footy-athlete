@@ -157,9 +157,9 @@
       "reason": "Day row reads one existing workout to select title/icon and mount controls; its only capability-bearing construction is a read-helper argument."
     },
     "src/screens/home/useDayWorkout.ts#useDayWorkout": {
-      "fingerprint": "042171521a208f4bfe74c83ac292e8876e9b3b8a396001661104c33e14e26145",
+      "fingerprint": "7f1aee6fe67398f628f88abe103e5d2a4333797df57dbaa70d9e33a88981a2b4",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03 re-review (drift: experience-aware load control mode, longer saved-dismiss timer): reads the canonical resolved day, applies the display normaliser, holds cue/edit state; weight and band overrides go through the store's own input setters. Does not author sessions."
+      "reason": "hingecod 2026-09-03 re-review (drift: experience-aware load control mode, longer saved-dismiss timer): reads the canonical resolved day, applies the display normaliser, holds cue/edit state; weight and band overrides go through the store's own input setters. Does not author sessions. | 2026-09-03 censusaudit re-review: the any-typed selectors to setWeightOverride and setBandResistanceOverride are now visible to the census as two opaque_domain_callable sites; both are the reviewed programStore input doors (canonical_input_writer). No new write path."
     },
     "src/store/acceptedStateTransaction.ts#stageReversibleAdjustmentCreationTransaction": {
       "fingerprint": "163d15682b969722489907aca572e77d9d1a2c1d11967ce8f9f2f40af6ad01fe",
@@ -3510,11 +3510,6 @@
       "fingerprint": "3893aae8c69b386f76b5f04370e66739798b9b35536c0fda3b1bcee1002f74de",
       "classification": "projection_display",
       "reason": "hingecod 2026-09-03: legality probe — generates a throwaway program for a patched profile with empty history and answers whether a week exists. Never installs it."
-    },
-    "src/rules/weeklyScheduler.ts#appSprintDay": {
-      "fingerprint": "bc227c3e927b9b4026787784692e887ff35ed7ddff3987634a54c1d2f6e0b541",
-      "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 (R-3xx freshness ranking drift): scheduler helper choosing the app sprint day from the free days by freshness. Pure; the only domain construct is a candidate's dayOfWeek."
     },
     "src/utils/activeCoachNotes.ts#buildActiveCoachNotes": {
       "fingerprint": "d69498d75514cb376faf069a6bfdebca05dc6358f7289202b15f808c7a191274",

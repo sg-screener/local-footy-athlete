@@ -407,5 +407,37 @@ test('hard-coded default-program fallback cannot return as an alternative author
   }
 });
 
+test('an any-typed store selector cannot hide a domain action from review', () => {
+  // Measured 2026-09-03: `useDayWorkout` reached `setWeightOverride` six times
+  // through `useProgramStore((s: any) => s.setWeightOverride)` and carried no
+  // site, because the parameter's declared type was gone. The state type is
+  // recovered from the hook's own selector overload, so an `any` selector is
+  // held to the same standard as a typed one.
+  const store = 'src/store/censusSelectorStore.ts';
+  const storeSource = `
+    export interface ProgramState { workouts: unknown[]; sessionFeedback: Record<string, unknown>;
+      setWeightOverride: (date: string, kg: number) => void }
+    export interface StoreHook { (): ProgramState; <U>(selector: (state: ProgramState) => U): U }
+    export const useProgramStore: StoreHook = null as never;
+  `;
+  const consumer = (selector) => ({ [store]: storeSource, 'src/screens/censusSelectorScreen.ts':
+    `import { useProgramStore } from '../store/censusSelectorStore';
+     export function useDayInput() { const action = useProgramStore(${selector}); return action; }` });
+  const typed = scanSources({ sources: consumer('(s: ProgramState) => s.setWeightOverride') });
+  const typedOwner = typed.owners.find(row => row.id === 'src/screens/censusSelectorScreen.ts#useDayInput');
+  assert(typedOwner && typedOwner.sites.some(site => site.kind === 'opaque_domain_callable_requires_review'),
+    'CONTROL: the typed selector must already be held for review');
+  const anyTyped = scanSources({ sources: consumer('(s: any) => s.setWeightOverride') });
+  const anyOwner = anyTyped.owners.find(row => row.id === 'src/screens/censusSelectorScreen.ts#useDayInput');
+  assert(anyOwner, 'the any-typed consumer must still be a capability owner');
+  assert(anyOwner.sites.some(site => site.kind === 'opaque_domain_callable_requires_review' &&
+    site.field === 's.setWeightOverride'), JSON.stringify(anyOwner.sites));
+  assert.equal(anyTyped.ok, false, 'an unreviewed owner reaching a store action must keep the gate red');
+  const read = scanSources({ sources: consumer('(s: any) => s.sessionFeedback') });
+  const readOwner = read.owners.find(row => row.id === 'src/screens/censusSelectorScreen.ts#useDayInput');
+  assert(!readOwner || !readOwner.sites.some(site => site.kind === 'opaque_domain_callable_requires_review'),
+    'a plain field read through an any selector is not a callable site');
+});
+
 console.log(`Writer census detector: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

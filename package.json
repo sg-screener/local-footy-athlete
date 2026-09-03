@@ -445,6 +445,7 @@
     "test:weekday-index": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekdayIndexOwnershipTests.ts",
     "test:cyclic-proximity": "TZ=Australia/Melbourne sucrase-node src/__tests__/cyclicGameProximityTests.ts",
     "test:clause-enforcement": "TZ=Australia/Melbourne sucrase-node src/__tests__/clauseEnforcementTests.ts",
+    "test:legality-enforcer-liveness": "TZ=Australia/Melbourne sucrase-node src/__tests__/legalityEnforcerLivenessTests.ts",
     "diag:bible:agreement": "node scripts/bible-agreement.js --run --jobs auto",
     "diag:bible:agreement:mutation": "node scripts/bible-agreement.js --mutation-check",
     "diag:injury-episode-transactions": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryEpisodeTransactionTests.ts",

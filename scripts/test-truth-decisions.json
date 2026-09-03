@@ -1301,6 +1301,49 @@
       ],
       "witnessScript": "test:session-section-add",
       "evidenceKind": "green_now"
+    },
+    "test:block-selection-authority": {
+      "kind": "current_contract",
+      "reason": "Block selection history is a rotation INPUT, never program output: a replay may not re-author a recorded block, a probe records nothing, and the persisted power selections (added 2026-08-31) carry exactly {blockStartISO, family, seatIndex, exerciseName} with no dose, load, rows or ids. Liveness: a planted prescribedSets on the composer push turned two cells red (2026-09-03, seat censusaudit).",
+      "productionPaths": [
+        "src/store/blockSelectionHistoryStore.ts",
+        "src/services/api/generateProgram.ts",
+        "src/rules/materialiseComposedWeek.ts",
+        "src/utils/sessionBuilder.ts"
+      ],
+      "contractRefs": [
+        "LAW-a-replay-never-reauthors",
+        "LAW-weekly-writer-zero-proof"
+      ],
+      "witnessScript": "test:block-selection-authority",
+      "evidenceKind": "green_now"
+    },
+    "test:programming-selection-trace-observer": {
+      "kind": "current_contract",
+      "reason": "The compiler selection-trace tap has no production observer: no file under src/ or the app roots mentions the installer or the private observer slot, the slot stays module-private, publishing is inert with nothing installed and inert again after the disposer. The writer census cannot see this tap, so this suite is the guard. Liveness: a planted installer under src/screens turned the real-tree cell red (2026-09-03, seat censusaudit).",
+      "productionPaths": [
+        "src/rules/programmingSelectionTrace.ts",
+        "src/rules/canonicalProgramCompiler.ts",
+        "src/utils/mobilityPrehabFlow.ts"
+      ],
+      "contractRefs": [
+        "LAW-weekly-writer-zero-proof"
+      ],
+      "witnessScript": "test:programming-selection-trace-observer",
+      "evidenceKind": "green_now"
+    },
+    "test:legality-enforcer-liveness": {
+      "kind": "current_contract",
+      "reason": "A weekly-legality delegation note that names a function names a LIVE one: exported from src/rules and called from production outside its own file. WC-135 named the dead export appSprintDay until 2026-09-03; the enforcer is scheduleWeek and the ghost is deleted. Liveness: a planted exported-but-uncalled enforcer is reported dead (seat censusaudit). Kept out of the quarantined clause-enforcement suite.",
+      "productionPaths": [
+        "src/rules/weeklyLegality.ts",
+        "src/rules/weeklyScheduler.ts"
+      ],
+      "contractRefs": [
+        "docs/RULINGS_REGISTRY.md"
+      ],
+      "witnessScript": "test:legality-enforcer-liveness",
+      "evidenceKind": "green_now"
     }
   }
 }

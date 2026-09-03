@@ -44,7 +44,6 @@ import {
   type ContractPhase,
   type MovementPattern,
   type OffseasonBlock,
-  type PhaseOverlay,
   type SessionPurpose,
   type SetBudget,
 } from './weeklyProgrammingContract';
@@ -2016,43 +2015,11 @@ export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number
   return legal[0]?.dayOfWeek ?? null;
 }
 
-export function appSprintDay(
-  inputs: WeeklySchedulerInputs,
-  overlay: PhaseOverlay,
-  /**
-   * Days already holding app work. **A sprint must land on a FREE day** — the
-   * first draft returned the first eligible weekday without asking, which was
-   * Monday, already a strength day, so no sprint was ever placed and the WC-135
-   * guard sat green over a rule the scheduler did not implement.
-   */
-  occupiedDays: ReadonlySet<number> = new Set(),
-): number | null {
-  // ── WC-124/WC-135, GENERALISED TO EVERY PHASE ────────────────────────────
-  //
-  // §3's sprint row is ONE rule, not an in-season one: *"At least 1 except
-  // early off-season. **Games and club training can supply it.** In-season,
-  // only add sprint work when there is no club training, and place it G-3 or
-  // earlier."*
-  //
-  // ⚠ **THIS FUNCTION USED TO REFUSE EVERY PHASE BUT IN-SEASON**, so the
-  // pre-season and off-season sprint had no owner here — and the thing that
-  // actually placed them was `coachingEngine`'s post-validation "sprint
-  // rescue", which took a conditioning slot the scheduler had already authored
-  // and OVERWROTE it. That is the legacy authority this mission removes, and
-  // it cannot be removed until this owner covers the phases it was covering.
-  //
-  // The club-training gate is the whole of the anchor test, deliberately: a
-  // GAME does not suppress the app sprint. Sam's approved source adds the
-  // in-season sprint on a no-club week that still has a fixture, and the
-  // placement rule below (G-3 or earlier) is what keeps that safe.
-  if (!overlay.sprintExposureRequired) return null;
-  if (!appSprintNeedPermitted(inputs)) return null;
-  return selectFreshSpeedDay({
-    inputs,
-    candidates: WEEK_ORDER.filter((day) => !occupiedDays.has(day))
-      .map((day) => ({ dayOfWeek: day, role: 'standalone' as const })),
-  });
-}
+// `appSprintDay` lived here until 2026-09-03: an exported WC-124/WC-135 placer
+// with ZERO callers, while `weeklyLegality` named it as WC-135's enforcer. The
+// live owner is `scheduleWeek`'s app-sprint block (`plannedSprintDay` via
+// `selectFreshSpeedDay`, both above); the census audit found the ghost and
+// `test:clause-enforcement` now proves every named enforcer is live.
 
 /** Re-exported so readers take the budget from the contract, never a literal. */
 export { DEFAULT_SET_BUDGET };
