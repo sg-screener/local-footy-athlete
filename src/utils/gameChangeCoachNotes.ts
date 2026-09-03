@@ -285,6 +285,26 @@ export function acceptedVisibleRowsForWeeks(
 }
 
 /**
+ * THE WEEK BEFORE AN ACCEPTED ADJUSTMENT, READ FROM THE LEDGER, NOT FROM A
+ * SECOND DERIVATION. The fixture transaction records every day it displaced
+ * (`displacedOriginalState.ownedDays[].beforeWorkout`); a day it did not own
+ * is unchanged, so its "before" is its "after". Boot replay must use this:
+ * reading the accepted week through the composer BEFORE the effect lands
+ * changed what the week compiled to after a restart (compiler-year
+ * male-5-two-fixtures weeks 4 and 6 restart-red on 2026-09-03; green with
+ * this). One read, after the commit, is all the note needs.
+ */
+export function gameChangeRowsBeforeAdjustment(args: {
+  after: readonly GameChangeVisibleDay[];
+  adjustment: { displacedOriginalState: { ownedDays: readonly { date: string; beforeWorkout: Workout | null }[] } } | null | undefined;
+}): GameChangeVisibleDay[] {
+  return args.after.map((row) => {
+    const displaced = args.adjustment?.displacedOriginalState.ownedDays.find((day) => day.date === row.date);
+    return displaced ? rowFromWorkout(row.date, displaced.beforeWorkout) : row;
+  });
+}
+
+/**
  * THE NOTE IS PART OF THE DECISION'S REPLAY. Boot re-lands every accepted
  * fixture effect from the decision ledger and the athlete's week comes back
  * right — but until 2026-09-03 the "Game moved" note was never re-derived, so

@@ -1798,3 +1798,24 @@ REGISTRY-GREP: R-262, R-271, R-105, R-115.
 | `test:injury-limited-kit` | 16/16 unchanged (the week-22 gate holds) |
 | `test:compile` | PASSED after the bisect probe file was deleted |
 | release gate `test:release` | run after this section was written — result recorded below |
+
+### The release gate after the injury fix — a regression of my own, found and fixed
+- `test:release` after `3487e01c`: still 11/27, but `compiler-year` went from
+  **416 green / 1 failure key** (the census) to **402 green / 15 keys** — all
+  fourteen reds the `restart` check, each in a week with a fixture action
+  (add/move/remove game, practice match): a game day came back as a normal
+  day, week-overlay identities vanished, rows recomposed.
+- Reproduced in under three minutes: `node scripts/run-compiler-year.js --only male-5-two-fixtures --weeks 7`
+  → restart reds at weeks 4 and 6. Green at `63f377d4` in a control worktree.
+- Bisected with env-gated toggles on my own changes (one run each): note
+  replay off → red; fact-compiler retention off → red; random adjustment id →
+  red; empty-day doubling off → red; **the "before" read at boot off → green.**
+  The read of the accepted week through the composer BEFORE the replayed
+  effect lands is not a pure read at boot; the "after" read and the note
+  upsert are clean.
+- Fix: no read before the commit. The fixture transaction already records
+  every day it displaced in the ledger (`displacedOriginalState.ownedDays[].beforeWorkout`);
+  `gameChangeRowsBeforeAdjustment` derives the note's "before" from that record
+  and the one post-commit read. `test:move-game-relaunch` 10/10 (the
+  persistence gate still converges, so the replayed note is byte-equal to the
+  live one); narrow year probe green; full gate rerun recorded below.

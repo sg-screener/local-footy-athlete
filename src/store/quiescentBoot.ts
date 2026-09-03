@@ -295,7 +295,7 @@ function compileFixtureDecisionGroup(
   const { commitCanonicalAcceptedFixtureEditEffect } =
     require('./acceptedStateTransaction');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { acceptedVisibleRowsForWeeks, upsertGameChangeCoachNoteForAcceptedEffect } =
+  const { acceptedVisibleRowsForWeeks, gameChangeRowsBeforeAdjustment, upsertGameChangeCoachNoteForAcceptedEffect } =
     require('../utils/gameChangeCoachNotes');
   const { getMondayForDate } = require('../utils/sessionResolver');
   const profile = useProfileStore.getState().onboardingData;
@@ -304,17 +304,22 @@ function compileFixtureDecisionGroup(
   // the week before and after. Replay must do both, or the athlete relaunches
   // into the right week with the note gone and disk disagreeing with memory
   // (found on the simulator 2026-09-02; held by `test:move-game-relaunch`).
+  // ⚠ NO READ BEFORE THE COMMIT. Composing the accepted week here, before the
+  // effect lands, changed what the week compiled to after a restart
+  // (`compiler-year` restart check, 2026-09-03). The ledger record the commit
+  // writes carries the displaced days; "before" is derived from it.
   const landWithNote = (effect: CanonicalAcceptedFixtureEditEffect): void => {
-    const weekStarts = [getMondayForDate(effect.targetDate)];
-    const before = profile ? acceptedVisibleRowsForWeeks(profile, weekStarts) : [];
     const result = commitCanonicalAcceptedFixtureEditEffect(effect);
     if (!profile) return;
     try {
+      const after = acceptedVisibleRowsForWeeks(profile, [getMondayForDate(effect.targetDate)]);
+      const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+        .find((record) => record.id === result.reversibleAdjustmentId) ?? null;
       upsertGameChangeCoachNoteForAcceptedEffect({
         effect,
         adjustmentId: result.reversibleAdjustmentId,
-        before,
-        after: acceptedVisibleRowsForWeeks(profile, weekStarts),
+        before: gameChangeRowsBeforeAdjustment({ after, adjustment }),
+        after,
       });
     } catch (error) {
       logger.warn('[quiescentBoot] fixture-edit coach note replay failed', {
