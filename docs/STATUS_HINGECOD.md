@@ -1819,3 +1819,25 @@ REGISTRY-GREP: R-262, R-271, R-105, R-115.
   and the one post-commit read. `test:move-game-relaunch` 10/10 (the
   persistence gate still converges, so the replayed note is byte-equal to the
   live one); narrow year probe green; full gate rerun recorded below.
+- **Release gate after `316f86e9`:** `compiler-year` back to **416 green / 416**,
+  1 failure key — the writer census (157 unresolved of 1164), exactly the
+  base's red. Gate **11/27**, stops at unit 12 as before. Logs: scratch
+  `release-gate-after-injury-fix.log` (402/416) and
+  `release-gate-after-boot-read-fix.log` (416/416).
+- **Simulator after `316f86e9`:** six audit flows in order — five PASS on the
+  first pass; `removal-undo-home` was killed by the watchdog at its FIRST
+  assert with the known Maestro driver hang (`viewHierarchy` 500,
+  `kAXErrorInvalidUIElement`, before the app did anything) and **PASSES on an
+  immediate rerun**. `week-move-game` PASS with the extended tail (relaunch →
+  no card on My Status → drag back → Saturday). Logs: scratch
+  `audit-flows-after-boot-read-fix.log`, `flow-removal-undo-home-rerun.log`.
+
+### Candidate state at `316f86e9`
+| | |
+| --- | --- |
+| release gate | **RED, 11/27** — stops at `compiler-year` on the writer census (157 unresolved of 1164); 416/416 athlete-weeks green |
+| simulator | **6/6 PASS** (one harness-flake rerun) |
+| genuine app defects known | Bike-flush display (cohort F003, P1); weekly exercise selection incl. double squat (F004, P1, report on hold); `weekly-scheduler` 2 bye cells (`b1b6c3e6`); the R-262/R-271 card seam (Sam to rule) |
+| stale/broken tests | `fixture-identity`, `surface-agreement`, `bible-anchors`, `coach-note-lifecycle`/`game-change-coach-notes` (pin R-262 against R-271), `quiescent-boot` 0/6, `fixture-conditioned-replan` 15/34, two `injury-fallback-journey` coverage cells |
+| unverified | dismiss-then-relaunch of a fixture note; the phone itself |
+| WORKING today | move-game relaunch (`test:move-game-relaunch` 10/10 + flow); lower-back limiting day (`test:injury-fallback-journey` cells + `test:injury-limited-kit` 16/16) |
