@@ -102,9 +102,14 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
         selectConditioningTemplate({ ...args, miniCycleNumber: 999 }).name === template.name);
       selected.push(template);
     }
+    // R-340 (2026-09-02): repeat-sprint is a hard CONDITIONING demand and the
+    // Speed pool no longer offers it, so the eligible Speed qualities are two.
     ok(`${category}: sparse opportunities reach every eligible quality`,
-      category === 'sprint' ? new Set(selected.map(t => t.quality)).size === 3 : new Set(selected.map(t => t.name)).size === 5,
-      JSON.stringify(selected.map(t => t.name)));
+      category === 'sprint'
+        ? ['acceleration', 'top_end_speed'].every(quality => selected.some(t => t.quality === quality))
+          && selected.every(t => t.quality !== 'repeat_sprint')
+        : new Set(selected.map(t => t.name)).size === 5,
+      JSON.stringify(selected.map(t => `${t.name}/${t.quality}`)));
   }
   ok('conditioning display audit reaches all 52 authored templates', CONDITIONING_TEMPLATES.length === 52);
   for (const template of CONDITIONING_TEMPLATES) {

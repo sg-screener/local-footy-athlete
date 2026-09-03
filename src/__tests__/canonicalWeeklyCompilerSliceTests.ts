@@ -94,6 +94,7 @@ import { isAthleteAddedSession, isAthletePlacedSession } from '../rules/athleteP
 import { legalAddCandidates, legalAddFamilies } from '../utils/addExerciseCandidates';
 import { ONBOARDING_STEPS } from '../utils/onboardingSteps';
 import { ARCHETYPES, athleteAnswers } from './compilerYear/catalog';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { runAthlete } from './compilerYear/run';
 import { visibleSignature as exactWeekSignature } from './compilerYear/invariants';
 import { mobilityAddJourney } from './support/mobilityAddJourney';
@@ -1148,9 +1149,12 @@ async function main(): Promise<void> {
     },
   });
   const identityRows = identityCompiled.workouts[0]?.exercises ?? [];
+  // The replacement lands under its canonical catalogue name (2026-09-02,
+  // 'Reverse Lunge' -> 'Reverse Lunges'); the cell is about which ROW was
+  // replaced, so it compares the canonical name, not the literal typed.
   ok('typed component identity selects the exact duplicate row without name guessing',
     identityRows[0]?.exercise?.name === 'Split Squat' &&
-      identityRows[1]?.exercise?.name === 'Reverse Lunge' &&
+      identityRows[1]?.exercise?.name === canonicalExerciseName('Reverse Lunge') &&
       identityRows[1]?.prescribedWeightKg === 17.5,
     JSON.stringify(identityRows));
   const missingIdentityCompiled = compileCanonicalWeeklyExerciseEdits({
@@ -3165,9 +3169,6 @@ async function main(): Promise<void> {
         const repeatSprintVariant = classifyVisibleSession({ ...speedWorkout, conditioningCategory: 'sprint' });
         ok(`${label} two sprint qualities in one session still earn one credit of each kind`,
           repeatSprintVariant.contributions.conditioning === 1 && repeatSprintVariant.contributions.sprintCod === 1);
-        const ordinaryIds = new Set(speedWorkout.conditioningBlock?.options.flatMap((option) => option.exerciseIds));
-        const removedOrdinary = { ...speedOnly,
-          exercises: speedOnly.exercises.filter((row) => !ordinaryIds.has(row.id)) };
         // Unit control: explicitly ask for a hard-conditioning quality. This
         // is not a newly authored target for the athlete's Pre-season week.
         const qualityContract = { ...contract, conditioning: { ...contract.conditioning,
@@ -3175,12 +3176,33 @@ async function main(): Promise<void> {
         const qualityCheck = (workouts: Workout[]) => evaluateSection18EffectiveWeek({
           contract: qualityContract, workouts, weekStart: builtWeek.startDate.slice(0, 10),
         })!;
+        // R-337 (2026-09-02): when the week has enough legal receivers, Speed
+        // owns its day and carries no metabolic block, so the hard conditioning
+        // lives on ANOTHER day. The mutation removes that day's typed
+        // conditioning component (the evidence the checker reads, plus its rows
+        // and block); the speed component — a hard credit under R-338 — is all
+        // that is left, and it cannot satisfy the hard-conditioning minimum.
+        const hardCredit = qualityCheck(builtWeek.workouts).ledger.conditioning.credits.find((credit) =>
+          credit.source === 'app' && credit.component === 'conditioning' && credit.stress === 'hard');
+        const hardWorkout = builtWeek.workouts.find((workout) => workout.dayOfWeek === hardCredit?.dayOfWeek);
+        const withoutHard = hardWorkout ? {
+          ...hardWorkout,
+          exercises: (hardWorkout.exercises ?? []).filter((row) => row.role !== 'conditioning'),
+          conditioningBlock: undefined, conditioningCategory: undefined,
+          hasCombinedConditioning: false, attachedConditioningKind: undefined,
+          section18Evidence: { ...hardWorkout.section18Evidence,
+            conditioningRole: 'none' as const, conditioningStress: 'unknown' as const },
+        } as Workout : null;
         const broken = qualityCheck(builtWeek.workouts.map((workout) =>
-          workout === speedWorkout ? removedOrdinary : workout));
+          workout === hardWorkout && withoutHard ? withoutHard : workout));
         ok(`[MUTATION] ${label} speed cannot substitute for the required hard-conditioning component`,
+          !!hardWorkout && hardWorkout !== speedWorkout &&
           !qualityCheck(builtWeek.workouts).blockingViolations.some((v) => v.code === 'conditioning_intensity_mismatch') &&
-          broken.blockingViolations.some((violation) => violation.code === 'conditioning_intensity_mismatch'),
-          JSON.stringify(broken.blockingViolations));
+          broken.blockingViolations.some((violation) => violation.code === 'conditioning_intensity_mismatch') &&
+          broken.ledger.conditioning.credits.some((credit) => credit.component === 'speed' && credit.stress === 'hard') ===
+            builtWeek.workouts.some((workout) => workout.speedBlock && !workout.conditioningBlock),
+          JSON.stringify({ hardDay: hardWorkout?.dayOfWeek, broken: broken.blockingViolations.map((v) => v.code),
+            credits: broken.ledger.conditioning.credits.map((c) => `${c.dayOfWeek}:${c.component}:${c.stress}`) }));
       }
     }
     const lateOffseasonDeload = phase === 'In-season' ? lateOffseasonWeeks[0] : lateOffseasonWeeks.find((week) =>
@@ -3519,9 +3541,15 @@ async function main(): Promise<void> {
     JSON.stringify(phaseJourney.weeks.flatMap(week => week.checks.filter(check => check.id === 'programming' && !check.ok)
       .map(check => ({ week: week.weekStart, detail: check.detail })))));
   const shiftedWeek = phaseJourney.weeks[16];
+  // R-337 (2026-09-02) budgets the week in stimuli, not days: the six-day
+  // athlete now trains four or five days most weeks, so seventeen logged weeks
+  // are ~89 sessions where they were >90. The bar is "accumulated history",
+  // not a session count; it is pinned above one full block's worth.
   ok('the phase witness reaches accumulated logged history and a genuine phase change',
-    phaseJourney.loggedSessions > 90 && phaseJourney.actions.some((a) => a.kind === 'phase_shift' && a.ok) &&
-    shiftedWeek.phase === 'In-season' && shiftedWeek.phaseWeek === 1);
+    phaseJourney.loggedSessions > 80 && phaseJourney.actions.some((a) => a.kind === 'phase_shift' && a.ok) &&
+    shiftedWeek.phase === 'In-season' && shiftedWeek.phaseWeek === 1,
+    JSON.stringify({ loggedSessions: phaseJourney.loggedSessions, phase: shiftedWeek.phase, phaseWeek: shiftedWeek.phaseWeek,
+      actions: phaseJourney.actions.map((a) => `${a.kind}:${a.ok}`) }));
   ok('a no-team-training phase transition survives cold reconstruction',
     shiftedWeek.status === 'measured' && shiftedWeek.checks.some((c) => c.id === 'restart' && c.ok), shiftedWeek.reason);
 

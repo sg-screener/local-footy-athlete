@@ -1003,6 +1003,19 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // session plus the fly ARE the four, and no extra aerobic session is owed.
   // Where it does not (in-season caps, P15/R-268), Speed still rides a receiver.
   const clubSpeedRides = clubSpeedTopUp && !overlay.speedInsideConditioningTarget;
+  // WC-143 + R-338 (2026-09-03): the NO-CLUB game week's Speed rides its early
+  // fast session — Sam's Q2 shape is one session, "a short sprint workout into
+  // ... flying runs or glycolytic sessions". In-season the contract counts
+  // Speed as conditioning (R-338) inside the game-week caps (P15), so a Speed
+  // day of its own made hard + Speed + moderate + flush = four app exposures
+  // against a maximum of three, and the generated week was refused at Section
+  // 18 (a blank program for the 6-day no-club athlete). Riding the receiver
+  // keeps R-330's word: the weekly conditioning count does not increase.
+  const noClubGameWeekSpeedRides = deliveredSprintDays.size === 0
+    && inputs.phase !== 'Off-season' && hasScheduledGame(inputs) && inputs.clubNights.length === 0
+    && overlay.sprintExposureRequired && !overlay.speedInsideConditioningTarget
+    && appSprintNeedPermitted(inputs);
+  const speedRides = clubSpeedRides || noClubGameWeekSpeedRides;
 
   // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
   // A sprint night IS a conditioning exposure — `demand.coreConditioning`
@@ -1034,7 +1047,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const speedCandidates = committedDays.size >= BIBLE_WEEKLY_CAPS.hardDaysAbsoluteMax
     ? automaticSpeedCandidates.filter((candidate) => candidate.role !== 'standalone')
     : automaticSpeedCandidates;
-  const unrestrictedPlannedSprintDay = clubSpeedRides
+  const unrestrictedPlannedSprintDay = speedRides
     || !overlay.sprintExposureRequired || !appSprintNeedPermitted(inputs)
     ? null
     : selectFreshSpeedDay({
@@ -1208,9 +1221,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           ...deliveredAppDays, ...days,
           ...(plannedSprintDay === null ? [] : [plannedSprintDay]),
         ]) - 2),
-        clubSpeedRides && !days.some(day => purposeByDay.has(day)
+        speedRides && !days.some(day => purposeByDay.has(day)
           && sprintDayIsLegal(day, inputs)) ? 1 : 0,
-        clubSpeedRides && !days.some(day => purposeByDay.has(day)
+        speedRides && !days.some(day => purposeByDay.has(day)
           && !PURPOSE_IS_LOWER[purposeByDay.get(day)!] && sprintDayIsLegal(day, inputs)) ? 1 : 0,
         hardQuality !== null && !days.some(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]
           && !isGameMinusTwo(day, inputs)) ? 1 : 0,
@@ -1365,8 +1378,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // P15 uses the existing speed + conditioning component shape. Keeping both
   // on one legal upper day preserves the game-week conditioning/nights caps
   // and does not replace the required metabolic work with speed.
-  const clubSpeedCandidates = clubSpeedRides ? conditioningDays.filter(day => purposeByDay.has(day)
-    && sprintDayIsLegal(day, inputs)) : [];
+  // The no-club game week's Speed goes INTO the fast session (Sam's Q2 shape);
+  // any other receiver would keep a fourth app exposure against the caps.
+  const noClubFastReceiver = noClubGameWeekSpeedRides && hardDay !== null
+    && purposeByDay.has(hardDay) && sprintDayIsLegal(hardDay, inputs) ? [hardDay] : null;
+  const clubSpeedCandidates = noClubFastReceiver ?? (speedRides ? conditioningDays.filter(day => purposeByDay.has(day)
+    && sprintDayIsLegal(day, inputs)) : []);
   const clubSpeedDay = selectFreshSpeedDay({
     inputs,
     candidates: clubSpeedCandidates.map((day) => ({

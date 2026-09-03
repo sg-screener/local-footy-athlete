@@ -1235,6 +1235,33 @@ ok(
 // Classification and mutation evidence: docs/PROGRAMMING_GAP_CLOSURE_2026-08-28.md.
 conditioningCategoryTruth(ok);
 
+// ── A recorded seat restores only into its own week (2026-09-03) ──
+// Seats are counted per WEEK by the materialiser, but the block record carried
+// no week, so a rebuild restored week one's Saturday tempo into week four
+// ("30:30 Controlled Tempo Blocks" became "2 min On / 1 min Easy" on relaunch).
+{
+  const { selectConditioningTemplate } = require('../rules/conditioningSelection');
+  const blockStartISO = '2026-07-13';
+  const args = { category: 'tempo' as const, dateStr: '2026-08-08', miniCycleNumber: 1, role: 'standalone' as const,
+    availableMachines: ['bike', 'air_bike', 'row', 'ski'] as const };
+  const context = (weekStartISO: string | undefined, history: unknown[]) => ({ ...args,
+    selectionContext: { blockStartISO, ...(weekStartISO ? { weekStartISO } : {}), history } });
+  const weekOne = selectConditioningTemplate(context('2026-07-13', [])).name;
+  const other = ['30:30 Controlled Tempo Blocks', '2 min On / 1 min Easy'].find((name) => name !== weekOne)!;
+  const recordedWeekOne = [{ blockStartISO, weekStartISO: '2026-07-13', category: 'tempo', seatIndex: 0, templateName: other }];
+  ok('a seat recorded for week one restores into week one',
+    selectConditioningTemplate(context('2026-07-13', recordedWeekOne)).name === other);
+  ok('a seat recorded for week one never restores into week four of the same block',
+    selectConditioningTemplate(context('2026-08-03', recordedWeekOne)).name !== other
+    || selectConditioningTemplate(context('2026-08-03', [])).name === other);
+  const recordedWeekFour = [...recordedWeekOne, { blockStartISO, weekStartISO: '2026-08-03', category: 'tempo', seatIndex: 0, templateName: weekOne }];
+  ok('week four restores its own recorded seat beside week one\'s',
+    selectConditioningTemplate(context('2026-08-03', recordedWeekFour)).name === weekOne);
+  const weekless = [{ blockStartISO, category: 'tempo', seatIndex: 0, templateName: other }];
+  ok('CONTROL: a record without a week still restores into a context without one',
+    selectConditioningTemplate(context(undefined, weekless)).name === other);
+}
+
 console.log(
   `\nConditioning template equality: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
 );

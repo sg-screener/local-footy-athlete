@@ -969,7 +969,12 @@ export function generateProgramLocally(
     const alreadyRecorded: boolean = historyStore.blockHasRecordedSelections(blockStart);
     if (options.recordSelections === 'author' || !alreadyRecorded) {
       const conditioningSelections: import('../../rules/conditioningSelection').BlockConditioningSelection[] = [];
-      for (const weekPlan of compilation.plans) {
+      compilation.plans.forEach((weekPlan, weekIndex) => {
+        // Seats are counted per WEEK here and in the materialiser; the record
+        // carries the week so a rebuild restores each week's own seat, never a
+        // sibling week's (2026-09-03: week one's Saturday tempo was restored
+        // into week four on relaunch).
+        const weekStartISO = compilation.microcycles[weekIndex]?.startDate?.slice(0, 10);
         const seats = new Map<string, number>();
         for (const allocation of weekPlan.weeklyPlan) {
           const entries = [
@@ -982,20 +987,22 @@ export function generateProgramLocally(
           for (const entry of entries) {
             const seatIndex = seats.get(entry.category) ?? 0;
             seats.set(entry.category, seatIndex + 1);
-            if (!conditioningSelections.some(row => row.category === entry.category && row.seatIndex === seatIndex)) {
+            if (!conditioningSelections.some(row => row.category === entry.category && row.seatIndex === seatIndex
+              && (row.weekStartISO ?? null) === (weekStartISO ?? null))) {
               conditioningSelections.push({ ...entry, category: entry.category as import('../../rules/conditioningSelection').AthleteConditioningCategory,
-                seatIndex, blockStartISO: blockStart });
+                seatIndex, blockStartISO: blockStart, ...(weekStartISO ? { weekStartISO } : {}) });
             }
           }
         }
-      }
+      });
       // Existing seats are accepted facts, not something a temporary injury,
       // equipment restriction or unrelated edit may silently re-record.
       const priorConditioning = historyStore.blockConditioningSelectionHistory()
         .filter((entry: import('../../rules/conditioningSelection').BlockConditioningSelection) => entry.blockStartISO === blockStart);
       historyStore.recordBlockSelections(blockStart, selectionsAuthored, [
         ...priorConditioning, ...conditioningSelections.filter(entry => !priorConditioning.some(
-          (prior: import('../../rules/conditioningSelection').BlockConditioningSelection) => prior.category === entry.category && prior.seatIndex === entry.seatIndex)),
+          (prior: import('../../rules/conditioningSelection').BlockConditioningSelection) => prior.category === entry.category && prior.seatIndex === entry.seatIndex
+            && (prior.weekStartISO ?? null) === (entry.weekStartISO ?? null))),
       ], compilation.powerSelections);
     }
   }

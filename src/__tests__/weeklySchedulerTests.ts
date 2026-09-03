@@ -725,6 +725,16 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
       && order.indexOf(fastDay.dayOfWeek) <= gameIdx - 4
       && ![THU, FRI, SAT, SUN].includes(speedDay.dayOfWeek),
       JSON.stringify({ fast: fastDay?.dayOfWeek, speed: speedDay?.dayOfWeek }));
+    // R-338 + P15 (2026-09-03): in-season the contract counts Speed as
+    // conditioning inside the game-week caps (three app exposures including the
+    // flush offer), so a Speed day of its own made hard + Speed + moderate +
+    // flush = four and the generated week was refused at Section 18 — a blank
+    // program for the six-day no-club athlete. Sam's Q2 shape is ONE session:
+    // "a short sprint workout into ... flying runs or glycolytic sessions".
+    ok('[WC-143/R-338] the NO-CLUB game week\'s Speed rides its early fast session — '
+      + 'one exposure, not a Speed day of its own', ['WC-143'],
+      fastDay !== undefined && speedDay !== undefined && speedDay.dayOfWeek === fastDay.dayOfWeek,
+      JSON.stringify({ fast: fastDay?.dayOfWeek, speed: speedDay?.dayOfWeek }));
     const g2 = inseasonGame.days.find((d) => order.indexOf(d.dayOfWeek) === gameIdx - 2);
     ok('[WC-143] ...and the SECOND app exposure sits at G-2 at moderate '
       + 'intensity — "then later in the week on say a g-2 ... keep this '

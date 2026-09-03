@@ -35,8 +35,13 @@ export async function specialSessionInputTruth(storage: Map<string, string>, ok:
       const illegal = names().filter(name => !exerciseIsAvailableWith(name, kitTags));
       ok(`${label}: authored special rows respect the current equipment answer`, add.ok && illegal.length === 0,
         JSON.stringify({ add, kitTags, illegal, names: names() }));
-      if (kit === 'full' && category === 'primer') ok(`${label}: full-kit route delivers authored heavy options`,
-        names().some(name => ['Trap Bar Deadlift', 'High Box Squat'].includes(name)) && names().includes('Bench Press'));
+      // R-288 (2026-08-31): Sam removed Acceleration, the Trap Bar Deadlift /
+      // High Box Squat row and Bench Press from every Primer. A Primer is now
+      // mobility, Pogo Hops, one upper power and one lower power exercise.
+      if (kit === 'full' && category === 'primer') ok(`${label}: full-kit route delivers the R-288 Primer, never its retired heavy rows`,
+        names().includes('Pogo Hops')
+        && !names().some(name => ['Trap Bar Deadlift', 'High Box Squat', 'Bench Press', 'Acceleration'].includes(name)),
+        JSON.stringify(names()));
       const accepted = visibleSignature(view());
       const boot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
       ok(`${label}: special-session equipment choices survive restart`, boot.ok && visibleSignature(view()) === accepted);

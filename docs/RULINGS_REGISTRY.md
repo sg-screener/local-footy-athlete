@@ -8520,6 +8520,36 @@ Guard: `LAW-flys-count-as-conditioning-and-speed` through chained
 `test:weekly-scheduler` (the two-club-night pre-season cells and the fresh
 existing-day placement cell). Receipt: `docs/STATUS_HINGECOD.md`.
 
+**R-338 addendum, 2026-09-03 (hingecod) — the NO-CLUB game week's Speed rides
+its early fast session.** The in-season contract counts Speed as conditioning
+(this row) inside the game-week caps (P15: three app exposures including the
+flush offer). R-330's freshness placement gave the no-club game week a Speed
+day of its own, so hard + Speed + moderate + flush made four and the generated
+week was REFUSED at Section 18 — the in-season six-day and three-day no-club
+athletes got a blank program from install (`test:canonical-weekly-compiler`
+"In-season / 6 gym days generation accepts its own weekly counts"). Sam's Q2
+shape (WC-143) is one session: *"a short sprint workout into ... flying runs
+or glycolytic sessions"*. Now the no-club game week's Speed rides the fast
+(glycolytic) session — one exposure, the weekly count does not increase, which
+is R-330's own word. Club athletes, bye weeks and every other phase are
+untouched. · `WORKING` — `test:weekly-scheduler` "[WC-143/R-338] the NO-CLUB
+game week's Speed rides its early fast session" (red-first: 1 red on the
+committed scheduler), and the two in-season no-club install cells of
+`test:canonical-weekly-compiler`.
+
+**R-345 addendum, 2026-09-03 (hingecod) — a recorded conditioning seat
+restores only into its own week.** The materialiser counts conditioning
+seats per WEEK, but the block record (`BlockConditioningSelection`) carried
+no week, so a rebuild matched `(block, category, seat 0)` to the FIRST week's
+entry: the Off-season three-day athlete's week-4 Saturday tempo was "30:30
+Controlled Tempo Blocks" at install and "2 min On / 1 min Easy" after relaunch
+("Off-season / 3 gym days preserves its compiled week and dose exactly across
+restart"). The record now carries `weekStartISO`, generation records every
+week's seats (it kept only the first per seat), and a seat restores only into
+the week it was recorded for; a record without a week restores only into a
+context without one. · `WORKING` — `test:conditioning-templates` (four
+seat-week cells) and the restart cell above.
+
 **R-339** · "Running" means running: attached conditioning runs on upper days
 outside In-season, stays off-feet on lower days and in-season, 2026-09-02.
 

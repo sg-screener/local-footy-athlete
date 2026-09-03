@@ -53,6 +53,10 @@ export function inseasonSpeedSelectionTruth(ok: (label: string, value: boolean, 
     age: 25, unavailableDays: [], readiness: { lowReadiness: false, highReadiness: false,
       lowFatigue: true, consistentlyCompletesThree: true },
   };
+  // R-341 (2026-09-02): the in-season shelf alternates by PHASE WEEK — an
+  // authored acceleration on odd weeks, Fly 20 on even — so the facts carry
+  // the phase week the app carries; without it every block read as week one
+  // and only accelerations were ever delivered. Never repeat-sprint (R-340).
   for (const [answer, qualities] of [
     ['No sprint training', ['acceleration', 'top_end_speed']],
     ['Acceleration only', ['top_end_speed']],
@@ -68,7 +72,7 @@ export function inseasonSpeedSelectionTruth(ok: (label: string, value: boolean, 
         speed.every(day => [1, 2, 3].includes(day.dayOfWeek)));
       const materialised = materialiseAuthoredSessions({ schedule: result, gameDay: 6,
         facts: { weekStartISO: base.weekStartISO, phase: 'In-season', capacity: 'high',
-          isBeginner: false, experienced: true, powerGoalNudge: false, injuries: [], miniCycleNumber: block } });
+          isBeginner: false, experienced: true, powerGoalNudge: false, injuries: [], miniCycleNumber: block, phaseWeekNumber: block } });
       for (const day of materialised) for (const template of [day.sprintTemplate, day.conditioningTemplate]) {
         if (template && ['acceleration', 'top_end_speed', 'repeat_sprint'].includes(template.quality)) {
           seen.add(template.quality);
@@ -90,9 +94,14 @@ export function inseasonSpeedSelectionTruth(ok: (label: string, value: boolean, 
         || result.days.every(day => day.conditioning !== 'sprint_high_speed' && !day.sprintComponent));
     }
   }
+  // R-311 (2026-09-01): "a frequency-only team-training answer never proves
+  // maximum velocity" — the app adds ONE run-only top-speed exposure on a legal
+  // early day even when no shortfall was reported; it never adds a second.
   for (const answer of [undefined, 'Occasionally', '2+ times per week']) {
     const result = scheduleWeek({ ...base, sprintExposure: answer } as WeeklySchedulerInputs);
-    ok(`P15/${answer ?? 'legacy unknown'}: no forced extra without a reported shortfall`,
-      !scheduleRefused(result) && result.days.every(day => day.conditioning !== 'sprint_high_speed' && !day.sprintComponent));
+    const speed = scheduleRefused(result) ? [] : result.days.filter(day => day.conditioning === 'sprint_high_speed' || day.sprintComponent);
+    ok(`P15/${answer ?? 'legacy unknown'}: one top-speed exposure without a reported shortfall, on a legal early day (R-311)`,
+      !scheduleRefused(result) && speed.length === 1 && speed.every(day => [1, 2, 3].includes(day.dayOfWeek)),
+      JSON.stringify(speed.map(day => day.dayOfWeek)));
   }
 }

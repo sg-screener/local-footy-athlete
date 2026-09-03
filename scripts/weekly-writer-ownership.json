@@ -92,9 +92,9 @@
       "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer — selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "8fdfd681e1ab80bfbdfef1e88c7acdffe8634ee244fb140b4fb6e5e009296fe2",
+      "fingerprint": "2a4e61b52dd43b08ad5e010ade03b80867f31ceaef4b8bbab767d7b67f14972a",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-359 drift: no sixth hard day is opened by the scheduler; delivered energy-system days honoured): pure weekly scheduling stage — legal placements, fixture precedence, conditioning/sprint demand, top-ups and optional intentions. No publication."
+      "reason": "hingecod 2026-09-03 re-review (WC-143/R-338: the no-club game week's Speed rides its early fast session so the in-season caps hold; R-359 drift kept): pure weekly scheduling stage — no store, no clock."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
       "fingerprint": "bd1fec4ff4800de548c3f29d4a46fa11e0b822e923a9498ba507a381134f0355",
@@ -412,9 +412,9 @@
       "reason": "Generation-request diagnostic builds a shared planner snapshot for explanation and emits profile/plan metadata only; no accepted program writer."
     },
     "src/rules/materialiseAuthoredSessions.ts#materialiseAuthoredSessions": {
-      "fingerprint": "dc512ca230d6fe753d3ed49661a4029fef46096b850f84cf6c2b6f9b7aff8a70",
+      "fingerprint": "2823c99a2a358d17cc8aed95b25a2d325e0ce5068e027f3280559605425d76fc",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: materialises the scheduler's intentions — conditioning/sprint template selection with traces and seat rotation, power policy. Pure; remembers selections in a local list."
+      "reason": "hingecod 2026-09-03 re-review (seat identity per week): materialises the scheduler's intentions — conditioning/sprint template selection with traces; the selection context and the remembered seats carry the week being materialised. Pure."
     },
     "src/rules/fixtureConditionedAvailability.ts#resolveFixtureConditionedAvailability": {
       "fingerprint": "57397a9756808a7dd2404e1060e9d26eac2b0fda97d25f0e97a36be991d0d121",
@@ -2517,9 +2517,9 @@
       "fingerprint": "da87deac54cf8095063653a39b32bc842a62c4d74749c4fceefc10d56110bbb8"
     },
     "src/services/api/generateProgram.ts#generateProgramLocally": {
-      "fingerprint": "c82fe1f676fbcb0d1eaaf607f47cd337c48095490678994d224f811c2ed268c0",
+      "fingerprint": "1fecd6f77618801d8c532fc09da89394ccf1e17ff03c79e53d3e69c4cf85f3e7",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review: captures the input, compiles once, then records the block's exercise/conditioning/power selections (history inputs) when asked. No output publication."
+      "reason": "hingecod 2026-09-03 re-review (seat identity per week): captures the input, compiles once, then records every week's exercise/conditioning/power selections keyed by week (history inputs) when asked. No derived output is written back as a decision."
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryProgression": {
       "fingerprint": "a38545836e60cee8028971b1e5c92191c139e725d3d19a6786b189b6b863f923",
@@ -3457,9 +3457,9 @@
       "reason": "hingecod 2026-09-03: one-line wrapper returning the traced selection's template."
     },
     "src/rules/conditioningSelection.ts#selectConditioningTemplateWithTrace": {
-      "fingerprint": "bdff140712f37af9cc0f7c39ce8142fc7e39bd88a95e04fa1735dc052808365e",
+      "fingerprint": "45e0197bb55e3a92194bf998a450f43468dda673f1596a788112cffc26ee32f1",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: the one conditioning template owner — kit/role/cap filters, recorded-selection restoration or stable rotation, and a candidate trace. Pure over its arguments; the only domain construct is the trace's dayOfWeek."
+      "reason": "hingecod 2026-09-03 re-review (seat identity per week): the one conditioning template owner — kit/role/cap filters; a recorded seat restores only into the week it was recorded for; rotation reads earlier blocks plus this week's own seats, never this block's other weeks; candidate trace. Pure, no store."
     },
     "src/rules/deloadWeekRules.ts#applyDeloadPoliciesToWeeklySessionAllocations": {
       "fingerprint": "68d3aeead934b1e23b4ed019358d11adc54b89b056e2a619d8d5f467366cd51f",

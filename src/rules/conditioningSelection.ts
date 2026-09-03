@@ -465,6 +465,8 @@ export interface ConditioningSelectionArgs {
   /** Accepted selection facts, never a preview/call-count cursor. */
   readonly selectionContext?: {
     readonly blockStartISO: string;
+    /** The week being materialised; a recorded seat restores only into its own week. */
+    readonly weekStartISO?: string;
     readonly history: readonly BlockConditioningSelection[];
   };
   /** The block must render off feet (run load caps, lower-body pairing). */
@@ -494,6 +496,15 @@ export interface ConditioningSelectionArgs {
 /** One chosen identity per conditioning seat; dose remains owned by the sheet. */
 export interface BlockConditioningSelection {
   readonly blockStartISO: string;
+  /**
+   * The week the seat belongs to. Seats are counted per WEEK by the
+   * materialiser, so without the week two weeks of one block share
+   * `(category, seatIndex)` and a rebuild restored week one's Saturday tempo
+   * into week four (2026-09-03: "30:30 Controlled Tempo Blocks" became
+   * "2 min On / 1 min Easy" on relaunch). Absent only on entries recorded
+   * without a week, which restore only into a context without one.
+   */
+  readonly weekStartISO?: string;
   readonly category: AthleteConditioningCategory;
   readonly seatIndex: number;
   readonly templateName: string;
@@ -655,7 +666,9 @@ export function selectConditioningTemplateWithTrace(
     const seat = args.seatIndex ?? 0;
     const relevant = history.filter(entry => entry.category === args.category
       && entry.blockStartISO <= blockStartISO);
-    const recorded = relevant.find(entry => entry.blockStartISO === blockStartISO && entry.seatIndex === seat);
+    const weekStartISO = args.selectionContext.weekStartISO ?? null;
+    const recorded = relevant.find(entry => entry.blockStartISO === blockStartISO && entry.seatIndex === seat
+      && (entry.weekStartISO ?? null) === weekStartISO);
     const restored = candidates.find(template => template.name === recorded?.templateName);
     if (restored) {
       selected = restored;
@@ -664,8 +677,15 @@ export function selectConditioningTemplateWithTrace(
     // Choose the least-recently served QUALITY before the template within it.
     // Skipped block numbers and unrelated qualities never consume a turn.
     // Earlier seats in this very week are supplied explicitly by the boundary.
+    // THIS block's record exists to RESTORE identity (above), not to rotate
+    // against: at first generation the block had no record, so a rebuild that
+    // rotated against the block's other weeks drifted from what was generated
+    // (2026-09-03: a fatigue rebuild swapped a build week's aerobic template).
+    // Rotation reads earlier blocks plus this very week's own seats.
+    const rotation = relevant.filter(entry => entry.blockStartISO < blockStartISO
+      || (entry.weekStartISO ?? null) === weekStartISO);
     const latest = (matches: (entry: BlockConditioningSelection) => boolean): string =>
-      relevant.filter(matches).map(entry => entry.blockStartISO).sort().at(-1) ?? '';
+      rotation.filter(matches).map(entry => entry.blockStartISO).sort().at(-1) ?? '';
     const qualityLast = (quality: ConditioningQuality): string => latest(entry =>
       resolveTemplateByName(entry.templateName)?.quality === quality);
     const nameLast = (name: string): string => latest(entry => entry.templateName === name);

@@ -2070,3 +2070,110 @@ advisory (one word and its detail text); the contract's
    main-strength count falls to zero and `required_minimum_shortfall` refuses
    later edits. Seen in a first draft of world (4); not the athlete's realistic
    path, recorded for whoever owns session merging.
+
+## The remaining 15 compiler failures, by root-cause family (2026-09-03)
+
+**Sam's brief.** Finish the remaining 15 by family; distinguish real app
+problems from stale tests; prove each fix; rerun the complete compiler suite
+and typecheck; leave the two side findings and the double-squat report alone.
+
+**Eight families. Three were the app, five were stale tests.**
+
+| family | cells | verdict | what moved |
+| --- | --- | --- | --- |
+| In-season no-club game week refused at install | 1 (+1 that appeared mid-fix) | **APP** | Speed rides the fast session (scheduler) |
+| Off-season restart changes Saturday's session | 1 | **APP** | conditioning seats recorded per week |
+| Speed-substitution mutation controls | 4 | stale (R-337) | mutation moved to the hard day's typed component |
+| P15 in-season speed selection | 4 | stale (R-311, R-341) | facts carry the phase week; no-shortfall answers still get one top-speed exposure |
+| Speed pool sparse opportunities | 1 | stale (R-340) | two Speed qualities, never repeat-sprint |
+| Primer heavy rows | 2 | stale (R-288) | Pogo Hops and power, never the retired heavy rows |
+| Duplicate-row component identity | 1 | stale (canonical names, 09-02) | compares the canonical name |
+| Phase witness session count | 1 | stale (R-337) | 89 sessions against a bar of 90; bar re-pinned above one block |
+
+**APP 1 — the in-season no-club week was refused by its own checker.**
+`athlete()` In-season, six gym days, Saturday game, no club nights:
+`Section 18 final-week rejection (maximum_breach:conditioning:4)`. The
+scheduler (WC-143 + R-330 freshness) built Tue upper + glycolytic, Wed hinge +
+Speed, Thu upper + tempo, Mon flush; under R-338 the Speed component is a hard
+conditioning credit, so app-selected conditioning = 4 against the in-season
+maximum of 3 (`max(3, tt+1)`, flush included). The athlete got a blank
+program from install. Fix in `weeklyScheduler`: when the no-club game week
+needs Speed, it rides the fast (glycolytic) session — Sam's Q2 shape, one
+exposure. A first cut let Speed ride any legal strength receiver; the 3-day
+shape then put it on a strength day the running-reserve loop had stripped of
+its conditioning, and the 3-day install went red the same way — so the
+receiver is the fast day itself. Proven: scheduler probe (6/4/5-day → Tue
+glycolytic + Speed; 3-day → Mon glycolytic + Speed); both installs through
+`coldStartThroughOnboarding` refusal-free and relaunch-clean; new scheduler
+cell red-first 1 red on HEAD's scheduler, `test:weekly-scheduler` 141/141
+after. `test:generated-scheduler-fixtures` has 2 reds that are identical with
+HEAD's scheduler (control run) — not mine, left as found.
+
+**APP 2 — a relaunch changed the athlete's Saturday session.** Traced every
+template selection at generation and at boot: same request
+(`tempo`, 2026-08-08, seat 0, block 2026-07-13) answered "30:30 Controlled
+Tempo Blocks" at generation and "2 min On / 1 min Easy" at boot. At boot the
+selection history held the whole block's recorded seats and
+`restored_recorded_selection` matched week ONE's tempo seat 0 to week FOUR's,
+because the record carried no week while the materialiser counts seats per
+week (and generation kept only the first entry per `(category, seat)` across
+weeks, dropping week four's own). Fix: `BlockConditioningSelection` carries
+`weekStartISO`; the materialiser records it and the restore matcher requires
+it; `generateProgram` records every week's seats keyed by week. Proven: the
+trace now restores "30:30" at boot, before/after signatures equal; four unit
+cells in `test:conditioning-templates` (180/180).
+
+**Stale, with the ruling that superseded each:** the mutation controls assumed
+Speed shared a day with the hard intervals (R-337 gives Speed its own day when
+receivers suffice; the hard credit is elsewhere, and the checker reads the
+typed `section18Evidence.conditioningRole`, not the rows) — the mutation now
+removes the hard day's typed component and the speed credit alone fails the
+hard minimum, in all four shapes; P15's in-season facts lacked
+`phaseWeekNumber`, which R-341's shelf alternates on, so every block read as
+week one and only accelerations were delivered — the facts carry it, both
+qualities reach; the three "no forced extra" cells contradict R-311 (a
+frequency-only answer never proves maximum velocity; one top-speed exposure
+is added) — re-pinned to exactly one, on a legal early day; the sparse-sprint
+cell wanted three Speed qualities but R-340 moved repeat-sprint out of the
+Speed pool; the primer cells wanted Trap Bar / High Box / Bench, which R-288
+removed from every Primer; the identity cell compared the typed literal
+"Reverse Lunge" where the compiler now writes the canonical "Reverse Lunges";
+the phase witness's bar of 90 logged sessions is 89 under R-337's four- and
+five-day weeks (phase shift, In-season week 1, all other conjuncts true).
+
+**Receipts.** `test:compile` gate PASSED (product 0, devtools 0, tests 0).
+`test:conditioning-modality-by-day` 5/5, `test:speed-template-variety` 5/5,
+`test:real-running-speed` 12/12, `test:conditioning-templates` 180/180,
+`test:section18-v2` 142/142, `test:hard-day-warns` 22/22.
+
+**A regression my own fix caused, caught by the chain and closed.** With
+week-keyed seats, `test:temporary-source-facts` "remaining-week fatigue deload
+reduces visible conditioning work" went red (90/90 at HEAD by control):
+weeks whose seats the plan never records (a combined aerobic component on a
+build week) fell to rotation, and rotation now saw the block's OTHER weeks'
+records — which the first generation never had — so a fatigue rebuild
+swapped a build-week aerobic template. Rotation now reads earlier blocks plus
+the week's own in-flight seats, never this block's other weeks; this block's
+record exists to restore identity. 90/90 after; the seat-week cells and the
+restart cell stay green.
+
+**The rest of the chain, run to the end** (the earlier chain stopped at the
+slice's first red, so these had not been measured today). Green: reset-coach
+19/19, athlete-session-deletion 139/139, program-hydration-ownership 83/83,
+temporary-source-facts 90/90, conditioning-balance-repair 42/42. Red and
+**identical with every product file at HEAD (control run)** — not this
+work's: `test:fixture-mutation-transaction` cell 17 (Friday school game plus
+Saturday club game: a hard lower session at G-2), `test:session-injury-review`
+2, `test:injury-session-adjustment` 3, `test:injury-compiler-preview` 3 (4 at
+HEAD — one went green with this work), `test:generated-scheduler-fixtures` 2
+(bye-week released-day placement). Left as found.
+
+**Writer census.** Four owners changed fingerprint (the selector, the
+materialiser, the scheduler, the program generator) and were re-reviewed
+with their prior classifications; census 1166/1166, 0 unresolved, 0 rival
+authors, 0 derived-output writers; `test:weekly-writer-zero` exit 0.
+
+**Final counts.** `test:canonical-weekly-compiler` slice: **10577 / 15 →
+10605 passed / 0 failed** (two runs on the final code). `test:compile` gate
+PASSED (product 0, devtools 0, tests 0). `test:weekly-scheduler` 141/141 (+
+fresh speed 14/14 and 2/2, COD 19/19; the 2 fixture reds above are HEAD's).

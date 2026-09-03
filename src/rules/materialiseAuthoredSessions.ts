@@ -143,11 +143,13 @@ export function materialiseAuthoredSessions(args: {
   const selectedThisWeek: BlockConditioningSelection[] = [];
   const selectionContext = () => facts.conditioningSelectionContext ? {
     ...facts.conditioningSelectionContext,
+    weekStartISO: facts.weekStartISO,
     history: [...facts.conditioningSelectionContext.history, ...selectedThisWeek],
   } : undefined;
   const remember = (category: AthleteConditioningCategory, seatIndex: number, template: ConditioningTemplate) => {
     if (facts.conditioningSelectionContext) selectedThisWeek.push({
       blockStartISO: facts.conditioningSelectionContext.blockStartISO,
+      weekStartISO: facts.weekStartISO,
       category, seatIndex, templateName: template.name,
     });
   };
