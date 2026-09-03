@@ -1841,3 +1841,11 @@ REGISTRY-GREP: R-262, R-271, R-105, R-115.
 | stale/broken tests | `fixture-identity`, `surface-agreement`, `bible-anchors`, `coach-note-lifecycle`/`game-change-coach-notes` (pin R-262 against R-271), `quiescent-boot` 0/6, `fixture-conditioned-replan` 15/34, two `injury-fallback-journey` coverage cells |
 | unverified | dismiss-then-relaunch of a fixture note; the phone itself |
 | WORKING today | move-game relaunch (`test:move-game-relaunch` 10/10 + flow); lower-back limiting day (`test:injury-fallback-journey` cells + `test:injury-limited-kit` 16/16) |
+
+### 2026-09-03 — PREVIEW on Sam's phone (not release-ready, not final)
+Signed Release build of `316f86e9` (docs at `642cc6b9`) from the candidate
+worktree, `npx expo run:ios --device 00008140-000975CC022A801C --configuration Release --no-bundler`,
+installed OVER the existing `com.localfootyathlete.app` on Sam's iPhone 16 Pro
+Max (`AFA21856-…`), so his data survives; Renee's phone not targeted. Launched
+and in the process list (PID 64548). Release gate still red at the census
+(11/27); this is a preview for Sam's eyes only.
