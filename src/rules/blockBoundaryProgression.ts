@@ -1857,14 +1857,24 @@ export function applyBlockBoundaryConditioning(args: {
       // The three display facts that would otherwise still say "hard".
       conditioningFlavour: 'aerobic' as const,
       ...(standalone ? { workoutType: workoutTypeForTemplate(template) } : {}),
+      // THE OPTION FOLLOWS ITS ROWS. The replacement rows carry new ids; an
+      // option still pointing at the old ids is how the screen lost the
+      // machine — no modality label, no effort scale, running "% MAS" copy on
+      // a bike (cohort F003, P1, 2026-09-03; `test:eased-conditioning-modality`).
+      // The eased session is one prescription: the first option keeps its
+      // machine and takes the new rows; options whose rows are gone go with them.
       ...(workout.conditioningBlock
         ? {
           conditioningBlock: {
             ...workout.conditioningBlock,
             intent: 'aerobic' as const,
-            options: workout.conditioningBlock.options.map((option, index) => (
-              index === 0 ? { ...option, title: template.name } : option
-            )),
+            options: workout.conditioningBlock.options.slice(0, 1).map((option) => ({
+              ...option,
+              title: template.name,
+              description: replacement.find((row) => row.role === 'conditioning' && row.notes)?.notes
+                ?? option.description,
+              exerciseIds: replacement.map((row) => row.id),
+            })),
           },
         }
         : {}),

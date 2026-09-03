@@ -1861,3 +1861,43 @@ The R-361 suite only listed the exact old tokens, so these passed it. Fix:
 the three read `colors.accent.lime`; the suite now refuses any lime-family
 literal (red-first: named both files; green after). Rebuilt and reinstalled
 over the phone app, data kept.
+
+## 2026-09-03 — Sam: "Keep the card off … call the Manage week route 'move it back' … Fix the Bike-flush display next"
+
+### R-271 reaffirmed; wording
+"Undo" → "move it back" in the move-game flow, the relaunch suite's cell
+names and the registry (R-271 reaffirmed line). No behaviour change.
+
+### FY-CCA-F003 — the Bike flush that lost its machine (P1) — root cause and fix
+- **Reproduced on the current candidate in three minutes:**
+  `node scripts/athlete-cohort-year.cjs --preset=club-rpe-swings --output=<scratch> --weeks=13`
+  → weeks 12 and 13 carry a conditioning row with running "% MAS" copy and no
+  modality label (the cohort evidence at `895dde2a` showed 11 such rows over
+  weeks 12–25).
+- **Mechanism.** After a hard block the boundary eases the day's conditioning
+  (`applyBlockBoundaryConditioning`, aerobic template). It recomposes the rows
+  with NEW ids (`cond-<seed>-eased-*`) but only retitled the day's
+  conditioning option, leaving `exerciseIds` pointing at the OLD rows. The
+  screen finds a row's machine through that option
+  (`conditioningModeLabelForRow` / `conditioningRowForDisplay`), so the eased
+  rows had no modality, no effort translation, and rendered the raw authored
+  running copy — the "low-load exercise card" the audit named.
+- **Fix, one place.** The option follows its rows: the first option keeps its
+  machine, takes the eased title, the first row's notes as description and the
+  replacement row ids; options whose rows are gone go with them (the eased
+  session is one prescription).
+- **Receipts.** `test:eased-conditioning-modality` (new, in the chain):
+  red-first 3/6 — option ids `["w-cond-1"]` vs rows
+  `["cond-2026-12-14-eased-main"]`, label `null`, notes "Intensity: 70–80% MAS"
+  (the cohort's exact copy) → **6/6**: option references the rows, label
+  "Bike", notes carry "Effort:" and no "MAS".
+- **Integration receipt.** The same 13-week club run with the fix: 0 bare
+  rows. Weeks 12 and 13 now read modality **Run** with the running copy
+  (65–80% MAS) — honest: this athlete's Tuesday conditioning had been on the
+  run since week 10 (2-Minute Repeats, 100% MAS), so the eased aerobic
+  session stays on the run; the audit's "Bike" was its inference from a
+  missing modality. The day's conditioning label is back ("Continuous
+  Aerobic" instead of none). `test:block-two-difficult-missed` 87/1 — the
+  one red ("a three-set secondary lift exists in the control") is identical at
+  the base `f385dc75`. `test:compile` 0 errors. The full 52-week club run is
+  being rerun in the background for the acceptance's own F003 check.

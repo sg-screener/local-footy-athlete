@@ -6957,6 +6957,12 @@ its restriction visibility, Clear and shared-count requirements remain.
 Guard: `LAW-session-stack-and-status-boundary`, `test:canonical-weekly-compiler`
 (`mobilityAddJourney`) and `test:modifier-lifecycle`.
 Transaction reassessment, verification status and NOT COVERED: `docs/STATUS_INTAKE.md`.
+**R-271 reaffirmed, 2026-09-03 (hingecod).** Sam, after the phone preview: *"Keep the
+card off — my 28 August ruling stands. Call the Manage week route 'move it back',
+not Undo."* No "Game moved" card on My Status, live or after a relaunch; the
+route an athlete takes after a relaunch is the board (Manage week → drag →
+save), named "move it back". `.maestro/audit/week-move-game.yaml` and
+`test:move-game-relaunch` carry that wording.
 
 **R-272** · Sam's Estimated 1RM implementation decisions, 2026-08-29.
 
