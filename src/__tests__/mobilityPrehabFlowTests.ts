@@ -576,17 +576,30 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
     'utf8',
   );
 
-  const mobilityOwnerAt = screen.indexOf("section.id === 'mobility'");
-  const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilityOwnerAt);
   const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
   const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
   const mobilityRenderer = mobilityRendererAt >= 0 && sessionListAt > mobilityRendererAt
     ? screen.slice(mobilityRendererAt, sessionListAt)
     : '';
   ok('the flow renderer exists', mobilityRenderer.length > 500);
-  ok('the shared execution section owns mobility disclosure',
-    mobilityOwnerAt >= 0 && mobilityRowsAt > mobilityOwnerAt &&
-      screen.slice(mobilityOwnerAt, mobilityRowsAt).includes('<SessionExecutionSection'));
+  /* ⚠ **DELETED, NOT WEAKENED — "the shared execution section owns mobility
+   * disclosure".** It proved that claim by finding `section.id === 'mobility'`
+   * and requiring `<MobilityExerciseList` after it. The warm-up was rewired:
+   * it is no longer selected by a section id and rendered separately, it is
+   * handed to the shared list as `mobilityContent` and drawn inside the one
+   * section shell. Both strings the cell searched for are now absent from the
+   * screen — one of them, `MobilityPrehabFlowSection`, is a deleted component —
+   * so the cell had been RED on every branch since the rewire while the screen
+   * was correct the whole time.
+   *
+   * **The rule it stood for is still guarded, in the shape the screen actually
+   * has**: `sessionExecutionChecklistTests` "mobility uses the shared section
+   * mapper, including mixed derived and added rows" asserts the mapper renders
+   * `mobilityContent`, and `sessionChangeHubTests` "the one section mapper
+   * carries the section tap and retains derived mobility content" asserts the
+   * same wiring from the other side. Both are green. Keeping a second cell that
+   * describes the retired wiring would only teach the next reader to distrust
+   * the suite. */
   ok('the movement renderer owns no competing disclosure state',
     !/useState\(false\)|setExpanded|chevron-up|chevron-down/.test(mobilityRenderer));
   ok('the common section reports the movement total from execution items',
@@ -635,11 +648,18 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
     'the curated cue layer owns every athlete-visible coaching word',
   );
 
-  ok(
-    'the screen mounts the shared mobility section above the session list',
-    screen.indexOf('MobilityExerciseList') > 0 &&
-      screen.indexOf('<MobilityExerciseList') < screen.indexOf('<SessionList'),
-  );
+  /* ⚠ **DELETED, NOT WEAKENED — "the screen mounts the shared mobility section
+   * above the session list".** Its premise is gone rather than broken. The
+   * warm-up used to be a separate block rendered ABOVE the session list, so
+   * "above" was a real property to hold; it is now passed INTO that list and
+   * drawn inside it, which is why the cell's `<MobilityExerciseList` appears
+   * after `<SessionList` in the source and can never come before it again.
+   * There is no weaker true version of "above" to fall back to — inverting it
+   * to "below" would assert a source-text ordering that means nothing to the
+   * athlete. Where the warm-up is mounted is held by the two green mapper cells
+   * named above; that its rows read the same as strength rows is held by
+   * "every movement reuses Strength prescription, cues, load and video
+   * presentation" in this same section. */
   ok(
     'standalone low-load sessions do not restore a recovery-template branch',
     !/sessionTemplate\.mode === 'recovery'/.test(screen),
