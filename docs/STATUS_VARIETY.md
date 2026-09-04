@@ -490,3 +490,48 @@ RECEIVES. None was found by a suite.** Every one passed the unit tests.
   **leave**.
 - `Leg Press` now appears once a year. Sam: *"i dont care that leg press isn't in
   there"*. Not chased.
+
+---
+
+## HANDOFF — read this and nothing else
+
+**Branch `integrate/2026-09-04-morning`. Everything below is committed and green.**
+R-367 to R-377: main-lift badge, B-Stance RDL, per-side, Dead Bug, rack implies
+pull-up bar, pulldowns on cables, Bent Row, A/B grading + seat routing, the
+two-or-three stagger, the four tracked lifts unglued, total load, and the
+prohibited-pattern sweep. `test:compiler-year` is **416/416**.
+
+**ONE THING IS OPEN AND IT IS NOT FROM TODAY.** `test:injury-authority` fails 6.
+Four are one problem: **the scheduler has no injury input at all**, so two days
+before a game it swaps the day to UPPER work for an athlete whose upper is
+injured. Sam's ruling, verbatim: *"it can become whatever can fit that makes
+sense that week — if nothing fits and they can't press then it's nothing … but
+don't just pack junk in to fill it up."* The fix is threading the prohibited
+patterns into `weeklyScheduler`; scope it before touching it. The other 2 are a
+crash in the suite, not the app.
+
+### HOW TO CHECK YOUR WORK — this is what actually caught things
+
+1. **`npm run year:diff`.** Generates a year and prints what changed for the
+   athlete. **Eight of today's fifteen defects were found this way and ZERO by
+   the unit suites covering the changed code.**
+2. **"Nothing changed" is a finding.** One fix today came back byte-identical —
+   it had reached nothing. A green test cannot tell you that.
+3. **Never edit a file while a run is reading it.** Three runs were binned today
+   for exactly this.
+4. **Control every red at HEAD before calling it pre-existing.** Back the files
+   up to scratchpad and `git checkout HEAD -- <paths>`; never `git stash`.
+5. **Read the pass count, not the exit code.** `test:release` prints
+   `RELEASE_GATE_EXIT` and a pipe will mask it.
+6. **`test:release` stops at the first red unit** — it shows one problem at a
+   time. Three separate runs today, each revealing the next.
+7. **There are THREE signed workbooks.** Master sheet, injury matrix, load
+   ratios. A content change usually needs two or three. One was missed twice.
+
+### THE SHAPE ALMOST EVERY DEFECT TOOK
+
+**One fact with several owners, and the copies drifting.** The main-lift badge
+had two. Per-side had five. The tracked-lift rule lived in three. Ordering was
+mistaken for precedence; a preference was applied before legality; a rule that
+existed only in a comment was lost when the code moved. **Before adding a
+reader, find out who already owns the answer.**
