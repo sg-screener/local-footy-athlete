@@ -1,5 +1,6 @@
 import type { AutomaticProgrammingSelectionTrace } from './programmingSelectionTrace';
 import {
+  selectedTrackedLiftProgrammingSeat,
   selectedTrackedLifts,
   trackedLiftId,
   type TrackedLiftChoices,
@@ -23,13 +24,40 @@ export interface TrackedLiftProgrammingEvidence {
   readonly withheld: readonly TrackedLiftWithholding[];
 }
 
+/**
+ * ⚠ **A SUBSTRING MATCH IS NOT A SEAT MAP, AND IT WAS SILENTLY MANUFACTURING
+ * WITHHOLDINGS (found 2026-09-04).**
+ *
+ * This tested `seat.includes('pull')`, so `horizontal_pull` was attributed to
+ * the `pull_up` tracked slot — and every horizontal-pull decision then recorded
+ * `Pull-Ups` as WITHHELD with `selected_anchor_not_in_candidate_pool`, because
+ * a pull-up is not a candidate for a row and never could be. Tens of thousands
+ * of them across a 52-week corpus.
+ *
+ * **It was invisible because nothing read those entries.** The acceptance check
+ * compared eligible dates against delivered dates, and `eligibleDates` correctly
+ * excluded them, so the noise sat in the receipt unexamined. R-374 narrowed that
+ * check onto the withheld REASONS and the noise became 470 failure keys — a real
+ * defect surfacing, not a new one.
+ *
+ * The seat a tracked lift occupies is the ATHLETE'S CHOICE, so it cannot be a
+ * static table: choosing Overhead Press moves the push anchor from
+ * `horizontal_push` to `vertical_push`. `selectedTrackedLiftProgrammingSeat` is
+ * the owner of that answer and this now asks it, once per pattern, and inverts.
+ */
 export function trackedLiftSlotForProgrammingSeat(
   seat: string,
+  choices: TrackedLiftChoices = {},
 ): TrackedLiftSlot | null {
-  if (seat.includes('push')) return 'bench_press';
-  if (seat.includes('pull')) return 'pull_up';
-  if (seat === 'squat') return 'back_squat';
-  if (seat === 'hinge') return 'rdl';
+  const patterns: readonly { pattern: 'push' | 'pull' | 'squat' | 'hinge'; slot: TrackedLiftSlot }[] = [
+    { pattern: 'push', slot: 'bench_press' },
+    { pattern: 'pull', slot: 'pull_up' },
+    { pattern: 'squat', slot: 'back_squat' },
+    { pattern: 'hinge', slot: 'rdl' },
+  ];
+  for (const { pattern, slot } of patterns) {
+    if (selectedTrackedLiftProgrammingSeat(choices, pattern) === seat) return slot;
+  }
   return null;
 }
 
@@ -57,7 +85,7 @@ export function trackedLiftProgrammingEvidence(
 
   for (const trace of finalByDecision.values()) {
     if (trace.kind !== 'strength_exercise' || trace.need.role !== 'main_strength') continue;
-    const slot = trackedLiftSlotForProgrammingSeat(trace.need.movementOrQuality);
+    const slot = trackedLiftSlotForProgrammingSeat(trace.need.movementOrQuality, choices);
     if (!slot) continue;
     const expected = choices[slot] && selected.includes(choices[slot]!)
       ? choices[slot]! : slot;

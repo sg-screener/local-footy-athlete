@@ -87,9 +87,9 @@
       "reason": "Session stopwatch registration persists only current and lastEnded timing facts. Start/pause/resume/end callbacks call pure stopwatch transforms and never read or write weekly content."
     },
     "src/rules/composeWeek.ts#composeWeek": {
-      "fingerprint": "fd2d6bfa7f13c3324db2b69033b0b78bd7631d608825812a21cca3b0acfa5b99",
+      "fingerprint": "dbe6c0b68338935e2c6278dfaf60e910c491094e596cdb08572943f3e6cd3fb8",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer \u2014 selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure."
+      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer \u2014 selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure. RE-SIGNED 2026-09-04 (seat variety, R-373/R-374): a pre-pass decides which of the six core seats may spend a rotation this block, the main-lift bench is ordered by authored grade, and the tracked anchor is a pin rather than a bypass. All three change WHICH identity a seat takes; none adds a row, a field or a write. Classification unchanged."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
       "fingerprint": "2a4e61b52dd43b08ad5e010ade03b80867f31ceaef4b8bbab767d7b67f14972a",
@@ -762,9 +762,9 @@
       "reason": "Diagnostic session recorder builds feedback from real visible components and submits the same session outcome transaction as the app."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryWeek": {
-      "fingerprint": "396ba4e3c62b9c3b47bd1b91aa95d1cdaf726890a5202e7e30973a6b83fdc1d5",
+      "fingerprint": "451e4fe038bbf95807b87c2f8659d04a44399233fc58e4f464422aaa7ddc203f",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-354/R-357 drift): folds dated injury stages over the week in order, then the weekly frontal completion (never before historyBeforeISO) and the useful-strength contract with typed reduction reasons. Works on a local copy of the map; no publication. | integrate 2026-09-03 re-review: after the frontal completion it now also runs the week-level core completion (one core row per week, Sam 2026-09-03), same placeable boundary. Pure over its inputs."
+      "reason": "hingecod 2026-09-03 re-review (R-354/R-357 drift): folds dated injury stages over the week in order, then the weekly frontal completion (never before historyBeforeISO) and the useful-strength contract with typed reduction reasons. Works on a local copy of the map; no publication. | integrate 2026-09-03 re-review: after the frontal completion it now also runs the week-level core completion (one core row per week, Sam 2026-09-03), same placeable boundary. Pure over its inputs. RE-SIGNED 2026-09-04 (seat variety, R-377): the week fold now drops MAIN-STRENGTH rows whose pattern is prohibited by the active injuries, after every author has run. It only ever REMOVES rows \u2014 nothing is added, renamed or re-dosed \u2014 and it reads the same section18Evidence the week evaluator judges by. No new write and no new persistence; classification unchanged."
     },
     "src/utils/coachRevisionTemplates.ts#buildEngineTemplateWorkout": {
       "fingerprint": "0ebb7ebf8d49acbdad64c38332298b0afc5015e629f0a1e13d7f1f6ea72c198c",

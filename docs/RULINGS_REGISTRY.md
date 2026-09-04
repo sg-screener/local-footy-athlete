@@ -9752,3 +9752,63 @@ position after `Single-Leg RDL` rather than appended. `test:load-ratio-rulings`
 Guard: `test:load-ratio-rulings` 47/47, `test:estimated-1rm` 54/0,
 `test:anchor-multipliers` 38/38, `test:single-estimation-owner` 14/14,
 `test:plane-and-load-memory` 20/0. Receipts: `docs/STATUS_VARIETY.md`.
+
+**R-376** · Single-Leg RDL is Avoid for a hamstring, 2026-09-04.
+
+Owner: variety. Sam: *"single leg rdl should be avoid for hammy injuries"*. It
+was `caution` — the one RDL-family lift a hamstring prohibition still permitted,
+while `RDLs` and `B-Stance RDL` are both `avoid`. A single-leg RDL is gentler
+than a loaded bilateral one, but it is still loaded hamstring lengthening under
+injury.
+
+The frozen `INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts` is NOT edited — it records
+what was authored then. `verify-injury-matrix-sheet` gains a named `RE_AUTHORED`
+entry instead, so a ruled change is explicit and an unnamed one still fails
+"lift, never re-decide". Distribution ratchet 1208/75/1330 -> 1207/76/1330: one
+cell, moved deliberately.
+
+Guard: `test:injury-matrix-sheet` VERIFIED; `test:b-stance-rdl` now holds the
+FAMILY rule — every loaded RDL-family lift refuses a hamstring — which is a
+stronger claim than the difference it replaced.
+
+**R-377** · A prohibited pattern is prohibited whoever authored the day, 2026-09-04.
+
+Owner: variety. MEASURED: `B-Stance RDL` shipped as `role: main_strength`,
+`mainStrengthPattern: hinge`, `slot: hinge` on **45 athlete-weeks whose hinge
+pattern was prohibited by injury**. Dumped from the acceptance run itself, not
+inferred.
+
+**TWO THINGS AUTHOR A TRAINING DAY AND ONLY ONE KNEW.** `composeWeek` refuses to
+create a seat for a prohibited pattern (*"safety, not kit"*). The retained
+`defaultProgram` adapter — which authors every day the composer does not own —
+has **zero references to prohibitions**. That survived only by luck: until now
+every prohibited pattern was also exercise-prohibited, so the row-level filter
+removed the lift anyway. `B-Stance RDL` is individually PERMITTED for an athlete
+whose hinge pattern is banned, and was the first lift to walk through.
+
+The sweep lives in `canonicalWeeklyInjuryCompiler.compileCanonicalInjuryWeek`,
+after the whole week is folded: it drops MAIN-STRENGTH rows whose pattern is
+prohibited, reading the same `section18Evidence` the week evaluator judges by, so
+what ships and what is judged cannot disagree. The prohibition comes from
+`canonicalWeeklyInjuryStateFrom` through the shared
+`buildGenerationConstraintContext` — never a second reading of the constraints.
+
+⚠ **ONE OWNER, NOT A MIRROR, AND SAM CHOSE IT.** Offered a copy of the composer's
+check inside the adapter, he took the single downstream sweep: a second copy of
+one rule is the shape that caused most of this day's defects, and it would still
+miss a third author. **It can only REMOVE** — no row is added, renamed or
+re-dosed — so it cannot become a second programming authority. Supporting work is
+untouched: the ban is on training that pattern as a MAIN lift, and whether an
+individual exercise is safe is already owned upstream.
+
+⚠ **THE FIRST ATTEMPT WAS IN THE WRONG PLACE AND IS RECORDED BECAUSE THE REASON
+GENERALISES.** It was put in `assembleAuthoredWeek`, where the two authoring
+paths merge — the right concept. A probe showed it firing **zero** times: at that
+moment the rows do not yet carry `section18Evidence`, which is attached later. A
+guard placed before the fact it reads exists is a guard that runs and sees
+nothing.
+
+MEASURED after: **416 green / 416 athlete-weeks**, from 371, with the
+prohibited-pattern breach gone.
+
+Guard: `test:compiler-year` 416/416. Receipts: `docs/STATUS_VARIETY.md`.

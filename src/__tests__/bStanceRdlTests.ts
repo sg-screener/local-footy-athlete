@@ -130,10 +130,14 @@ run('SAME EXPERIENCE GATE: everyone, the same as the sibling', () => {
 
 /* ── Where Sam authored something DIFFERENT, pinned as literals ──────────── */
 
-run('HAMSTRING IS AVOID, NOT THE SIBLING\'S CAUTION — the difference that protects an athlete', () => {
-  assert.equal(EXERCISE_TAGS[NAME].injury.hamstring, 'avoid');
-  assert.equal(EXERCISE_TAGS[SIBLING].injury.hamstring, 'caution',
-    'the sibling changed; this cell is now comparing against a moved reference');
+/* R-376 (Sam, 2026-09-04): *"single leg rdl should be avoid for hammy
+ * injuries"*. The sibling moved to `avoid`, so this cell can no longer hold a
+ * DIFFERENCE — it holds the family rule instead, which is the stronger claim:
+ * every loaded RDL-family lift refuses a hamstring outright. */
+run('THE WHOLE RDL FAMILY IS AVOID FOR A HAMSTRING — no member is the way through', () => {
+  for (const lift of [NAME, SIBLING, 'RDLs']) {
+    assert.equal(EXERCISE_TAGS[lift].injury.hamstring, 'avoid', lift);
+  }
 });
 
 run('the remaining twelve injury ratings ship exactly as signed', () => {

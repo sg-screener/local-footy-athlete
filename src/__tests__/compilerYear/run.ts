@@ -76,10 +76,27 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
       observed.output.selectionTraces,
       input.weeks.trackedLiftChoices ?? {},
     )) {
+      /* ⚠ **NARROWED BY R-374, WHICH IS THE OTHER HALF OF R-304'S AMENDMENT.**
+       *
+       * This asked that EVERY eligible date deliver the tracked anchor. That was
+       * right while the anchor was a BYPASS — it took its pattern every single
+       * block, which is exactly why `Bench Press` shipped 51 weeks out of 52.
+       * Sam unglued it: the anchor is now a pin that yields at the eight-week
+       * ceiling like any other lift, and *"i don't want the program to be worse
+       * or less balanced just so they can track a lift"*.
+       *
+       * So a date where the anchor was OFFERED and the rotation chose otherwise
+       * is the rotation working, not a withholding. What survives is R-304's own
+       * sentence and it is the stronger claim: the athlete's chosen lift must
+       * always be OFFERED when its pattern is programmed and it is legal.
+       * `selected_anchor_not_in_candidate_pool` means it was not — the selection
+       * lost it before any decision was made — and that is still a defect. */
+      const unoffered = evidence.withheld.filter((entry) =>
+        entry.reasons.includes('selected_anchor_not_in_candidate_pool'));
       observations.push({
         id: 'tracked_lift_anchor_eligible',
-        ok: evidence.eligibleDates.every((date) => evidence.deliveredDates.includes(date)),
-        detail: JSON.stringify(evidence),
+        ok: unoffered.length === 0,
+        detail: JSON.stringify({ ...evidence, unoffered }),
       });
     }
     doseReceipts.push(...numeric.receipts);
@@ -340,9 +357,15 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
       deliveredDistinctDates: evidence.deliveredDates.length,
       withheld: evidence.withheld,
     }));
+    /* R-374, the annual half of the same narrowing. Eligible-equals-delivered
+     * was the BYPASS's signature: the anchor took its pattern every block. As a
+     * pin it yields at the eight-week ceiling, so the annual claim is the same
+     * one the weekly check makes — the lift is always OFFERED when its pattern
+     * is programmed and it is legal, never that it always wins. */
     result.checks.push({
       id: 'annual_tracked_lift_eligible_delivery',
-      ok: trackedReceipt.every((item) => item.eligibleDistinctDates === item.deliveredDistinctDates),
+      ok: trackedReceipt.every((item) => item.withheld.every((entry) =>
+        !entry.reasons.includes('selected_anchor_not_in_candidate_pool'))),
       detail: JSON.stringify(trackedReceipt),
     });
     result.checks.push({

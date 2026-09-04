@@ -4,6 +4,8 @@ import type { ActiveConstraint, ActiveInjuryConstraint } from '../store/coachUpd
 import { planInjuryRecomposition } from '../utils/injurySessionRecomposition';
 import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { applyExclusionsToAuthoredDay } from './exerciseExclusions';
+import { canonicalWeeklyInjuryStateFrom } from './canonicalWeeklyInjuryState';
+import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { compileCanonicalExerciseEditOnWorkout } from './canonicalWeeklyExerciseEditCompiler';
 import { loadForReplacementExercise, type readBlockHistory } from './blockBoundaryProgression';
 import { applyInjurySessionAdjustment, deriveInjurySessionAdjustment } from '../utils/injurySessionAdjustment';
@@ -176,6 +178,54 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
       (stagesByDate[dateISO] ??= []).push(result);
     }
   }
+  /* ⚠ **A BANNED PATTERN IS BANNED WHOEVER AUTHORED THE DAY — R-377.**
+   *
+   * TWO THINGS BUILD A TRAINING DAY. The composer refuses to create a seat for
+   * a prohibited pattern (`composeWeek`: *"safety, not kit"*). The retained
+   * `defaultProgram` adapter, which builds every day the composer does not own,
+   * has NEVER known prohibitions exist — zero references in that file.
+   *
+   * It survived only by luck: until 2026-09-04 every prohibited pattern was also
+   * exercise-prohibited, so the row-level filter above removed the lift anyway.
+   * `B-Stance RDL` is individually PERMITTED for an athlete whose hinge pattern
+   * is banned, so it was the first lift to walk through — reaching 45
+   * athlete-weeks as a main hinge on a week that forbids hinging.
+   *
+   * ⚠ **IT LIVES HERE, AND ONLY HERE, ON PURPOSE.** Mirroring the composer's
+   * check into the adapter would be a SECOND copy of one rule — the shape that
+   * caused most of that day's defects — and would still miss a third author.
+   * This runs after the whole week is folded, downstream of every author, on
+   * rows that carry the same `section18Evidence` the week evaluator judges by,
+   * so what ships and what is judged cannot disagree.
+   *
+   * ⚠ **IT CAN ONLY REMOVE.** No row is added, renamed or re-dosed here, so it
+   * cannot become a second programming authority. Supporting work is untouched:
+   * the ban is on TRAINING that pattern as a main lift, and whether an
+   * individual exercise is safe is already owned above. */
+  const prohibitedPatterns = new Set(canonicalWeeklyInjuryStateFrom({
+    profile: args.profile,
+    // The SAME builder the rest of generation uses to turn this week's active
+    // constraints into an injury context — never a second reading of them here.
+    generationConstraints: buildGenerationConstraintContext({
+      activeConstraints: args.constraints,
+      todayISO: Object.keys(args.workoutsByDate).sort()[0] ?? '',
+    }),
+  }).prohibitedPatterns);
+  if (prohibitedPatterns.size > 0) {
+    for (const [dateISO, workout] of Object.entries(workoutsByDate)) {
+      const rows = workout.exercises ?? [];
+      const kept = rows.filter((row) => {
+        const evidence = row.section18Evidence;
+        if (evidence?.role !== 'main_strength') return true;
+        return !(evidence.mainStrengthPattern
+          && prohibitedPatterns.has(evidence.mainStrengthPattern));
+      });
+      if (kept.length !== rows.length) {
+        workoutsByDate[dateISO] = { ...workout, exercises: kept };
+      }
+    }
+  }
+
   const dates = Object.keys(workoutsByDate).sort();
   const completed = dates.length > 0
     ? (() => {

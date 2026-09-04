@@ -1924,6 +1924,19 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  /**
+   * ⚠ **HAMSTRING IS `avoid`, NOT `caution` — Sam, 2026-09-04: *"single leg rdl
+   * should be avoid for hammy injuries"*.**
+   *
+   * It was `caution`, which made it the one RDL-family lift a hamstring injury
+   * still permitted — `RDLs` and `B-Stance RDL` are both `avoid`. A single-leg
+   * RDL is gentler than a loaded bilateral one, but it is still a loaded
+   * hamstring lengthening under injury, and the family it belongs to says so.
+   *
+   * Surfaced while chasing a `prohibited_pattern_breach`: R-373 let a graded
+   * single-leg hinge fill the MAIN hinge seat, and this was the only member of
+   * that family a hamstring prohibition did not already stop.
+   */
   'Single-Leg RDL': {
     strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'low', fatigue: 'moderate',
@@ -1933,7 +1946,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
       'groin': 'caution',
       'hip': 'caution',
       'quad': 'good',
-      'hamstring': 'caution',
+      'hamstring': 'avoid',
       'knee': 'caution',
       'calf': 'caution',
       'ankle/foot': 'caution',

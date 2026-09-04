@@ -352,8 +352,9 @@ ok('structural', '201 x 13 = 2613 cells compared', cells === 2613, `got ${cells}
 // (hamstring: a B-stance loads the front hamstring harder), 3 good (quad, knee,
 // neck). 1199/74/1327 -> 1208/75/1330. The code's own derivation reports the
 // same three numbers, so this ratchet moved BY the row and not around it.
-ok('snapshot', 'final distribution: 1208 caution / 75 avoid / 1330 good',
-  distribution.caution === 1208 && distribution.avoid === 75 && distribution.good === 1330,
+// R-376: Single-Leg RDL hamstring caution -> avoid moves exactly one cell.
+ok('snapshot', 'final distribution: 1207 caution / 76 avoid / 1330 good',
+  distribution.caution === 1207 && distribution.avoid === 76 && distribution.good === 1330,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
@@ -366,12 +367,35 @@ ok('structural', 'no retired key survives in exerciseTags',
 // LIFT, NEVER RE-DECIDE (Sam, 2026-07-28). When a thin rule dies under the n>=2
 // minimum, the cell that fed it must survive as a named exception carrying its
 // ORIGINAL authored rating — never silently fall through to the declaration.
+/**
+ * ⚠ **RE-AUTHORED BY SAM, WHICH IS NOT THE SAME AS DROPPED.**
+ *
+ * "Lift, never re-decide" exists to stop a rating falling silently through to
+ * the declaration when its rule dies. It is not a freeze on Sam's own judgement.
+ * A rating he re-authors moves here, NAMED, with the ruling and his words — and
+ * `INJURY_MATRIX_PRE_MIGRATION_RATINGS.ts` stays untouched, because it is the
+ * historical record of what was authored then, not a claim about now.
+ *
+ * An entry here is a deliberate override. An unnamed change is still a defect.
+ */
+const RE_AUTHORED: Readonly<Record<string, string>> = {
+  // R-376, Sam 2026-09-04: "single leg rdl should be avoid for hammy injuries".
+  // It was the only RDL-family lift a hamstring prohibition still permitted;
+  // RDLs and B-Stance RDL are both avoid.
+  'Single-Leg RDL.hamstring': 'avoid',
+};
+
 const preCheck = readPreMigrationRatings();
 const dropped: string[] = [];
 for (const record of finalRows) {
   const before = preCheck.get(record.Exercise) ?? {};
   for (const [region, authored] of Object.entries(before)) {
     const now = record[region].replace(/ \((exc|dec)\)$/, '');
+    const ruled = RE_AUTHORED[`${record.Exercise}.${region}`];
+    if (ruled !== undefined) {
+      if (now !== ruled) dropped.push(`${record.Exercise}.${region}: RULED ${ruled} -> ${now}`);
+      continue;
+    }
     if (now !== authored) dropped.push(`${record.Exercise}.${region}: ${authored} -> ${now}`);
   }
 }
