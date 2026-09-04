@@ -281,3 +281,43 @@ rules.**
    COVERED. Changes what three shipping lifts prescribe, so it is his call.
 2. **`isolation_lower/accessory has 7 entries (got 8)`** — another seat's stale
    count from the T-Bar Tib Raises intake, red on `HEAD`, blocking `test:pools`.
+
+---
+
+## THE RELEASE GATE — CONTROLLED AT BOTH ENDS, 2026-09-04
+
+**`npm run test:release` is RED on this branch and it was red before this seat
+existed.** Proven, not asserted: the gate was run twice, on two trees, to
+completion.
+
+| | baseline `cf1e5118` (before slice 1) | current (slices 1 + 5 committed) |
+| --- | --- | --- |
+| athlete-weeks | **416 green / 416 reached / 416 required** | **416 green / 416 reached / 416 required** |
+| distinct failure keys | 1 | 1 |
+| the key | `canonical_only` | `canonical_only` |
+| unresolved candidate owners | **1 / 1170** | **1 / 1170** |
+| units | **11/31 green** | **11/31 green** |
+| verdict | `RELEASE_GATE_EXIT=1` | `RELEASE_GATE_EXIT=1` |
+
+**Identical at every line.** The baseline was taken in an ISOLATED
+`git worktree` at `/private/tmp/lfa-variety-baseline`, detached at `cf1e5118`,
+with `node_modules` symlinked — never by reverting the shared checkout, which
+would have taken another seat's work with it.
+
+**WHAT IS ACTUALLY BLOCKING IT IS NOT THE PROGRAMME.** Every one of the 416
+athlete-weeks is green on both sides. The gate stops on the executable-ownership
+census: **one unresolved candidate owner out of 1,170**, with 0 rival functions
+and 0 derived publishers. That is the writer-census tail, not a defect in a
+generated week.
+
+**AND THE NEW CODE DID NOT ADD TO IT.** `sessionRoleForRow` is a new exported
+function and the census counts function owners, so this was checked directly
+rather than assumed: `scanSources` reports `1 / 1170` on the current tree,
+**the same numerator AND the same denominator** as the baseline report.
+
+⚠ **THE FIRST RUN OF THIS GATE WAS DISCARDED AND THE REASON IS WORTH KEEPING.**
+It was started before the B-Stance edits and finished after them, so it read a
+tree that changed underneath it — a control that did not see one tree, and
+therefore no control at all. It reported the same 11/31, which is exactly what
+made it tempting to keep. Both runs above were started against a quiet tree and
+nothing was edited while either ran.
