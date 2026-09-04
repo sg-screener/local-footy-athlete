@@ -1946,6 +1946,46 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  /**
+   * R-368, Sam's signed intake 2026-09-04
+   * (`docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`).
+   *
+   * ⚠ **NOT A COPY OF THE `Single-Leg RDL` ROW ABOVE, AND THE DIFFERENCES ARE
+   * THE POINT.** `hamstring` is **avoid** rather than caution — a B-stance
+   * loads the front hamstring harder because the rear leg is not sharing the
+   * work — while `knee` is good and `stability` is moderate rather than low,
+   * because the rear foot is a kickstand. `load` and `eccentric` rise with it.
+   * A row that merely inherited Single-Leg RDL's ratings would offer this lift
+   * to a hamstring the app is supposed to be protecting.
+   *
+   * What IS shared is shared through its owner, never duplicated here:
+   * `movement: 'hinge'` + `unilateral: true` is what makes
+   * `slotsForExerciseName` seat it in `single_leg_hip`, exactly as it does for
+   * Single-Leg RDL, and `lateWeek: 'caution'` is the same season/game rating
+   * Sam's sheet asked for.
+   */
+  'B-Stance RDL': {
+    strengthClassification: 'compound',
+    movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
+    doms: 'moderate', stability: 'moderate', unilateral: true,
+    eccentric: 'high', lateWeek: 'caution',
+    injury: {
+      'groin': 'caution',
+      'hip': 'caution',
+      'quad': 'good',
+      'hamstring': 'avoid',
+      'knee': 'good',
+      'calf': 'caution',
+      'ankle/foot': 'caution',
+      'ribs': 'caution',
+      'lowerBack': 'caution',
+      'neck': 'good',
+      'shoulder': 'caution',
+      'elbow': 'caution',
+      'wrist/hand': 'caution',
+    },
+  },
+
   'Hip Thrusts': {
     strengthClassification: 'compound',
     movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',

@@ -76,6 +76,15 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Banded TKE": ['bands'],
   "Banded Tricep Pushdown": ['bands'],
   "Barbell Row": ['barbell'],
+  // R-368, Sam's signed intake 2026-09-04: *"Barbell OR dumbbell"*. **DUMBBELLS
+  // LEAD for the same reason Single-Leg RDL's row does** — the OR-group resolves
+  // first-available, so a dumbbell athlete gets a dumbbell B-stance and nothing
+  // about their session changes when a barbell comes or goes.
+  //
+  // ⚠ **NO KETTLEBELL, AND DELIBERATELY NOT `BODYWEIGHT_CAPABLE`.** Single-Leg
+  // RDL is both; this sheet says barbell or dumbbell and nothing was widened
+  // past it. An unloaded B-stance is not a regression Sam authored.
+  "B-Stance RDL": [['dumbbells', 'barbell']],
   "Bear Carry": ['sandbag'],
   "Bench Press": ['barbell', 'bench'],
   "Bicep Curl (Barbell)": ['barbell'],

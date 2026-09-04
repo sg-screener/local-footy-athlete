@@ -396,6 +396,24 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
     note: '',
     flagged: false,
   },
+  // R-368, Sam's signed intake 2026-09-04. `everyone` is his answer, and it is
+  // the SAME gate as Single-Leg RDL despite the higher eccentric demand — a
+  // kickstand makes this the easier of the two to hold position on, which is
+  // why it is the one that widens the group rather than narrowing it.
+  {
+    exercise: 'B-Stance RDL',
+    pool: 'Lower hinge',
+    primary: ['Hamstrings', 'Glutes'],
+    secondary: ['Low back'],
+    experienceGate: 'everyone',
+    note: 'Single-leg hip-dominant. Rear foot is a kickstand for balance only; '
+      + 'the front leg does the work. Barbell or dumbbell. Repetitions are per '
+      + 'side. Same sets, repetitions, rest, loading and progression as '
+      + 'Single-Leg RDL, and the same season and game-day restrictions. '
+      + 'Automatic programming and manual Add/Swap wherever Single-Leg RDL is '
+      + 'eligible.',
+    flagged: false,
+  },
   {
     exercise: 'Hip Thrusts',
     pool: 'Lower hinge',

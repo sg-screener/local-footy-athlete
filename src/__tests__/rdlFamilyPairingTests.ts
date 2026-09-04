@@ -144,10 +144,32 @@ run('an Off-season RDL day carries a hamstring row in the vacated spot — repla
       rdlDays.map((day) => day.names.join(', ')).join(' || ')}`);
 });
 
-run('Single-Leg RDL still lives where it owns the day (In-season 3-day)', () => {
+/* ⚠ **THIS CELL USED TO NAME `Single-Leg RDL` AND THAT WAS AN ACCIDENT OF
+ * SCARCITY.** The property it protects is that the guard does not ERASE the
+ * single-leg hip seat in worlds where nothing ever collided — and until
+ * 2026-09-04 the app owned exactly one loaded lift that could hold that seat, so
+ * "the seat survived" and "Single-Leg RDL survived" were the same sentence.
+ *
+ * R-368 added `B-Stance RDL` to the group, and the seat legitimately rotates to
+ * it (least-recently-used: a never-used option is the most eligible). The cell
+ * went red naming an identity while the property it exists for held perfectly.
+ * **So it asks for the SEAT, which is what it always meant.**
+ *
+ * The non-vacuity below is why this is not a loosening: it pins that the group
+ * really does hold more than one loaded option now, so a future change that
+ * collapses it back to one cannot pass this cell by making the question easier. */
+const isLoadedSingleLegHip = (name: string) =>
+  isSlRdl(name) || /B-?Stance RDL/i.test(name.replace(/‑/g, '-'));
+
+run('the loaded single-leg hip seat still lives where it owns the day (In-season 3-day)', () => {
+  const groupMembers = ['Single-Leg RDL', 'B-Stance RDL']
+    .filter((name) => slotsForExerciseName(name).includes('single_leg_hip'));
+  assert(groupMembers.length >= 2,
+    `non-vacuity: the loaded single-leg hip group is back to ${groupMembers.length} option(s) `
+    + '— this cell can no longer tell a rotation from an erasure');
   const days = generatedDays('In-season', 3);
-  assert(days.some((day) => day.names.some(isSlRdl) && !day.names.some(isRdls)),
-    'the guard erased Single-Leg RDL from worlds where it never collided');
+  assert(days.some((day) => day.names.some(isLoadedSingleLegHip) && !day.names.some(isRdls)),
+    'the guard erased the loaded single-leg hip row from worlds where it never collided');
 });
 
 run('healthy full-kit RDL de-dup is internal variety, never an equipment explainer', () => {

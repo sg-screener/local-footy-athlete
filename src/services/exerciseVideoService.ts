@@ -81,6 +81,8 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Trap Bar Deadlift':                'https://youtube.com/shorts/v-SrIcAp3vM?si=NgsvLWJbCw6rz73U',
   'RDLs':                             'https://youtube.com/shorts/g5u75sgpn04?si=OXvMDpOjCaR0mP2r',
   'Single-Leg RDL':                   'https://youtube.com/shorts/R_fJ6H3FlVw?si=b9TIsBIrsFMjc0KT',
+  // R-368, the link on Sam's signed intake, 2026-09-04.
+  'B-Stance RDL':                     'https://youtube.com/shorts/5fUAdAXu3PI?si=7zXA5P6Mvng5UFjY',
   'Hip Thrusts':                      'https://youtube.com/shorts/Kvh5yudFKyM?si=JunAi-NVT4L4SBP_',
   'Kettlebell Swings':                'https://youtube.com/shorts/jwILQCx61ts?si=EzLjxPLFrFSJs9ie',
 
@@ -311,6 +313,8 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'romanian deadlift':                'RDLs',
   'single leg rdl':                   'Single-Leg RDL',
   'single leg deadlift':              'Single-Leg RDL',
+  'b stance rdl':                     'B-Stance RDL',
+  'kickstand rdl':                    'B-Stance RDL',
   'hip thrust':                       'Hip Thrusts',
   'leg extension':                    'Leg Extension',
   'leg extensions':                   'Leg Extension',

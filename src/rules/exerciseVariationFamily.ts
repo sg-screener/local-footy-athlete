@@ -50,7 +50,11 @@ const FAMILY_MEMBERS: Readonly<Record<ExerciseVariationFamily, readonly string[]
     'Neutral-Grip Pulldown',
     'Single-Arm Lat Pulldown',
   ],
-  romanian_deadlift: ['RDLs', 'Single-Leg RDL'],
+  // R-368: an RDL with a kickstand is still an RDL. This table's question is
+  // *"effectively the same variation for ONE SESSION"*, and two RDLs on one page
+  // is exactly what R-233 exists to stop — so B-Stance RDL joins on arrival
+  // rather than being found later by an athlete reading both.
+  romanian_deadlift: ['RDLs', 'Single-Leg RDL', 'B-Stance RDL'],
 };
 
 /**

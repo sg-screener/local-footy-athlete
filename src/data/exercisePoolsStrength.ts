@@ -414,6 +414,16 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // wrong than a lost slot; more variety is a content unit, not this one.
       slot: 'hinge', role: 'accessory', entries: [
         { name: 'Single-Leg RDL', doseCategory: 'loaded_lower_secondary_compound',    loadRatio: 0.45, group: 'single_leg_hip' },
+        // R-368 — SAM ASKED FOR THIS ROW BY NAME, 2026-09-04: *"add this into
+        // the exercise list as well - so we have another single leg hip
+        // dominant lift"*. The narrowing the comment above SAYS OUT LOUD —
+        // *"the app owns exactly ONE single-leg hip lift in this pool, so that
+        // group cannot rotate at all today"* — is what this pays off. It is
+        // the third member, and the first that can actually rotate with
+        // Single-Leg RDL: `SL 45° Back Extension` is unloaded, so
+        // `weightedFirst` puts it behind both. Intake:
+        // `docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`.
+        { name: 'B-Stance RDL', doseCategory: 'loaded_lower_secondary_compound',      loadRatio: 0.45, group: 'single_leg_hip' },
         { name: "SL 45° Back Extension", loadRatio: 0, group: 'single_leg_hip' },
         { name: 'Hip Thrusts', doseCategory: 'loaded_lower_secondary_compound',       loadRatio: 1.10, group: 'bilateral_hinge' },
         { name: 'Kettlebell Swings', doseCategory: 'ballistic_strength', loadRatio: 0.35, group: 'bilateral_hinge' },

@@ -160,9 +160,124 @@ checkout and a whole-tree write would have taken another seat's work with it.
 
 ---
 
-## STATUS WORDS
+### Slice 1 status word
 
-- **WORKING** — the composer's main-lift decision reaches the athlete's session
-  list, and an anchor-named supporting row no longer claims the badge. Breaks
-  `test:visible-surfaces` [12] if it regresses.
-- **NOT YET STARTED** — slices 2 through 6.
+**WORKING** — the composer's main-lift decision reaches the athlete's session
+list, and an anchor-named supporting row no longer claims the badge. Breaks
+`test:visible-surfaces` [12] if it regresses.
+
+---
+
+## SLICE 5 (TAKEN OUT OF ORDER) — B-STANCE RDL
+
+Sam sent the signed intake mid-slice, 2026-09-04, with *"add this into the
+exercise list as well - so we have another single leg hip dominant lift"*. Taken
+now rather than at its planned position because it is pure content addition: it
+touches no selector, no cadence and no rotation rule, so it cannot interfere
+with slices 2-4, and the group it widens is the one the pool file has been
+complaining about in writing since 2026-08-13.
+
+Intake: `docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`. Ruling: **R-368**.
+Law: `LAW-b-stance-rdl-intake`. Guard: `test:b-stance-rdl`, **18/18**, chained
+into `test:exercise-intake`.
+
+### What was touched, and why each one
+
+| file | why |
+| --- | --- |
+| `data/exercisePoolsStrength.ts` | the row itself — hinge accessory, `single_leg_hip`, `loaded_lower_secondary_compound` |
+| `data/exerciseTags.ts` | demand + all thirteen injury ratings |
+| `data/exerciseCues.ts` | Sam's two cue lines verbatim |
+| `data/exerciseEquipmentRequirement.ts` | `[['dumbbells', 'barbell']]` |
+| `data/exerciseMovementPlaneMetadata.ts` | sagittal, frontal + transverse behind |
+| `data/muscleExperienceMetadata.ts` | muscles, pool, experience gate, note |
+| `rules/exerciseVariationFamily.ts` | `romanian_deadlift` — R-233 covers it on arrival |
+| `utils/loadEstimation.ts` | the identical load profile row + three aliases |
+| `services/exerciseVideoService.ts` | the intake video + aliases |
+| `docs/EXERCISE_MASTER_SHEET_2026-07-28.xlsx` | the signed workbook the equality suites read |
+
+### The workbook edit, receipted
+
+`openpyxl`, inserted at the **Lower hinge** position immediately after
+Single-Leg RDL — **never appended**. Verified by diffing every cell of every
+data row against a pre-edit copy: **218 -> 219 data rows, and 0 rows differing
+apart from the insert.** A CHANGE LOG line was added to the sheet's own log
+cell, which is that file's existing convention. Pre-edit copy kept in scratchpad
+for the life of the branch.
+
+### The one cell that had to change, and why it is not a loosening
+
+`rdlFamilyPairingTests` asserted *"Single-Leg RDL still lives where it owns the
+day (In-season 3-day)"*. It went red — because the seat now legitimately
+**rotates** to B-Stance RDL (least-recently-used: a never-used option is the
+most eligible). **The property that cell protects is that the guard does not
+ERASE the single-leg hip seat, and that property held perfectly.** Naming the
+identity was an accident of scarcity: with one loaded option in the group, "the
+seat survived" and "Single-Leg RDL survived" were the same sentence.
+
+The cell now asks for the SEAT, and carries a **non-vacuity that reds if the
+loaded group ever falls back to one option** — so a future change cannot pass it
+by making the question easier.
+
+### Gates
+
+| gate | before | after |
+| --- | --- | --- |
+| `test:compile` | 0 errors | **0 errors** |
+| `test:b-stance-rdl` | (new) | **18/18** |
+| `test:muscle-experience` | 97/97 | **97/97** (sheet 216 -> 217, everyone 146 -> 147) |
+| `test:movement-planes` | 13/13 | **13/13** (mirror updated) |
+| `test:authored-cues` | 56/56 | **56/56** |
+| `test:rdl-family` | 7 / **1** | 7 / **1** (same pre-existing cell) |
+| `test:locked-list` | 32 / **1** | 32 / **1** (same cell) |
+| `test:pools` | 487 / **5** | 487 / **5** (same five) |
+| `test:law-registry` | 13 / **1** | 13 / **1** (21 unenforced laws, none of them this one) |
+
+All controlled at `HEAD` by backing the nine files up to scratchpad and
+`git checkout HEAD -- <the nine paths>`, never `git stash`.
+
+### NOT MINE, FOUND IN PASSING — one line, another seat's
+
+`test:pools` fails `isolation_lower/accessory has 7 entries (got 8)`. The pool
+genuinely holds eight: `T-Bar Tib Raises` was added on 2026-09-02 and the
+count assertion in `exercisePoolsStrengthTests.ts:598` was never bumped. **It is
+red on `HEAD` with none of my files present.** Left alone deliberately — fixing
+another seat's stale count inside this commit would make the attribution a lie.
+The other four `test:pools` reds are the squat-rotation cells, also pre-existing,
+and they are what slice 4 is about.
+
+### NOT COVERED — RAISED WITH SAM, NOT DECIDED HERE
+
+**Per-side dosing does not render, for the whole class.** Sam's sheet says
+B-Stance RDL's repetitions are per side. Measured on the preserved 52-week
+driver, `Single-Leg RDL`, `Walking Lunges` and `Bulgarian Split Squats` ALL ship
+as plain `3 × 8` with no `/ side`, while `Half Copenhagen` and `Bosch Hold` ship
+`3 × 30s / side` correctly. The reason: `perSide` is only ever read off an
+authored prehab/carry pool entry (`composedDose.ts`) and is never derived from
+`unilateral: true`, which is the field that already knows.
+
+Fixing it for B-Stance alone would be the name-special-case
+`.claude/rules/coach-and-plan-edits.md` forbids. Fixing the class changes what
+three shipping lifts prescribe — 8 per side is not 8 — which is a dose change
+and Sam's call. **B-Stance ships matching Single-Leg RDL exactly until he
+rules.**
+
+---
+
+## STATUS WORDS — WHOLE SEAT
+
+- **WORKING** — slice 1: the composer's main-lift decision reaches the athlete's
+  session list. Held by `test:visible-surfaces` [12].
+- **WORKING** — slice 5: B-Stance RDL ships as a second loaded single-leg hip
+  option. Held by `test:b-stance-rdl` (18/18), chained into
+  `test:exercise-intake`.
+- **NOT YET STARTED** — slice 2 (grade eligible mains A/B/none), slice 3 (the
+  two-or-three-at-a-time rotation rule), slice 4 (unglue the four tracked
+  lifts), Bulgarian split squat, weight tracking.
+
+### OPEN WITH SAM
+
+1. **Per-side dosing for loaded unilateral lower lifts.** See slice 5's NOT
+   COVERED. Changes what three shipping lifts prescribe, so it is his call.
+2. **`isolation_lower/accessory has 7 entries (got 8)`** — another seat's stale
+   count from the T-Bar Tib Raises intake, red on `HEAD`, blocking `test:pools`.

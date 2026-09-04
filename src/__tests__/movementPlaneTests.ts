@@ -77,6 +77,9 @@ add(['Face Pull', 'Cable Face Pull'], 'transverse', ['frontal']);
 add(['Banded 90/90 External Rotation'], 'transverse');
 add(['Nordic Lower', 'Hamstring Curl', 'Leg Extension', 'Calf Raises', 'Tib Raises', 'T-Bar Tib Raises',
   'Back Extension', 'Seated Calf Raise'], 'sagittal');
+// R-368: B-Stance RDL takes Single-Leg RDL's classification — resisting
+// rotation and lateral drift on one leg is the same demand with a kickstand.
+add(['B-Stance RDL'], 'sagittal', ['frontal', 'transverse']);
 add(['SL 45° Back Extension', 'Single-Leg Hip Thrust'],
   'sagittal', ['frontal', 'transverse']);
 add(['Single-Leg Calf Raise'], 'sagittal', ['frontal']);

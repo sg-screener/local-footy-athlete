@@ -141,6 +141,17 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-b-stance-rdl-intake',
+    law: 'R-368: B-Stance RDL is a loaded single-leg hip-dominant lift for everyone, in the hinge accessory pool\'s single_leg_hip group. Barbell or dumbbell, dumbbells resolved first; no kettlebell and not bodyweight-capable. Same dose category, load profile, experience gate, season and game-day rating, and automatic/manual routes as Single-Leg RDL, held as equalities rather than copies. It differs where Sam authored it to: hamstring Avoid, knee Good, stability moderate, eccentric high, load moderate. It joins the romanian_deadlift variation family, so R-233\'s one-RDL-variant-per-day covers it.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-368',
+    guard: {
+      state: 'guarded',
+      by: 'test:exercise-intake',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-04 by seat `variety`, on Sam\'s "add this into the exercise list as well - so we have another single leg hip dominant lift". The single-leg hip group held ONE loaded option before this, which is why Single-Leg RDL repeated for most of a season; the suite pins that the group holds two and reds if it collapses back to one. Every "same as Single-Leg RDL" claim is an equality against the sibling read through its owner, so a change to the sibling cannot silently diverge the two; every authored difference is a literal. Master workbook row inserted at its Lower hinge position (218 -> 219 data rows, every other row byte-identical), and the movement-plane mirror in test:movement-planes updated with it. rdlFamilyPairingTests\' single-leg-hip cell was rewritten to ask for the SEAT rather than the identity Single-Leg RDL, with a non-vacuity that reds if the group narrows again. Receipts: docs/STATUS_VARIETY.md, docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md.',
+    },
+  },
+  {
     id: 'LAW-t-bar-tib-raises-intake',
     law: 'R-332: T-Bar Tib Raises is the tib-bar-loaded progression of Tib Raises for everyone. It uses the same 2 x 15-20 total reps and 30 seconds rest, is preferred automatically when a tib bar is available, remains a direct Swap and manual Add/Swap option, records total external kilograms in 2.5 kg steps, permits a familiar light G-1 dose and is not automatic in Primer.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-332',

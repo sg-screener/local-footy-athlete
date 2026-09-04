@@ -804,6 +804,12 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Hinge at the hip, soft knee.',
     secondaryCue: 'Balance and control over speed.',
   },
+  // R-368, Sam's signed intake 2026-09-04. Both lines are his words verbatim —
+  // the curated cue layer owns every athlete-visible coaching word (R-366).
+  'B-Stance RDL': {
+    primaryCue: 'Load the front leg and push your hips straight back.',
+    secondaryCue: 'Keep hips square; use the rear foot only for balance.',
+  },
   'Single-Leg Squat (to Box)': {
     primaryCue: 'Sit to the box under control.',
     secondaryCue: 'Keep the knee tracking straight.',

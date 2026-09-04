@@ -9350,3 +9350,53 @@ is the next convergence and is named in `docs/STATUS_VARIETY.md`.
 Guard: `test:visible-surfaces` section [12], both directions, driving the real
 materialiser and the real session-template owner. Receipts:
 `docs/STATUS_VARIETY.md`.
+
+**R-368** · B-Stance RDL joins the single-leg hip group, 2026-09-04.
+
+Owner: variety. Sam: *"add this into the exercise list as well - so we have
+another single leg hip dominant lift."* B-Stance RDL is a loaded single-leg
+hip-dominant lift for everyone, seated in the hinge accessory pool's
+`single_leg_hip` group. Barbell or dumbbell with dumbbells resolved first; no
+kettlebell, and it is NOT bodyweight-capable — the sheet says barbell or
+dumbbell and nothing was widened past it.
+
+WHY IT MATTERS MORE THAN AN ORDINARY ADDITION: the app owned exactly ONE loaded
+single-leg hip lift, and `exercisePoolsStrength.ts` has said so in its own words
+since 2026-08-13 — *"the app owns exactly ONE single-leg hip lift in this pool,
+so that group cannot rotate at all today ... more variety is a content unit, not
+this one."* This is that content unit. The group now holds two loaded options and
+can rotate.
+
+"Same as Single-Leg RDL" is held as EQUALITY, never as a copy: the identical
+authored dose category, the identical load profile row, the identical experience
+gate and late-week rating, and slot membership DERIVED from `movement: 'hinge'`
++ `unilateral: true` by the same owner that seats the sibling. A suite pinning
+those as literals would stay green on the day the sibling's numbers moved and
+the two lifts silently diverged.
+
+It differs where Sam authored it to, and those are literals: hamstring **Avoid**
+(the sibling is Caution — a B-stance loads the front hamstring harder because
+the rear leg is not sharing the work), knee Good, stability moderate, eccentric
+high, load moderate.
+
+SAME-SESSION IDENTITY: it joins the `romanian_deadlift` variation family, so
+R-233's one-RDL-variant-per-day covers it on arrival rather than being found by
+an athlete reading two RDLs on one page. **The consequence is stated:** in-season
+R-093 puts an RDL on every hinge day, so this lift is excluded exactly where the
+sibling is. The variety it buys is off-season and pre-season variety.
+
+The master workbook row was INSERTED at its Lower hinge position, never appended
+— 218 to 219 data rows with every other row byte-identical — and the
+movement-plane mirror moved with it.
+
+NOT COVERED: per-side rendering. Sam's sheet says the repetitions are per side
+and they do not render that way; neither do `Single-Leg RDL`, `Walking Lunges`
+or `Bulgarian Split Squats`, all measured shipping as plain `3 × 8`, because
+`perSide` is only ever read off an authored prehab/carry pool entry and never
+derived from `unilateral: true`. A class-wide gap, raised with Sam and not fixed
+for one lift. Also not added to `BEGINNER_EXERCISE_PRIORITY.hinge`, which is a
+preference order rather than a legality gate.
+
+Guard: `LAW-b-stance-rdl-intake` through chained `test:exercise-intake`, which
+invokes `test:b-stance-rdl`. Receipts: `docs/STATUS_VARIETY.md`,
+`docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`.

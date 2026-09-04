@@ -501,9 +501,10 @@
     "probe:totally-cooked": "TZ=Australia/Melbourne sucrase-node scripts/probe-totally-cooked.ts",
     "test:injury-latest-severity": "TZ=Australia/Melbourne sucrase-node src/__tests__/latestInjurySeverityAuthorityTests.ts",
     "test:modifier-lifecycle": "TZ=Australia/Melbourne sucrase-node src/__tests__/modifierLifecycleTests.ts && npm run test:my-status-modifiers && npm run test:program-tab-read-only-modifiers && npm run test:modifier-effect-phrases",
-    "test:exercise-intake": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseIntakeTests.ts && npm run test:banded-90-90-external-rotation && npm run test:t-bar-tib-raises && npm run test:equipment-vocabulary && npm run test:primer-session && npm run test:power-pool && npm run test:muscle-experience && npm run test:authored-cues && npm run test:power-primer-policy && npm run test:quick-exercise-actions",
+    "test:exercise-intake": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseIntakeTests.ts && npm run test:banded-90-90-external-rotation && npm run test:t-bar-tib-raises && npm run test:b-stance-rdl && npm run test:equipment-vocabulary && npm run test:primer-session && npm run test:power-pool && npm run test:muscle-experience && npm run test:authored-cues && npm run test:power-primer-policy && npm run test:quick-exercise-actions",
     "test:banded-90-90-external-rotation": "TZ=Australia/Melbourne sucrase-node src/__tests__/banded9090ExternalRotationTests.ts",
     "test:t-bar-tib-raises": "TZ=Australia/Melbourne sucrase-node src/__tests__/tBarTibRaisesTests.ts",
+    "test:b-stance-rdl": "TZ=Australia/Melbourne sucrase-node src/__tests__/bStanceRdlTests.ts",
     "test:estimated-1rm": "TZ=Australia/Melbourne sucrase-node src/__tests__/trackedLiftProgrammingAnchorTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/estimatedOneRepMaxTests.ts && TZ=Australia/Melbourne sucrase-node src/__tests__/progressTabOwnershipTests.ts && npm run test:workout-log-progression-wiring && npm run test:effort-scale",
     "test:session-section-add": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionSectionAddTests.ts && npm run test:session-change-hub"
   },

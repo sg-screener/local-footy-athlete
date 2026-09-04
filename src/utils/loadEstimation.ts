@@ -201,6 +201,10 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   // so a 0.00 entry here was a second representation of the same fact. The
   // cue's "add weight to hips if you can" is the whole instruction.
   'Single-Leg RDL':         { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
+  // R-368: *"Use the same loading rules and progression as Single-Leg RDL."*
+  // The identical row, so the two lifts seed and progress from one answer
+  // rather than from two tables that agree today.
+  'B-Stance RDL':           { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Kettlebell Swings':      { anchor: 'squat', ratio: 0.20, equipment: 'kettlebell' },
 
   // ═══ LOWER BODY — MACHINE ═══
@@ -348,6 +352,10 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'db rdl':                   'Single-Leg RDL',   // DB RDL usually means single-leg
   'single leg rdl':           'Single-Leg RDL',
   'single-leg romanian deadlift': 'Single-Leg RDL',
+  // R-368. "Kickstand" is what athletes and coaches usually call this.
+  'b stance rdl':             'B-Stance RDL',
+  'b-stance romanian deadlift': 'B-Stance RDL',
+  'kickstand rdl':            'B-Stance RDL',
   'hip thrust':               'Hip Thrusts',
   'barbell hip thrust':       'Hip Thrusts',
   'bb hip thrust':            'Hip Thrusts',

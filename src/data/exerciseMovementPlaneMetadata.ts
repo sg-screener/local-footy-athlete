@@ -53,6 +53,10 @@ add(['Single-Leg Squat (to Box)'], 'sagittal', ['frontal', 'transverse']);
 add(['Deadlift', 'Trap Bar Deadlift', 'RDLs', 'Hip Thrusts', 'Kettlebell Swings',
   'Glute Bridge'], 'sagittal');
 add(['Single-Leg RDL'], 'sagittal', ['frontal', 'transverse']);
+// R-368, Sam's signed intake 2026-09-04: sagittal primary, frontal and
+// transverse secondary — the same answer as Single-Leg RDL, because resisting
+// rotation and lateral drift on one leg is the same demand with a kickstand.
+add(['B-Stance RDL'], 'sagittal', ['frontal', 'transverse']);
 add(['Bench Press', 'DB Bench Press', 'Single-Arm DB Bench Press',
   'Single-Arm DB Floor Press'], 'transverse');
 add(['Incline Bench', 'Close Grip Bench', 'Incline DB Bench', 'Push-ups', 'Incline Push-Up'],
