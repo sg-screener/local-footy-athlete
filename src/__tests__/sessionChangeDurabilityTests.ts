@@ -548,9 +548,30 @@ async function main(): Promise<void> {
   // R-124: knee restrictions exhaust the per-exercise ladder; unrelated work
   // must not be labelled a replacement. The session reports its pause instead.
   const s8Adjustment = injuryAdjustmentOn(TARGET);
+  /* ⚠ **THIS ASKED FOR ZERO SUBSTITUTIONS ON THE WHOLE DAY, AND THAT WAS AN
+   * ACCIDENT OF SCARCITY (R-368/R-372, 2026-09-04).**
+   *
+   * R-124's property is about THE ATHLETE'S CHOSEN LIFT: a knee restriction
+   * exhausts its per-exercise ladder, so the session must NAME it as paused
+   * rather than dress unrelated work up as its replacement. `s8Subs.length === 0`
+   * was a proxy that held only because no hinge in the app was better for a knee
+   * than `RDLs`.
+   *
+   * `B-Stance RDL` arrived with `knee: good` where `RDLs` is `caution`, so the
+   * injury system now does the right thing and swaps THAT lift — a real,
+   * same-family, better-for-the-knee substitution, on a different row from the
+   * one this cell is about. Refusing it would be pausing a hinge the athlete
+   * could safely train.
+   *
+   * So the cell asks its own question: the CHOSEN lift is paused, and nothing is
+   * offered as its replacement. The non-vacuity below keeps it honest — if the
+   * chosen lift ever stops being displaced, this case proves nothing. */
+  const s8ChoiceSubstituted = s8Subs.some((entry) => entry.includes(`<-${s8Choice}`));
   ok('R-124 names the chosen lift as paused rather than inventing a replacement',
-    !!s8Adjustment?.paused.includes(s8Choice) && s8Subs.length === 0,
+    !!s8Adjustment?.paused.includes(s8Choice) && !s8ChoiceSubstituted,
     JSON.stringify({ adjustment: s8Adjustment, substitutions: s8Subs }));
+  ok('non-vacuity: the chosen lift really was displaced by the injury',
+    displaced, `${s8Choice} still on the day`);
   ok('the visible session explains the injury adjustment',
     !!s8Adjustment?.summary && /knee/i.test(s8Adjustment.summary), JSON.stringify(s8Adjustment));
 
