@@ -52,7 +52,7 @@ import {
   injurySeverityReducesAffectedWork,
   onboardingInjurySeverityScore,
 } from '../rules/injurySeverityBands';
-import { EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
+import { EXERCISE_TAGS, CONDITIONING_META, resolvePerSide } from '../data/exerciseTags';
 import { composedRowIsLegal } from '../rules/composedRowLegality';
 import {
   resolveInjuryRegion,
@@ -1083,7 +1083,11 @@ function powerEntryToWorkoutExercise(
     prescribedRepsMax: authored?.repsMax ?? slot.repsMax,
     restSeconds: authored?.restSeconds ?? slot.restSeconds,
     prescriptionType: authored?.prescriptionType,
-    perSide: authored?.perSide,
+    // R-369: the power row asks the ONE per-side owner. It read only the
+    // authored prescription, so `Lateral Jump` and `RFE Split Squat Jump`
+    // — unilateral, no authored block — shipped a bare `3 x 3` while
+    // `Rotational Medicine-Ball Slam` (authored) said `/ side`.
+    perSide: resolvePerSide(entry.name, authored?.perSide),
     notes: authored?.notes ?? entry.authoredCueIntent,
     exercise: {
       id,
@@ -1113,7 +1117,9 @@ function poolExerciseToWorkoutExercise(
     prescribedRepsMax: pe.repsMax,
     restSeconds: pe.restSeconds,
     prescriptionType: pe.prescriptionType,
-    perSide: pe.perSide,
+    // R-369: same owner. The pool entry still wins where it authored an
+    // answer; the tag only fills silence.
+    perSide: resolvePerSide(pe.name, pe.perSide),
     notes: pe.notes,
     exercise: {
       id: pe.id,

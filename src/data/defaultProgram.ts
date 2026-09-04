@@ -1,4 +1,4 @@
-import { getExerciseTags } from './exerciseTags';
+import { getExerciseTags, resolvePerSide } from './exerciseTags';
 import {
   Workout,
   WorkoutExercise,
@@ -1361,7 +1361,12 @@ export function buildPowerRow(
     prescribedRepsMax: authored?.repsMax ?? spec.repsMax,
     restSeconds: authored?.restSeconds ?? 120,
     prescriptionType: authored?.prescriptionType,
-    perSide: authored?.perSide,
+    // R-369: the block power row asks the ONE per-side owner. Reading only
+    // the authored prescription left `Lateral Jump` and `RFE Split Squat
+    // Jump` — both unilateral, neither authored — shipping a bare `3 x 3`
+    // while `Rotational Medicine-Ball Slam` said `/ side`. Measured: the
+    // last 9 rows per athlete-year after the other four callers converged.
+    perSide: resolvePerSide(name, authored?.perSide),
     notes: authored ? `${notes} ${authored.notes}` : notes,
     role: 'power',
     power: { family: spec.family, kind: spec.kind },

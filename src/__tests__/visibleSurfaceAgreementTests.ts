@@ -51,6 +51,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { composeDayDetail } from '../utils/dayDetailComposition';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { classifyExerciseRole } from '../utils/sessionRoles';
+import { resolvePerSide } from '../data/exerciseTags';
 import { buildSwapSuggestionPayload } from '../utils/swapSuggestionPayload';
 import { loadForReplacementExercise } from '../rules/blockBoundaryProgression';
 import * as fs from 'fs';
@@ -69,7 +70,11 @@ import {
   resolveSelectedImplement,
   selectedImplementLabel,
 } from '../rules/selectedImplement';
-import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
+import {
+  cueForImplement,
+  formatLowLoadSetsReps,
+  formatStrengthSetsReps,
+} from '../screens/home/dayWorkoutHelpers';
 import {
   CUE_ASSUMED_IMPLEMENT,
   CUE_IMPLEMENT_NEUTRAL,
@@ -765,6 +770,59 @@ function run(): void {
   check('so the squat day the athlete opens carries a visible main lift',
     badgeItems.some((item: any) => item.role === 'main_lift'),
     badgeItems.map((item: any) => item.role).join(' | '));
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [13] A ONE-SIDED LIFT SAYS "/ side" ON THE STRENGTH CARD  (Sam, 2026-09-04)
+  //
+  // MEASURED over the preserved 52-week driver: **200 rows (male) and 202
+  // (female)** told the athlete a TOTAL for a movement with one side.
+  // `Single-Leg RDL`, `Walking Lunges` and `Bulgarian Split Squats` shipped a
+  // bare `3 × 8`; `Half Copenhagen` correctly shipped `3 × 30s / side`.
+  // `Side Plank` managed BOTH in the same year.
+  //
+  // ⚠ **THE FIRST FIX CHANGED NOTHING THE ATHLETE READS, AND ONLY A YEAR
+  // RE-RUN COULD SAY SO.** Resolving `perSide` onto the row came back
+  // byte-identical, because THIS renderer never read the field for rep rows —
+  // it only delegated per-side to the timed formatter. The difference was the
+  // UNIT, not the movement. A unit test of the resolver would have passed and
+  // shipped nothing.
+  //
+  // Five builders answered "does this count one side" from five places;
+  // `resolvePerSide` is now the one owner and this is its athlete-visible end.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[13] A one-sided lift says "/ side" on the strength card');
+
+  const strengthDose = (row: Record<string, unknown>): string =>
+    formatStrengthSetsReps({ prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 8, ...row });
+  check('THE REP ROW SAYS IT — this is the line that was silent',
+    strengthDose({ perSide: true }) === '3 × 8 / side',
+    strengthDose({ perSide: true }));
+  check('and a two-sided row is untouched — not a blanket suffix',
+    strengthDose({}) === '3 × 8', strengthDose({}));
+  check('an EXACTLY authored dose carries it too — the other return path',
+    strengthDose({ exactDose: true, perSide: true }) === '3 × 8 / side',
+    strengthDose({ exactDose: true, perSide: true }));
+  check('one vocabulary: the strength card and the low-load card say the SAME words',
+    strengthDose({ perSide: true }).endsWith(' / side')
+      && formatLowLoadSetsReps({ prescribedSets: 3, prescribedRepsMax: 8, perSide: true })
+        .endsWith(' / side'),
+    `${strengthDose({ perSide: true })} vs ${formatLowLoadSetsReps({ prescribedSets: 3, prescribedRepsMax: 8, perSide: true })}`);
+
+  // The owner behind it, both directions and the precedence.
+  check('THE OWNER: a one-sided movement answers true from the tag alone',
+    resolvePerSide('Single-Leg RDL') === true
+      && resolvePerSide('Bulgarian Split Squats') === true
+      && resolvePerSide('Single-Arm DB Row') === true,
+    `${resolvePerSide('Single-Leg RDL')} / ${resolvePerSide('Single-Arm DB Row')}`);
+  check('a two-sided movement answers undefined, never false — it stamps no field',
+    resolvePerSide('Back Squat') === undefined && resolvePerSide('Bench Press') === undefined,
+    String(resolvePerSide('Back Squat')));
+  check('AN AUTHORED ANSWER WINS BOTH WAYS — the tag only fills silence',
+    resolvePerSide('Single-Leg RDL', false) === false
+      && resolvePerSide('Back Squat', true) === true,
+    `${resolvePerSide('Single-Leg RDL', false)} / ${resolvePerSide('Back Squat', true)}`);
+  check('an unknown name is not guessed at',
+    resolvePerSide('Something The Tags Never Heard Of') === undefined);
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

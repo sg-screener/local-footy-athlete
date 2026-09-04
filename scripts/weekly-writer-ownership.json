@@ -89,12 +89,12 @@
     "src/rules/composeWeek.ts#composeWeek": {
       "fingerprint": "fd2d6bfa7f13c3324db2b69033b0b78bd7631d608825812a21cca3b0acfa5b99",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer — selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure."
+      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer \u2014 selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
       "fingerprint": "2a4e61b52dd43b08ad5e010ade03b80867f31ceaef4b8bbab767d7b67f14972a",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (WC-143/R-338: the no-club game week's Speed rides its early fast session so the in-season caps hold; R-359 drift kept): pure weekly scheduling stage — no store, no clock."
+      "reason": "hingecod 2026-09-03 re-review (WC-143/R-338: the no-club game week's Speed rides its early fast session so the in-season caps hold; R-359 drift kept): pure weekly scheduling stage \u2014 no store, no clock."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
       "fingerprint": "bd1fec4ff4800de548c3f29d4a46fa11e0b822e923a9498ba507a381134f0355",
@@ -144,12 +144,12 @@
     "src/utils/workoutCanonicalisation.ts#finaliseWorkoutAfterMutation": {
       "fingerprint": "001e72491af6947378883869b78c31a23524ca37937431419486396fac0c1245",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: checked wrapper — runs the unchecked normaliser and asserts template/modality compatibility."
+      "reason": "hingecod 2026-09-03 re-review: checked wrapper \u2014 runs the unchecked normaliser and asserts template/modality compatibility."
     },
     "src/utils/programControlActions.ts#executeProgramControlActionDurablyWithinTrace": {
       "fingerprint": "091e22a2d36c00816d6b98f554737f6a38a5ba13b2345af916cb6c8dd9dc5e9f",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: canonical effective fixtures in the chooser context; visible-change reporting after an injury): the durable input transaction — clears, injury episodes, fatigue/recovery, edits — each through its owning transaction inside runCoachMutationTransaction. No independent publication."
+      "reason": "hingecod 2026-09-03 re-review (drift: canonical effective fixtures in the chooser context; visible-change reporting after an injury): the durable input transaction \u2014 clears, injury episodes, fatigue/recovery, edits \u2014 each through its owning transaction inside runCoachMutationTransaction. No independent publication."
     },
     "src/screens/home/HomeScreenV2.tsx#DayRow": {
       "fingerprint": "a5ed8ef0d52c91e989afb9b8f73e0abd504e7f9cab128a78558abfce4cb624dd",
@@ -199,7 +199,7 @@
     "src/screens/home/DayWorkoutScreenV2.tsx#DayWorkoutScreenV2": {
       "fingerprint": "64cb1c0e3f03c31ab5419db3eccc66893adfdfa5a8aae4ba87fc30f325a8d4cc",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift since intake 2026-08-29: accent tokens, conditioning card redesign, speed section order, read-only session context, canonical exercise names): the session screen still reads the resolved day and delegates every change — swaps/adds/removes, injury, equipment, feedback — to the program control doors and the outcome transaction. Local editing/sheet state only; no direct output writes."
+      "reason": "hingecod 2026-09-03 re-review (drift since intake 2026-08-29: accent tokens, conditioning card redesign, speed section order, read-only session context, canonical exercise names): the session screen still reads the resolved day and delegates every change \u2014 swaps/adds/removes, injury, equipment, feedback \u2014 to the program control doors and the outcome transaction. Local editing/sheet state only; no direct output writes."
     },
     "src/screens/home/HomeScreenV2.tsx#HomeScreenV2": {
       "fingerprint": "b149a548e5556d7302fc50699d697421228ce11feed9d5a826e91fbb943de478",
@@ -264,7 +264,7 @@
     "src/store/acceptedStateTransaction.ts#buildFixtureProjection": {
       "fingerprint": "8edc20f86a52605f0f007799b26bc86881aa739207d5347bd360bd018da26ed7",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review: fixture proposal adapter — rebases the accepted week, supplies the canonical generator and fixture compiler with explicit inputs and returns the projection plus alternatives. Publishes nothing."
+      "reason": "hingecod 2026-09-03 re-review: fixture proposal adapter \u2014 rebases the accepted week, supplies the canonical generator and fixture compiler with explicit inputs and returns the projection plus alternatives. Publishes nothing."
     },
     "src/utils/planChangeProducer.ts#commitVerifiedAgainstVisibleWeek": {
       "fingerprint": "bcb73729ddc1afa6c821244fe7349d77830b586d37820807cf68c2d2cc01c975",
@@ -414,7 +414,7 @@
     "src/rules/materialiseAuthoredSessions.ts#materialiseAuthoredSessions": {
       "fingerprint": "2823c99a2a358d17cc8aed95b25a2d325e0ce5068e027f3280559605425d76fc",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (seat identity per week): materialises the scheduler's intentions — conditioning/sprint template selection with traces; the selection context and the remembered seats carry the week being materialised. Pure."
+      "reason": "hingecod 2026-09-03 re-review (seat identity per week): materialises the scheduler's intentions \u2014 conditioning/sprint template selection with traces; the selection context and the remembered seats carry the week being materialised. Pure."
     },
     "src/rules/fixtureConditionedAvailability.ts#resolveFixtureConditionedAvailability": {
       "fingerprint": "57397a9756808a7dd2404e1060e9d26eac2b0fda97d25f0e97a36be991d0d121",
@@ -464,7 +464,7 @@
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryStage": {
       "fingerprint": "fcbb7e92828e05e061e6fbfb6aa03820c5aaedef5356f486a719ceb6e5f8e117",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recorded loads reach the replacement load and the added block): one injury stage — ladder substitutions through the exercise-edit compiler, then the paused-row adjustment and conditioning policy, then evidence/name refresh. Pure over its inputs."
+      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recorded loads reach the replacement load and the added block): one injury stage \u2014 ladder substitutions through the exercise-edit compiler, then the paused-row adjustment and conditioning policy, then evidence/name refresh. Pure over its inputs."
     },
     "src/utils/workoutCanonicalisation.ts#buildCanonicalConditioningBlock": {
       "fingerprint": "4cad58e1a13576b080bbae1770ea0b677c0b61b955dda35fc4326d7c1dea160c",
@@ -587,9 +587,9 @@
       "reason": "Session-action sheet manages header/back/scroll UI state and renders children; does not change athlete program state."
     },
     "src/screens/home/DayWorkoutScreenV2.tsx#MobilityExerciseList": {
-      "fingerprint": "8796653a063afd0b0e678aa6b55be8a738224caed9fe94cdf91d801506d5a575",
+      "fingerprint": "b7805ce624eca4e2879c26565d19e64e167d07b868a0c53b265458b7adcf124e",
       "classification": "projection_display",
-      "reason": "Adapts existing mobility-flow movements into card props and delegates edit controls to canonical action handlers; no persisted/generated session writer."
+      "reason": "Adapts existing mobility-flow movements into card props and delegates edit controls to canonical action handlers; no persisted/generated session writer. RE-SIGNED 2026-09-04 (seat variety, on Sam's \"yes\"): the review had gone 'changed' because b1bdd403 added onQuickSwap/onQuickRemove. Re-read in full before re-signing \u2014 the function still constructs one in-memory display row with prescribedWeightKg explicitly null and passes both new controls straight through to the existing quick-action handlers, which is the delegation this reason already described. Classification unchanged."
     },
     "src/data/defaultProgram.ts#validatePairings": {
       "fingerprint": "0ea9f971cb5b53fdbc2871833f622e7322b3e89711d16c42034bbce226e59795",
@@ -689,7 +689,7 @@
     "src/rules/canonicalInjuryConditioning.ts#compileInjuryConditioning": {
       "fingerprint": "81e18d056395e1c62a061454694c23258dcda2a6a870e12e68e750b83493e0e1",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: injury conditioning policy — filters typed components by the active constraints, checks the selected machines are still owned, resolves feasibility and applies the shared modality/substitution materialisers or collapses an honestly emptied shell to rest. No persistence or ambient reads beyond the equipment resolver."
+      "reason": "hingecod 2026-09-03 re-review: injury conditioning policy \u2014 filters typed components by the active constraints, checks the selected machines are still owned, resolves feasibility and applies the shared modality/substitution materialisers or collapses an honestly emptied shell to rest. No persistence or ambient reads beyond the equipment resolver."
     },
     "src/utils/programControlActions.ts#compileSessionInjuryPreview": {
       "fingerprint": "01901d75442892444d9c7c5dda4f423696bc00e916f0f1408d4b16e7e0f44de2",
@@ -844,7 +844,7 @@
     "src/rules/deloadWeekRules.ts#applyStrengthDeloadToExercises": {
       "fingerprint": "11978230bf018f37a37faad8be992cf4a44bfb0dc66146a7d567ce9ec32cb3c7",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-357 drift: a frontal-plane row counts as important in the keep order): deload row materialiser — sets, load and accessory retention per the single law. Pure map; chooses no deload weeks and publishes nothing."
+      "reason": "hingecod 2026-09-03 re-review (R-357 drift: a frontal-plane row counts as important in the keep order): deload row materialiser \u2014 sets, load and accessory retention per the single law. Pure map; chooses no deload weeks and publishes nothing."
     },
     "src/utils/coachingEngine.ts#scoreStrengthSequence": {
       "fingerprint": "e5609ab47fbe3da0a3604c40ba739ce711ff3128a943d8b2262e7dde73b0371a",
@@ -897,9 +897,9 @@
       "reason": "Routes modifier clearing by exact accepted identity; canonical temporary facts must use their durable fact action and cannot be cleared through a compatibility copy."
     },
     "src/data/defaultProgram.ts#buildPowerRow": {
-      "fingerprint": "641cdd12737b275c4f0524dadce445d1642ab0a808d32f7ec90875a36d897e63",
+      "fingerprint": "51cee94707e71416d1ee6f3f63ca17265dae25d68ea1a22cd200b7c1fb71a5a5",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: weekly selector and traces): builds the primer power row from the traced selector and the authored prescription. Pure constructor."
+      "reason": "hingecod 2026-09-03 re-review (drift: weekly selector and traces): builds the primer power row from the traced selector and the authored prescription. Pure constructor. RE-SIGNED 2026-09-04 (seat variety, R-369): the review went 'changed' because this row's `perSide` line now calls the one per-side owner `resolvePerSide(name, authored)` instead of reading its own authored field alone. An authored answer still wins; the tag only fills silence. No new write, no new field, no persistence \u2014 classification unchanged."
     },
     "src/data/defaultProgram.ts#completeCoachWorkoutsFromPlan": {
       "fingerprint": "968d0eeedfe402566fd4781cfdb7bc65358c1eed61d66f095898e4fa8d702bb7",
@@ -969,7 +969,7 @@
     "src/store/sourceFactCompilation.ts#captureSourceFactCompilerInput": {
       "fingerprint": "212c6412190a64180874f18cf8585652aab82e2edc88e834f4dc33473a3cf637",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: unchanged role — captures the deterministic source-fact compiler inputs (accepted profile, generation anchor, selection replay, earned progression) and now also the athlete's recorded loads by name (R-358). Constructs input only; no publication."
+      "reason": "hingecod 2026-09-03 re-review: unchanged role \u2014 captures the deterministic source-fact compiler inputs (accepted profile, generation anchor, selection replay, earned progression) and now also the athlete's recorded loads by name (R-358). Constructs input only; no publication."
     },
     "src/utils/fixtureMinimalReplan.ts#withoutPlannerOffers": {
       "fingerprint": "8a307e8b02e950558b873acbff995d117fac5574cf99ae6f7a8fecb31ec2bc8c",
@@ -1029,7 +1029,7 @@
     "src/utils/fixtureMinimalReplan.ts#scoreCandidate": {
       "fingerprint": "c89b4ed8f1eac04274d8bebcf9c7dc683e03de58397112997995a6e9fb17ca42",
       "classification": "projection_display",
-      "reason": "integrate 2026-09-03 re-review (craft verdict ranks the candidate): read-only fixture candidate cost evaluator — compares identities, contracts and placement, and now copies the gateway's craft-tier blocking count (`craftBlockers`) into the cost; does not mutate candidates."
+      "reason": "integrate 2026-09-03 re-review (craft verdict ranks the candidate): read-only fixture candidate cost evaluator \u2014 compares identities, contracts and placement, and now copies the gateway's craft-tier blocking count (`craftBlockers`) into the cost; does not mutate candidates."
     },
     "src/utils/fixtureMinimalReplan.ts#relocateNewStrength": {
       "fingerprint": "86f194bd6bab815b026d4911a07c816bd714032e747bcb40a3800a5b832c3fa7",
@@ -1044,7 +1044,7 @@
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan.regenerateFromCompilerTarget": {
       "fingerprint": "2a761cb1049e3107cbae64aeac009b16e44921d180df8c5111de13d26cb77857",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03: the former inline full-regeneration fallback as a local closure — runs the accepted-week gateway over the compiler's complete target for these fixtures and scores it. Pure over its arguments; no store writes."
+      "reason": "integrate 2026-09-03: the former inline full-regeneration fallback as a local closure \u2014 runs the accepted-week gateway over the compiler's complete target for these fixtures and scores it. Pure over its arguments; no store writes."
     },
     "src/utils/visibleWorkoutIdentity.ts#normalizeVisibleWorkoutIdentity": {
       "fingerprint": "1eb69409e7a754cf176f11530bed6499acbab34720da80a56e5575e5ba429192",
@@ -1059,7 +1059,7 @@
     "src/store/quiescentBoot.ts#compileFixtureDecisionGroup": {
       "fingerprint": "2804b7a59ac01d5f50e27a9e67257c31577bf943c06beb64a9ef556ce7984f92",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: boot folds each accepted fixture effect in ledger order through commitCanonicalAcceptedFixtureEditEffect (the canonical fixture stage), then derives the fixture's coach note through the coach-updates constraint door from the ledger record it just wrote plus one post-commit read (never a read before the commit — compiler-year restart check). Legacy entries still cross the migration boundary and emit upgrade metadata. Authors no rows itself."
+      "reason": "hingecod 2026-09-03: boot folds each accepted fixture effect in ledger order through commitCanonicalAcceptedFixtureEditEffect (the canonical fixture stage), then derives the fixture's coach note through the coach-updates constraint door from the ledger record it just wrote plus one post-commit read (never a read before the commit \u2014 compiler-year restart check). Legacy entries still cross the migration boundary and emit upgrade metadata. Authors no rows itself."
     },
     "src/components/dev/ScheduleDebugPanel.tsx#useScheduleState": {
       "fingerprint": "97b5deece89686d998914798b6c027fd04c04e1f544771ae466d686bb60f8a1b",
@@ -1134,7 +1134,7 @@
     "src/rules/canonicalInjuryConditioning.ts#withPlannedInjuryConditioning": {
       "fingerprint": "3e3dc6fe3c9ab001a8d76ccf228526d652957aec89b35afbb7f4455e5ddfe967",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: source-fact merge — keeps the accepted strength rows and takes the planned week's conditioning rows/block/speed block, collapsing an empty planned shell to rest. Pure merge; no publication."
+      "reason": "hingecod 2026-09-03 re-review: source-fact merge \u2014 keeps the accepted strength rows and takes the planned week's conditioning rows/block/speed block, collapsing an empty planned shell to rest. Pure merge; no publication."
     },
     "src/utils/sessionBuilder.ts#buildConditioningTemplate": {
       "fingerprint": "af36613bd44de5a6e17c46dfbf7e3f63af9e261211b0a775115455b1663ae4f1",
@@ -1244,7 +1244,7 @@
     "src/rules/assembleAuthoredWeek.ts#applyContribution": {
       "fingerprint": "318a7ea2b39811f79c95ec4e348165494c059e9da0ffb7ce6fb9c9d85298f046",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: private assembly stage — refuses adapter overreach, merges power/composer/other rows with one ordering and resolves the club-day display name. Pure; returns a new Workout."
+      "reason": "hingecod 2026-09-03 re-review: private assembly stage \u2014 refuses adapter overreach, merges power/composer/other rows with one ordering and resolves the club-day display name. Pure; returns a new Workout."
     },
     "src/utils/coachRevisionPolicy.ts#canonicalTemplateSectionSignature": {
       "fingerprint": "25e22d35d826696f94ab025703cf953aaf6892015fdc00fef36f945fc060e583",
@@ -1374,7 +1374,7 @@
     "src/screens/coach/useCoachWeeklyCommitment.ts#coachWeeklyCommitmentInputs.candidateProgramFor": {
       "fingerprint": "5fc5453a3dd8bc646c12f32c57433840b69393ea4e77ea14a310cb9269df9716",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03 re-review (drift: trackedLiftChoices passed to the generator): preview only — calls the real generation owner for a candidate profile with recordSelections false and never installs the output."
+      "reason": "hingecod 2026-09-03 re-review (drift: trackedLiftChoices passed to the generator): preview only \u2014 calls the real generation owner for a candidate profile with recordSelections false and never installs the output."
     },
     "src/utils/postGenerationConstraintValidation.ts#assertLiveNullableWorkoutWrite": {
       "fingerprint": "7ad7118e6d50bcad265cd7a134ac20269d611ebe4a40331611646f2ee448459e",
@@ -1417,9 +1417,9 @@
       "reason": "Fixture candidate query returns displaced existing standalone conditioning references using the exposure ledger; no reauthoring."
     },
     "src/utils/sessionBuilder.ts#poolExerciseToWorkoutExercise": {
-      "fingerprint": "ec330952fbe3a8c1c1b1ce012249d601b6241708d6603371eeaa8a3e134cc518",
+      "fingerprint": "88a6023e97a6e3ae19e65a7d8c80fd37b14568490d9f63af01a8e8c67aef1293",
       "classification": "canonical_compiler",
-      "reason": "Private pool-row materialiser copies explicit pool prescriptions and row evidence into canonical optional-session rows."
+      "reason": "Private pool-row materialiser copies explicit pool prescriptions and row evidence into canonical optional-session rows. RE-SIGNED 2026-09-04 (seat variety, R-369): the review went 'changed' because this row's `perSide` line now calls the one per-side owner `resolvePerSide(name, authored)` instead of reading its own authored field alone. An authored answer still wins; the tag only fills silence. No new write, no new field, no persistence \u2014 classification unchanged."
     },
     "src/store/coachMutationTransaction.ts#captureAcceptedMirrors": {
       "fingerprint": "74797632fccd504c61f4e01dda9a4a1515dea9cad24ac6f2142ea8e9e058e137",
@@ -1442,9 +1442,9 @@
       "reason": "hingecod 2026-09-03 re-review: template materialiser builds the warm-up/section/main rows from explicit template inputs with the shared display text. Pushes into its own local array; no publication."
     },
     "src/utils/sessionBuilder.ts#powerEntryToWorkoutExercise": {
-      "fingerprint": "2a0848a05537c738829c00b3c8b0eee1bc1caabdf23453aada8893040f183d64",
+      "fingerprint": "9370d073a44949bb719992012c3e28f7859ccbb41ed76d9a3d2863014ce5f156",
       "classification": "canonical_compiler",
-      "reason": "Intake review 2026-08-28: Existing power row constructor carries authored prescription units, sides and rest. No later rewrite."
+      "reason": "Intake review 2026-08-28: Existing power row constructor carries authored prescription units, sides and rest. No later rewrite. RE-SIGNED 2026-09-04 (seat variety, R-369): the review went 'changed' because this row's `perSide` line now calls the one per-side owner `resolvePerSide(name, authored)` instead of reading its own authored field alone. An authored answer still wins; the tag only fills silence. No new write, no new field, no persistence \u2014 classification unchanged."
     },
     "src/utils/liveEvaluationSurfaces.ts#liveAcceptedEffectiveWeekSurfaces": {
       "fingerprint": "ef3559a9816810112960982108802de713330f68ea278427118a8be9ec044980",
@@ -1744,7 +1744,7 @@
     "src/rules/conditioningFeasibility.ts#resolveWeeklyConditioningFeasibility": {
       "fingerprint": "c5dc86fa5a1e489a805421bc606fcb25ada334482ac4849d2d43238d741b68d6",
       "classification": "canonical_compiler",
-      "reason": "Applies the single conditioning feasibility policy with each day’s explicit equipment context before row composition."
+      "reason": "Applies the single conditioning feasibility policy with each day\u2019s explicit equipment context before row composition."
     },
     "src/utils/onboardingCompletion.ts#logOnboardingPipelineError": {
       "fingerprint": "14c14140581843c7fa1b3116a92f90e1b4d32887cb1fe7ae452ba5b5389e68f6",
@@ -1769,7 +1769,7 @@
     "src/dev/e2e/devE2EWorldReset.ts#resetDevE2EWorldThroughPublicAPIs": {
       "fingerprint": "1cb86801f59609d1b0a0083a29f70411245fa4dd3d2dd5d6f39c1d2426ef901e",
       "classification": "canonical_input_writer",
-      "reason": "Explicit dev world reset calls each store’s public reset door; does not manufacture generated sessions."
+      "reason": "Explicit dev world reset calls each store\u2019s public reset door; does not manufacture generated sessions."
     },
     "src/dev/e2e/explorerCampaignBootstrap.ts#writeAndVerify": {
       "fingerprint": "384181af6135aeddd23b50010f11fd975e6c0b2bd4f73afef53e2d330632dd5e",
@@ -2359,17 +2359,17 @@
     "src/rules/canonicalWeeklySourceFactCompiler.ts#compileCanonicalSourceFactWeeks": {
       "fingerprint": "4197343341472e0b866f6ab1a3be7d8dcd6f5da133f3c367533c445dd2c6d3a5",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recordedLoads carried into each week's compile): source-fact fold — for each deriving fact and horizon week, rebases the accepted week, recompiles with the fact's compatibility, preserves fixture-relative offers and the athlete's own loads, then runs the injury week compiler. Returns overlays/overrides; no publication."
+      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recordedLoads carried into each week's compile): source-fact fold \u2014 for each deriving fact and horizon week, rebases the accepted week, recompiles with the fact's compatibility, preserves fixture-relative offers and the athlete's own loads, then runs the injury week compiler. Returns overlays/overrides; no publication."
     },
     "src/services/api/generateProgram.ts#canonicalProgramInputFromProfile": {
       "fingerprint": "06bc8e75e90227fea38ad574561afed351f7f20917f724a4062953546034c22b",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: optional recordedLoads forwarded): input capture boundary — profile, history, clocks, equipment, facts, selection histories and tracked lifts into the compiler input. Reads stores when the caller states nothing."
+      "reason": "hingecod 2026-09-03 re-review (R-358 drift: optional recordedLoads forwarded): input capture boundary \u2014 profile, history, clocks, equipment, facts, selection histories and tracked lifts into the compiler input. Reads stores when the caller states nothing."
     },
     "src/store/sourceFactCompilation.ts#compileAcceptedSourceFacts": {
       "fingerprint": "42ea9a261bcb170a49d865ad75ac27e746b17fded38470ac46c7b76cdcd81e2e",
       "classification": "persistence_boundary",
-      "reason": "hingecod 2026-09-03 re-review: invokes the pure source-fact compiler and publishes its exact overlays and fact mirrors through commitAcceptedStateTransaction. Change: the accepted constraints it writes are the fact-derived ones PLUS the non-fact constraints already accepted (fixture notes), carried forward untouched — it replaced the whole list before and swept them."
+      "reason": "hingecod 2026-09-03 re-review: invokes the pure source-fact compiler and publishes its exact overlays and fact mirrors through commitAcceptedStateTransaction. Change: the accepted constraints it writes are the fact-derived ones PLUS the non-fact constraints already accepted (fixture notes), carried forward untouched \u2014 it replaced the whole list before and swept them."
     },
     "src/store/temporarySourceFactTransaction.ts#commitTemporarySourceFactSet": {
       "fingerprint": "4ae3eda1602c7c51306386dd644ccce8ea768ea27576aaaeb2db73871286ed82",
@@ -2409,7 +2409,7 @@
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
       "fingerprint": "07bb159d5c09d34e7d0b80d20be4030013b6dd4d8e373765c7cfd9925b55f2e6",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: the canonical week compiler — scheduler with fixture/availability state, materialised sessions, optional flags, conditioning policy, coaching plan, injury-safe contract and dose policies. Pure input→output."
+      "reason": "hingecod 2026-09-03 re-review: the canonical week compiler \u2014 scheduler with fixture/availability state, materialised sessions, optional flags, conditioning policy, coaching plan, injury-safe contract and dose policies. Pure input\u2192output."
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeeklyDosePolicies": {
       "classification": "canonical_compiler",
@@ -2579,12 +2579,12 @@
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
       "fingerprint": "576babbdc789592db814bd735a6e63240246b906cbe12c26848cc856849b6696",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler — injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays. | integrate 2026-09-03 re-review (delivered-day evidence): a pinned history day is handed to the scheduler as app-programmed core conditioning only when its typed conditioningRole is not an optional one (flush / recovery aerobic / non-core) — the same rule the scheduler counts its own authored days by. No new write path. | integrate 2026-09-03 re-review: runs completeWeeklyCore after the frontal completion on every authored week (one core row per week). No new write path."
+      "reason": "hingecod 2026-09-03 re-review (R-357/R-358 drift: recorded loads threaded to the composer; the weekly frontal completion runs after authorship and before judgement): the block's week-by-week row compiler \u2014 injury/availability state, dose policies, composition, adapter assembly, completion, validation. Pure; traces out through the supplied arrays. | integrate 2026-09-03 re-review (delivered-day evidence): a pinned history day is handed to the scheduler as app-programmed core conditioning only when its typed conditioningRole is not an optional one (flush / recovery aerobic / non-core) \u2014 the same rule the scheduler counts its own authored days by. No new write path. | integrate 2026-09-03 re-review: runs completeWeeklyCore after the frontal completion on every authored week (one core row per week). No new write path."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "fingerprint": "14adcabb3f5b4ca2edfc14d1712253ef6d2844600f54f757f177621ec70d4f68",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: nested candidate builder — materialises the composed week with deload/power policy, builds adapter workouts, assembles them and pins history days. Pure."
+      "reason": "hingecod 2026-09-03 re-review: nested candidate builder \u2014 materialises the composed week with deload/power policy, builds adapter workouts, assembles them and pins history days. Pure."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.pinHistoryDays": {
       "classification": "canonical_compiler",
@@ -3234,7 +3234,7 @@
     "src/rules/blockBoundaryProgression.ts#recordedLoadsFromFeedback": {
       "fingerprint": "f285a3c084bca9d6c7f6d5aa2d0b0ae2447ae577df79de73c2d584dff68bf8e5",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: one-line read — readBlockHistory over the whole history, returning lastRecordedLoadByExercise. No writes."
+      "reason": "hingecod 2026-09-03: one-line read \u2014 readBlockHistory over the whole history, returning lastRecordedLoadByExercise. No writes."
     },
     "src/store/fixtureMutationTransaction.ts#deriveAcknowledgedCoachNote": {
       "fingerprint": "1bed3c4e416f5bc6f138429d21a7d29ffe79c909d4e236d61b162a9211f5ca9b",
@@ -3244,22 +3244,22 @@
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyLowerBodyFrontal": {
       "fingerprint": "d560f2f873d90029f601121790faf0e83b00a239f03951f01f8be1e349c2925a",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input→output over the workouts map; no publication. | integrate 2026-09-03 re-review: exception stripping moved to the shared stripExceptionKind so two completion kinds can coexist on one week; behaviour unchanged."
+      "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input\u2192output over the workouts map; no publication. | integrate 2026-09-03 re-review: exception stripping moved to the shared stripExceptionKind so two completion kinds can coexist on one week; behaviour unchanged."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore": {
       "fingerprint": "4805f414a6f3e2686c2fec926156bc95782626d3988e617f29e06bc7b2839a9d",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion — if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row. | integrate 2026-09-03 re-review (order): the row is inserted before the first conditioning row and exerciseOrder renumbered, so generation and fixture repair agree on the session order (Bible: midline after accessories, before the finisher). Still pure over its arguments."
+      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion \u2014 if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row. | integrate 2026-09-03 re-review (order): the row is inserted before the first conditioning row and exerciseOrder renumbered, so generation and fixture repair agree on the session order (Bible: midline after accessories, before the finisher). Still pure over its arguments."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#automaticRows": {
       "fingerprint": "971f2deabd80f3e5495c50e27d57cff1062fbf5e2dbb6ac19b0b86280525efc9",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: pure read — the automatically selected rows across the given workouts."
+      "reason": "hingecod 2026-09-03: pure read \u2014 the automatically selected rows across the given workouts."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#existingStrengthDates": {
       "fingerprint": "b5d75886a0a7ca2e52ff3d03951c62bad0190a05e28b48ac47bdd1586251084c",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: pure read — the week's strength dates in placement order (lower days first). Returns existing references; no writes."
+      "reason": "hingecod 2026-09-03: pure read \u2014 the week's strength dates in placement order (lower days first). Returns existing references; no writes."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#hasMeaningfulLowerFrontal": {
       "fingerprint": "a03db6db5afd827164f9e9abe29738c596915a28d084a5b11913e9c0ac271e17",
@@ -3269,7 +3269,7 @@
     "src/rules/canonicalWeeklyPlaneCompletion.ts#withException": {
       "fingerprint": "157613d9b3cf8924870768efbeddeefc348fa4e79b4b61447995bbb49992cd61",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: compiler-stage transform — returns a copied week with the typed plane exception stamped on its first strength day (sorts a local copy of the entries only). No publication. | integrate 2026-09-03 re-review: appends the exception beside another kind instead of overwriting; still a pure projection."
+      "reason": "hingecod 2026-09-03: compiler-stage transform \u2014 returns a copied week with the typed plane exception stamped on its first strength day (sorts a local copy of the entries only). No publication. | integrate 2026-09-03 re-review: appends the exception beside another kind instead of overwriting; still a pure projection."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#stripExceptionKind": {
       "fingerprint": "9a947d32cf011375d82ec1f93d9b31ebc17b6f51f9dffc3c7972f2148d0afca9",
@@ -3279,12 +3279,12 @@
     "src/rules/acceptedLoadCarry.ts#carryOwnAcceptedLoads": {
       "fingerprint": "1ac36d231f3a5534f424018d28e176d14a9d40c8be89c0cbf1902f0b4c2176a8",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: rebuild stage — maps each rebuilt workout through carryOwnAcceptedLoadsIntoWorkout against the accepted week. Returns new objects; no publication."
+      "reason": "hingecod 2026-09-03: rebuild stage \u2014 maps each rebuilt workout through carryOwnAcceptedLoadsIntoWorkout against the accepted week. Returns new objects; no publication."
     },
     "src/rules/acceptedLoadCarry.ts#carryOwnAcceptedLoadsIntoWorkout": {
       "fingerprint": "95242bebd06db63aac550a4931d3a63475cf48a71d706d090136b012f194d9de",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: rebuild stage — copies the athlete's own accepted load (and dose when asked) onto the matching rebuilt row, returning a new workout only when something changed. Reads accepted rows; authors nothing new."
+      "reason": "hingecod 2026-09-03: rebuild stage \u2014 copies the athlete's own accepted load (and dose when asked) onto the matching rebuilt row, returning a new workout only when something changed. Reads accepted rows; authors nothing new."
     },
     "src/rules/acceptedLoadCarry.ts#ownRowInWeek": {
       "fingerprint": "b55d9e7c352bff8c47211e4de211fa682fb41c5dd0d5f13032ab20680f2a9f3e",
@@ -3299,17 +3299,17 @@
     "App.tsx#<module>": {
       "fingerprint": "6ad646ecc8b8eed8331e6183f33da52a277c11d0583728a039cbdfe21e05992e",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: app shell module — imports, the dev-only harness bindings behind __DEV__ and a query client. No domain object construction or store writes; every state change is behind the dev entry and the navigator it mounts."
+      "reason": "hingecod 2026-09-03: app shell module \u2014 imports, the dev-only harness bindings behind __DEV__ and a query client. No domain object construction or store writes; every state change is behind the dev entry and the navigator it mounts."
     },
     "App.tsx#App": {
       "fingerprint": "b1f2c3d07baa60fde9211e504231a686d9dc9835d34b611d04d86b92a22ba27e",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: root component — runs the dev launch barrier (dev only), mounts providers and the navigator, renders the dev refusal notice. Local React state only; no program or calendar writes."
+      "reason": "hingecod 2026-09-03: root component \u2014 runs the dev launch barrier (dev only), mounts providers and the navigator, renders the dev refusal notice. Local React state only; no program or calendar writes."
     },
     "src/navigation/AppNavigator.tsx#AppNavigator": {
       "fingerprint": "f6170d13c911831444d814cb83ef6d0b46955e83d6d8fb8176113e706b451b52",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: tab navigator — reads the coach commitment hook for the tab dot/label, logs mounts, mounts screens. No domain writes."
+      "reason": "hingecod 2026-09-03: tab navigator \u2014 reads the coach commitment hook for the tab dot/label, logs mounts, mounts screens. No domain writes."
     },
     "src/navigation/AppNavigator.tsx#ProgramStackNavigator": {
       "fingerprint": "9f38b73b22482ce1d59d88826fa1240917a7848627fabd08dce46aa71785338e",
@@ -3319,57 +3319,57 @@
     "src/navigation/RootNavigator.tsx#RootNavigator": {
       "fingerprint": "1539d0d4f3cc509b7a77804ba34a02151f2a90e23b10d31d21010d051e7a82fe",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: reads hydration/onboarding state, renders loading, the boot-failure retry (retryAppHydration — a hydration re-read, not a domain write), and the navigation tree. No program writes."
+      "reason": "hingecod 2026-09-03: reads hydration/onboarding state, renders loading, the boot-failure retry (retryAppHydration \u2014 a hydration re-read, not a domain write), and the navigation tree. No program writes."
     },
     "src/dev/coachLab/coachLabCases.ts#coachLabFixtureSnapshot": {
       "fingerprint": "9ae2552f35f9e89244aa968eeb9702d9961be9df90fc5ee06cc4876aa74a779f",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: dev Coach Lab — builds a fixed sample CoachSnapshot through deriveCoachSnapshot's builder from literal inputs. Never touches stores or the program."
+      "reason": "hingecod 2026-09-03: dev Coach Lab \u2014 builds a fixed sample CoachSnapshot through deriveCoachSnapshot's builder from literal inputs. Never touches stores or the program."
     },
     "src/dev/e2e/coachSnapshotPopulatedJourney.ts#runCoachSnapshotCookedCheckIn": {
       "fingerprint": "00c35042e16e56ec80e9c0377d35f93c50e09e7c4c58112446f9c6b091aeb882",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only seed step — records a 'cooked' fatigue status through executeProgramControlActionDurably (the program control door) and throws if refused. No direct output writes."
+      "reason": "hingecod 2026-09-03: dev-only seed step \u2014 records a 'cooked' fatigue status through executeProgramControlActionDurably (the program control door) and throws if refused. No direct output writes."
     },
     "src/dev/e2e/devE2ESeedAction.ts#applyDevE2ESeedAction": {
       "fingerprint": "b6781375962663b32245f548a2c5ba375aaddf72c95431a0cb0180251e86b498",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only seed action — replays a program-control action through executeProgramControlActionDurably and throws if it was refused or changed nothing."
+      "reason": "hingecod 2026-09-03: dev-only seed action \u2014 replays a program-control action through executeProgramControlActionDurably and throws if it was refused or changed nothing."
     },
     "src/dev/e2e/devE2EEntry.tsx#installDevE2EEntry": {
       "fingerprint": "2c1afff4add06f2f9d7327c5975542c92d67657f876565c3c44dba866d279a97",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only deep-link entry — parses e2e routes and dispatches to the seed coordinator (reset/checkpoint/scenario) or the explorer runtime; publishes harness markers/diagnostics only. Every domain change happens inside the coordinator's doors."
+      "reason": "hingecod 2026-09-03: dev-only deep-link entry \u2014 parses e2e routes and dispatches to the seed coordinator (reset/checkpoint/scenario) or the explorer runtime; publishes harness markers/diagnostics only. Every domain change happens inside the coordinator's doors."
     },
     "src/dev/e2e/devE2EEntry.tsx#installDevE2EEntry.coordinatorReady@2": {
       "fingerprint": "e5a31a6073e19397a05fd1afe3f70fc3e45736875df8c6033864392bbaa0508c",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only — awaits app hydration, creates the seed coordinator, restores explorer harness state, validates the reload checkpoint and releases the route queues. No direct domain writes."
+      "reason": "hingecod 2026-09-03: dev-only \u2014 awaits app hydration, creates the seed coordinator, restores explorer harness state, validates the reload checkpoint and releases the route queues. No direct domain writes."
     },
     "src/dev/e2e/devE2EEntry.tsx#installDevE2EEntry.processRoute": {
       "fingerprint": "c66c5daae95aa2a25355ecba5aa9907e9615f7defb12fa9d301da165d775b653",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only route dispatcher — each case delegates to the coordinator, the coach-snapshot journeys or the explorer runtime; errors are published as harness markers. No direct domain writes."
+      "reason": "hingecod 2026-09-03: dev-only route dispatcher \u2014 each case delegates to the coordinator, the coach-snapshot journeys or the explorer runtime; errors are published as harness markers. No direct domain writes."
     },
     "src/dev/e2e/explorerCanonicalLiveHost.ts#createCanonicalExplorerLiveHostDependencies": {
       "fingerprint": "4638f158cad8d09a653f3fa1667dda56ec13ec7a3c2985cc89ab13f8db326cb8",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only explorer live host — one-shot seed reset through the coordinator, fingerprint/projection captures, physical-evidence receipts and action-ingress gating. Harness state only; domain changes go through the coordinator and the durable action ingress."
+      "reason": "hingecod 2026-09-03: dev-only explorer live host \u2014 one-shot seed reset through the coordinator, fingerprint/projection captures, physical-evidence receipts and action-ingress gating. Harness state only; domain changes go through the coordinator and the durable action ingress."
     },
     "src/dev/e2e/explorerCanonicalLiveHost.ts#createCanonicalExplorerLiveHostDependencies.resetSeedOnce": {
       "fingerprint": "28e01099ccd8d94cf4997015ef63b807c5adb953f5858355a1097419d4bc10e3",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only — clears the ingress gate, resets the scenario through the coordinator exactly once, validates the durable session and reports seed witnesses. No direct domain writes."
+      "reason": "hingecod 2026-09-03: dev-only \u2014 clears the ingress gate, resets the scenario through the coordinator exactly once, validates the durable session and reports seed witnesses. No direct domain writes."
     },
     "src/dev/e2e/explorerLiveScenarioRuntime.ts#liveHostDependencies": {
       "fingerprint": "940e9f485e120c30e9f001dfc40ecf825695531e8cb28f729a5d278baadacb7d",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only — reads the active campaign bootstrap and builds the live host dependencies. Delegation only."
+      "reason": "hingecod 2026-09-03: dev-only \u2014 reads the active campaign bootstrap and builds the live host dependencies. Delegation only."
     },
     "src/dev/e2e/explorerLiveScenarioRuntime.ts#runLiveExplorerCampaign": {
       "fingerprint": "738650d552521e4669ee17ebfa5e9417ae4e6f4f95fcdcac304c4844a6517840",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only — runs every smoke scenario through runLiveExplorerScenario and completes the campaign record. Delegation only."
+      "reason": "hingecod 2026-09-03: dev-only \u2014 runs every smoke scenario through runLiveExplorerScenario and completes the campaign record. Delegation only."
     },
     "src/dev/e2e/explorerLiveScenarioRuntime.ts#runLiveExplorerCampaign.run": {
       "fingerprint": "d96b04c2fbc61d566ee4250012279718a3ad43ccbf008bd71322a750125b5e8d",
@@ -3379,12 +3379,12 @@
     "src/dev/e2e/explorerLiveScenarioRuntime.ts#runLiveExplorerScenario": {
       "fingerprint": "116a996d76d3110d775ad4802c8b679586c12b1931a7c48f85c1337d3edf29b0",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only — builds the scenario runner over the live host and runs one scenario; marks the artifact accepted. Delegation only."
+      "reason": "hingecod 2026-09-03: dev-only \u2014 builds the scenario runner over the live host and runs one scenario; marks the artifact accepted. Delegation only."
     },
     "src/screens/coach/CoachTabScreen.tsx#CoachTabScreen": {
       "fingerprint": "37f6676660d4feaebddc7542bfe8434455e2c17e42b5cdd9043e969a6f613681",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: read-only coach chat — reads the resolved week, modifiers, live snapshot and commitment; conversation turns are local screen state; answers come from askCoachReadOnly. No program or calendar writes."
+      "reason": "hingecod 2026-09-03: read-only coach chat \u2014 reads the resolved week, modifiers, live snapshot and commitment; conversation turns are local screen state; answers come from askCoachReadOnly. No program or calendar writes."
     },
     "src/screens/coach/useCoachNoteActions.ts#createCoachNoteActions.applyGuidedInjury": {
       "fingerprint": "39895c0121df98bb8cec414e589a9e096ac6026fca8a461bef23c3916087725f",
@@ -3394,7 +3394,7 @@
     "src/screens/coach/useCoachNoteActions.ts#createCoachNoteActions.updateCoachNoteStatus": {
       "fingerprint": "ca750a6d4bde60e133909408b1ae1f6cdb62c63993e110d26679c6a19f1067c2",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: status update — clears the prior note through clearCoachNote where the kind changes, then records recovery mode or a fatigue status through the program control doors. No direct output writes."
+      "reason": "hingecod 2026-09-03: status update \u2014 clears the prior note through clearCoachNote where the kind changes, then records recovery mode or a fatigue status through the program control doors. No direct output writes."
     },
     "src/screens/coach/useCoachWeeklyCommitment.ts#coachWeeklyCommitmentInputs.isCommitmentLegal": {
       "fingerprint": "f589162cb190ae9a6855c70d23bb26c14cdf8eff76f0f4f8a9b13c17fb6120ab",
@@ -3419,7 +3419,7 @@
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet": {
       "fingerprint": "faa6e0b8cb2696e491d20b8c07fc8d969206a7e15197e5c4f05c4fc1c30b93fa",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: plan-change sheet — lists options (listPlanChangeOptionsForDay), previews risk, and commits only through commitPlanChange (program control door / applyPlanChange with applyProgramOverrideWrite). Sheet steps are local state; renders the observation of a landed result."
+      "reason": "hingecod 2026-09-03: plan-change sheet \u2014 lists options (listPlanChangeOptionsForDay), previews risk, and commits only through commitPlanChange (program control door / applyPlanChange with applyProgramOverrideWrite). Sheet steps are local state; renders the observation of a landed result."
     },
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet.apply": {
       "fingerprint": "236da9640d49974c635236aca002b105ef886ceea84bdabd8c087598d0a3a75c",
@@ -3429,7 +3429,7 @@
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet.applyCategory": {
       "fingerprint": "ce00cb652f24f15adc94ecf6c0e30a85526cabeb24590c935627b5840ae6fcc4",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: one-line delegate — apply an add_category change."
+      "reason": "hingecod 2026-09-03: one-line delegate \u2014 apply an add_category change."
     },
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet.chooseCategory": {
       "fingerprint": "9610082e7c695242f84bcdd0b9091b95dd2f9be13ab72b5651e948b5bd4c7152",
@@ -3439,17 +3439,17 @@
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet.commitPlanChange": {
       "fingerprint": "250f71ff1ecdfcafa94fa2bb83aeb393e7e17a6b06033cf0eab9bd68afe3e27e",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: the sheet's one commit — a screen action goes through executeProgramControlActionDurably, otherwise applyPlanChange whose override callback is applyProgramOverrideWrite (writer 'athlete_tap'). Registers the UI outcome; no other output writes."
+      "reason": "hingecod 2026-09-03: the sheet's one commit \u2014 a screen action goes through executeProgramControlActionDurably, otherwise applyPlanChange whose override callback is applyProgramOverrideWrite (writer 'athlete_tap'). Registers the UI outcome; no other output writes."
     },
     "src/screens/home/WeekBoard.tsx#WeekBoard": {
       "fingerprint": "d9b18b5c6d8e8fef44bfc48b9c3df68048c0a98fe208977f24770f4b6a52374c",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: Manage week board — measured layout frames and drag/lock state in refs and local state; a completed drop is handed to the parent's onMove/onAdd/onRemove. No program or calendar writes."
+      "reason": "hingecod 2026-09-03: Manage week board \u2014 measured layout frames and drag/lock state in refs and local state; a completed drop is handed to the parent's onMove/onAdd/onRemove. No program or calendar writes."
     },
     "src/screens/progress/ProgressTabScreen.tsx#ProgressTabScreen": {
       "fingerprint": "f12cc74f2936fabab8a09b113c764b55081d20f2ef24c4c3e5f83a8495146bf6",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: Progress tab — reads the live snapshot; performance-test results and measurements are recorded through commitProfileProgramTransaction; tracked lift choice through the profile store setter. Form state is local. No program output writes."
+      "reason": "hingecod 2026-09-03: Progress tab \u2014 reads the live snapshot; performance-test results and measurements are recorded through commitProfileProgramTransaction; tracked lift choice through the profile store setter. Form state is local. No program output writes."
     },
     "src/components/SessionFeedbackPanel.tsx#SessionFeedbackPanel": {
       "fingerprint": "6c6b7eadc26ebcc6ec33df60a8e768cfced9b41e21e3e3f7f44ee366f1492aa2",
@@ -3459,7 +3459,7 @@
     "src/rules/canonicalInjuryConditioning.ts#honestlyEmptyToRest": {
       "fingerprint": "f74c4e17b261d7d3018acb0a7185805c2e539e0e2ba89db2ed401f64a029240d",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: one-line stage — collapses a workout to rest only when the shared predicates say it is empty. Pure."
+      "reason": "hingecod 2026-09-03: one-line stage \u2014 collapses a workout to rest only when the shared predicates say it is empty. Pure."
     },
     "src/rules/canonicalWeeklyAthleteEditCompiler.ts#compileCanonicalFrequencyReducedContract": {
       "fingerprint": "ec00d16570c5109b960e5e84e9e20fdab8d211dec16e3b72e9af565865e3871c",
@@ -3474,7 +3474,7 @@
     "src/rules/conditioningSelection.ts#selectConditioningTemplateWithTrace": {
       "fingerprint": "45e0197bb55e3a92194bf998a450f43468dda673f1596a788112cffc26ee32f1",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (seat identity per week): the one conditioning template owner — kit/role/cap filters; a recorded seat restores only into the week it was recorded for; rotation reads earlier blocks plus this week's own seats, never this block's other weeks; candidate trace. Pure, no store."
+      "reason": "hingecod 2026-09-03 re-review (seat identity per week): the one conditioning template owner \u2014 kit/role/cap filters; a recorded seat restores only into the week it was recorded for; rotation reads earlier blocks plus this week's own seats, never this block's other weeks; candidate trace. Pure, no store."
     },
     "src/rules/deloadWeekRules.ts#applyDeloadPoliciesToWeeklySessionAllocations": {
       "fingerprint": "68d3aeead934b1e23b4ed019358d11adc54b89b056e2a619d8d5f467366cd51f",
@@ -3484,7 +3484,7 @@
     "src/rules/fixtureRelativePlannerOffer.ts#preserveAcceptedFixtureRelativeOffer": {
       "fingerprint": "899ac6cb24da8cd3297404727663cef1f74e395a82118ea33e4bc0a751f8ebd5",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: pure choice — keep the accepted day when only the planned one is an automatic fixture-relative offer. Returns existing references."
+      "reason": "hingecod 2026-09-03: pure choice \u2014 keep the accepted day when only the planned one is an automatic fixture-relative offer. Returns existing references."
     },
     "src/rules/liveAthleteSnapshot.ts#buildCoachSnapshot": {
       "fingerprint": "3df5b0461d1da6c08c6e360508d167e88d9269077cc4e1181566dd6ad8fb4efc",
@@ -3504,7 +3504,7 @@
     "src/rules/projectVisibleWeek.ts#project": {
       "fingerprint": "a87c8b679ccff3e53e44b87368a6b7b708c5bc184e55b3b50d4b860851ba8ba9",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: the visible-week projection — parts, rows, headlines, buckets and capabilities from resolved days. Read-only."
+      "reason": "hingecod 2026-09-03: the visible-week projection \u2014 parts, rows, headlines, buckets and capabilities from resolved days. Read-only."
     },
     "src/rules/validateGeneratedWeek.ts#validateGeneratedWeek": {
       "fingerprint": "c4f19ef9cc54575e87ef9799128311491291dd24dcfedf172c4e46dcb715e2b9",
@@ -3524,7 +3524,7 @@
     "src/rules/weeklyCommitmentLegality.ts#commitmentLegalityProbe": {
       "fingerprint": "3893aae8c69b386f76b5f04370e66739798b9b35536c0fda3b1bcee1002f74de",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: legality probe — generates a throwaway program for a patched profile with empty history and answers whether a week exists. Never installs it."
+      "reason": "hingecod 2026-09-03: legality probe \u2014 generates a throwaway program for a patched profile with empty history and answers whether a week exists. Never installs it."
     },
     "src/utils/activeCoachNotes.ts#buildActiveCoachNotes": {
       "fingerprint": "d69498d75514cb376faf069a6bfdebca05dc6358f7289202b15f808c7a191274",
@@ -3549,7 +3549,7 @@
     "src/utils/coachRevisionTemplateContext.ts#<module>": {
       "fingerprint": "61f30dd8debf88d5132b843dc5e00acbd9c651ac176f166c1aa1fed410441e5c",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: module body — imports, the context interface, a fallback context and a swappable provider binding. No domain writes at load."
+      "reason": "hingecod 2026-09-03: module body \u2014 imports, the context interface, a fallback context and a swappable provider binding. No domain writes at load."
     },
     "src/utils/coachRevisionTemplateContext.ts#getCoachRevisionTemplateContext": {
       "fingerprint": "244a606172abaae36ae949c7ab55082eb1a1e9ac38411254a91a1335c3609fbe",
@@ -3559,7 +3559,7 @@
     "src/utils/coachRevisionTemplateContext.ts#setCoachRevisionTemplateContextProvider": {
       "fingerprint": "13d78c1fc7174766bee2feda98ccb06b86760b6337f1de359f1d5ecfed9df59a",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: test seam — swaps the context provider. No domain writes."
+      "reason": "hingecod 2026-09-03: test seam \u2014 swaps the context provider. No domain writes."
     },
     "src/utils/coachingEngine.ts#classifyGenerationAdjacencyRegion": {
       "fingerprint": "a8f22fa34e4973b77115599def3dc68953a80e840f08be00e2a396ebfe6fb36e",
@@ -3574,7 +3574,7 @@
     "src/utils/planChangeProducer.ts#applyPlanChangeWithinTrace": {
       "fingerprint": "14cd47cc174bb8d1b96f05816ee6329596cab878e7d86e28e5cc67b7811590c5",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: athlete plan-change door — resolves the typed change, commits moves/removals through the athlete session move/deletion transactions verified against the visible week, or applies coach-template changes through the supplied override door. Every write goes through a transaction."
+      "reason": "hingecod 2026-09-03: athlete plan-change door \u2014 resolves the typed change, commits moves/removals through the athlete session move/deletion transactions verified against the visible week, or applies coach-template changes through the supplied override door. Every write goes through a transaction."
     },
     "src/utils/planChangeProducer.ts#listPlanChangeOptionsForDay": {
       "fingerprint": "ef9ff7938785d4156301628d917fcdb744242520e33bd43c94395e89689f1ad8",
@@ -3634,7 +3634,7 @@
     "src/dev/e2e/defaultDevE2ESeedCoordinator.ts#<module>": {
       "fingerprint": "35a99d820a457ea29ea62109135f61c2a2d3592199ce45c6aa3add1c18adec6b",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only seed coordinator module — imports plus the DEFAULT_DEPS table binding the coordinator to the public doors (profile setters, accepted-state transaction, outcome transaction, injury episode, checkpoint/session harness). No load-time writes."
+      "reason": "hingecod 2026-09-03: dev-only seed coordinator module \u2014 imports plus the DEFAULT_DEPS table binding the coordinator to the public doors (profile setters, accepted-state transaction, outcome transaction, injury episode, checkpoint/session harness). No load-time writes."
     },
     "src/rules/fixtureStrengthPurposeSelection.ts#rankStrengthTemplatesForWeek": {
       "fingerprint": "8b4403d9e452d09067547dad933731eb8e31573b78fbfe0674803a136ecdccff",

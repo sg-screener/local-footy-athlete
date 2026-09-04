@@ -986,6 +986,46 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
   const dose = (identity: string, phase: string, sub: string | null = null) =>
     resolveComposedDose({ ...inSeason(phase, sub), identity });
 
+  /* ── A ONE-SIDED LIFT SAYS "/ SIDE" — Sam, 2026-09-04 ──────────────────────
+   *
+   * MEASURED before the change over the preserved 52-week driver: 182 rows
+   * across 20 exercises read as a TOTAL when the movement only has one side.
+   * `Single-Leg RDL`, `Walking Lunges` and `Bulgarian Split Squats` shipped a
+   * bare `3 × 8` while `Half Copenhagen` and `Bosch Hold` correctly shipped
+   * `3 × 30s / side`. `Side Plank` managed both in the same year.
+   *
+   * The tag is the owner and it always was: `addExerciseCandidates` has derived
+   * `perSide: tags.unilateral` for the manual Add door all along. These cells
+   * hold that the AUTOMATIC composer asks the same owner — and that it is a
+   * property of the movement, not a list of four names. */
+  ok('[per-side] a one-sided lower lift is dosed per side',
+    dose('Single-Leg RDL', 'In-season').perSide === true
+    && dose('Walking Lunges', 'In-season').perSide === true
+    && dose('Bulgarian Split Squats', 'In-season').perSide === true
+    && dose('B-Stance RDL', 'In-season').perSide === true,
+    JSON.stringify(dose('Single-Leg RDL', 'In-season')));
+  ok('[per-side] and a one-sided UPPER lift too — the rule is the movement, not the pool',
+    dose('Single-Arm DB Row', 'In-season').perSide === true
+    && dose('Concentration Curl', 'In-season').perSide === true,
+    JSON.stringify(dose('Single-Arm DB Row', 'In-season')));
+  ok('[per-side] a TWO-sided lift is untouched — this is not a blanket stamp',
+    dose('Back Squat', 'In-season').perSide === undefined
+    && dose('Goblet Squat', 'In-season').perSide === undefined
+    && dose('Bench Press', 'In-season').perSide === undefined,
+    JSON.stringify(dose('Goblet Squat', 'In-season')));
+  /* ⚠ THE AUTHORED ARM IS INERT BY CONTENT, AND THAT IS SAID RATHER THAN
+   * HIDDEN. No exercise is currently `unilateral: true` with an authored
+   * `perSide: false`, so the "authored wins" branch has no live case to fire
+   * on. What IS observable is that an authored prescription still returns
+   * whole and unrewritten, which is the same precedence seen from the outside. */
+  ok('[per-side] an AUTHORED prescription still wins whole — the tag only fills silence',
+    JSON.stringify(dose('SL 45° Back Extension', 'In-season'))
+      === JSON.stringify({
+        ...(require('../data/exerciseTags').getExerciseTags('SL 45° Back Extension').prescription),
+        category: 'authored_exercise',
+      }),
+    JSON.stringify(dose('SL 45° Back Extension', 'In-season')));
+
   // U-1 — the loaded band, and its OFF-SEASON CORRECTION.
   ok('[U-1] loaded lower secondary: in-season 6-8',
     JSON.stringify(dose('Single-Leg RDL', 'In-season')).includes('"repsMin":6')

@@ -40,7 +40,7 @@ import {
   resolveExerciseName,
 } from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
-import { getExerciseTags } from '../data/exerciseTags';
+import { getExerciseTags, resolvePerSide } from '../data/exerciseTags';
 import { SHOULDER_HEALTH_POOL } from '../data/exercisePools';
 import type { SessionSlot } from './sessionSlotCoverage';
 import { automaticNordicPrescriptionForIdentity } from './nordicPrescription';
@@ -183,7 +183,7 @@ export interface ComposedDoseInput {
  * single-leg."* So a `Single-Leg RDL` leading a day is dosed by the phase table,
  * and the same movement supporting one takes U-1's loaded band.
  */
-export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
+function resolveComposedDoseBand(input: ComposedDoseInput): ComposedDose {
   const nordic = automaticNordicPrescriptionForIdentity(input.identity);
   if (nordic && !input.isMainLift) {
     return { ...nordic, category: 'authored_exercise' };
@@ -271,6 +271,41 @@ export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
   // composer already authored for it.
   const [sets, min, max] = input.authoredFallback;
   return { sets, repsMin: min, repsMax: max, category: 'composer_authored_passthrough' };
+}
+
+/**
+ * ⚠ **A ONE-SIDED LIFT SAYS "/ SIDE", AND THE TAG ALREADY KNEW** — Sam,
+ * 2026-09-04, answering *"should per side show on screen"* with **yes**.
+ *
+ * MEASURED over the preserved 52-week driver before the change: `Single-Leg
+ * RDL`, `Walking Lunges` and `Bulgarian Split Squats` all shipped as a bare
+ * `3 × 8`, while `Half Copenhagen` and `Bosch Hold` correctly shipped
+ * `3 × 30s / side` — **182 rows across 20 exercises reading as a total when the
+ * movement only has one side.** `Side Plank` managed BOTH in the same year,
+ * which is the tell: two authorities, disagreeing on one exercise.
+ *
+ * WHY IT SPLIT. `perSide` was only ever read off an AUTHORED pool entry — the
+ * prehab, carry and shoulder-health pools set it by hand, and the band-resolved
+ * categories above (`loaded_lower_secondary_compound` and friends) have no such
+ * field to read. So whether the athlete was told "per side" depended on which
+ * pool happened to author the row, not on whether the lift has two sides.
+ *
+ * **NOTHING NEW IS AUTHORED HERE, AND THERE IS NO NAME LIST.**
+ * `exerciseTags[name].unilateral` is the app's existing answer to "does this
+ * movement have a side", and `utils/addExerciseCandidates.ts:397` ALREADY
+ * derives `perSide: tags.unilateral` for the manual Add door. The automatic
+ * composer simply never asked. This is the same question reaching the same
+ * owner — the fix `.claude/rules/coach-and-plan-edits.md` asks for: the layer
+ * that explains the whole class, not four names.
+ *
+ * ⚠ **AN AUTHORED `perSide` STILL WINS.** A pool entry that says `perSide:
+ * false` for a two-sided-looking movement is a deliberate authorship, and the
+ * tag may not overrule it — only fill the silence.
+ */
+export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
+  const dose = resolveComposedDoseBand(input);
+  const perSide = resolvePerSide(input.identity, dose.perSide);
+  return perSide === undefined ? dose : { ...dose, perSide };
 }
 
 /**

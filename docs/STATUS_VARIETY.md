@@ -321,3 +321,98 @@ tree that changed underneath it — a control that did not see one tree, and
 therefore no control at all. It reported the same 11/31, which is exactly what
 made it tempting to keep. Both runs above were started against a quiet tree and
 nothing was edited while either ran.
+
+---
+
+## R-369 — A ONE-SIDED LIFT SAYS "/ SIDE" (Sam: *"1 yes"*, 2026-09-04)
+
+Raised as slice 5's NOT COVERED; he answered yes, then yes again to applying it
+to all twenty rather than the four he first named.
+
+### Measured, both athletes, before and after
+
+| | male | female |
+| --- | --- | --- |
+| one-sided rows in the year | 432 | 453 |
+| saying `/ side` BEFORE | 232 | 251 |
+| **wrong BEFORE** | **200** | **202** |
+| **wrong AFTER** | **0** | **0** |
+| total rows | 1710 → 1710 | 1711 → 1711 |
+
+### Six sites, one owner
+
+`data/exerciseTags.resolvePerSide(name, authored?)`. Five row builders answered
+"does this count one side" from five places, each right about its own rows and
+blind outside them:
+
+| builder | what it read before |
+| --- | --- |
+| `rules/composedDose` band categories | nothing — no authored field exists there |
+| `utils/sessionBuilder` power rows | only the tag's `prescription` |
+| `utils/sessionBuilder` pool rows | only the pool entry |
+| `data/defaultProgram.buildPowerRow` | only the tag's `prescription` |
+| `utils/addExerciseCandidates` | **`unilateral` — the only one already right** |
+
+That last row is the whole diagnosis: the manual **Add** door got this right and
+automatic programming did not, because only one of the five ever asked the field
+that already knew.
+
+### ⚠ THE SIXTH SITE, AND WHY THE PROCESS FOUND IT WHEN A UNIT TEST WOULD NOT
+
+**Fixing the dose resolver returned a BYTE-IDENTICAL year.** 182 rows still
+wrong, same count, same names.
+
+`screens/home/dayWorkoutHelpers.formatStrengthSetsReps` — the strength card's
+own renderer — never read `perSide` for REP rows. It delegated per-side only to
+the timed formatter. So what the athlete saw turned on the **unit**, not the
+movement: `Half Copenhagen` (seconds) said `/ side`, `Single-Leg RDL` (reps) did
+not. **A unit test of the thing I changed would have passed and shipped
+nothing.** Only re-running the year and reading the athlete's own string caught
+it — `measure-what-the-athlete-reads-not-the-sheets`, paid again.
+
+Then the year re-run after THAT still left 27 rows: the Gunshow arm seats and
+two power lifts, which is how the fourth and fifth builders were found. **Three
+year re-runs, each one narrowing the number: 182 → 27 → 9 → 0.**
+
+### Surfaced, not caused — reported to Sam
+
+`Dead Bug`, `Weighted Dead Bug` and `Banded Dead Bug` carry an authored
+`perSide: true` on their pool entries while being tagged `unilateral: false`.
+They were ALWAYS authored per side and the card was hiding it. **The tag and the
+pool entry disagree for those three.** Not silently changed.
+
+### The ownership census — 1/1170 unresolved to ZERO
+
+Sam approved chasing it. What it was: `DayWorkoutScreenV2#MobilityExerciseList`,
+reviewed and cleared as `projection_display`, then edited by `b1bdd403` ("add
+ranked per-exercise quick actions") so its fingerprint no longer matched. **A
+stale review, not a defect.** Re-read in full before re-signing: it still builds
+one in-memory display row with `prescribedWeightKg` explicitly null and passes
+the two new controls straight through to the existing handlers — which is the
+delegation its recorded reason already described.
+
+⚠ **AND MY OWN EDITS THEN INVALIDATED THREE MORE**, which is the mechanism
+working exactly as designed: `buildPowerRow`, `poolExerciseToWorkoutExercise`
+and `powerEntryToWorkoutExercise` all went `changed` the moment their `perSide`
+line started calling the shared owner. All three re-signed with what changed;
+all three stay `canonical_compiler`.
+
+**`scanSources` now reports `ok: true`, 0 unresolved of 1170, 0 errors** — the
+first time this branch has had a clean executable-ownership census. Whether that
+lets `test:release` past `canonical_only` and onto the 20 units it has never
+reached is the next thing to find out, and it is not claimed here.
+
+### Gates
+
+| gate | before | after |
+| --- | --- | --- |
+| `test:compile` | 0 errors | **0 errors** |
+| `test:visible-surfaces` | 76 / 1 | **84 / 1** (section [13], 8 cells) |
+| `test:composer-severance` | 7 pre-existing reds | **7** (+4 `[per-side]` cells green) |
+| `test:pools` | 487 / 5 | **488 / 4** (the 7→8 count, its own commit) |
+| `test:mobility-flow` | — | **64/0** |
+| `test:power-pool` / `power-counting` / `primer-session` | — | **104/0, 12/0, 25/0** |
+| `test:session-section-add` | — | **250/0** |
+| `test:row-counting` | — | **45/45** |
+| `test:b-stance-rdl` | 18/18 | **18/18** |
+| writer census | 1/1170 unresolved | **0/1170, `ok: true`** |

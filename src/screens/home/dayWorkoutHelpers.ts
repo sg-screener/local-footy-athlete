@@ -358,11 +358,31 @@ export function formatStrengthSetsReps(exercise: any): string {
   // An EXACTLY AUTHORED dose is shown as authored. `displayReps` simplifies a
   // range; there is nothing to simplify where the author wrote one number, and
   // snapping it would overwrite the decision — see `WorkoutExercise.exactDose`.
+  /* ⚠ **A ONE-SIDED LIFT SAYS "/ side" ON THE STRENGTH CARD TOO** — Sam,
+   * 2026-09-04, answering *"should per side show on screen"* with **yes**.
+   *
+   * THIS WAS THE SECOND HALF OF A TWO-PART GAP, AND ONLY MEASURING FOUND IT.
+   * `perSide` was already resolved onto the row, and the delegation above
+   * already renders it — but only for rows whose unit is NOT reps. So
+   * `Half Copenhagen` (duration) shipped `3 × 30s / side` while
+   * `Single-Leg RDL` (reps) shipped a bare `3 × 8`, and the difference was the
+   * UNIT rather than the movement. Measured over the preserved 52-week driver:
+   * **182 rows across 20 exercises** read as a total when the movement only has
+   * one side. `Side Plank` managed both in the same year.
+   *
+   * Fixing the dose resolver alone changed NOTHING the athlete reads — the
+   * re-run came back byte-identical — because this line was the one talking.
+   * That is the whole reason the check is a year re-run and not a unit call.
+   *
+   * The suffix is `formatLowLoadSetsReps`' exact string, deliberately: one
+   * per-side vocabulary across both renderers, so a row cannot say "/ side" on
+   * one card and "per side" on the other. */
+  const perSide = (exercise as { perSide?: boolean }).perSide ? ' / side' : '';
   if ((exercise as { exactDose?: boolean }).exactDose) {
-    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}`;
+    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}${perSide}`;
   }
   const shown = displayReps(exercise.prescribedRepsMin, exercise.prescribedRepsMax);
-  return `${exercise.prescribedSets} × ${shown ?? exercise.prescribedRepsMin}`;
+  return `${exercise.prescribedSets} × ${shown ?? exercise.prescribedRepsMin}${perSide}`;
 }
 
 /**

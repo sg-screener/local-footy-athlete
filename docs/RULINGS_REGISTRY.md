@@ -9400,3 +9400,44 @@ preference order rather than a legality gate.
 Guard: `LAW-b-stance-rdl-intake` through chained `test:exercise-intake`, which
 invokes `test:b-stance-rdl`. Receipts: `docs/STATUS_VARIETY.md`,
 `docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`.
+
+**R-369** · A one-sided lift is dosed and displayed per side, 2026-09-04.
+
+Owner: variety. Sam, asked whether "per side" should show on screen: **yes**.
+`data/exerciseTags.resolvePerSide(name, authored?)` is the ONE owner: an
+authored answer wins in both directions, and `unilateral: true` fills the
+silence. It returns `undefined` rather than `false` for a two-sided movement so
+a caller spreading the result cannot stamp a field the row never had.
+
+MEASURED over the preserved 52-week driver before the change: **200 rows (male)
+and 202 (female)** told the athlete a TOTAL for a movement with one side.
+`Single-Leg RDL`, `Walking Lunges` and `Bulgarian Split Squats` shipped a bare
+`3 × 8` while `Half Copenhagen` correctly shipped `3 × 30s / side`. **`Side
+Plank` shipped BOTH ways in the same athlete-year**, which is the tell. After:
+**0 and 0**, with row totals unchanged at 1710 and 1711.
+
+FIVE BUILDERS ANSWERED ONE QUESTION FROM FIVE PLACES, each right about its own
+rows and blind outside them: `composedDose` band categories had no authored
+field to read at all; `sessionBuilder`'s power and pool builders and
+`defaultProgram.buildPowerRow` each read only their own authored source; and
+`addExerciseCandidates` was the ONLY one already asking `unilateral` — which is
+why the manual Add door got this right while automatic programming did not.
+
+⚠ **THE SIXTH SITE WAS THE RENDERER, AND ONLY A YEAR RE-RUN FOUND IT.** Fixing
+the dose resolver first returned a byte-identical year, because
+`formatStrengthSetsReps` never read `perSide` for REP rows — it delegated
+per-side only to the timed formatter. The difference the athlete saw was the
+UNIT, not the movement. A unit test of the resolver would have passed and
+shipped nothing. The suffix is now `formatLowLoadSetsReps`' exact ` / side`, so
+one row cannot say "/ side" on one card and "per side" on another.
+
+SURFACED, NOT CAUSED: `Dead Bug`, `Weighted Dead Bug` and `Banded Dead Bug`
+carry an authored `perSide: true` on their pool entries and are tagged
+`unilateral: false`. They were always authored per side; the strength card was
+hiding it. The tag and the pool entry disagree for those three — reported to
+Sam, not silently changed.
+
+Guard: `test:visible-surfaces` section [13] — the renderer both ways, the
+shared vocabulary, and the owner's precedence in both directions — plus four
+`[per-side]` cells in `test:composer-severance`. Receipts:
+`docs/STATUS_VARIETY.md`.

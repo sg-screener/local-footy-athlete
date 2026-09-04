@@ -5060,6 +5060,45 @@ export function getExerciseTags(name: string): ExerciseTag | undefined {
   return EXERCISE_TAGS[canonicalExerciseName(name)];
 }
 
+/**
+ * ⚠ **DOES THIS MOVEMENT'S DOSE COUNT ONE SIDE? ONE OWNER, FOUR CALLERS.**
+ *
+ * Sam, 2026-09-04, asked whether "per side" should show on screen: **yes**.
+ *
+ * MEASURED over the preserved 52-week driver before the change: **200 rows
+ * (male) and 202 (female) read as a TOTAL when the movement only has one
+ * side** — `Single-Leg RDL`, `Walking Lunges` and `Bulgarian Split Squats` all
+ * shipped a bare `3 × 8`, while `Half Copenhagen` correctly shipped
+ * `3 × 30s / side`. `Side Plank` managed BOTH in the same year.
+ *
+ * **THE CAUSE WAS FOUR BUILDERS ANSWERING THE SAME QUESTION FROM DIFFERENT
+ * PLACES**, each right about its own rows and blind outside them:
+ *
+ *   - `rules/composedDose` band categories — no authored field to read at all;
+ *   - `utils/sessionBuilder` power rows — only the tag's `prescription`;
+ *   - `utils/sessionBuilder` pool rows — only the pool entry;
+ *   - `utils/addExerciseCandidates` — the ONLY one that already asked
+ *     `unilateral`, which is why the manual Add door got this right while
+ *     automatic programming did not.
+ *
+ * `unilateral` has always been the app's answer to "does this movement have a
+ * side". **Nothing new is authored here and there is no name list** — this
+ * function is the fourth caller's question asked once, so a fifth builder
+ * cannot quietly disagree.
+ *
+ * ⚠ **AN AUTHORED ANSWER STILL WINS.** A pool entry or authored prescription
+ * that says `perSide: false` is deliberate authorship; the tag may only fill
+ * SILENCE, never overrule. `undefined` is returned rather than `false` so a
+ * caller spreading the result cannot stamp a field the row never had.
+ */
+export function resolvePerSide(
+  rawName: string,
+  authoredPerSide?: boolean,
+): boolean | undefined {
+  if (authoredPerSide !== undefined) return authoredPerSide;
+  return getExerciseTags(rawName)?.unilateral === true ? true : undefined;
+}
+
 /** The one canonical answer consumed by selection, auditing and completeness gates. */
 export function strengthExerciseClassification(
   name: string,
