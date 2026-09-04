@@ -71,14 +71,24 @@ run('THE GROUP SAM ASKED TO WIDEN IS ACTUALLY WIDER — two LOADED options, not 
     'the group is back to one loaded option — the reason this lift was added is gone');
 });
 
-run('the slot deriver seats it in single_leg_hip and NOT in the bilateral hinge', () => {
+/* ⚠ **REWRITTEN BY R-373, AND THE PROPERTY GOT SHARPER RATHER THAN WEAKER.**
+ * This cell used to assert a unilateral hinge may NOT claim the bilateral seat.
+ * Sam's grading table (2026-09-04) makes `Single-Leg RDL` a B-grade hinge
+ * primary and this lift its sibling, so candidacy legitimately widened. What
+ * must NOT widen is CREDIT — a row on a day still counts as ONE slot, or a day
+ * built to Sam's own fill order reports a duplicated hinge. Both halves are
+ * asserted here so a future change cannot quietly collapse them back together. */
+run('it may be SELECTED for the hinge seat, but CREDITS as single-leg hip', () => {
   const slots = slotsForExerciseName(NAME);
   assert(slots.includes('single_leg_hip'), `slots were [${slots.join(', ')}]`);
-  assert(!slots.includes('hinge'),
-    'a unilateral hinge may not claim the bilateral hinge seat');
-  // Derived, not listed: it follows from movement + unilateral, exactly as the
-  // sibling's does. Equal answers from one owner.
+  assert(slots.includes('hinge'),
+    'a GRADED unilateral hinge must be reachable by the hinge seat (R-373)');
+  // Derived, not listed: it follows from movement + unilateral + the grade,
+  // exactly as the sibling's does. Equal answers from one owner.
   assert.deepEqual([...slots].sort(), [...slotsForExerciseName(SIBLING)].sort());
+  // CREDIT, absent a composer decision, stays narrow — this is what keeps a
+  // heavy hinge and a single-leg RDL from counting as two hinges.
+  assert.deepEqual(slotsForExerciseName(NAME, false), ['single_leg_hip']);
 });
 
 /* ── "Same as Single-Leg RDL", held as EQUALITY and never as a copy ──────── */

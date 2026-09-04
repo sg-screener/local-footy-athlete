@@ -127,6 +127,33 @@ export interface PoolEntry {
    */
   doseCategory?: ComposedDoseCategory;
   /**
+   * ⚠ **CAN THIS LIFT BE A BLOCK'S MAIN LIFT? — Sam's grading table, 2026-09-04.**
+   *
+   * `'A'` freely selectable as the block's core lift. `'B'` a legitimate
+   * alternate primary. **ABSENT means never a normal main lift** — the row is
+   * supporting work only.
+   *
+   * ## WHY A GRADE AND NOT THE ARRAY IT SITS IN
+   *
+   * `anchor` vs `accessory` was already NOT the answer to this question, and the
+   * year proved it: `anchorCandidates` has always returned the anchor bench THEN
+   * the accessory bench, so `Seated Cable Row`, `Chest-Supported DB Row`,
+   * `Seated DB Press` and `Z-Press` were all shipping as real block primaries —
+   * correctly. Sam's table simply writes down which ones may.
+   *
+   * **THE GRADE'S FIRST JOB IS DEMOTION, NOT PROMOTION.** Because the accessory
+   * bench is fully reachable, `Glute Bridge`, `Bodyweight Squat`,
+   * `Incline Push-Up` and `Kettlebell Swings` were all eligible to lead a day.
+   * They are ungraded here and now cannot.
+   *
+   * ⚠ **AN UNGRADED ROW IS STILL THE ANSWER WHEN NOTHING GRADED IS LEGAL.**
+   * Sam, asked what a bodyweight athlete's push day should do: *"push ups can be
+   * a main when no equipment"*, and *"give them best availble i think"*. So the
+   * grade ORDERS the bench; it never empties a seat. `Push-ups` is deliberately
+   * ungraded and is deliberately still reachable.
+   */
+  primaryGrade?: 'A' | 'B';
+  /**
    * Load ratio relative to the slot's reference exercise.
    *   squat            ref: Back Squat       → 1.00
    *   hinge            ref: Deadlift         → 1.00
@@ -331,12 +358,12 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   squat: {
     anchor: {
       slot: 'squat', role: 'anchor', entries: [
-        { name: 'Back Squat',  loadRatio: 1.00 },
-        { name: 'Front Squat', loadRatio: 0.85 },
-        { name: 'Box Squat',   loadRatio: 0.95 },
+        { name: 'Back Squat', primaryGrade: 'A',  loadRatio: 1.00 },
+        { name: 'Front Squat', primaryGrade: 'A', loadRatio: 0.85 },
+        { name: 'Box Squat', primaryGrade: 'A',   loadRatio: 0.95 },
         // Sam ruled 2026-07-25: 1.2 x Box Squat, derived from Box Squat's own
         // 0.95 — a higher box is a shorter range, so heavier, not lighter.
-        { name: 'High Box Squat', loadRatio: 1.14 },
+        { name: 'High Box Squat', primaryGrade: 'A', loadRatio: 1.14 },
       ],
     },
     accessory: {
@@ -363,14 +390,14 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // varies WITHIN a group and never across one. A lunge now rotates to
       // another single-leg knee movement, and the squat stays a squat.
       slot: 'squat', role: 'accessory', entries: [
-        { name: 'Walking Lunges', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
-        { name: 'Bulgarian Split Squats', doseCategory: 'loaded_lower_secondary_compound', loadRatio: 0.40, group: 'single_leg_knee' },
-        { name: 'Reverse Lunges', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
-        { name: 'Step Ups', doseCategory: 'loaded_lower_secondary_compound',               loadRatio: 0.40, group: 'single_leg_knee' },
-        { name: 'Single-Leg Leg Press', doseCategory: 'loaded_lower_secondary_compound',   loadRatio: 0.50, group: 'single_leg_knee' },
+        { name: 'Walking Lunges', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Bulgarian Split Squats', primaryGrade: 'A', doseCategory: 'loaded_lower_secondary_compound', loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Reverse Lunges', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Step Ups', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',               loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Single-Leg Leg Press', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',   loadRatio: 0.50, group: 'single_leg_knee' },
         { name: 'Single-Leg Squat (to Box)', doseCategory: 'loaded_lower_secondary_compound', loadRatio: 0.30, group: 'single_leg_knee' },
-        { name: 'Goblet Squat', doseCategory: 'loaded_lower_secondary_compound',           loadRatio: 0.35, group: 'bilateral_squat' },
-        { name: 'Leg Press', doseCategory: 'loaded_lower_secondary_compound',             loadRatio: 0.90, group: 'bilateral_squat' },
+        { name: 'Goblet Squat', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',           loadRatio: 0.35, group: 'bilateral_squat' },
+        { name: 'Leg Press', primaryGrade: 'A', doseCategory: 'loaded_lower_secondary_compound',             loadRatio: 0.90, group: 'bilateral_squat' },
         { name: 'Bodyweight Squat', doseCategory: 'unloaded_lower_compound',       loadRatio: 0.00, group: 'bilateral_squat' },
       ],
     },
@@ -378,9 +405,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   hinge: {
     anchor: {
       slot: 'hinge', role: 'anchor', entries: [
-        { name: 'Deadlift',          loadRatio: 1.00 },
-        { name: 'Trap Bar Deadlift', loadRatio: 1.05 },
-        { name: 'RDLs',              loadRatio: 0.80 },
+        { name: 'Deadlift', primaryGrade: 'A',          loadRatio: 1.00 },
+        { name: 'Trap Bar Deadlift', primaryGrade: 'A', loadRatio: 1.05 },
+        { name: 'RDLs', primaryGrade: 'A',              loadRatio: 0.80 },
       ],
     },
     accessory: {
@@ -413,7 +440,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // sees, which is R-076's mistake. A repeated Single-Leg RDL is a smaller
       // wrong than a lost slot; more variety is a content unit, not this one.
       slot: 'hinge', role: 'accessory', entries: [
-        { name: 'Single-Leg RDL', doseCategory: 'loaded_lower_secondary_compound',    loadRatio: 0.45, group: 'single_leg_hip' },
+        { name: 'Single-Leg RDL', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',    loadRatio: 0.45, group: 'single_leg_hip' },
         // R-368 — SAM ASKED FOR THIS ROW BY NAME, 2026-09-04: *"add this into
         // the exercise list as well - so we have another single leg hip
         // dominant lift"*. The narrowing the comment above SAYS OUT LOUD —
@@ -423,9 +450,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         // Single-Leg RDL: `SL 45° Back Extension` is unloaded, so
         // `weightedFirst` puts it behind both. Intake:
         // `docs/EXERCISE_INTAKE_B_STANCE_RDL_2026-09-04.md`.
-        { name: 'B-Stance RDL', doseCategory: 'loaded_lower_secondary_compound',      loadRatio: 0.45, group: 'single_leg_hip' },
+        { name: 'B-Stance RDL', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',      loadRatio: 0.45, group: 'single_leg_hip' },
         { name: "SL 45° Back Extension", loadRatio: 0, group: 'single_leg_hip' },
-        { name: 'Hip Thrusts', doseCategory: 'loaded_lower_secondary_compound',       loadRatio: 1.10, group: 'bilateral_hinge' },
+        { name: 'Hip Thrusts', primaryGrade: 'B', doseCategory: 'loaded_lower_secondary_compound',       loadRatio: 1.10, group: 'bilateral_hinge' },
         { name: 'Kettlebell Swings', doseCategory: 'ballistic_strength', loadRatio: 0.35, group: 'bilateral_hinge' },
         // Sam ruled 2026-07-25: bodyweight-with-optional. loadRatio 0 means no
         // progression transfer to or from its hinge siblings, which is the
@@ -447,23 +474,23 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   horizontal_push: {
     anchor: {
       slot: 'horizontal_push', role: 'anchor', entries: [
-        { name: 'Bench Press',      loadRatio: 1.00 },
-        { name: 'Incline Bench',    loadRatio: 0.85 },
-        { name: 'Close Grip Bench', loadRatio: 0.90 },
+        { name: 'Bench Press', primaryGrade: 'A',      loadRatio: 1.00 },
+        { name: 'Incline Bench', primaryGrade: 'A',    loadRatio: 0.85 },
+        { name: 'Close Grip Bench', primaryGrade: 'A', loadRatio: 0.90 },
       ],
     },
     accessory: {
       slot: 'horizontal_push', role: 'accessory', entries: [
-        { name: 'DB Bench Press',  loadRatio: 0.80 },
-        { name: 'Incline DB Bench', loadRatio: 0.70 },
+        { name: 'DB Bench Press', primaryGrade: 'A',  loadRatio: 0.80 },
+        { name: 'Incline DB Bench', primaryGrade: 'A', loadRatio: 0.70 },
         { name: 'Push-ups',        loadRatio: 0.00 },
         { name: 'Incline Push-Up', loadRatio: 0.00 },
-        { name: 'Dips',            loadRatio: 0.60 },
-        { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
+        { name: 'Dips', primaryGrade: 'B',            loadRatio: 0.60 },
+        { name: 'Single-Arm DB Bench Press', primaryGrade: 'B', loadRatio: 0.35 },
         // Sam's locked list (2026-07-24) pools the Bible's pressing injury-swap
         // rather than leaving it reachable by substitution only. Ratio mirrors
         // Single-Arm DB Bench Press exactly; confirmed unchanged 2026-07-25.
-        { name: 'Single-Arm DB Floor Press', loadRatio: 0.35 },
+        { name: 'Single-Arm DB Floor Press', primaryGrade: 'B', loadRatio: 0.35 },
         // 'Speed Bench' is NOT here on purpose: it classifies as `power`, and
         // the power policy strips power rows from coach-built strength content
         // (workoutCanonicalisation.ts:572). Pooled here it silently deleted the
@@ -476,16 +503,16 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   vertical_push: {
     anchor: {
       slot: 'vertical_push', role: 'anchor', entries: [
-        { name: 'Overhead Press', loadRatio: 1.00 },
-        { name: 'Landmine Press', loadRatio: 0.70 },
+        { name: 'Overhead Press', primaryGrade: 'A', loadRatio: 1.00 },
+        { name: 'Landmine Press', primaryGrade: 'A', loadRatio: 0.70 },
       ],
     },
     accessory: {
       slot: 'vertical_push', role: 'accessory', entries: [
-        { name: 'DB Shoulder Press',                        loadRatio: 0.55 },
-        { name: 'Seated DB Press',                          loadRatio: 0.55 },
-        { name: 'Half-Kneeling Single-Arm Overhead Press',  loadRatio: 0.35 },
-        { name: 'Z-Press',                                  loadRatio: 0.60 },
+        { name: 'DB Shoulder Press', primaryGrade: 'A',                        loadRatio: 0.55 },
+        { name: 'Seated DB Press', primaryGrade: 'A',                          loadRatio: 0.55 },
+        { name: 'Half-Kneeling Single-Arm Overhead Press', primaryGrade: 'B',  loadRatio: 0.35 },
+        { name: 'Z-Press', primaryGrade: 'B',                                  loadRatio: 0.60 },
       ],
     },
   },
@@ -496,9 +523,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         // with 2 hands - so maybe we need to change the form cues for that one
         // and the name so it's just bent row and can use bb or db"*. Renamed
         // from `Barbell Row`, which is a legacy read alias.
-        { name: 'Bent Row',            loadRatio: 1.00 },
-        { name: 'Chest Supported Row', loadRatio: 0.85 },
-        { name: 'Single-Arm DB Row',   loadRatio: 0.60 },
+        { name: 'Bent Row', primaryGrade: 'A',            loadRatio: 1.00 },
+        { name: 'Chest Supported Row', primaryGrade: 'A', loadRatio: 0.85 },
+        { name: 'Single-Arm DB Row', primaryGrade: 'B',   loadRatio: 0.60 },
       ],
     },
     accessory: {
@@ -527,7 +554,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // variety here, stated rather than discovered later: there are few
       // horizontal-pull accessories that are not shoulder work.
       slot: 'horizontal_pull', role: 'accessory', entries: [
-        { name: 'Seated Cable Row',        loadRatio: 0.90 },
+        { name: 'Seated Cable Row', primaryGrade: 'A',        loadRatio: 0.90 },
         // REFILLED FROM THE LOCKED VOCABULARY, NOT INVENTED. R-076 took three of
         // this slot's four accessories to the shoulder group, leaving one — and
         // `test:pools` caught it immediately ("accessory has >=3 entries (got 1)"),
@@ -535,26 +562,26 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         // may never be authored by an agent, so these two are EXISTING
         // `EXERCISE_TAGS` entries tagged `horizontal_pull` that no pool had
         // claimed yet. Both are genuine rows, which is the whole point.
-        { name: 'Chest-Supported DB Row',  loadRatio: 0.60 },
+        { name: 'Chest-Supported DB Row', primaryGrade: 'A',  loadRatio: 0.60 },
         // Bodyweight: loadRatio 0, the same no-progression-transfer convention
         // used by plyo and isolation_lower.
-        { name: 'Inverted Row (Bodyweight)', loadRatio: 0 },
+        { name: 'Inverted Row (Bodyweight)', primaryGrade: 'B', loadRatio: 0 },
       ],
     },
   },
   vertical_pull: {
     anchor: {
       slot: 'vertical_pull', role: 'anchor', entries: [
-        { name: 'Pull-Ups', loadRatio: 1.00 },
+        { name: 'Pull-Ups', primaryGrade: 'A', loadRatio: 1.00 },
         { name: 'Band-Assisted Pull-Up', loadRatio: 0 },
-        { name: 'Chin-Ups', loadRatio: 1.00 },
+        { name: 'Chin-Ups', primaryGrade: 'A', loadRatio: 1.00 },
       ],
     },
     accessory: {
       slot: 'vertical_pull', role: 'accessory', entries: [
-        { name: 'Lat Pulldown',            loadRatio: 0.80 },
-        { name: 'Neutral-Grip Pulldown',   loadRatio: 0.80 },
-        { name: 'Single-Arm Lat Pulldown', loadRatio: 0.40 },
+        { name: 'Lat Pulldown', primaryGrade: 'A',            loadRatio: 0.80 },
+        { name: 'Neutral-Grip Pulldown', primaryGrade: 'A',   loadRatio: 0.80 },
+        { name: 'Single-Arm Lat Pulldown', primaryGrade: 'B', loadRatio: 0.40 },
       ],
     },
   },

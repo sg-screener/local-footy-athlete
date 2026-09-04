@@ -739,15 +739,32 @@ function poolOrderedFor(
  * then inherited strength progression. Tags describe the movement; the pool
  * decides whether automatic strength programming owns the identity.
  */
+/**
+ * ⚠ **THE GRADE ORDERS THE MAIN-LIFT BENCH — Sam's table, 2026-09-04 (R-373).**
+ *
+ * A grade of `A` leads, `B` follows, and an UNGRADED row is not a normal main
+ * lift at all. Before this, "main lift" meant "reachable from the anchor bench
+ * then the accessory bench", which let `Glute Bridge`, `Bodyweight Squat`,
+ * `Incline Push-Up` and `Kettlebell Swings` lead a day.
+ *
+ * ⚠ **BUT IT MAY NEVER EMPTY A SEAT, AND THAT IS SAM'S OWN RULING.** Asked what
+ * a bodyweight athlete's push day should do — `Push-ups` is deliberately
+ * ungraded and is their only legal press — he said *"push ups can be a main when
+ * no equipment"* and *"give them best availble i think"*. So the ungraded tail
+ * is APPENDED, never removed: a graded lift always outranks it, and it is only
+ * ever reached when nothing graded is legal on the day's kit.
+ *
+ * The weighted-before-unloaded preference still applies INSIDE each grade, so
+ * Sam's *"yes i'd prefer weighted exercises"* is not overturned by a grade.
+ */
 function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
   if (!poolSlot) return weightedFirst(slotCandidates(slot));
   const pool = STRENGTH_POOLS[poolSlot];
-  const ordered = [
-    ...poolOrderedFor(slot, pool.anchor.entries),
-    ...poolOrderedFor(slot, pool.accessory.entries),
-  ];
-  return weightedFirst(ordered);
+  const entries = [...pool.anchor.entries, ...pool.accessory.entries];
+  const atGrade = (grade: 'A' | 'B' | undefined) =>
+    weightedFirst(poolOrderedFor(slot, entries.filter((e) => e.primaryGrade === grade)));
+  return [...atGrade('A'), ...atGrade('B'), ...atGrade(undefined)];
 }
 
 /**

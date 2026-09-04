@@ -515,11 +515,12 @@ function authoredPoolMembership(name: string): {
   readonly slot: string;
   readonly role: string;
   readonly group: string | null;
+  readonly primaryGrade: 'A' | 'B' | null;
 } | null {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { findPoolEntry } = require('../data/exercisePoolsStrength') as {
     findPoolEntry: (n: string) => {
-      slot: string; role: string; entry: { group?: string };
+      slot: string; role: string; entry: { group?: string; primaryGrade?: 'A' | 'B' };
     } | null;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -528,7 +529,8 @@ function authoredPoolMembership(name: string): {
   };
   const membership = findPoolEntry(name) ?? findPoolEntry(canonicalExerciseName(name));
   return membership
-    ? { slot: membership.slot, role: membership.role, group: membership.entry.group ?? null }
+    ? { slot: membership.slot, role: membership.role, group: membership.entry.group ?? null,
+        primaryGrade: membership.entry.primaryGrade ?? null }
     : null;
 }
 
@@ -580,7 +582,31 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   }
   const name = row.exercise?.name;
   if (!name) return [];
-  return slotsForExerciseName(name);
+  /* ⚠ **CANDIDACY IS NOT CREDIT — R-373, and this is where the earlier attempts
+   * went wrong twice.**
+   *
+   * `slotsForExerciseName` answers *"which seats may SELECT this lift"*, and
+   * R-373 widened it so a graded single-leg lift can lead the squat or hinge
+   * pattern. This function answers a different question — *"what does this row,
+   * already on the day, COUNT as"* — and it must answer with ONE slot, or a day
+   * built to Sam's own fill order (heavy hinge + single-leg RDL) reports
+   * `duplicated: [hinge]` and flags his prescription. That is exactly the defect
+   * that got this reverted before.
+   *
+   * The composer's typed slot is the answer whenever it has one, which is the
+   * precedent the `football_robustness` branch above already sets: *"the
+   * composer's typed slot outranks re-inference by name"*. A `Single-Leg RDL`
+   * selected INTO the hinge seat counts as the hinge; the same lift selected
+   * into the single-leg hip seat counts as single-leg hip; and the week still
+   * owes a heavy hinge in the second case.
+   *
+   * With no typed slot the row gets the NARROW answer — its own primary
+   * identity — because absent a decision a single-leg lift is single-leg work.
+   * That is the pre-R-373 behaviour, unchanged. */
+  const composed = row.section18Evidence?.slot as SessionSlot | undefined;
+  const narrow = slotsForExerciseName(name, false);
+  if (composed && slotsForExerciseName(name).includes(composed)) return [composed];
+  return narrow;
 }
 
 /**
@@ -594,7 +620,10 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
  * uncounted copies in other modules — the two answers would drift and the oracle
  * would disagree with its own availability test.
  */
-export function slotsForExerciseName(name: string): readonly SessionSlot[] {
+export function slotsForExerciseName(
+  name: string,
+  includeGradedPatternSeat = true,
+): readonly SessionSlot[] {
   // R-130b: the female shoulder-prehab seat draws the shoulder-health pool.
   // Membership is decided BEFORE the tag gate below, deliberately: prehab
   // rows may carry none of the strength taxonomy's tags, and a tagless
@@ -632,6 +661,29 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   // overlap as a duplicate made the two requirements impossible to satisfy at
   // once. It also let a day with ONLY a single-leg RDL claim the heavy-hinge
   // slot, which his fill order plainly separates.
+  /* ⚠ **A GRADED SINGLE-LEG LIFT MAY LEAD THE PATTERN — R-373, Sam 2026-09-04.**
+   *
+   * His grading table puts `Bulgarian Split Squat` among the A-grade SQUAT
+   * primaries and `Single-Leg RDL` among the B-grade HINGE primaries. Before
+   * this, a unilateral lift filled ONLY its single-leg slot, so those grades
+   * could never take effect: the app filed the lift as single-leg work and the
+   * squat seat never saw it. Sam, on doing the grade without this: it would
+   * *"open up single leg single arm or lower body upper body accessories"* —
+   * and it does not, unless the routing moves with it.
+   *
+   * ⚠ **THE GRADE IS THE GATE, NOT LATERALITY, AND THAT IS DELIBERATE.** An
+   * earlier revision let EVERY unilateral lift fill both, and a day built exactly
+   * to Sam's fill order — heavy hinge, squat, single-leg knee, single-leg RDL,
+   * accessory — reported `duplicated: [hinge]`, flagging his own prescription.
+   * Only a lift he graded as a primary is offered the bilateral seat, so an
+   * ungraded single-leg row (`Single-Leg Squat (to Box)`, `SL 45° Back
+   * Extension`) still fills exactly one slot and cannot collide with itself.
+   *
+   * The single-leg slot always comes FIRST, so nothing that reads the head of
+   * this list changes what a unilateral lift primarily is. */
+  const gradedPrimary = includeGradedPatternSeat
+    && strengthMembership?.primaryGrade !== null
+    && strengthMembership?.primaryGrade !== undefined;
   switch (tag.movement) {
     case 'squat':
       if (unilateral) {
@@ -641,19 +693,25 @@ export function slotsForExerciseName(name: string): readonly SessionSlot[] {
         // day can carry two different single-leg lifts before it reaches an
         // isolation. R-336 keeps knee-dominant work off the hinge day.
         if (automaticRouteFor(name) !== 'prehab') out.push('loaded_lower_accessory');
+        if (gradedPrimary) out.push('squat');
       } else {
         out.push('squat');
       }
       break;
     case 'lunge':
       // A lunge IS the single-leg knee-dominant slot — that is what the pattern
-      // means. It is not a bilateral squat and never fills the squat slot.
+      // means. R-373: a GRADED lunge may additionally lead the squat pattern,
+      // which is what puts Sam's B-grade `Reverse Lunges` / `Walking Lunges` /
+      // `Step Ups` in reach of a dumbbell athlete's squat seat.
       out.push('single_leg_knee');
       if (automaticRouteFor(name) !== 'prehab') out.push('loaded_lower_accessory');
+      if (gradedPrimary) out.push('squat');
       break;
     case 'hinge':
-      if (unilateral) out.push('single_leg_hip');
-      else out.push('hinge');
+      if (unilateral) {
+        out.push('single_leg_hip');
+        if (gradedPrimary) out.push('hinge');
+      } else out.push('hinge');
       break;
     // ── AN UPPER *ACCESSORY* IS ALSO HIS "ARM WORK OR ACCESSORY WORK" ───────
     //

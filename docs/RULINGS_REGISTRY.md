@@ -9564,3 +9564,54 @@ canonicalises the doc's name before asking, which is why a rename is no longer
 read as a missing video), `test:deload-law` 78/78 (its `\brow\b` regression cell
 keeps its hazard: the new name still contains a bare `row`), `test:visible-surfaces`
 84/1. Receipts: `docs/STATUS_VARIETY.md`.
+
+**R-373** · A grade decides what may lead a block, and the seat follows, 2026-09-04.
+
+Owner: variety. Sam's grading table plus his answers the same day: Hip Thrusts B,
+Single-Arm DB Floor Press B, B-Stance RDL B, `Push-ups` ungraded, and *"give them
+best availble i think"* when nothing graded is legal.
+
+`PoolEntry.primaryGrade` is authored on the entry: `'A'` freely selectable as the
+block's core lift, `'B'` a legitimate alternate primary, **absent = never a
+normal main lift**. 42 entries graded, 26 A and 16 B.
+
+**THE GRADE'S FIRST JOB IS DEMOTION.** `anchorCandidates` already returned the
+anchor bench THEN the accessory bench, so `Seated Cable Row`, `Seated DB Press`
+and `Z-Press` were correctly shipping as primaries — and so were `Glute Bridge`,
+`Bodyweight Squat`, `Incline Push-Up` and `Kettlebell Swings`. MEASURED: one
+ungraded lift led a day in the year before; **zero after.**
+
+**AND THE SEAT HAD TO MOVE WITH IT, OR THE GRADE DOES NOTHING.** A unilateral
+lift filled only its single-leg slot, so grading `Bulgarian Split Squat` an
+A-grade squat primary changed nothing — the app still filed it as single-leg work
+and the squat seat never saw it. Graded single-leg lifts now reach the pattern
+seat; ungraded ones do not.
+
+⚠ **WHY THIS SURVIVED WHERE TWO EARLIER ATTEMPTS DID NOT.** One function was
+answering two questions: *"which seat may SELECT this lift"* and *"what does this
+row COUNT as"*. Widening the first widened the second, so a day built to Sam's
+own fill order — heavy hinge plus single-leg RDL — reported `duplicated: [hinge]`
+and flagged his prescription. **Candidacy and credit are now separate.**
+`slotsForExerciseName` widened; `slotsFilledByRow` credits the composer's typed
+slot when it has one and the NARROW identity otherwise — the precedent the
+`football_robustness` branch beside it already set. All three cells that killed
+the earlier attempts pass UNCHANGED, including *"a day with only a single-leg RDL
+still lacks the heavy hinge"*.
+
+MEASURED over the preserved 52-week driver, both athletes: **distinct main lifts
+16 → 20**, ungraded-as-main **1 → 0**, and the squat seat genuinely rotates —
+Bulgarian Split Squats ×16, Walking Lunges ×13, Step Ups ×8, Single-Leg Leg Press
+×7, Reverse Lunges ×7. `Pull-Ups` ×52, `Bench Press` ×51 and `RDLs` ×51 still run
+every week: that is the tracked-lift pin, which is the NEXT slice and not this one.
+
+NOT COVERED, and raised rather than buried: **two `Accessories` sessions per
+athlete-year became rest** (strength days 93 → 91). Every other day type is
+identical — `lower_squat` 14, `lower_hinge` 35, `Gunshow` 21, `upper_push` 7 all
+unchanged. The likely cause is that an accessories day fills what the week is
+missing, and fewer patterns are now missing; it is not chased here and Sam has
+not ruled on it.
+
+Guard: `test:slot-coverage` 92/92 (all three prior-attempt cells untouched),
+`test:b-stance-rdl` 18/18 (candidacy AND credit asserted separately),
+`test:main-lift-pattern` 23/23, `test:movement-planes` 13/13,
+`test:visible-surfaces` 84/1. Receipts: `docs/STATUS_VARIETY.md`.
