@@ -9494,3 +9494,33 @@ one-sided is the honest answer.
 Guard: `test:visible-surfaces` [13] holds the owner's precedence; the three rows
 resolve equal from the pool entry, the tag alone and the shared owner. Receipts:
 `docs/STATUS_VARIETY.md`.
+
+**R-371** · A squat rack carries a chin-up bar; a pulldown is a cable, 2026-09-04.
+
+Owner: variety. Sam: *"i think we should assume that the squat rack has a pull
+up bar - i'm sick of dealing with all these fucking options - if S&C is important
+to them they will get a fucking bench and a pull up bar and stuff"*, and *"lat
+pulldown should be a cable machine only thing"*.
+
+**THE RACK.** `rack` implies `pullup_bar`. MEASURED: an athlete answering
+barbell + rack + bench + dumbbells had **ZERO** legal vertical-pull options —
+`Pull-Ups` and `Chin-Ups` need `pullup_bar`, every pulldown needed a machine. A
+home gym with a rack trained no vertical pull at all: not a thin seat, an absent
+movement pattern. Almost every rack carries a chin-up bar, so believing it beats
+asking a second question about the same piece of steel.
+
+`rules/equipmentVocabulary.withEquipmentImplications` is the one table and the
+one reader. **It runs BEFORE the constraint filter, never after** — an away span
+or dated equipment fact must still be able to take the bar away, and a hotel room
+does not gain one because the athlete owns a rack at home. Both ingresses (the
+typed answer and the legacy stored checklist) pass through it, so the two cannot
+disagree about what a rack means.
+
+**THE PULLDOWNS.** `Lat Pulldown`, `Neutral-Grip Pulldown` and `Single-Arm Lat
+Pulldown` move from `machine` to `cables`. A pulldown is a cable movement; filing
+it under Weight machines meant an athlete who ticked Cable machine but not Weight
+machines got a `Seated Cable Row` and no pulldown off the same stack.
+
+Guard: `test:equipment-vocabulary` 98/0, `test:equipment-answer` 50/0,
+`test:equipment-scopes` 20/0, `test:dated-equipment-fact` 3/0,
+`test:slot-coverage` 92/92. Receipts: `docs/STATUS_VARIETY.md`.

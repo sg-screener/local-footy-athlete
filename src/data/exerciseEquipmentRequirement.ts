@@ -159,7 +159,11 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Kettlebell Swings": ['kettlebell'],
   "Kneeling Jump": [],
   "Landmine Press": ['barbell'],
-  "Lat Pulldown": ['machine'],
+  // R-371 (Sam, 2026-09-04): *"lat pulldown should be a cable machine only
+  // thing"*. A pulldown is a cable movement; filing it under Weight machines
+  // meant an athlete who ticked Cable machine but not Weight machines got a
+  // Seated Cable Row and no pulldown off the same stack.
+  "Lat Pulldown": ['cables'],
   "Lateral Bounds": [],
   "Lateral Jump": [],
   "Lateral Lunge": [],
@@ -169,7 +173,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Long-Lever Copenhagen": [],
   "Lying Dumbbell Curl": ['dumbbells'],
   "McGill Sit Up": [],
-  "Neutral-Grip Pulldown": ['machine'],
+  "Neutral-Grip Pulldown": ['cables'],
   "Nordic Lower": [],
   "Overhead Carry": ['dumbbells'],
   "Overhead Press": ['barbell', 'rack'],
@@ -203,7 +207,7 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Single-Arm DB Bench Press": ['bench', 'dumbbells'],
   "Single-Arm DB Floor Press": ['dumbbells'],
   "Single-Arm DB Row": ['dumbbells'],
-  "Single-Arm Lat Pulldown": ['machine'],
+  "Single-Arm Lat Pulldown": ['cables'],
   "Single-Arm Shrug": ['dumbbells'],
   "Single-Leg Calf Raise": [],
   "Single-Leg Hip Thrust": [],

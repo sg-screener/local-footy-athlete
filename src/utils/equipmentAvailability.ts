@@ -22,6 +22,7 @@ import {
   runWithAthleteActionTrace,
 } from './athleteActionDiagnostics';
 import { todayISOLocal } from './appDate';
+import { withEquipmentImplications } from '../rules/equipmentVocabulary';
 
 export type EquipmentAvailabilityProfile =
   Pick<
@@ -522,7 +523,11 @@ function resolveAnsweredCapabilities(
     if (possession === 'have') modalities.push(modality as ConditioningEquipmentModality);
   }
 
-  const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
+  // R-371: a rack carries a chin-up bar. Derived BEFORE the constraint filter,
+  // never after — an away span must still be able to take the bar away, and a
+  // hotel room does not gain one because the athlete owns a rack at home.
+  const constrainedTags = applyEquipmentConstraints(
+    withEquipmentImplications(tags), constraints, effectiveDate);
   const constrainedModalities = applyConditioningModalityConstraints(
     modalities, constraints, effectiveDate,
   );
@@ -576,7 +581,11 @@ export function resolveEquipmentCapabilities(
       ? 'legacy_positive_lift'
       : 'complete_selection';
 
-  const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
+  // R-371, the legacy-checklist path — same owner, same order. Both ingresses
+  // reach one implication table so a stored checklist and a typed answer cannot
+  // disagree about what a rack means.
+  const constrainedTags = applyEquipmentConstraints(
+    withEquipmentImplications(tags), constraints, effectiveDate);
   const constrainedModalities = applyConditioningModalityConstraints(
     Array.from(new Set(modalities)), constraints, effectiveDate,
   );

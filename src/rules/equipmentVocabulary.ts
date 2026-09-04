@@ -481,3 +481,43 @@ export function formatEquipmentProfileSummary(data: {
 
 /** Referenced so the rendering rules stay an import-checked source. */
 export const MODALITY_RULE_COUNT = MODALITY_RENDERING_RULES.length;
+
+/**
+ * ⚠ **WHAT ONE ANSWER ALREADY TELLS YOU ABOUT ANOTHER** — Sam, 2026-09-04:
+ * *"i think we should assume that the squat rack has a pull up bar - i'm sick of
+ * dealing with all these fucking options."*
+ *
+ * MEASURED, and it was costing a whole movement pattern: an athlete answering
+ * barbell + rack + bench + dumbbells had **ZERO** legal vertical-pull options,
+ * because `Pull-Ups` and `Chin-Ups` require `pullup_bar` and every pulldown
+ * requires a cable machine. A home gym with a rack trained no vertical pull at
+ * all — not a thin seat, an absent pattern.
+ *
+ * Almost every squat rack carries a chin-up bar across the top, so the honest
+ * default is to believe it rather than ask a second question about the same
+ * piece of steel.
+ *
+ * ⚠ **THIS IS DERIVED, AND IT RUNS BEFORE CONSTRAINTS, NEVER AFTER.** An away
+ * span or a dated equipment fact must still be able to take the bar away — a
+ * hotel room does not gain a pull-up bar because the athlete owns a rack at
+ * home. Applying it after the constraint filter would silently restore what a
+ * trip had removed.
+ *
+ * ONE TABLE, ONE READER. If a second implication is ever ruled, it is a row
+ * here — never a branch at a call site.
+ */
+const EQUIPMENT_IMPLICATIONS: Readonly<Partial<Record<EquipmentTag, readonly EquipmentTag[]>>> = {
+  rack: ['pullup_bar'],
+};
+
+export function withEquipmentImplications(
+  tags: readonly EquipmentTag[],
+): EquipmentTag[] {
+  const out = [...tags];
+  for (const tag of tags) {
+    for (const implied of EQUIPMENT_IMPLICATIONS[tag] ?? []) {
+      if (!out.includes(implied)) out.push(implied);
+    }
+  }
+  return out;
+}
