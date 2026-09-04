@@ -287,7 +287,8 @@ const finalRows = readSheetRecords(FILE, 'Final matrix', 5);
 // 149 → 200 on 2026-09-03: 148 snapshot rows still in code (Single-Arm
 // Pulldown retired, kept as rule evidence only), 19 intake rows, and the 33
 // untagged pool members the app can place, shown with what the rules say.
-ok('snapshot', '200 rows on the final matrix', finalRows.length === 200, `got ${finalRows.length}`);
+// R-368: B-Stance RDL joined the LOWER BODY - HINGE block, 200 -> 201.
+ok('snapshot', '201 rows on the final matrix', finalRows.length === 201, `got ${finalRows.length}`);
 
 ok('structural', 'every exercise in CODE appears in the sheet',
   code.every((e) => finalRows.some((r) => r.Exercise === e.name)),
@@ -335,7 +336,7 @@ ok('structural', 'every code entry authors all 13 regions — no omissions possi
   code.filter((e) => REGIONS.some((r) => e.ratings[r] === undefined)).map((e) => e.name).join(', '));
 // Compared = rows in code × 13. 167 → 200 on 2026-09-04 (R-364): nothing the
 // app can place is untagged any more.
-ok('structural', '200 x 13 = 2600 cells compared', cells === 2600, `got ${cells}`);
+ok('structural', '201 x 13 = 2613 cells compared', cells === 2613, `got ${cells}`);
 // 872/24/1041 → 875/24/1038 on 2026-08-26: the three rack-squat shoulder
 // cells moved good → caution (Sam's ruling above).
 // 875/24/1038 → 869/24/1044 on 2026-08-27: the six quad-dominant hamstring
@@ -347,8 +348,12 @@ ok('structural', '200 x 13 = 2600 cells compared', cells === 2600, `got ${cells}
 // 1060/42/1069 → 1199/74/1327 on 2026-09-04 (R-364): the 33 recovery rows
 // enter; every pool contraindication is Avoid (+32), loaded/stretched regions
 // Caution, the rest Good. Over the 2600 compared cells.
-ok('snapshot', 'final distribution: 1199 caution / 74 avoid / 1327 good',
-  distribution.caution === 1199 && distribution.avoid === 74 && distribution.good === 1327,
+// R-368, 2026-09-04: B-Stance RDL adds exactly 13 cells - 9 caution, 1 avoid
+// (hamstring: a B-stance loads the front hamstring harder), 3 good (quad, knee,
+// neck). 1199/74/1327 -> 1208/75/1330. The code's own derivation reports the
+// same three numbers, so this ratchet moved BY the row and not around it.
+ok('snapshot', 'final distribution: 1208 caution / 75 avoid / 1330 good',
+  distribution.caution === 1208 && distribution.avoid === 75 && distribution.good === 1330,
   JSON.stringify(distribution));
 
 // inj() and SAFE must never come back — they are the defect itself.
