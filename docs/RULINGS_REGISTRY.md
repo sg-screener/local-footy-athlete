@@ -9669,8 +9669,23 @@ class, not an incident:
    replace the already-authored default"*. As a pin, the record went back in
    front of it — and the record is often a SUPPORTING row for the same slot
    authored earlier in the block. An athlete who chose `Overhead Press` got it
-   **ZERO times in a full year** while it sat eligible on every one of those
-   days. A legal tracked anchor ignores the record again.
+   **zero times in that block** while it sat eligible on every one of those days
+   — they received `DB Shoulder Press` twice instead, once as support and once
+   as their main lift. A legal tracked anchor ignores the record again.
+
+   ⚠ **CORRECTED 2026-09-04, same day, before anyone relied on it.** This was
+   first written as *"zero times in a full year"*. It was not: the world that
+   suite compiles is FOUR WEEKS — one block. A failing delivery count was read as
+   an annual figure. In the real 52-week driver `Overhead Press` is absent for a
+   different and entirely correct reason — that athlete has no barbell, and the
+   compiler rejected it 406 times with the typed reason `equipment`.
+
+   AND THE REMAINING COLLISION WAS MEASURED RATHER THAN ASSUMED. The record is
+   keyed by slot and seat with no note of whether the choice was a main lift or
+   supporting work, so the same inheritance is possible on any untracked pattern.
+   Across the 52-week run it happens **once in thirteen blocks**, and that one is
+   benign — a support row early in the week and a main lift later. Not fixed, on
+   Sam's judgement, because it is not producing bad programs.
 
 Guard: `test:block-rotation-stagger` 14/14, mutation-checked (raising the quota
 to six reddens three cells). `test:estimated-1rm` 34/34 + 181/181,
