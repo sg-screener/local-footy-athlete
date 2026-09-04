@@ -93,6 +93,28 @@ export type LoadAnchor = 'squat' | 'bench';
 export type EquipmentClass = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'bodyweight' | 'kettlebell';
 
 export interface ExerciseLoadProfile {
+  /**
+   * ⚠ **HOW MANY IMPLEMENTS THE LIFT USES — R-375, Sam 2026-09-04.**
+   *
+   * *"isn't it simpler to just do total? like RDL 80kg and you can use a bar or
+   * 2 x 40kg db"*, and for one-handed work *"it just has 1 weight i.e. 30kg or
+   * whatever and not 60"*.
+   *
+   * **THE NUMBER THE ATHLETE READS IS ALWAYS THE TOTAL WORKING LOAD.** One bar
+   * at 80 and two 40s are the same 80. A one-handed lift has one implement, so
+   * its total IS that dumbbell — 30 means 30, never 60.
+   *
+   * The ratios below stay authored PER IMPLEMENT, because that is what they
+   * were measured as; this field is what turns them into a total, once, in
+   * `effectiveLoadRatio`. Absent means one — a bar, a machine, a goblet squat's
+   * single dumbbell, or anything held in one hand.
+   *
+   * ⚠ **IT CANNOT BE DERIVED FROM `equipment` OR FROM `unilateral`, AND BOTH
+   * WERE TRIED ON PAPER FIRST.** `Goblet Squat` is a dumbbell, two-handed, and
+   * ONE implement; `DB Bench Press` is a dumbbell, two-handed, and TWO. The
+   * count is a fact about the exercise and is authored as one.
+   */
+  implements?: 1 | 2;
   /** Which anchor 1RM to derive from */
   anchor: LoadAnchor;
   /** Fraction of anchor 1RM → working weight (NOT a 1RM percentage) */
@@ -214,9 +236,9 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   // Farmer's total is 0.71 x bench across both hands; the number the athlete
   // sees is one hand's worth. Suitcase is a single dumbbell at the same
   // per-hand load. Their cues state this.
-  'Farmer Carry':           { anchor: 'bench', ratio: 0.4, equipment: 'dumbbell' },
+  'Farmer Carry':           { implements: 2, anchor: 'bench', ratio: 0.4, equipment: 'dumbbell' },
   'Suitcase Carry':         { anchor: 'bench', ratio: 0.4, equipment: 'dumbbell' },
-  'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
+  'Overhead Carry':         { implements: 2, anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
 
   // ═══ SAM'S LOCKED-LIST LOAD RULINGS (2026-07-25) ═══
   'Single-Leg Hip Thrust':  { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
@@ -247,15 +269,15 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Speed Bench':            { anchor: 'bench', ratio: 0.55, equipment: 'barbell' },
 
   // ═══ UPPER BODY — DUMBBELL ═══
-  'DB Bench Press':           { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
-  'Incline DB Bench':         { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
-  'DB Shoulder Press':        { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
-  'Seated DB Press':          { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'DB Bench Press':           { implements: 2, anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'Incline DB Bench':         { implements: 2, anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'DB Shoulder Press':        { implements: 2, anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'Seated DB Press':          { implements: 2, anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
   'Half-Kneeling Single-Arm Overhead Press': { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
   'Single-Arm DB Row':        { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
   'Single-Arm DB Bench Press': { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
   'Single-Arm DB Floor Press': { anchor: 'bench', ratio: 0.22, equipment: 'dumbbell' },
-  'Lateral Raise':            { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
+  'Lateral Raise':            { implements: 2, anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
 
   // ═══ UPPER BODY — CABLE / MACHINE ═══
   'Seated Cable Row':         { anchor: 'bench', ratio: 0.50, equipment: 'cable' },
@@ -263,7 +285,7 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Single-Arm Lat Pulldown':  { anchor: 'bench', ratio: 0.30, equipment: 'cable' },
   'Face Pull':                { anchor: 'bench', ratio: 0.2, equipment: 'cable' },
   'Cable Face Pull':          { anchor: 'bench', ratio: 0.2, equipment: 'cable' },
-  'Chest Supported Row':      { anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
+  'Chest Supported Row':      { implements: 2, anchor: 'bench', ratio: 0.3, equipment: 'dumbbell' },
   'Landmine Press':           { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
   'Bear Carry':               { anchor: 'squat', ratio: 0.30, equipment: 'dumbbell' },
 
@@ -274,20 +296,20 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Weighted Dead Bug':        { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
 
   // ═══ ARMS / PUMP (pool exercises from derived sessions) ═══
-  'Bicep Curl (Dumbbell)':      { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
-  'Hammer Curl':                { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
-  'Incline Dumbbell Curl':      { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
-  'Lying Dumbbell Curl':        { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
+  'Bicep Curl (Dumbbell)':      { implements: 2, anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
+  'Hammer Curl':                { implements: 2, anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
+  'Incline Dumbbell Curl':      { implements: 2, anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
+  'Lying Dumbbell Curl':        { implements: 2, anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
   'Concentration Curl':         { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Pushdown':            { anchor: 'bench', ratio: 0.20, equipment: 'cable' },
   'Overhead Tricep Extension':  { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
   'Skull Crushers':             { anchor: 'bench', ratio: 0.2, equipment: 'barbell' },
-  'Dumbbell Skull Crusher':     { anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
+  'Dumbbell Skull Crusher':     { implements: 2, anchor: 'bench', ratio: 0.15, equipment: 'dumbbell' },
   'Dumbbell Kickback':          { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
   'Tricep Circuit (Dirty 30)':  { anchor: 'bench', ratio: 0.10, equipment: 'dumbbell' },
-  'Rear Delt Fly':              { anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
-  'Chest-Supported DB Row':     { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
-  'Shrugs':                     { anchor: 'bench', ratio: 0.30, equipment: 'dumbbell' },
+  'Rear Delt Fly':              { implements: 2, anchor: 'bench', ratio: 0.1, equipment: 'dumbbell' },
+  'Chest-Supported DB Row':     { implements: 2, anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
+  'Shrugs':                     { implements: 2, anchor: 'bench', ratio: 0.30, equipment: 'dumbbell' },
   'Single-Arm Shrug':           { anchor: 'bench', ratio: 0.2, equipment: 'dumbbell' },
 
   // ═══ COMMON GYM EXERCISES (missing from original map) ═══
@@ -990,6 +1012,15 @@ export function formatLoadControlLabel(
  */
 
 /** Round to a loadable weight. Kept as the module's public name; delegates. */
+/**
+ * R-375: the authored ratio turned into a TOTAL. Both readers of `profile.ratio`
+ * go through here — the starting-weight estimator and the family-seed borrower —
+ * so a two-dumbbell lift cannot be a total on one path and per-hand on the other.
+ */
+export function effectiveLoadRatio(profile: ExerciseLoadProfile): number {
+  return profile.ratio * (profile.implements ?? 1);
+}
+
 export function roundToEquipment(weight: number, equipment: EquipmentClass): number {
   return roundDownToLattice(weight, equipment);
 }
@@ -1178,7 +1209,7 @@ export function estimateStartingWeight(
 
   const { profile } = authority;
   const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
-  return prescribableWeight(anchor1RM * profile.ratio, profile.equipment);
+  return prescribableWeight(anchor1RM * effectiveLoadRatio(profile), profile.equipment);
 }
 
 /**
@@ -1289,12 +1320,13 @@ export function familySeedFromRecord(
     if (resolveExerciseName(name) === own) continue;
     const sibling = resolveLoadAuthority(name);
     if (sibling.kind !== 'prescribed' || sibling.profile.anchor !== target.anchor) continue;
-    if (!best || sibling.profile.ratio > best.ratio) {
-      best = { impliedAnchorKg: kg / sibling.profile.ratio, ratio: sibling.profile.ratio };
+    const siblingRatio = effectiveLoadRatio(sibling.profile);
+    if (!best || siblingRatio > best.ratio) {
+      best = { impliedAnchorKg: kg / siblingRatio, ratio: siblingRatio };
     }
   }
   if (!best) return null;
-  const borrowed = best.impliedAnchorKg * target.ratio;
+  const borrowed = best.impliedAnchorKg * effectiveLoadRatio(target);
   const estimate = estimateStartingWeight(exerciseName, onboardingData);
   const capped = estimate !== null && estimate > 0
     ? Math.min(borrowed, estimate * FAMILY_SEED_CAP_MULTIPLIER)

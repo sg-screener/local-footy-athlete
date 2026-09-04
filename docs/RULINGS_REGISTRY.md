@@ -9691,3 +9691,52 @@ Guard: `test:block-rotation-stagger` 14/14, mutation-checked (raising the quota
 to six reddens three cells). `test:estimated-1rm` 34/34 + 181/181,
 `test:slot-coverage` 92/92, `test:main-lift-pattern` 23/23,
 `test:block-selection-authority` 10/10. Receipts: `docs/STATUS_VARIETY.md`.
+
+**R-375** · The load an athlete reads is the TOTAL, 2026-09-04.
+
+Owner: variety. Sam: *"isn't it simpler to just do total? like RDL 80kg and you
+can use a bar or 2 x 40kg db"*, and for one-handed work *"it just has 1 weight
+i.e. 30kg or whatever and not 60"*. Asked whether he minded the displayed numbers
+doubling: *"yes - it doesn't matter if it doubles we have no users and it's not
+on app store yet."*
+
+One bar at 80 and two 40s are the same 80. A one-handed lift has ONE implement,
+so its total IS that dumbbell — 30 means 30, never 60.
+
+`ExerciseLoadProfile.implements` (1 or 2, absent means 1) is the authored fact,
+and `effectiveLoadRatio` is the one place it is applied. **BOTH readers of
+`profile.ratio` go through it** — the starting-weight estimator and the
+family-seed borrower — so a two-dumbbell lift cannot be a total on one path and
+per-hand on the other. The authored ratios are unchanged; they stay per
+implement, which is what they were measured as.
+
+⚠ **IT CANNOT BE DERIVED FROM `equipment` OR FROM `unilateral`, AND BOTH WERE
+CHECKED BEFORE THE FIELD WAS ADDED.** `Goblet Squat` is a dumbbell, two-handed
+and ONE implement; `DB Bench Press` is a dumbbell, two-handed and TWO. The count
+is a fact about the exercise, so it is authored as one.
+
+16 lifts marked as two implements. Measured for a 100 kg bench / 140 kg squat
+athlete: `DB Bench Press` 30 → 60, `DB Shoulder Press` 20 → 40, `Farmer Carry`
+40 → 80; `Bench Press` 80, `Goblet Squat` 31, `Kettlebell Swings` 28,
+`Single-Arm DB Floor Press` 22 and `Bulgarian Split Squats` 28 all unchanged.
+
+**THIS SUPERSEDES ONE EARLIER RULING AND THAT IS NAMED RATHER THAN ABSORBED.**
+`loadEstimation.ts` carried *"CARRIES — stored and displayed PER HAND (Sam,
+2026-07-24)"*. Carries are two implements and now read as a total like every
+other two-handed lift.
+
+NOT COVERED — five lifts whose implement count is a judgement I made rather than
+one Sam authored, listed so he can correct them in one pass: `Overhead Carry`
+(marked 2), and `Weighted Dead Bug`, `Tricep Circuit (Dirty 30)`,
+`Back Extension` and `Bear Carry` (all left at 1).
+
+⚠ **AND IT SURFACED TWO GAPS IN TODAY'S EARLIER WORK.** `LOAD_RATIO_REVIEW` is a
+THIRD signed workbook, and neither R-368 nor R-372 had touched it: `Barbell Row`
+was still named there, and `B-Stance RDL` had a ratio in code that no authored
+sheet recorded. Both fixed — renamed in place, and the new row INSERTED at its
+position after `Single-Leg RDL` rather than appended. `test:load-ratio-rulings`
+45/47 → **47/47**.
+
+Guard: `test:load-ratio-rulings` 47/47, `test:estimated-1rm` 54/0,
+`test:anchor-multipliers` 38/38, `test:single-estimation-owner` 14/14,
+`test:plane-and-load-memory` 20/0. Receipts: `docs/STATUS_VARIETY.md`.
