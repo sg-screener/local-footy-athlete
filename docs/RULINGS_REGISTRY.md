@@ -7670,6 +7670,27 @@ Annual evidence reports distinct eligible dates, distinct delivered dates and
 typed reasons for every withheld opportunity. Repeated observations—not an
 arbitrary injury-blind annual quota—are the graph-usefulness contract.
 
+**AMENDED 2026-09-04 (seat variety): THE PROGRAM OUTRANKS THE GRAPH.** Sam:
+*"i dont care - i just want the most well balanced program ... i don't want the
+program to be worse or less balanced just so they can track a lift."* A
+delivery COUNT is not a law and may not bend composition. What stands is this
+ruling's own sentence — the anchor applies whenever its pattern is programmed
+and the exercise is legal — held through the compiler's selection traces, plus
+the weaker claim that the choice reaches a delivered row at all.
+
+WHY IT NEEDED SAYING: `test:estimated-1rm` asked for three deliveries per
+tracked lift and went red when `B-Stance RDL` was added to an unrelated pool.
+**Overhead Press was never beaten — its SLOT was never created.** A full-body
+day's slots are computed from what the rest of the week is missing, so changing
+one row's identity changed the gap arithmetic and that day declared four slots
+instead of five; deliveries fell 4 to 2. Measured across the preserved 52-week
+driver, the same change moved NOTHING: 93 strength sessions, 61 mobility days,
+1710 rows and 312 main lifts, identical on both sides, for both athletes. The
+short day exists only in that suite's synthetic all-alternatives world.
+
+NOT COVERED: which single input flips the gap arithmetic was not isolated. It is
+not chased, because the ruling above makes it a non-issue for programming.
+
 Guard: `LAW-selected-tracked-lift-is-program-anchor` through chained
 `test:estimated-1rm + test:compiler-year`. Verification status and NOT COVERED:
 `docs/STATUS_YEARREPAIR.md`.

@@ -109,9 +109,33 @@ for (const gender of ['male', 'female'] as const) {
         expected: expectedNames[choices[slot] ?? slot], actual: trace.selected })));
     const deliveredNames = built.program.microcycles.flatMap((week) => week.workouts)
       .flatMap((workout) => workout.exercises.map((row) => row.exercise?.name ?? ''));
+    /* ⚠ **THE ANNUAL QUOTA IS GONE — R-304 AMENDED BY SAM, 2026-09-04.**
+     *
+     * This asked for THREE deliveries per tracked lift, and it went red when
+     * `B-Stance RDL` was added to a completely unrelated pool: the full-body
+     * day's slots are computed from what the REST OF THE WEEK is missing, so
+     * changing one row's identity changed the gap arithmetic and that day
+     * declared four slots instead of five. **Overhead Press was never beaten —
+     * the vertical-push SLOT was never created**, and its deliveries fell 4 -> 2.
+     *
+     * Sam, shown that: *"i dont care - i just want the most well balanced
+     * program ... i don't want the program to be worse or less balanced just so
+     * they can track a lift."* **So the quota is not a law and it may not bend
+     * the week.** A count-based cell here would keep forcing composition
+     * decisions to serve a graph, which is precisely what he ruled against.
+     *
+     * WHAT SURVIVES, AND IT IS THE ACTUAL LAW. R-304's own sentence is *"the
+     * anchor applies whenever its pattern is programmed and the exercise is
+     * legal"* — held by the `every eligible main pattern takes its selected
+     * anchor` cell above, which reads the compiler's own selection traces. This
+     * cell keeps only the part that cell cannot see: that the choice SURVIVES
+     * the compiler and reaches a real delivered row, rather than being selected
+     * and then dropped on the way to the athlete. One delivery proves the
+     * chain; three proved a quota nobody ruled. */
     for (const id of selectedTrackedLifts(choices)) {
-      check(`${gender}: ${expectedNames[id]} repeats often enough for observations`,
-        deliveredNames.filter((name) => name === expectedNames[id]).length >= 3);
+      check(`${gender}: ${expectedNames[id]} reaches the athlete's program at all`,
+        deliveredNames.filter((name) => name === expectedNames[id]).length >= 1,
+        `${expectedNames[id]} delivered ${deliveredNames.filter((name) => name === expectedNames[id]).length}x`);
     }
     if (choices === alternatives) {
       for (const slot of Object.keys(TRACKED_LIFT_PAIRS) as (keyof TrackedLiftChoices)[]) {
