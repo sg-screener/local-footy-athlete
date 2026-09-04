@@ -592,7 +592,7 @@ export const EXERCISE_MUSCLE_METADATA: readonly ExerciseMuscleEntry[] = [
 
   /* ── Upper pull horizontal ── */
   {
-    exercise: 'Barbell Row',
+    exercise: 'Bent Row',
     pool: 'Upper pull horizontal',
     primary: ['Upper back', 'Lats'],
     secondary: ['Biceps', 'Midline'],

@@ -78,7 +78,12 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
   'Spanish Squat Hold': 'bands',
   'Hamstring Curl': 'machine',
   'Single-Leg Leg Press': 'machine',
-  'Single-Arm Lat Pulldown': 'machine',
+  // R-371: the pulldowns moved from Weight machines to Cable machine, so this
+  // assumed implement had to move with them. Left on 'machine' the row
+  // resolved to `cables` and its cue came back NULL on a full kit — the
+  // athlete would have read no coaching words at all. Caught by the
+  // full-kit cue census in test:visible-surfaces, not by the equipment gate.
+  'Single-Arm Lat Pulldown': 'cables',
 
   // ── ⚠ THE FOUR CONFLICTS — RULED BY SAM 2026-08-18, AND RECONCILED HERE.
   // They were listed for his decision rather than silently picked; these rows

@@ -243,7 +243,7 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Incline Bench':          { anchor: 'bench', ratio: 0.7, equipment: 'barbell' },
   'Close Grip Bench':       { anchor: 'bench', ratio: 0.75, equipment: 'barbell' },
   'Overhead Press':         { anchor: 'bench', ratio: 0.6, equipment: 'barbell' },
-  'Barbell Row':            { anchor: 'bench', ratio: 0.70, equipment: 'barbell' },
+  'Bent Row':            { anchor: 'bench', ratio: 0.70, equipment: 'barbell' },
   'Speed Bench':            { anchor: 'bench', ratio: 0.55, equipment: 'barbell' },
 
   // ═══ UPPER BODY — DUMBBELL ═══
@@ -403,10 +403,19 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'overhead walk':                          'Overhead Carry',
 
   // ── Row variants ──
-  'bent-over row':            'Barbell Row',
-  'bb row':                   'Barbell Row',
-  'bent over barbell row':    'Barbell Row',
-  'pendlay row':              'Barbell Row',
+  'bent-over row':            'Bent Row',
+  'bb row':                   'Bent Row',
+  // R-372: THE LEGACY READ ALIAS. `Barbell Row` was the athlete-visible name
+  // until 2026-09-04; every logged set, recorded load and stored week still
+  // carries it, and canonicalisation resolves through this table, so history
+  // follows the rename instead of resetting. Same shape as the 2026-09-01
+  // Single-Arm Pulldown merge.
+  'barbell row':              'Bent Row',
+  'bent row':                 'Bent Row',
+  'two-arm dumbbell row':     'Bent Row',
+  'db bent row':              'Bent Row',
+  'bent over barbell row':    'Bent Row',
+  'pendlay row':              'Bent Row',
   'dumbbell row':             'Single-Arm DB Row',
   'db row':                   'Single-Arm DB Row',
   'one-arm db row':           'Single-Arm DB Row',

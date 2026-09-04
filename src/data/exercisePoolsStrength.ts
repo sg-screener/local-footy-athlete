@@ -492,7 +492,11 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   horizontal_pull: {
     anchor: {
       slot: 'horizontal_pull', role: 'anchor', entries: [
-        { name: 'Barbell Row',         loadRatio: 1.00 },
+        // R-372 (Sam, 2026-09-04): *"you should be able to do bent DB rows
+        // with 2 hands - so maybe we need to change the form cues for that one
+        // and the name so it's just bent row and can use bb or db"*. Renamed
+        // from `Barbell Row`, which is a legacy read alias.
+        { name: 'Bent Row',            loadRatio: 1.00 },
         { name: 'Chest Supported Row', loadRatio: 0.85 },
         { name: 'Single-Arm DB Row',   loadRatio: 0.60 },
       ],

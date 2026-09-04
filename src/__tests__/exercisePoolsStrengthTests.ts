@@ -102,7 +102,8 @@ section('1. Classification');
   assert(ohp?.slot === 'vertical_push' && ohp?.role === 'anchor',
     'Overhead Press → vertical_push/anchor');
 
-  const barbellRow = classifyPoolSlot('Barbell Row');
+  // R-372: renamed to Bent Row (barbell OR dumbbells); slot/role unchanged.
+  const barbellRow = classifyPoolSlot('Bent Row');
   assert(barbellRow?.slot === 'horizontal_pull' && barbellRow?.role === 'anchor',
     'Barbell Row → horizontal_pull/anchor');
 
@@ -335,7 +336,7 @@ section('5. Load normalization across siblings');
   assert(hv_push === 100,
     `Cross-sub-pattern (h_push → v_push) unchanged (${hv_push}) — upper split blocks transfer`);
 
-  const hv_pull = normalizeLoadAcrossSiblings(80, 'Barbell Row', 'Pull-Ups');
+  const hv_pull = normalizeLoadAcrossSiblings(80, 'Bent Row', 'Pull-Ups');
   assert(hv_pull === 80,
     `Cross-sub-pattern (h_pull → v_pull) unchanged (${hv_pull}) — upper split blocks transfer`);
 
@@ -793,7 +794,7 @@ section('13. Upper sub-slot split (h_push / v_push / h_pull / v_pull)');
 
   // Same for pull: Barbell Row + Pull-Ups in one session → h_pull + v_pull
   const mc1w1: RotationContext = { miniCycleNumber: 1, weekInBlock: 1 };
-  const rowRoute = routeAndSelect('Barbell Row', mc1w1);
+  const rowRoute = routeAndSelect('Bent Row', mc1w1);
   const pullupRoute = routeAndSelect('Pull-Ups', mc1w1);
   assert(rowRoute.slot === 'horizontal_pull' && rowRoute.role === 'anchor',
     `Barbell Row routes to h_pull/anchor (got ${rowRoute.slot}/${rowRoute.role})`);

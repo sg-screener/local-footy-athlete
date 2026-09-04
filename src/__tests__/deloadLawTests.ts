@@ -136,11 +136,13 @@ console.log('\n[2] MAIN LIFTS — half the sets, weight held, RPE 5-6');
   // through unhalved while halving the pulldowns beside it. A name the
   // registry knows answers from the registry ONLY — the regex is for
   // unregistered names.
-  ok('"Barbell Row" is a strength row, not conditioning',
-    !isConditioningExerciseRow(row('Barbell Row', 3)));
+  // R-372: renamed to Bent Row. The regex hazard this cell guards is UNCHANGED
+  // — the new name still contains a bare `row`, which is the whole point.
+  ok('"Bent Row" is a strength row, not conditioning',
+    !isConditioningExerciseRow(row('Bent Row', 3)));
   const clubNight = applyStrengthDeloadToExercises(
-    [row('Barbell Row', 3), row('Lat Pulldown', 3)], policy);
-  const barbellRow = clubNight.find((entry) => entry.exercise?.name === 'Barbell Row');
+    [row('Bent Row', 3), row('Lat Pulldown', 3)], policy);
+  const barbellRow = clubNight.find((entry) => entry.exercise?.name === 'Bent Row');
   ok('the club-night main lift halves like every other lift',
     barbellRow?.prescribedSets === 2, `got ${barbellRow?.prescribedSets}`);
   ok('and carries the deload sentence',

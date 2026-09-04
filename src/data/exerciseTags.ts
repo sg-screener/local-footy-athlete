@@ -3161,7 +3161,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // UPPER BODY — HORIZONTAL PULL
   // ═══════════════════════════════════════════════════════════════
 
-  'Barbell Row': {
+  'Bent Row': {
     strengthClassification: 'compound',
     movement: 'horizontal_pull', region: 'upper', load: 'high', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,

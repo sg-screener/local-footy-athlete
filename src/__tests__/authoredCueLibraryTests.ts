@@ -528,8 +528,16 @@ function main(): void {
   console.log('\n[8] Sam\'s 36 video URLs, exactly');
   {
     const wrong: string[] = [];
+    /* ⚠ **CANONICALISE THE DOC'S NAME BEFORE ASKING — R-372.** The changeset is
+     * a DATED, SIGNED record and is not rewritten when an exercise is renamed:
+     * it says `Barbell Row` because that is what the name was on 2026-07-24.
+     * `Bent Row` is the same exercise and the alias table is the ruling that
+     * says so, which is exactly why `getExerciseTags` canonicalises before its
+     * own lookup. Comparing the raw string instead asked the video map for a
+     * name that no longer exists and called a rename a missing video. */
     for (const [name, url] of authoredVideos) {
-      const shipped = EXERCISE_DEMO_VIDEOS[name];
+      const shipped = EXERCISE_DEMO_VIDEOS[name]
+        ?? EXERCISE_DEMO_VIDEOS[resolveExerciseName(name)];
       if (shipped !== url) {
         wrong.push(`${name}\n        doc:  ${url}\n        code: ${String(shipped)}`);
       }

@@ -66,7 +66,7 @@ add(['Overhead Press', 'DB Shoulder Press', 'Seated DB Press', 'Z-Press'],
   'frontal', ['sagittal']);
 add(['Landmine Press'], 'sagittal', ['frontal']);
 add(['Half-Kneeling Single-Arm Overhead Press'], 'frontal', ['transverse']);
-add(['Barbell Row', 'Chest Supported Row', 'Single-Arm DB Row', 'Seated Cable Row',
+add(['Bent Row', 'Chest Supported Row', 'Single-Arm DB Row', 'Seated Cable Row',
   'Chest-Supported DB Row', 'Inverted Row (Bodyweight)'], 'transverse', ['sagittal']);
 add(['Pull-Ups', 'Band-Assisted Pull-Up', 'Lat Pulldown'], 'frontal', ['sagittal']);
 add(['Chin-Ups', 'Neutral-Grip Pulldown', 'Single-Arm Lat Pulldown'],

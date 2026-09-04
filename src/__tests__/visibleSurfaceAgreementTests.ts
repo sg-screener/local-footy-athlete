@@ -718,9 +718,9 @@ function run(): void {
   check('non-vacuity: Goblet Squat is an ACCESSORY-array name',
     classifyExerciseRole('Goblet Squat') === 'accessory',
     classifyExerciseRole('Goblet Squat'));
-  check('non-vacuity: Barbell Row is an ANCHOR-array name',
-    classifyExerciseRole('Barbell Row') === 'main_lift',
-    classifyExerciseRole('Barbell Row'));
+  check('non-vacuity: Bent Row is an ANCHOR-array name',
+    classifyExerciseRole('Bent Row') === 'main_lift',
+    classifyExerciseRole('Bent Row'));
 
   const badgeRow = (
     identity: string,
@@ -739,7 +739,7 @@ function run(): void {
       // The squat seat, filled off the accessory bench because no rack exists.
       badgeRow('Goblet Squat', 'main_strength', 'squat'),
       // A supporting row whose NAME is an anchor — the inverse leak.
-      badgeRow('Barbell Row', 'strength_accessory', 'horizontal_pull'),
+      badgeRow('Bent Row', 'strength_accessory', 'horizontal_pull'),
     ],
   };
   const badgeWorkout: any = materialiseComposedWeek(
@@ -765,8 +765,8 @@ function run(): void {
     badgeRoleOf('Goblet Squat') === 'main_lift',
     `Goblet Squat badged ${badgeRoleOf('Goblet Squat')}`);
   check('AND THE INVERSE: an anchor name in a supporting seat does NOT',
-    badgeRoleOf('Barbell Row') === 'accessory',
-    `Barbell Row badged ${badgeRoleOf('Barbell Row')}`);
+    badgeRoleOf('Bent Row') === 'accessory',
+    `Bent Row badged ${badgeRoleOf('Bent Row')}`);
   check('so the squat day the athlete opens carries a visible main lift',
     badgeItems.some((item: any) => item.role === 'main_lift'),
     badgeItems.map((item: any) => item.role).join(' | '));

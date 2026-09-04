@@ -75,7 +75,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Banded 90/90 External Rotation": ['bands'],
   "Banded TKE": ['bands'],
   "Banded Tricep Pushdown": ['bands'],
-  "Barbell Row": ['barbell'],
+  // R-372: barbell OR dumbbells, resolved first-available. The two-handed
+  // dumbbell version is the same movement; `Single-Arm DB Row` remains the
+  // separate one-handed lift.
+  "Bent Row": [['dumbbells', 'barbell']],
   // R-368, Sam's signed intake 2026-09-04: *"Barbell OR dumbbell"*. **DUMBBELLS
   // LEAD for the same reason Single-Leg RDL's row does** — the OR-group resolves
   // first-available, so a dumbbell athlete gets a dumbbell B-stance and nothing

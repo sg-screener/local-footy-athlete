@@ -9524,3 +9524,43 @@ machines got a `Seated Cable Row` and no pulldown off the same stack.
 Guard: `test:equipment-vocabulary` 98/0, `test:equipment-answer` 50/0,
 `test:equipment-scopes` 20/0, `test:dated-equipment-fact` 3/0,
 `test:slot-coverage` 92/92. Receipts: `docs/STATUS_VARIETY.md`.
+
+**R-372** · Barbell Row becomes Bent Row, barbell OR dumbbells, 2026-09-04.
+
+Owner: variety. Sam: *"you should be able to do bent DB rows with 2 hands - so
+maybe we need to change the form cues for that one and the name so it's just bent
+row and can use bb or db."*
+
+The athlete-visible name is **Bent Row**; equipment is `[['dumbbells',
+'barbell']]`, dumbbells resolved first. The cue was rewritten because the old one
+relied on the NAME to carry the implement — *"Hinge forward, pull to the belly"*
+never said how many hands. It now says both: *"Hinge forward, flat back, pull the
+bar or dumbbells to your belly" / "Both hands together. Squeeze the shoulder
+blades at the top."* `Single-Arm DB Row` is untouched and remains the separate
+one-handed lift.
+
+**HISTORY FOLLOWS THE RENAME, IT DOES NOT RESET.** `Barbell Row` is retained as a
+legacy read alias in `EXERCISE_ALIASES`, which `canonicalExerciseName` resolves
+through — the same shape as the 2026-09-01 Single-Arm Pulldown merge. Every
+logged set, recorded load and stored week still carrying the old spelling lands
+on the new identity. `bent-over row`, `bb row`, `pendlay row` and the rest
+re-target with it; `bent row`, `db bent row` and `two-arm dumbbell row` are new.
+
+NO PRODUCT CODE BRANCHED ON THE NAME — a census of all 9 non-test files naming it
+found comments only. The change is data plus both signed workbooks plus the test
+mirrors that pin the vocabulary.
+
+⚠ **IT ALSO SURFACED A DEFECT IN R-371, ONE COMMIT OLD.** Moving the pulldowns
+from `machine` to `cables` changed which implement `Single-Arm Lat Pulldown`
+resolves to, and its assumed implement in `cueImplement.ts` still said `machine`
+— so on a FULL kit that row returned **no cue at all**. The athlete would have
+read no coaching words. Caught by the full-kit cue census in
+`test:visible-surfaces`, not by any equipment gate: an equipment change can move
+a cue, and only a census over every curated cue sees it.
+
+Guard: `test:pools`, `test:movement-planes` 13/13, `test:authored-cues` 56/56
+(the video changeset is a DATED signed record and is not rewritten — the cell
+canonicalises the doc's name before asking, which is why a rename is no longer
+read as a missing video), `test:deload-law` 78/78 (its `\brow\b` regression cell
+keeps its hazard: the new name still contains a bare `row`), `test:visible-surfaces`
+84/1. Receipts: `docs/STATUS_VARIETY.md`.

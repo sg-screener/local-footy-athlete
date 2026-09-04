@@ -476,7 +476,8 @@ console.log('\n[9] Plural normalisation — a pluralised spelling is the same mo
   ok('the reported name resolves', canonicalExerciseName('Hamstring Curls') === 'Hamstring Curl',
     `got ${JSON.stringify(canonicalExerciseName('Hamstring Curls'))}`);
   for (const [variant, canon] of [
-    ['Barbell Rows', 'Barbell Row'],
+    // R-372: the target moved with the rename; the plural still resolves.
+    ['Barbell Rows', 'Bent Row'],
     ['Single-Arm DB Rows', 'Single-Arm DB Row'],
     ['Goblet Squats', 'Goblet Squat'],
     ['Nordic Lowers', 'Nordic Lower'],

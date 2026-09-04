@@ -262,9 +262,11 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: "Band behind knee, step back for tension, straighten knee and squeeze quads.",
     secondaryCue: "",
   },
-  'Barbell Row': {
-    primaryCue: 'Hinge forward, pull to the belly.',
-    secondaryCue: 'Squeeze the shoulder blades at the top.',
+  // R-372: TWO HANDS, BARBELL OR DUMBBELLS. The old cue said neither, because
+  // the name carried the implement; now the name does not, so the cue must.
+  'Bent Row': {
+    primaryCue: 'Hinge forward, flat back, pull the bar or dumbbells to your belly.',
+    secondaryCue: 'Both hands together. Squeeze the shoulder blades at the top.',
   },
   'Bear Carry': {
     primaryCue: 'Hug the load tight, ribs down.',
