@@ -595,8 +595,13 @@ section('12. Isolation_lower (accessory-only slot)');
   const accessory = STRENGTH_POOLS.isolation_lower.accessory;
   assert(anchor.entries.length === 0,
     `isolation_lower/anchor is empty (accessory-only slot, got ${anchor.entries.length})`);
-  assert(accessory.entries.length === 7,
-    `isolation_lower/accessory has 7 entries (got ${accessory.entries.length})`);
+  // R-332 added T-Bar Tib Raises as the tib-bar progression of Tib Raises on
+  // 2026-09-02 and this count was not moved with it, so the cell has been red
+  // ever since — miscounting, not protecting. Seven to EIGHT, on Sam's word
+  // 2026-09-04 (*"fix it"*), by the seat that found it rather than the seat
+  // that owns it. The comment above states the arithmetic; this is its next term.
+  assert(accessory.entries.length === 8,
+    `isolation_lower/accessory has 8 entries (got ${accessory.entries.length})`);
 
   // Every canonical name classifies to isolation_lower/accessory
   const ISO_LOWER_NAMES = [
