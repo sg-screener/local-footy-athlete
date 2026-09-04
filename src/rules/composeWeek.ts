@@ -816,7 +816,17 @@ function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[
 function gradedFirstAmongLegal(
   legal: readonly ComposedExerciseIdentity[],
 ): readonly ComposedExerciseIdentity[] {
-  const graded = legal.filter((id) => POOL_GRADE_OF.has(id));
+  /* ⚠ **A GRADE MAY NOT DEMOTE AN EXPERIENCE REGRESSION.** `Band-Assisted
+   * Pull-Up` and `Incline Push-Up` are ungraded — neither is a normal main lift
+   * — but for a beginner they are the SOURCE-BOUND REGRESSION of `Pull-Ups` and
+   * `Push-ups`, which is a different question from "may this lead a block".
+   * Filtering them out because `Pull-Ups` is graded took the regression away
+   * from the athletes it exists for: five intake cells, beginner and 1-2 year
+   * male and female, went red on exactly that.
+   *
+   * `sourceBoundRegressionTarget` is the existing typed owner of "this is a
+   * regression target", so the exemption reads it rather than naming the two. */
+  const graded = legal.filter((id) => POOL_GRADE_OF.has(id) || sourceBoundRegressionTarget(id));
   return graded.length > 0 ? graded : legal;
 }
 

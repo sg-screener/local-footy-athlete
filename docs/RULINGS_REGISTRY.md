@@ -9611,6 +9611,18 @@ unchanged. The likely cause is that an accessories day fills what the week is
 missing, and fewer patterns are now missing; it is not chased here and Sam has
 not ruled on it.
 
+⚠ **AND IT TOOK A REGRESSION AWAY FROM BEGINNERS BEFORE THE FULL GATE CAUGHT
+IT.** `Band-Assisted Pull-Up` and `Incline Push-Up` are ungraded — correctly,
+neither is a normal main lift — but for a beginner they are the SOURCE-BOUND
+REGRESSION of `Pull-Ups` and `Push-ups`, which is a different question from *"may
+this lead a block"*. The grade filter removed them because their graded sibling
+was legal, and five `test:exercise-intake` cells went red: beginner male, beginner
+female and 1-2 years female on the pull, beginner male and female on the push.
+`gradedFirstAmongLegal` now exempts anything `sourceBoundRegressionTarget`
+answers for, so a future regression is covered without being named. **Two
+different questions both look like "which of these is better"; answering the
+second with the first is the shape.**
+
 Guard: `test:slot-coverage` 92/92 (all three prior-attempt cells untouched),
 `test:b-stance-rdl` 18/18 (candidacy AND credit asserted separately),
 `test:main-lift-pattern` 23/23, `test:movement-planes` 13/13,
