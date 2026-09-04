@@ -664,9 +664,38 @@ console.log('\n[6] Shared section and exercise-row owners at the top');
     'standalone low-load sessions do not restore a recovery-template branch',
     !/sessionTemplate\.mode === 'recovery'/.test(screen),
   );
+  /* ⚠ **RE-PINNED TO THE OUTCOME, BECAUSE THE MECHANISM IT NAMED IS GONE.**
+   *
+   * THE RULE, WHICH HAS NOT CHANGED: a warm-up movement reaches the screen by
+   * two routes — the warm-up block draws it, and it is also an item in the
+   * section's own list of rows. **If both routes draw it the athlete sees the
+   * exercise TWICE**, once in the warm-up and again as a plain row below.
+   *
+   * The old cell watched the old defence: the warm-up section was rendered
+   * separately, so `SessionList` was told to skip it, and the cell searched for
+   * that instruction. The rewire changed the defence — the list now draws the
+   * warm-up block itself and maps only the rows the block does not own — so the
+   * instruction is gone and the cell went permanently red while the screen was
+   * right. It is the ONE of that section's three cells whose rule is still live,
+   * which is why this is re-pinned rather than deleted like the other two.
+   *
+   * It now asserts the OUTCOME: the row mapper excludes warm-up items, and the
+   * warm-up block is rendered exactly once. A source-text cell is what this
+   * suite can reach — there is no mounted renderer here — so the CONTROL below
+   * exists to stop it passing vacuously if those anchors are ever renamed
+   * again. */
+  const mobilityBlockRenders = (screen.match(/\? mobilityContent : null/g) ?? []).length;
+  const rowMapperExcludesMobility =
+    /section\.items\.filter\(\(item\) => item\.source !== 'mobility'\)\s*\.map\(/.test(screen);
   ok(
-    'the external warm-up flow alone is withheld from SessionList',
-    /section\.id === 'mobility'[\s\S]{0,120}section\.items\.every\(\(item\) => item\.source === 'mobility'\)/.test(screen),
+    'CONTROL — the row mapper and the warm-up block slot were both found',
+    mobilityBlockRenders > 0 && /section\.items\.filter\(/.test(screen),
+    'if this reds, the screen was restructured again and the cell below is asserting nothing',
+  );
+  ok(
+    'a warm-up movement is drawn once — the row mapper leaves out what the warm-up block owns',
+    rowMapperExcludesMobility && mobilityBlockRenders === 1,
+    `row mapper excludes warm-ups: ${rowMapperExcludesMobility}; warm-up block rendered ${mobilityBlockRenders} time(s)`,
   );
   ok(
     'the flow never gates the Finish action',
