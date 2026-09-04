@@ -9615,3 +9615,64 @@ Guard: `test:slot-coverage` 92/92 (all three prior-attempt cells untouched),
 `test:b-stance-rdl` 18/18 (candidacy AND credit asserted separately),
 `test:main-lift-pattern` 23/23, `test:movement-planes` 13/13,
 `test:visible-surfaces` 84/1. Receipts: `docs/STATUS_VARIETY.md`.
+
+**R-374** · Two or three of the six rotate per block, and the pins come off, 2026-09-04.
+
+Owner: variety. Sam: *"Rotate two or three of the six core lifts. Allow the
+others to continue for another four weeks. No core lift may remain unchanged
+beyond eight weeks. Never rotate all six at once."* And, on the four tracked
+lifts and the in-season hinge: **yes** to ungluing both, RDLs *"only at block
+boundaries"*.
+
+**THE STAGGER.** `rules/blockRotationStagger.ts` is a new pure owner:
+two-or-three per block, longest-held first, an eight-week ceiling that overrides
+the quota, and Sam's guardrails (≥4 A-grade, ≤2 B-grade) checked against the week
+a move WOULD produce so a breaking move is refused rather than reported. **A
+forced move is not a rotation** — *"injury and travel substitutions do not count
+as planned rotations"* — so it neither spends a rotation nor counts toward the
+floor. It never chooses an exercise; `decideExerciseForBlock` remains the one
+selection owner and a released seat is decided exactly as before.
+
+⚠ **IT HAD TO BE A PRE-PASS.** `decideExerciseForBlock` is per-SEAT and pure — it
+cannot see the other five, which is precisely why nothing had ever staggered. The
+quota is a property of the WEEK, so the six answers must exist before any is
+authored.
+
+**THE UNGLUE.** The tracked lift was a BYPASS that returned before the rotation
+engine ran, which is why `Bench Press`, `Pull-Ups` and `RDLs` shipped 51, 52 and
+51 times out of 52 with the reason `athlete_preference`. It is now a PIN: a legal
+pin still wins, and still yields at the eight-week ceiling like any other lift.
+`phasePinsSlot` is DELETED rather than made to return false — a predicate that is
+always false is a branch nobody can see is dead. In-season still LEADS with RDLs
+through `IN_SEASON_HINGE_ORDER`; it no longer refuses to leave them.
+
+MEASURED, both athletes, before → after: **distinct main lifts 16 → 32**,
+ungraded-as-main **1 → 0**, most-repeated lift **52/52 → 39/52**. `Leg Press`
+went from 51 weeks to rotating out entirely.
+
+⚠ **THREE DEFECTS THE YEAR CAUGHT AND NO SUITE DID.** Recorded because each is a
+class, not an incident:
+
+1. **Ordering is not precedence.** `anchorCandidates` returned A, B, then
+   ungraded, and "last" was assumed to mean "lowest". `decideExerciseForBlock`
+   picks the LEAST RECENTLY USED, and an ungraded lift nobody has been given has
+   infinite age — so `Kettlebell Swings` led three hinge days with `RDLs`
+   available either side.
+2. **A preference must sit after legality.** Filtering to graded inside
+   `anchorCandidates` asked *"does this pool contain graded lifts"* when the
+   question is *"can THIS athlete do any"*. A kit whose graded options were all
+   illegal lost the seat and the week was REFUSED —
+   `main_strength_required_minimum: expected 3, actual 2`. The narrowing moved
+   into `legalUnder`, where legality is known, and falls back rather than empty.
+3. **The bypass carried a property the pin did not.** Its own comment said
+   *"ignoring the current-block record here is what lets a live athlete choice
+   replace the already-authored default"*. As a pin, the record went back in
+   front of it — and the record is often a SUPPORTING row for the same slot
+   authored earlier in the block. An athlete who chose `Overhead Press` got it
+   **ZERO times in a full year** while it sat eligible on every one of those
+   days. A legal tracked anchor ignores the record again.
+
+Guard: `test:block-rotation-stagger` 14/14, mutation-checked (raising the quota
+to six reddens three cells). `test:estimated-1rm` 34/34 + 181/181,
+`test:slot-coverage` 92/92, `test:main-lift-pattern` 23/23,
+`test:block-selection-authority` 10/10. Receipts: `docs/STATUS_VARIETY.md`.

@@ -47,6 +47,10 @@ import {
   type BlockExerciseSelection,
   type SelectionRole,
 } from './blockExerciseSelection';
+import {
+  STAGGER_CORE_SLOTS,
+  decideBlockRotationStagger,
+} from './blockRotationStagger';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
 import { POOL_REGISTRY, preferAutomaticCurlCandidates } from '../data/exercisePools';
 import {
@@ -543,6 +547,22 @@ const POOL_GROUP_OF: ReadonlyMap<ComposedExerciseIdentity, string> = new Map(
       .filter((entry) => typeof entry.group === 'string')
       .map((entry) => [composedIdentityFor(entry.name), entry.group as string] as const)));
 
+/**
+ * R-374: the authored grade of a composed identity, read off the pool entry that
+ * owns it. The stagger's guardrails are stated in grades — *"at least four of
+ * the six core lifts must be A-grade"* — so it needs the same answer the
+ * selector uses, from the same place, rather than a second table.
+ */
+const POOL_GRADE_OF: ReadonlyMap<ComposedExerciseIdentity, 'A' | 'B'> = new Map(
+  (Object.keys(STRENGTH_POOLS) as PoolSlotKey[]).flatMap((poolSlot) =>
+    [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
+      .filter((entry) => entry.primaryGrade !== undefined)
+      .map((entry) => [composedIdentityFor(entry.name), entry.primaryGrade as 'A' | 'B'] as const)));
+
+function primaryGradeOf(identity: string): 'A' | 'B' | null {
+  return POOL_GRADE_OF.get(composedIdentityFor(identity)) ?? null;
+}
+
 const UNLOADED_POOL_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
   (Object.keys(STRENGTH_POOLS) as PoolSlotKey[]).flatMap((poolSlot) =>
     [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
@@ -764,7 +784,40 @@ function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[
   const entries = [...pool.anchor.entries, ...pool.accessory.entries];
   const atGrade = (grade: 'A' | 'B' | undefined) =>
     weightedFirst(poolOrderedFor(slot, entries.filter((e) => e.primaryGrade === grade)));
+  /* The ungraded tail is CARRIED, not dropped — the graded-only preference is
+   * applied in `legalUnder` below, where legality is known. Deciding it here
+   * would ask "are there graded lifts at all", when the question is "are there
+   * graded lifts THIS ATHLETE CAN DO". */
   return [...atGrade('A'), ...atGrade('B'), ...atGrade(undefined)];
+}
+
+/**
+ * ⚠ **GRADED FIRST — BUT ONLY AMONG WHAT IS ACTUALLY LEGAL (R-374).**
+ *
+ * Two defects, one after the other, produced this shape and both are worth
+ * keeping written down.
+ *
+ * **First: ordering is not precedence.** `anchorCandidates` returns A, then B,
+ * then ungraded, and the first cut assumed last meant lowest. It does not —
+ * `decideExerciseForBlock` picks the LEAST RECENTLY USED candidate, and a lift
+ * nobody has ever been given has infinite age, so it beats every graded option
+ * outright. MEASURED: `Kettlebell Swings`, never a normal main lift, led three
+ * hinge days in the 52-week run with `RDLs` available either side.
+ *
+ * **Second: the fix for that must sit AFTER legality.** Filtering to graded
+ * inside `anchorCandidates` asked "does this pool contain graded lifts", when
+ * the real question is "can THIS athlete do any of them". A kit whose graded
+ * options are all illegal lost the seat entirely, and the week was refused with
+ * `main_strength_required_minimum: expected 3, actual 2`.
+ *
+ * So the narrowing happens here, on the already-legal list, and falls back the
+ * moment it would empty — which is Sam's *"give them best availble i think"*.
+ */
+function gradedFirstAmongLegal(
+  legal: readonly ComposedExerciseIdentity[],
+): readonly ComposedExerciseIdentity[] {
+  const graded = legal.filter((id) => POOL_GRADE_OF.has(id));
+  return graded.length > 0 ? graded : legal;
 }
 
 /**
@@ -1485,6 +1538,75 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     }
     return out;
   };
+  /* ── R-374: WHICH CORE SEATS MAY SPEND THEIR ROTATION THIS BLOCK ──────────
+   *
+   * Sam: *"Rotate two or three of the six core lifts. Allow the others to
+   * continue for another four weeks. Never rotate all six at once."*
+   *
+   * ⚠ **THIS HAS TO BE A PRE-PASS AND THERE IS NO WAY AROUND IT.**
+   * `decideExerciseForBlock` is per-SEAT and pure — it cannot see the other
+   * five, which is exactly why nothing has ever staggered. The quota is a
+   * property of the WEEK, so the week's six answers must exist before any of
+   * them is authored. By the time the day loop reaches the sixth seat the first
+   * five are already rows.
+   *
+   * It decides only WHICH SEATS HOLD. It never picks an exercise —
+   * `decideExerciseForBlock` remains the one selection owner, and a released
+   * seat is decided exactly as it was before this existed. */
+  const heldIdentityBySlot = new Map<SessionSlot, ComposedExerciseIdentity>();
+  {
+    const weekKit = [...new Set(inputs.plannedDays.flatMap((day) => kitOn(day.dayOfWeek)))];
+    const seats = STAGGER_CORE_SLOTS.flatMap((slot) => {
+      const history = inputs.selectionHistory
+        .filter((entry) => entry.slot === slot && selectionSeatIndex(entry) === 0
+          && entry.blockStartISO < inputs.blockStartISO)
+        .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
+      const previous = history[0]?.identity ?? null;
+      if (previous === null) return [];
+      const legal = anchorCandidates(slot).filter((id) =>
+        !excluded.has(id) && composedRowIsLegal(id, weekKit));
+      if (legal.length === 0) return [];
+      // A recorded lift the world no longer permits is a FORCED move, not a
+      // planned rotation, and Sam ruled those out of the quota: *"Injury and
+      // travel substitutions do not count as planned rotations."*
+      const forced = !legal.includes(previous as ComposedExerciseIdentity);
+      let blocksHeld = 0;
+      for (const entry of history) {
+        if (entry.identity !== previous) break;
+        blocksHeld += 1;
+      }
+      const decided = decideExerciseForBlock({
+        phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+        blockNumber: inputs.blockNumber,
+        slot,
+        group: null,
+        role: selectionRoleFor(slot),
+        legalCandidates: legal,
+        previousSelection: history[0] ?? null,
+        currentBlockSelection: null,
+        recentSelections: history,
+        progressedIdentities: inputs.progressedIdentities,
+        pinnedIdentities: inputs.pinnedIdentities,
+      });
+      return [{
+        slot,
+        previousIdentity: previous,
+        wouldRotateTo: decided.identity,
+        blocksHeld,
+        currentGrade: primaryGradeOf(previous),
+        candidateGrade: primaryGradeOf(decided.identity),
+        forced,
+      }];
+    });
+    for (const decision of decideBlockRotationStagger(seats)) {
+      if (decision.rotates) continue;
+      const seat = seats.find((entry) => entry.slot === decision.slot);
+      if (seat?.previousIdentity) {
+        heldIdentityBySlot.set(decision.slot, seat.previousIdentity as ComposedExerciseIdentity);
+      }
+    }
+  }
+
   // Two coverage days in one week must not both claim the same gap.
   const takenByCoverageDays = new Set<SessionSlot>();
 
@@ -1895,7 +2017,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           ? applySourceBoundAutomaticRegression(hardLegal, inputs.profile)
             .map(composedIdentityFor)
           : experiencePreferred(hardLegal, inputs.profile);
-        return hingePriorityFirst(slot, experienceLegal);
+        // R-374: a graded primary outranks an ungraded one among what is LEGAL,
+        // and yields to the ungraded tail rather than leaving the seat empty.
+        // Main seats only — a supporting row is not choosing a block primary.
+        return hingePriorityFirst(slot,
+          isMainLift ? gradedFirstAmongLegal(experienceLegal) : experienceLegal);
       };
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────
        *
@@ -2252,15 +2378,33 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       // it from `selectionCandidates` before this branch and the ordinary typed
       // fallback owns the day. Ignoring the current-block record here is what
       // lets a live athlete choice replace the already-authored default.
-      const selection = trackedAnchor && selectionCandidates.includes(trackedAnchor)
+      /* R-374: a seat the stagger HELD keeps the lift it already had, so long as
+       * the world still permits it. It is not a new decision — it is the absence
+       * of one — so the recorded reason stays `retained`. A held seat whose lift
+       * has become illegal is not held at all: it was marked `forced` in the
+       * pre-pass and never entered the hold set. */
+      const heldAnchor = heldIdentityBySlot.get(slot) ?? null;
+      const selection = heldAnchor && !trackedAnchor && selectionCandidates.includes(heldAnchor)
         ? {
-            identity: trackedAnchor,
-            decisionKind: slotHistory[0]?.identity === trackedAnchor
-              ? 'retained' as const : 'first_selection' as const,
-            reason: 'athlete_preference' as const,
+            identity: heldAnchor,
+            decisionKind: 'retained' as const,
+            reason: 'progressed_from_own_history' as const,
             previousIdentity: slotHistory[0]?.identity ?? null,
             consideredCandidates: selectionCandidates,
           }
+        /* ⚠ **R-374: THE TRACKED LIFT IS A PREFERENCE, NOT A BYPASS.**
+         *
+         * Sam, asked to unglue the four: **yes**. This branch used to RETURN,
+         * skipping `decideExerciseForBlock` entirely — so `Bench Press`,
+         * `Pull-Ups` and `RDLs` were selected 51, 52 and 51 times out of 52 with
+         * the reason `athlete_preference`, and the whole rotation engine below
+         * was unreachable for four of the six patterns.
+         *
+         * It is now a PIN handed to the selector, which already knows what to do
+         * with one: a legal pin wins (rule 2), and *"a pinned lift is still
+         * subject to the mandatory break when it is the one that has already
+         * been held twice"*. So the athlete's choice still leads its pattern,
+         * and still yields at the eight-week ceiling like every other lift. */
         : decideExerciseForBlock({
             phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
             blockNumber: inputs.blockNumber,
@@ -2269,10 +2413,30 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
             role,
             legalCandidates: selectionCandidates,
             previousSelection: slotHistory[0] ?? null,
-            currentBlockSelection: recordedForThisBlock,
+            /* ⚠ **A TRACKED LIFT OUTRANKS THE ALREADY-AUTHORED DEFAULT, AND
+             * THAT PROPERTY WAS NEARLY LOST WITH THE BYPASS (R-374).**
+             *
+             * The old bypass returned before this argument was read, and its
+             * comment said why: *"Ignoring the current-block record here is what
+             * lets a live athlete choice replace the already-authored default."*
+             * Turning it into a pin put the record back in front of it — and the
+             * record is often a SUPPORTING row for the same slot, authored
+             * earlier in the block. MEASURED: the vertical-push accessory seat
+             * recorded `DB Shoulder Press`, the main seat then RESTORED it, and
+             * the athlete's chosen `Overhead Press` reached their program ZERO
+             * times in a full year while sitting eligible on every one of those
+             * days.
+             *
+             * So a legal tracked anchor still ignores the record, exactly as
+             * before. Everything else about it is now an ordinary pin. */
+            currentBlockSelection: trackedAnchor
+              && selectionCandidates.includes(trackedAnchor)
+              ? null : recordedForThisBlock,
             recentSelections: slotHistory,
             progressedIdentities: inputs.progressedIdentities,
-            pinnedIdentities: inputs.pinnedIdentities,
+            pinnedIdentities: trackedAnchor && selectionCandidates.includes(trackedAnchor)
+              ? [...inputs.pinnedIdentities, trackedAnchor]
+              : inputs.pinnedIdentities,
             movementPlaneContext: seatPlaneContext(),
           });
       /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**

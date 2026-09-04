@@ -485,6 +485,7 @@
     "test:block-two-explanation-delivery": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoExplanationDeliveryTests.ts",
     "test:visible-surfaces": "TZ=Australia/Melbourne sucrase-node src/__tests__/visibleSurfaceAgreementTests.ts && npm run test:form-cue-equipment",
     "test:form-cue-equipment": "TZ=Australia/Melbourne sucrase-node src/__tests__/formCueEquipmentAgreementTests.ts",
+    "test:block-rotation-stagger": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockRotationStaggerTests.ts",
     "test:block-selection-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockSelectionAuthorityTests.ts",
     "test:session-change-durability": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionChangeDurabilityTests.ts",
     "census:injury-fallback": "TZ=Australia/Melbourne sucrase-node scripts/census-injury-fallback.ts",

@@ -197,10 +197,24 @@ function orderByPreference(
   return stable.sort((a, b) => rank(a) - rank(b));
 }
 
-/** Is this slot pinned to one movement by the season phase? */
-function phasePinsSlot(inputs: ExerciseSelectionInputs): boolean {
-  return inputs.phase === 'In-season' && inputs.slot === 'hinge';
-}
+/**
+ * ⚠ **RETIRED BY R-374, ON SAM'S WORD — 2026-09-04.**
+ *
+ * This returned true for the in-season hinge, and an anchored slot has NO
+ * rotation at all: it took the phase's first choice every block, forever. That
+ * is why `RDLs` shipped 51 weeks out of 52.
+ *
+ * Asked whether RDLs should rotate in-season he said **yes — "only at block
+ * boundaries"**, which is not a new constraint but the existing one: every
+ * rotation in this module happens at a block boundary and nothing here can move
+ * a lift mid-block. `IN_SEASON_HINGE_ORDER` survives as a PREFERENCE
+ * (`HINGE_PREFERENCE_ORDER` already ordered RDLs and Trap Bar ahead of a
+ * conventional Deadlift in every phase), so in-season still LEADS with RDLs —
+ * it just no longer refuses to ever leave them.
+ *
+ * The function is deleted rather than made to return false, because a predicate
+ * that is always false is a branch nobody can see is dead.
+ */
 
 /**
  * How long ago this identity was last selected for the slot. `Infinity` means
@@ -250,7 +264,8 @@ export function decideExerciseForBlock(
   const phaseOrdered = inputs.slot === 'hinge'
     ? orderByPreference(
       automaticCandidates,
-      phasePinsSlot(inputs) ? IN_SEASON_HINGE_ORDER : HINGE_PREFERENCE_ORDER,
+      // R-374: in-season still LEADS with RDLs; it no longer refuses to leave.
+      inputs.phase === 'In-season' ? IN_SEASON_HINGE_ORDER : HINGE_PREFERENCE_ORDER,
       decisionIdentity,
     )
     : stableDecisionOrder(automaticCandidates, decisionIdentity, sourceBoundSelectionIdentity);
@@ -304,15 +319,6 @@ export function decideExerciseForBlock(
   // ── RULE 3 — PHASE POLICY ─────────────────────────────────────────────────
   // An anchored slot has no rotation at all: it takes the athlete's legal pin
   // when there is one, else the phase's own first choice, every block.
-  if (phasePinsSlot(inputs)) {
-    const anchored = legalPin ?? phaseOrdered[0];
-    return decide(
-      anchored,
-      previousIdentity === anchored ? 'retained' : 'first_selection',
-      legalPin ? 'athlete_preference' : 'phase_policy',
-    );
-  }
-
   if (legalPin) {
     // A pinned lift is still subject to the mandatory break below when it is the
     // one that has already been held twice.
