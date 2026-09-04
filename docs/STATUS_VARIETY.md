@@ -416,3 +416,77 @@ reached is the next thing to find out, and it is not claimed here.
 | `test:row-counting` | — | **45/45** |
 | `test:b-stance-rdl` | 18/18 | **18/18** |
 | writer census | 1/1170 unresolved | **0/1170, `ok: true`** |
+
+---
+
+## THE REST OF SAM'S LIST — R-371 to R-375, 2026-09-04
+
+His order, worked in it. Slices 1 and 5 are above; this is everything after.
+
+| ruling | what | measured |
+| --- | --- | --- |
+| **R-371** | a squat rack carries a chin-up bar; pulldowns are cables | a home gym with a rack had **ZERO** legal vertical pulls |
+| **R-372** | Barbell Row → **Bent Row**, barbell OR dumbbells | ~40 files; history follows via a legacy alias |
+| **R-373** | grade A/B/none + the seat routing, together | distinct main lifts **16 → 20**, ungraded-as-main **1 → 0** |
+| **R-374** | two-or-three-per-block stagger; the four pins come off | distinct main lifts **→ 32**, most-repeated **52/52 → 39/52** |
+| **R-375** | the load an athlete reads is the TOTAL | DB Bench 30 → 60; single-arm and Goblet unchanged |
+
+### THE DAY'S HEADLINE, BOTH ATHLETES
+
+| | this morning | tonight |
+| --- | --- | --- |
+| distinct main lifts across a year | **16** | **32** |
+| most-repeated lift | **52 of 52 weeks** | **39 of 52** |
+| ungraded lift leading a day | 1 | **0** |
+| squat seat | `Leg Press` ×51 | five lifts rotating |
+
+`Leg Press` ×51 was never a rotation defect: the trace's own reason was
+`single_legal_candidate`, with Back/Front/Box/High Box rejected `equipment` (no
+rack) and Goblet/Bodyweight rejected `experience`. **One legal squat existed.**
+The five that replaced it were legal all along and unreachable, because a
+unilateral lift only ever filled its single-leg slot.
+
+### ⚠ WHAT ACTUALLY WENT WRONG TODAY — five, and every one is a class
+
+1. **A fix at the resolver that never reached the renderer.** Per-side was
+   resolved onto the row and the strength card never read the field for REP rows.
+   The year came back **byte-identical**. A unit test of the thing I changed
+   would have passed and shipped nothing.
+2. **Ordering is not precedence.** `anchorCandidates` returned A, B, then
+   ungraded; "last" was assumed to mean "lowest". The selector picks LEAST
+   RECENTLY USED, and a never-given lift has infinite age — `Kettlebell Swings`
+   led three hinge days.
+3. **A preference applied before legality empties the seat.** Filtering to graded
+   inside `anchorCandidates` asked *"does this pool contain graded lifts"* when
+   the question is *"can THIS athlete do any"*. The week was REFUSED:
+   `main_strength_required_minimum: expected 3, actual 2`.
+4. **A rule that lived only in a comment was lost when the code moved.** The
+   tracked-lift BYPASS ignored the current-block record — its comment said why.
+   As a pin the record went back in front of it, and a supporting row's record
+   was inherited by the main seat.
+5. **A signed workbook missed twice.** `LOAD_RATIO_REVIEW` is a THIRD workbook
+   beside the master sheet and the injury matrix. Neither R-368 nor R-372 touched
+   it; R-375 found it.
+
+**FOUR OF THE FIVE WERE FOUND BY RUNNING A YEAR AND READING WHAT AN ATHLETE
+RECEIVES. None was found by a suite.** Every one passed the unit tests.
+
+### AND TWO THINGS I GOT WRONG IN THE REPORTING
+
+- **"Overhead Press got ZERO times in a full year"** — it was zero in ONE BLOCK.
+  The suite that measured it compiles four weeks. A failing delivery count was
+  read as an annual figure and written into R-374; corrected the same day in
+  `6c9c9220`, before anyone relied on it.
+- **I proposed fixing a "shared drawer" collision before measuring it.** It
+  happens **once in thirteen blocks** and that one is benign. Sam's call: leave
+  it. The measurement was cheap and should have come first.
+
+### OPEN
+
+- Five implement counts are my judgement, confirmed by Sam rather than authored
+  by him: `Overhead Carry` (2); `Weighted Dead Bug`, `Tricep Circuit (Dirty 30)`,
+  `Back Extension`, `Bear Carry` (1).
+- Two `Accessories` sessions per athlete-year became rest under R-373. Sam:
+  **leave**.
+- `Leg Press` now appears once a year. Sam: *"i dont care that leg press isn't in
+  there"*. Not chased.
