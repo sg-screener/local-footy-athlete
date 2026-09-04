@@ -187,6 +187,16 @@ export interface ResolvedDay {
     | 'none';          // no workout (out of block or rest day)
   /** Indicator for calendar dots and styling */
   indicator: 'core' | 'optional' | 'recovery' | 'conditioning' | 'game' | 'rest' | null;
+  /**
+   * R-379. WHY this day is empty, when the app deliberately emptied it.
+   *
+   * Attached by `buildProgramTabProjectedWeek` from the week the compiler
+   * stored, read by the day card in place of its standing rest line. **Absent is
+   * the normal answer** and means an ordinary rest day, never "we could not
+   * tell". Nothing here derives it: the scheduler decided, the compiler stored
+   * it, this carries it.
+   */
+  restReason?: import('../rules/restDayReason').RestDayReason;
 }
 
 // ─── Constants ───

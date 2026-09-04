@@ -51,6 +51,7 @@ import {
 } from './weeklyProgrammingContract';
 import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import type { RestDayReason } from './restDayReason';
 import type { AthleteGender, SprintExposure, WeekKind } from '../types/domain';
 import {
   requiredRunningSpeedQualities,
@@ -310,6 +311,17 @@ export interface WeeklyReductionRecord {
 
 export interface WeeklySchedule {
   readonly weekStartISO: string;
+  /**
+   * WHY A DAY IS EMPTY, by weekday — R-379. Written only for a day the app
+   * DELIBERATELY emptied; a day that simply holds nothing carries no entry and
+   * keeps the standing rest line. Read by the compiler onto the stored week, and
+   * from there by the day card.
+   *
+   * The scheduler is the right writer because it is the owner that decides a day
+   * holds nothing. It states a typed REASON and never a sentence: the words are
+   * Sam's and live in `projectionCopy`.
+   */
+  readonly restDayReasonByDay: Readonly<Partial<Record<number, RestDayReason>>>;
   readonly layoutClauseId: string;
   readonly requiredStrengthSessions: number;
   /**
@@ -984,6 +996,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // A purpose is dropped only when the injury takes EVERY pattern it offers:
   // prohibiting `push` alone leaves `upper` runnable as pull, and deleting it
   // would remove work the athlete can safely do.
+  /** R-379. Days the app deliberately empties, and why. Empty is the normal
+   * answer: a day with no entry keeps the standing rest line. */
+  const restDayReasons: Partial<Record<number, RestDayReason>> = {};
   const injuryProhibited = new Set(inputs.prohibitedPatterns ?? []);
   if (injuryProhibited.size > 0) {
     const impossible = (purpose: SessionPurpose): boolean => {
@@ -1033,6 +1048,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         dropped.push(slot);
         return false;
       });
+      for (const slot of dropped) restDayReasons[slot.day] = 'injury';
       if (dropped.length > 0) {
         reductionDisclosure = {
           intendedStrengthCount: authored,
@@ -2017,6 +2033,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   return {
     weekStartISO: inputs.weekStartISO,
+    /* R-379. Only days that actually ended up empty keep their reason: a day
+     * the injury pass dropped and a later pass then filled (a top-up, a
+     * composed optional) is no longer an empty day and must not explain itself
+     * as one. Filtered against the days this schedule actually ships. */
+    restDayReasonByDay: Object.fromEntries(
+      Object.entries(restDayReasons).filter(([day]) => withComposedOptional.some(
+        (entry) => entry.dayOfWeek === Number(day) && entry.owner === 'rest_or_recovery')),
+    ),
     layoutClauseId: layout.clauseId,
     requiredStrengthSessions: needed,
     authoredStrengthSessions: authored,

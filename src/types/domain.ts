@@ -824,6 +824,17 @@ export interface Microcycle {
   /** Compiler output consumed by materialisers and repair builders, never re-resolved. */
   dosePolicyByDay?: Readonly<Partial<Record<number, import('../rules/deloadWeekRules').DeloadWeekPolicy>>>;
 
+  /**
+   * R-379. WHY A DAY IS EMPTY, by weekday. Written by the compiler from the
+   * scheduler's own statement, read by the day card in place of the standing
+   * rest line. Same shape and the same rule as `dosePolicyByDay`: compiler
+   * output, stored once, never re-resolved at read.
+   *
+   * ABSENT IS THE NORMAL ANSWER. A day with no entry is an ordinary rest day and
+   * keeps "Freshen up. Adapt. Go again."; this is never "we could not tell".
+   */
+  restDayReasonByDay?: Readonly<Partial<Record<number, import('../rules/restDayReason').RestDayReason>>>;
+
   /** Phase-owned weekly exposure intent accepted against final effective content. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
 

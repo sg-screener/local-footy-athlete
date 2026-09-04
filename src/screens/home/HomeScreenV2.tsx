@@ -104,6 +104,7 @@ import {
   PHASE_SHIFT_MESSAGES,
   type PhaseShiftStep,
 } from './homeScreenConstants';
+import { REST_DAY_REASON_COPY_ID } from '../../rules/restDayReason';
 
 type DayPickerMode = 'normal' | 'moveGame' | 'addGame';
 
@@ -2957,7 +2958,21 @@ function DayRow({
       )}
       {dayShape && isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
-          <Text style={styles.expandedMeta}>Freshen up. Adapt. Go again.</Text>
+          {/* R-379. Sam, 2026-09-05: *"it should replace fresh up, adapt go
+              again - when it's needed"*. An ordinary rest day keeps the standing
+              line; a day the app deliberately emptied says why instead.
+
+              ⚠ IT REPLACES, IT DOES NOT STACK. Two lines would leave the athlete
+              reading "Freshen up. Adapt. Go again." directly above "No session
+              today", which is the app cheerfully contradicting itself.
+
+              The sentence is looked up, never composed here: the reason is a
+              typed member and its words are signed copy. */}
+          <Text style={styles.expandedMeta} testID="home-rest-day-reason">
+            {signedCopy(day.restReason
+              ? REST_DAY_REASON_COPY_ID[day.restReason]
+              : 'day.rest.default')}
+          </Text>
           <Button
             label={signedCopy('day.add_session.action')}
             variant="secondary"

@@ -9850,3 +9850,46 @@ exception when there is none — *"otherwise give them nothing"*, already built.
 
 Guard: `test:injury-authority` G2-G4/G7, rebased off the cancelled quality-lower
 onto omit-and-disclose.
+
+## THE EMPTY DAY SAYS WHY, ON THE DAY — Sam, 2026-09-05
+
+**R-379** · *"put it on the day"* · *"it should replace fresh up, adapt go again
+- when it's needed"* · *"it should not include any fuckign M dashes"* ·
+**AND HE REFUSED THE EDGE CASE FIRST.**
+
+Offered a shoulder-specific note, he pushed back: *"would this be the same for
+all injuries - i don't like fixing edge cases remember and you sounds very
+fucking much like you're trying to fix and edge case here"*. **He was right and
+the check proved it both ways.** The R-378 scheduler fix is pattern-driven with
+no region, day or severity in it. The MESSAGE was the edge case: the note kind it
+would have used, `injury_game_proximity`, is defined in the code as the
+INTERSECTION of "a paused region" and "a fixture two days out", and had no writer.
+
+- **ONE READER, EVERY CAUSE.** The app already records, every time, that it gave
+  the athlete a smaller week and why: game freshness, spacing, availability,
+  injury. **Nothing on any screen read it.** So the gap was never "we do not
+  explain injuries", it was *"the app quietly gives you less for half a dozen
+  reasons and never says which"*.
+- **ON THE DAY, REPLACING THE STANDING LINE.** The rest card's
+  *"Freshen up. Adapt. Go again."* is the slot. A day emptied for a reason says
+  the reason INSTEAD. **It replaces, it does not stack** — the two together would
+  be the app contradicting itself in consecutive sentences.
+- **AN ORDINARY REST DAY IS UNTOUCHED.** Absent is the normal answer.
+- **NO EM DASHES IN ATHLETE COPY.** Held by `test:rest-day-reason` against the
+  character itself.
+- **THE SENTENCES, SIGNED ON SIGHT** (*"they'll do"*), with Sam to correct them
+  once he sees them on a device: injury *"No session today. Your shoulder is
+  still sore, so there is nothing here worth doing."*; game proximity *"Kept
+  clear for Saturday. You will train again Monday."*; illness *"Nothing today
+  while you shake this off."*; away *"No session while you are away."*; deload
+  *"Lighter week. Today stays clear."*
+
+**MEASURED ON DEVICE, AND IT CHANGES WHAT TO EXPECT.** On a seeded in-season
+athlete a severe shoulder emptied NOTHING: the week substitutes and keeps its
+shape. Adding a second severe injury took Tuesday from `Strength + Team Training`
+to `Team Training` alone. **A fully empty day is a genuine last resort**, so this
+sentence will be rare in the wild, which is the correct outcome of R-378's
+substitute-before-dropping and not a defect.
+
+Guard: `test:rest-day-reason` (19 cells) and `test:injury-authority` G9, which
+proves the reason survives the real generator into the stored week.

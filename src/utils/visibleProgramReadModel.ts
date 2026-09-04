@@ -17,6 +17,7 @@ import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import { getSessionComponentRows } from './sessionComponents';
+import { restDayReasonsForWeek } from '../rules/restDayReason';
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -59,10 +60,24 @@ export function buildProgramTabProjectedWeek(args: {
   overrideContexts?: Record<string, any>;
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay[] {
-  return resolveWeekWithConditioning(args.mondayISO ?? getMondayStr(0), {
+  const mondayISO = args.mondayISO ?? getMondayStr(0);
+  const days = resolveWeekWithConditioning(mondayISO, {
     ...args.state, activeConstraints: args.state.activeConstraints ?? [], todayISO: args.todayISO,
     overrideContexts: args.overrideContexts ?? args.state.overrideContexts,
     modalityPreferences: args.modalityPreferences ?? args.state.modalityPreferences ?? useCoachPreferencesStore.getState().modalityPreferences,
+  });
+  /* R-379. WHY AN EMPTY DAY IS EMPTY, attached at the ONE place the Program tab
+   * builds its days, so the week view and the day view cannot disagree about it.
+   *
+   * ⚠ **ONLY A DAY THAT IS ACTUALLY EMPTY.** The stored reason is the
+   * scheduler's statement at generation; if a later pass filled that day, or the
+   * athlete added a session to it, the day is no longer empty and must not
+   * explain itself as one. The day in hand is the authority on emptiness; the
+   * stored map only supplies the reason. */
+  const reasons = restDayReasonsForWeek(args.state.currentProgram, mondayISO);
+  return days.map((day) => {
+    const reason = reasons[day.dayOfWeek];
+    return reason && !day.workout ? { ...day, restReason: reason } : day;
   });
 }
 

@@ -216,6 +216,7 @@
     "test:fact-horizon": "TZ=Australia/Melbourne sucrase-node src/__tests__/durableFactHorizonTests.ts",
     "test:missed-signup": "TZ=Australia/Melbourne sucrase-node src/__tests__/missedSessionSignupBoundaryTests.ts && npm run test:missed-session-prompt",
     "test:missed-session-prompt": "TZ=Australia/Melbourne sucrase-node src/__tests__/missedSessionPromptOwnershipTests.ts",
+    "test:rest-day-reason": "TZ=Australia/Melbourne sucrase-node src/__tests__/restDayReasonTests.ts",
     "test:injury-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryAuthorityOwnershipTests.ts",
     "test:section18-delivered-remaining": "TZ=Australia/Melbourne sucrase-node src/__tests__/section18DeliveredRemainingTests.ts",
     "test:onboarding-reliability": "TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingReliabilityTests.ts",

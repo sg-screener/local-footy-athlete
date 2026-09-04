@@ -154,6 +154,8 @@ function currentWeekContract() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const G2_DAY = 'Thursday';   // G-2 for a Saturday game, and a team-training day
+/** The same day as a weekday number, for the stored per-day records. */
+const G2_DAY_NUMBER = 4;
 
 function matrixProfile(
   gameDay: 'Saturday' | undefined,
@@ -248,6 +250,11 @@ function matrixWorld(args: {
   return {
     plan,
     workouts,
+    // R-379. The stored week's own statement about which days it deliberately
+    // emptied, straight off the real generator's output.
+    restDayReasonByDay: (program.microcycles[0] as never as {
+      restDayReasonByDay?: Readonly<Partial<Record<number, string>>>;
+    }).restDayReasonByDay ?? {},
     // THE V2 CONTRACT, deliberately: `main_strength_frequency` is the typed
     // metric the ruling names, the one `applyReductionProjections` lowers the
     // planner-selected target off, and the one `hasFrequencyReduction`
@@ -351,6 +358,37 @@ function registerScenarios(): void {
         `"${movement}" shipped on the G-2 day (${G2_DAY}) — R-095 prohibits it there `
         + `outright: ${rowSummary(workout)}`);
     }
+  });
+
+  // ── G9 — R-379, END TO END THROUGH THE REAL GENERATOR. ──────────────────
+  //
+  // G2 proves the day is EMPTY. This proves the athlete is told WHY: the reason
+  // the scheduler stated survives the compiler into the stored week, which is
+  // the record the day card reads. Without this cell the whole carry could be
+  // wired backwards and every other cell here would still be green.
+  scenario('g9', 'G9 a day the injury emptied carries its reason into the stored week', async () => {
+    // ⚠ **THE G-2 DAY OF THE SEVERE-UPPER WORLD IS THE WRONG WITNESS AND THAT
+    // COST A RED.** Thursday is that athlete's CLUB NIGHT, so dropping the gym
+    // session does not leave an empty day: it leaves a team-training day, which
+    // is not a rest day and must not explain itself as one. The exhausted world
+    // is the honest witness — every main pattern is paused, so the strength days
+    // are dropped and genuinely end up empty.
+    const world = matrixWorld({
+      gameDay: 'Saturday', restricted: ['upper_body', 'lower_body'],
+      profileOverrides: { teamTrainingDays: [] } as never,
+    });
+    const reasons = world.restDayReasonByDay;
+    const emptied = Object.entries(reasons).filter(([, reason]) => reason === 'injury');
+    assert(emptied.length > 0,
+      'the stored week does not say WHY any day is empty (got '
+      + `${JSON.stringify(reasons)}) — the day card falls back to the standing rest `
+      + 'line and the athlete is told nothing');
+    // And a healthy week says nothing, because there is nothing to say.
+    const healthy = matrixWorld({ gameDay: 'Saturday', restricted: [] });
+    assert(Object.keys(healthy.restDayReasonByDay).length === 0,
+      'a HEALTHY week claimed a deliberate empty day: '
+      + `${JSON.stringify(healthy.restDayReasonByDay)} — every ordinary rest day `
+      + 'would start explaining itself');
   });
 
   // ── G5 — THE RULING'S OWN ENFORCEMENT. A healthy week must not move a byte.

@@ -1132,6 +1132,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       weekKind: effectiveWeekKind,
       deloadDoor: compiledDoseDoor ?? undefined,
       dosePolicyByDay: compiledDosePolicyByDay,
+      /* R-379. Carried off the schedule's own statement, not re-derived: the
+       * scheduler is the owner that decided the day holds nothing, so it is the
+       * owner that says why. Absent on every ordinary rest day. */
+      restDayReasonByDay: compiledSchedule?.restDayReasonByDay,
       readinessDeloadWindow: generationConstraints?.readiness?.deloaded &&
         generationConstraints.readiness.windowStartISO &&
         generationConstraints.readiness.windowEndISO

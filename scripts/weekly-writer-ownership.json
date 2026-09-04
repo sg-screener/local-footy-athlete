@@ -92,9 +92,9 @@
       "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer — selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure. RE-SIGNED 2026-09-04 (seat variety, R-373/R-374): a pre-pass decides which of the six core seats may spend a rotation this block, the main-lift bench is ordered by authored grade, and the tracked anchor is a pin rather than a bypass. All three change WHICH identity a seat takes; none adds a row, a field or a write. Classification unchanged."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "8a6a837c2a1e2eeaa2d376d6f83923777b64b7061f5a7ee154707cce535eac9b",
+      "fingerprint": "a93a6731709a1c0d95d3fda6e80f93e6d28064db1fb540c030fa2a30d4b03f5d",
       "classification": "canonical_compiler",
-      "reason": "variety 2026-09-04 re-review (R-378/WC-064): the injury prohibition arrives as a scheduler INPUT and is applied AFTER the ladder has chosen the week — impossible sessions are first SUBSTITUTED for a safe purpose that is still legal in place (same day, same count, so an injury can never add work), and only dropped when nothing fits. The ladder search was extracted to walkLadder with the same rungs and the same first-rung-wins order. Enforcing it inside the search was measured to make an injury ADD sets (12->20 on one day) by sending the ladder to a denser smaller layout; that route is gone. Still a pure weekly scheduling stage — no store, no clock."
+      "reason": "variety 2026-09-05 re-review (R-379, on top of R-378): now also STATES which days it deliberately emptied and why, as a typed reason per weekday. It states a reason and never a sentence; the words are signed copy. Filtered to days that actually ship empty, so a day a later pass fills carries nothing. Still a pure weekly scheduling stage."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
       "fingerprint": "bd1fec4ff4800de548c3f29d4a46fa11e0b822e923a9498ba507a381134f0355",
@@ -152,9 +152,9 @@
       "reason": "hingecod 2026-09-03 re-review (drift: canonical effective fixtures in the chooser context; visible-change reporting after an injury): the durable input transaction — clears, injury episodes, fatigue/recovery, edits — each through its owning transaction inside runCoachMutationTransaction. No independent publication."
     },
     "src/screens/home/HomeScreenV2.tsx#DayRow": {
-      "fingerprint": "a5ed8ef0d52c91e989afb9b8f73e0abd504e7f9cab128a78558abfce4cb624dd",
+      "fingerprint": "13a3e4c44095b8d496fbe222bfddd2fdd5e5743c4fd50f8fd6b41dbba6137485",
       "classification": "projection_display",
-      "reason": "Day row reads one existing workout to select title/icon and mount controls; its only capability-bearing construction is a read-helper argument."
+      "reason": "variety 2026-09-05 re-review (R-379): the rest card renders ONE line, either the day's reason or the standing rest line, both through signedCopy. Replaces the bare literal that stood there. Projection/display only."
     },
     "src/screens/home/useDayWorkout.ts#useDayWorkout": {
       "fingerprint": "7f1aee6fe67398f628f88abe103e5d2a4333797df57dbaa70d9e33a88981a2b4",
@@ -2577,9 +2577,9 @@
       "reason": "hingecod 2026-09-03 re-review (R-358 drift): top-level pure program compiler now derives the athlete's recorded loads from feedback dated before asOfISO (unless supplied), compiles the weeks, applies exclusions and canonical progression. Publishes selection traces (diagnostics) only."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "2b90d52e8b7fc3779d6239f759921cbd93491c55fd70301dae5e6bb97656c6cc",
+      "fingerprint": "98387b9b3620166566ed5571649e8878b3685d3b33ec279a7e34d7e07d0b6b07",
       "classification": "canonical_compiler",
-      "reason": "variety 2026-09-04 re-review (R-378): an empty activeConstraints array is truthy and was discarding the resolved generationConstraints, so the athlete's injuries never reached generation on that path. Rebuild only when there ARE active constraints; otherwise prefer the resolved context. No new authority."
+      "reason": "variety 2026-09-05 re-review (R-379): carries the scheduler's per-day rest reason onto the stored week beside dosePolicyByDay. Copied off the schedule, never re-derived, same rule as its neighbour: compiler output stored once."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "fingerprint": "14adcabb3f5b4ca2edfc14d1712253ef6d2844600f54f757f177621ec70d4f68",
@@ -2667,9 +2667,9 @@
       "fingerprint": "1a74a2b47dfab9039b22c2c6ee83b687ed9d785778df92437f6b19a318980a3a"
     },
     "src/utils/visibleProgramReadModel.ts#buildProgramTabProjectedWeek": {
+      "fingerprint": "bebb1e8b27210f7a88622ff1f58709e26cd5c83964304ec815bb15666b1a8ccd",
       "classification": "projection_display",
-      "reason": "Single-return weekly read adapter forwards explicit context to the public compiled resolver; no per-day filter or programming loop remains. Source guard and real accepted-world reader parity cover this boundary.",
-      "fingerprint": "9777afdc54f1982393c2bcff8e9b298af99aa01813cc44be7cd19b604a073c28"
+      "reason": "variety 2026-09-05 re-review (R-379): attaches the stored rest reason to the resolved day at the ONE place the Program tab builds its days, so the week and day views cannot disagree. Attaches only to a day with no workout, so a day filled after generation cannot explain itself as empty. Reads; decides nothing."
     },
     "src/utils/visibleProgramReadModel.ts#buildDayWorkoutProjectedDay": {
       "classification": "projection_display",
@@ -3645,6 +3645,11 @@
       "fingerprint": "af7000a43c30847f190b5c0c349296cb19d9fad5985ce4eeac3d6c47d75dfa62",
       "classification": "canonical_compiler",
       "reason": "integrate 2026-09-03: re-selects a copied day's main/accessory identities the kept days already spend, through the weekly selector and the tap-swap safety gate from the seat's own pool; replacement load from loadForReplacementExercise. Pure over its arguments; no store. | 2026-09-03 (integrate): replacement requested as typed support (R-317), a replaced main row becomes strength_accessory."
+    },
+    "src/utils/coachRevisionProposal.ts#buildCoachRevisionWeekSnapshotFromProgramTabProjection": {
+      "fingerprint": "bd44e40ea233fcbb716d459debaa8f01ad5d2d5aab1f4bef4cf0ea9b1b76bfbc",
+      "classification": "projection_display",
+      "reason": "variety 2026-09-05 review: reads the Program tab projection into a coach revision snapshot. Unchanged by R-379 in behaviour; its fingerprint moved because the projection it reads gained an optional per-day reason field it neither reads nor writes. Projection/display."
     }
   }
 }

@@ -626,6 +626,58 @@ export function registerProjectionCopy(): void {
         + 'disagree about which days are fixtures.',
       text: 'Practice Match',
     },
+    // ── WHY THIS DAY IS EMPTY — R-379, Sam 2026-09-05. ──
+    //
+    // *"put it on the day … it should replace fresh up, adapt go again - when
+    // it's needed"*. These REPLACE the rest card's standing subline on a day the
+    // app deliberately emptied; an ordinary rest day keeps "Freshen up. Adapt.
+    // Go again." Sam approved this set on sight (*"they'll do"*) with the note
+    // that he will correct them once he has seen them on the phone.
+    //
+    // ⚠ **NO EM DASHES.** Sam, same message, verbatim: *"it should not include
+    // any fuckign M dashes"*. `test:rest-day-reason` reds on the character.
+    {
+      id: 'day.rest.reason.injury',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT 2026-09-05 ("they\'ll do"), R-379. Shown when '
+        + 'an injury closed the session the day would otherwise have held (R-378). '
+        + 'Sam is to correct the wording once he has seen it on a device.',
+      text: 'No session today. Your shoulder is still sore, so there is nothing here worth doing.',
+    },
+    {
+      id: 'day.rest.reason.game_proximity',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT 2026-09-05, R-379. A day held clear because a '
+        + 'fixture is close.',
+      text: 'Kept clear for Saturday. You will train again Monday.',
+    },
+    {
+      id: 'day.rest.reason.illness',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT 2026-09-05, R-379.',
+      text: 'Nothing today while you shake this off.',
+    },
+    {
+      id: 'day.rest.reason.away',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT 2026-09-05, R-379.',
+      text: 'No session while you are away.',
+    },
+    {
+      id: 'day.rest.reason.deload',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT 2026-09-05, R-379.',
+      text: 'Lighter week. Today stays clear.',
+    },
+    {
+      id: 'day.rest.default',
+      source: 'sam_ruling',
+      provenance: 'LIFTED OUT OF `HomeScreenV2` 2026-09-05, R-379. It was a bare '
+        + 'literal in the day card while every neighbouring string went through '
+        + '`signedCopy` — so the one line the athlete reads on every rest day was '
+        + 'the one line no copy gate could see. Words unchanged.',
+      text: 'Freshen up. Adapt. Go again.',
+    },
     {
       id: 'day.refusal.nothing_to_change',
       source: 'sam_ruling',
