@@ -9441,3 +9441,35 @@ Guard: `test:visible-surfaces` section [13] — the renderer both ways, the
 shared vocabulary, and the owner's precedence in both directions — plus four
 `[per-side]` cells in `test:composer-severance`. Receipts:
 `docs/STATUS_VARIETY.md`.
+
+**R-370** · Dead Bug is per side; its loaded siblings are not, 2026-09-04.
+
+Owner: variety. Sam, shown the three rows' own cues: *"those deadbugs are double
+limb"*, then *"8 per side"* for the plain one.
+
+`Dead Bug` is 8-10 **per side** and is now tagged `unilateral: true` to say so.
+Its authored cue is *"Opposite arm and leg, slow"* — right arm with left leg,
+then swap — and its trunk pool entry has carried `perSide: true` all along.
+`Banded Dead Bug` and `Weighted Dead Bug` LOSE their `perSide`: their cues say
+both arms move together (*"pull band with straight arms toward knees"*,
+*"extended arms overhead and feet out"*), so the reps were never per side.
+
+**EACH ROW'S TWO RECORDS CONTRADICTED EACH OTHER AND NOTHING COULD SEE IT.** The
+pool entry said per side; the tag said not one-sided. R-369 made the strength
+card render the field, which is the only reason it became visible — it had been
+wrong on screen in the athlete's favour by accident.
+
+**AND THE CONTRADICTION WAS LIVE IN A SECOND PLACE.** The manual Add door doses
+core rows `perSide: tags.unilateral`, so adding `Dead Bug` by hand gave a TOTAL
+while automatic programming gave per side: the same exercise, two answers,
+decided by which door the athlete came through. The tag flip is what makes both
+doors agree — this ruling is a convergence, not a preference.
+
+Known and accepted: `exerciseSubstitutes` counts a bilateral↔unilateral
+difference as a swap-suggestion axis and labels it "unilateral variation".
+Neither blocks a swap; both are descriptive, and describing this movement as
+one-sided is the honest answer.
+
+Guard: `test:visible-surfaces` [13] holds the owner's precedence; the three rows
+resolve equal from the pool entry, the tag alone and the shared owner. Receipts:
+`docs/STATUS_VARIETY.md`.

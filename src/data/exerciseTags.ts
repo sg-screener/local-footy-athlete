@@ -3753,9 +3753,33 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     },
   },
 
+  /**
+   * ⚠ **`unilateral: true` — R-370, Sam 2026-09-04: *"8 per side"*.**
+   *
+   * This row's own authored cue is *"Opposite arm and leg, slow"*: right arm
+   * with left leg, then swap. It is one side at a time, and the trunk pool
+   * entry has said `perSide: true` all along — the two records CONTRADICTED
+   * each other and nobody could see it, because the strength card did not
+   * render the field until R-369.
+   *
+   * **THE CONTRADICTION WAS LIVE IN A SECOND PLACE.** The manual Add door
+   * doses core rows `perSide: tags.unilateral`, so adding Dead Bug by hand gave
+   * a TOTAL while automatic programming gave per side — the same exercise, two
+   * answers, depending on which door the athlete came through. Flipping the tag
+   * is what makes both doors agree.
+   *
+   * Its two loaded siblings went the OTHER way in the same ruling: `Banded Dead
+   * Bug` and `Weighted Dead Bug` lost their `perSide` because their cues say
+   * both arms move together. Sam: *"those deadbugs are double limb"*.
+   *
+   * Known and accepted: `exerciseSubstitutes` counts a bilateral↔unilateral
+   * difference as a swap-suggestion AXIS and labels it "unilateral variation".
+   * Neither blocks a swap; both are descriptive, and describing this movement
+   * as one-sided is the honest answer.
+   */
   'Dead Bug': {
     movement: 'core', region: 'upper', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
+    doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
     injury: {
       'groin': 'caution',

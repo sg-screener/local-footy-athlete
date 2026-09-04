@@ -328,8 +328,18 @@ export const LOWER_PREHAB_POOL: PoolExercise[] = [
 export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
   ex('band-pallof',       'Band Pallof Press',          3, 10, 12, 45, 'Band at chest height. Press out and hold.',   ['bands'],     [],                     'low', { prescriptionType: 'reps' }),
   ex('dead-bug',          'Dead Bug',                   3, 8,  10, 30, 'Opposite arm and leg. Keep the midline tight.',      ['bodyweight'],[],                     'low', { prescriptionType: 'reps', perSide: true }),
-  ex('banded-dead-bug',   'Banded Dead Bug',            3, 8,  10, 30, 'Band around feet adds anti-extension challenge.', ['bands'], [],                    'low', { prescriptionType: 'reps', perSide: true }),
-  ex('weighted-dead-bug', 'Weighted Dead Bug',          3, 6,  8,  45, 'Hold dumbbells overhead. Slow and controlled.', ['dumbbells'], [],                  'low', { prescriptionType: 'reps', perSide: true }),
+  // R-370 (Sam, 2026-09-04): *"those deadbugs are double limb"*. The
+  // authored CUE says so on its own — this variation moves both arms
+  // together, so the reps were never per side. The `perSide: true` here
+  // contradicted the `unilateral: false` tag and was invisible until
+  // R-369 made the strength card render the field.
+  ex('banded-dead-bug',   'Banded Dead Bug',            3, 8,  10, 30, 'Band around feet adds anti-extension challenge.', ['bands'], [],                    'low', { prescriptionType: 'reps' }),
+  // R-370 (Sam, 2026-09-04): *"those deadbugs are double limb"*. The
+  // authored CUE says so on its own — this variation moves both arms
+  // together, so the reps were never per side. The `perSide: true` here
+  // contradicted the `unilateral: false` tag and was invisible until
+  // R-369 made the strength card render the field.
+  ex('weighted-dead-bug', 'Weighted Dead Bug',          3, 6,  8,  45, 'Hold dumbbells overhead. Slow and controlled.', ['dumbbells'], [],                  'low', { prescriptionType: 'reps' }),
   ex('mcgill-situp',      'McGill Sit Up',              3, 8,  10, 30, 'One knee bent, hands under low back. Lift shoulder blades only.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('ab-wheel',          'Ab Wheel',                   3, 6,  10, 60, 'Roll out, brace hard, no low-back sag.',      ['ab_wheel'],['lower_back', 'shoulder'], 'moderate', { prescriptionType: 'reps' }),
   ex('hanging-leg-raise', 'Hanging Leg Raise',          3, 6,  10, 60, 'Dead hang from bar. No swing.',               ['pullup_bar'],['shoulder'],            'moderate', { prescriptionType: 'reps' }),
