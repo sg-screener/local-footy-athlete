@@ -232,6 +232,14 @@ export function compileCanonicalWeek(
     appSprintPermitted: input.injury?.blocksAppSprint !== true,
     sprintExposure: input.coaching.sprintExposure,
     appRunningPermitted: input.injury?.lowerBodyRestricted !== true,
+    /* R-378 / WC-064. Derived HERE, beside its two siblings above, and not at
+     * the call sites: `WeeklySchedulerInputs` is assembled by two different
+     * builders (`weeklySchedulerInputsFrom` and generateProgram's
+     * `coachingInputsToSchedulerInputs`), and a fact each of them has to
+     * remember is a fact one of them will eventually forget. Both already hand
+     * `injury` to this compiler, so the layout step reads the same injury state
+     * the week is later judged by, whichever door the week came through. */
+    prohibitedPatterns: input.injury?.prohibitedPatterns ?? [],
     readiness: {
       ...input.scheduler.readiness,
       lowReadiness: input.readiness?.deloaded === true,

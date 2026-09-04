@@ -535,3 +535,85 @@ had two. Per-side had five. The tracked-lift rule lived in three. Ordering was
 mistaken for precedence; a preference was applied before legality; a rule that
 existed only in a comment was lost when the code moved. **Before adding a
 reader, find out who already owns the answer.**
+
+## R-378 — THE SCHEDULER NOW KNOWS THE ATHLETE IS HURT (2026-09-04, seat variety)
+
+**THE JOB AS HANDED OVER WAS THE WRONG JOB, AND THE REGISTRY SAID SO.** The
+handoff asked for the G-2 day to be FILLED with the authored quality-lower (High
+Box Squat 2x3 + Vertical Jump 2x3). **Sam cancelled that session on 2026-08-16
+in R-095** — a Vertical Jump is plyometric and G-2 bars added lower-body power —
+and R-095's own entry records that its omit-and-disclose guard never landed and
+that `injuryAuthorityOwnershipTests` G2-G4 "still assert the old exception". Put
+to Sam, he chose A and added one exception (R-378).
+
+### THE DEFECT
+
+`WeeklySchedulerInputs` had **no injury field at all**. The reduction ladder's
+rung 1 offers `upper` wherever a constrained day may not hold heavy lower, so a
+Saturday-game athlete with a paused shoulder was handed **Bench Press and Seated
+DB Press two days before the game**. The ladder was doing exactly what it was
+written to do; nothing had ever told it the substitute was unavailable.
+
+### WHAT LANDED
+
+- **One owner, two consumers.** `compileCanonicalWeek` derives
+  `prohibitedPatterns` for the scheduler from the `injury` state it ALREADY
+  receives, beside `appSprintPermitted` / `appRunningPermitted`. Not at the call
+  sites: `WeeklySchedulerInputs` has **two** builders and a fact each must
+  remember is a fact one will forget.
+- **SUBSTITUTE, THEN DROP.** An impossible session is first swapped for a safe
+  purpose that is still legal in place — same day, same count. Only when nothing
+  fits is the day left empty. That is Sam's sentence in order: *"whatever can fit
+  that makes sense … if nothing fits … then it's nothing"*.
+- **APPLIED AFTER THE LADDER, NEVER INSIDE IT.** ⚠ The first version made a
+  prohibited purpose illegal DURING the search. It fixed the G-2 day and then did
+  something worse: a candidate ruled out mid-search sends the ladder down a rung,
+  and a reduced rung is the authored SMALLER STRUCTURE — three split days become
+  two FULL-BODY days. **Measured: a shoulder injury took one day from 12 sets to
+  20 and gave another 12 where it had none.** An injury that ADDS work is the
+  opposite of the ruling. `WC-064` is now `enforcedElsewhere`.
+- **An empty `activeConstraints` array is TRUTHY**, and the row compiler's
+  `args.activeConstraints ? rebuild : args.generationConstraints` therefore built
+  a context from ZERO constraints and discarded the resolved one. The injury
+  reached generation and arrived as no prohibition at all.
+- **A conditioning session vouched for its own conditioning.**
+  `hasVisibleConditioningContent` counts `isConditioningTypedWorkout` as content,
+  so a day named "Aerobic Conditioning" holding Single-Arm DB Row, Dead Bug and
+  Side Plank was never repaired. The new branch asks the ROWS, never the type.
+- **Two duplicate purpose-to-pattern tables** (`schedulerPlannedDays`,
+  `scheduleToCoachingPlan`) folded into `MAIN_PATTERNS_FOR_PURPOSE`. Both were
+  written before R-087 widened `MainStrengthPattern` and neither was swept — the
+  stale comment claimed the single-leg slots "cannot be named".
+- **Two unguarded `.join`s on `injury.triggers`** crash generation on a
+  constraint missing that field. Guarded; the malformed test payloads that
+  exposed them (`as never` hid a missing required field) were fixed too.
+
+### RECEIPTS
+
+| gate | before | after |
+| --- | --- | --- |
+| `test:injury-authority` | 19 passed / 6 failed | **25 / 0** |
+| `test:injury-recomposition` | 186 green | **186 green** |
+| `test:compiler-year` | 416/416 | **416/416, 0 failure keys** |
+| `test:compile` | 0 errors | **0 errors** |
+| writer census | 0 unresolved | **0 unresolved / 1170** |
+| `year:diff` | baseline | **one conditioning quality swapped, total rows UNCHANGED** |
+
+**`test:release` still stops on 4 PRE-EXISTING failures** — `unilateral/{male,
+female}/{no-rack,no-barbell}: required bilateral squat coverage stays honestly
+bilateral`. **Controlled at HEAD in an isolated worktree: 10616 passed, 4 failed,
+the same four.** Not this work's.
+
+### WHAT IS STILL OWED
+
+**THE DISCLOSURE HALF OF R-095.** The athlete is owed a reason their Thursday is
+empty. `injury_game_proximity` exists in `types/domain` and in one test
+assertion and **nowhere else in product code** — a note kind with no writer — and
+its signed sentence (*"a short, sharp lower session instead of a full one"*)
+describes the session R-095 cancelled. The scheduler now records a typed
+omission disclosure; **the athlete-facing sentence is Sam's to write.** G7 pins
+meanwhile that the CANCELLED sentence must never ship.
+
+**THE YEAR IS PARTLY BLIND HERE.** Its shoulder episode is 4/10, which prohibits
+`push` only, so the severe both-patterns case that prompted all this never occurs
+in `year:diff`. The severe case is held by `test:injury-authority`.

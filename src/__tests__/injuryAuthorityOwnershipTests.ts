@@ -290,61 +290,67 @@ function registerScenarios(): void {
       + `${world.reductionMetrics.join(', ')} — substitution was available and was not exhausted`);
   });
 
-  // ── G2 — WORLD 2: Saturday game + severe upper. THE HEADLINE. Both upper
-  // patterns are paused and heavy lower is barred at G-2, so the day used to be
-  // stranded (docs/UPPER_BODY_SEVERE_STRENGTH_MISS_DIAGNOSIS_2026-08-06.md).
-  // The anchor's own second state fills it.
-  scenario('g2', 'G2 a Saturday game + severe upper injury FILLS the G-2 day with the authored quality-lower', async () => {
+  // ── G2-G4 — REBASED 2026-09-04 ONTO R-095 + R-378. READ THIS BEFORE EDITING.
+  //
+  // These three cells asserted the authored "quality-lower neural primer" — High
+  // Box Squat 2x3 + Vertical Jump 2x3 — on the G-2 day of a severe-upper week.
+  // **SAM CANCELLED THAT SESSION ON 2026-08-16 (R-095):** *"G-2 outranks the
+  // injury exception. High Box Squat and Vertical Jump are both prohibited on
+  // G-2. Omit and disclose; upper-body work remains legal."* A Vertical Jump is
+  // plyometric and G-2 bars added lower-body power, so the two rulings could not
+  // both hold and the later safety-side one won. R-095's own entry records that
+  // the omit-and-disclose guard never landed and that these cells "still assert
+  // the old exception" — this is that guard, landing.
+  //
+  // **R-378 (2026-09-04) AFFIRMED IT AND NAMED THE ONE EXCEPTION.** Asked to
+  // choose between the cancelled session and an empty day, Sam chose the empty
+  // day: *"otherwise give them nothing — dont just add junk or extra work in"*.
+  // The day may be filled ONLY to repair a genuine week-level gap (his examples:
+  // no groin work, no core all week) and only with work that is safe against the
+  // injury AND legal on G-2 — which the two named movements are not.
+  //
+  // ⚠ **DO NOT "FIX" THESE BACK.** A red here means the app placed strength work
+  // on a G-2 day for an athlete who cannot press. That is the defect these cells
+  // now exist to catch, and it is the one that shipped Bench Press and Seated DB
+  // Press two days before a game.
+  scenario('g2', 'G2 a Saturday game + severe upper injury OMITS the G-2 day rather than filling it', async () => {
     const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
-    assert(world.qualityLowerDays.includes(G2_DAY),
-      `the G-2 day (${G2_DAY}) did not receive the quality-lower; placed on `
-      + `[${world.qualityLowerDays.join(', ') || 'nothing'}]. The day is stranded again: `
-      + 'upper is paused by the injury and heavy lower is barred by the game.');
-    assert(!world.reductionMetrics.includes('main_strength_frequency'),
-      'the week authorised a main-strength FREQUENCY reduction even though the G-2 '
-      + 'exception could fill the day — exhaustion must be a MEASURED outcome, and '
-      + `this week is not exhausted. Reductions: ${world.reductionMetrics.join(', ')}`);
+    assert(world.qualityLowerDays.length === 0,
+      `the cancelled G-2 quality-lower was placed on [${world.qualityLowerDays.join(', ')}] — `
+      + 'R-095 prohibits both of its movements on G-2 and no dose reduction rescues either');
+    const workout = workoutForDay(world.workouts, G2_DAY);
+    assert(!workout || (workout.exercises ?? []).length === 0,
+      `the G-2 day (${G2_DAY}) was filled anyway: ${rowSummary(workout)} — upper is paused `
+      + 'by the injury and lower is barred by the game, so the day is owed NOTHING');
   });
 
-  // ── G3 — THE BINDING GATE. The shape the placer produces must be the shape
-  // `looksLikeNeuralPrimer` licenses. This is what stops the producer and the
-  // authored definition drifting apart: a heavier "quality" lower would still
-  // pass G2 above and would be a full lower session two days before a game.
-  scenario('g3', 'G3 the G-2 session the placer ships satisfies the authored neural-primer definition', async () => {
+  // ── G3 — THE OTHER HALF OF "NOTHING": the week around the omitted day must
+  // still be a week. Omitting is not refusing, and R-378's empty G-2 day may not
+  // cost the athlete the sessions they CAN safely do earlier in the week.
+  scenario('g3', 'G3 omitting the G-2 day leaves the rest of the week standing', async () => {
     const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
-    const workout = workoutForDay(world.workouts, G2_DAY);
-    assert(workout, `no workout was built for ${G2_DAY}`);
-    assert(looksLikeNeuralPrimer(workout!),
-      `the G-2 session is NOT a neural primer by the authored definition `
-      + `(rules/weekStructureValidator.looksLikeNeuralPrimer): ${rowSummary(workout)}`);
-    // And the husk cannot come back: a day that carries a strength component
-    // must carry strength rows.
-    assert((workout!.exercises ?? []).length > 0,
-      `${G2_DAY} shipped with zero rows — the husk the diagnosis measured`);
+    // Compared by identity against `workoutForDay`'s own answer — a second
+    // day-name-to-number map in this file is exactly the drift R-378 was about.
+    const g2Workout = workoutForDay(world.workouts, G2_DAY);
+    const strengthDays = world.workouts.filter((workout) =>
+      workout !== g2Workout && (workout.exercises ?? []).length > 0);
+    assert(strengthDays.length > 0,
+      'the whole week came back empty — WC-064 is meant to omit the ONE day the injury '
+      + 'closes, not to refuse the week; the safe lower work earlier in the week still fits');
   });
 
-  // ── G4 — SAM'S SENTENCE, VERBATIM. "2x3 box squats to high box + 2x3 vertical
-  // jumps". Both halves are composed here; the week's authorised power-primer
-  // budget decides whether the jump row survives to the athlete (measured: in the
-  // seeded world the budget is 0 for `game_load_protection`, and the power owner
-  // removes it — content built to the number the contract authorises).
-  scenario('g4', 'G4 the authored G-2 content is High Box Squat 2x3 + Vertical Jump 2x3, and rotation does not rewrite it', async () => {
+  // ── G4 — R-095 BY NAME. Asserting "the day is empty" alone would pass on a
+  // week that shipped these two movements somewhere else on G-2 under a
+  // different session shape, and naming them is how G4 always worked.
+  scenario('g4', 'G4 neither High Box Squat nor Vertical Jump reaches the G-2 day', async () => {
     const world = matrixWorld({ gameDay: 'Saturday', restricted: ['upper_body'] });
     const workout = workoutForDay(world.workouts, G2_DAY);
-    const rows = (workout?.exercises ?? []).map((row) => ({
-      name: row.exercise?.name ?? '',
-      sets: row.prescribedSets,
-      repsMax: row.prescribedRepsMax,
-    }));
-    const squat = rows.find((row) => row.name === 'High Box Squat');
-    assert(squat, `the G-2 session does not name High Box Squat — "low range of motion" is `
-      + `the ruling, and a rotated full-range squat is not it: ${rowSummary(workout)}`);
-    assert(squat!.sets === 2 && squat!.repsMax === 3,
-      `High Box Squat shipped ${squat!.sets}x${squat!.repsMax}, not the authored 2x3 — `
-      + 'a phase rep scheme overwrote the dose that IS the exception');
-    const jump = rows.find((row) => row.name === 'Vertical Jump');
-    assert(jump && jump.sets === 2 && jump.repsMax === 3,
-      `the composed G-2 session is missing the authored 2x3 Vertical Jump: ${rowSummary(workout)}`);
+    const names = (workout?.exercises ?? []).map((row) => row.exercise?.name ?? '');
+    for (const movement of ['High Box Squat', 'Vertical Jump']) {
+      assert(!names.includes(movement),
+        `"${movement}" shipped on the G-2 day (${G2_DAY}) — R-095 prohibits it there `
+        + `outright: ${rowSummary(workout)}`);
+    }
   });
 
   // ── G5 — THE RULING'S OWN ENFORCEMENT. A healthy week must not move a byte.
@@ -432,9 +438,24 @@ function registerScenarios(): void {
     const exposure = (rebased.contract as never as {
       mainStrength?: { exposure?: { achievedCount?: number; plannerSelectedTarget?: number } };
     }).mainStrength?.exposure;
-    assert(exposure?.achievedCount === exposure?.plannerSelectedTarget,
-      `the week achieved ${exposure?.achievedCount} main-strength sessions against a `
-      + `selected target of ${exposure?.plannerSelectedTarget}`);
+    // ── WIDENED FROM `===` TO "NO SHORTFALL" ON 2026-09-04, AND SAM WAS TOLD.
+    //
+    // The cell's subject is *"no husk"* — a week that came up SHORT. Equality
+    // also fails on over-delivery, and after R-378 this world over-delivers: the
+    // seeded week's days are already SPENT (3 main-strength sessions completed
+    // before the injury was reported), while re-deriving under the new severe
+    // upper injury correctly lowers the forward-looking target to 1. Asserting
+    // 3 === 1 would be asserting that a mid-week injury may not reduce what is
+    // still to come, which is the opposite of the ruling this cell now guards.
+    //
+    // ⚠ **THE SPENT-WEEK QUESTION IS NOT SETTLED BY THIS LINE.** Whether a
+    // target may be lowered on a week whose days are already done belongs to the
+    // §18 elapsed-week / materialisation reassessment — the same owner I6's
+    // quarantine note defers to. This assertion deliberately does not decide it;
+    // it holds the shortfall law and no more.
+    assert((exposure?.achievedCount ?? 0) >= (exposure?.plannerSelectedTarget ?? 0),
+      `the week came up SHORT: achieved ${exposure?.achievedCount} main-strength `
+      + `session(s) against a selected target of ${exposure?.plannerSelectedTarget}`);
 
     // RULING 4a, DELIVERED — and this cell now asserts it BY NAME.
     //
@@ -462,12 +483,17 @@ function registerScenarios(): void {
     // (`IN=1 OUT=1`, and `updatePowerForPhase`'s removal branch never fires —
     // `gMinusTwoBlocked` is false for a 5+ years athlete). The gateway was a
     // THIRD reader of the weekly-budget question with its own copy of it.
+    // INVERTED 2026-09-04 (R-095 + R-378): this asserted that BOTH movements
+    // reach the athlete. Sam prohibited both on G-2 on 2026-08-16 and affirmed
+    // omit-and-disclose on 2026-09-04. The end-to-end proof is now that neither
+    // reaches the day — the same two names, the opposite verdict. See the block
+    // above G2 for the full history and for why this must not be "fixed" back.
     const g2Day = rebased.visibleWorkouts.find((workout) => workout.dayOfWeek === 4);
     const g2Names = (g2Day?.exercises ?? []).map((row) =>
       String((row as { exercise?: { name?: string } }).exercise?.name ?? row.exerciseId));
     for (const movement of ['High Box Squat', 'Vertical Jump']) {
-      assert(g2Names.includes(movement),
-        `the G-2 quality-lower session does not ship "${movement}" to the athlete. `
+      assert(!g2Names.includes(movement),
+        `"${movement}" reached the athlete's G-2 day, which R-095 prohibits outright. `
         + `d4 rows: [${g2Names.join(', ')}]`);
     }
 
@@ -491,15 +517,31 @@ function registerScenarios(): void {
       date.setDate(date.getDate() + (workout.dayOfWeek - 1));
       return { date: date.toISOString().slice(0, 10), workout: workout as never };
     });
+    // ── THE DISCLOSURE HALF OF "OMIT AND DISCLOSE" IS OWED AND UNBUILT. ─────
+    //
+    // This asserted a signed Coach Note reading *"...so it is a short, sharp
+    // lower session instead of a full one."* That sentence DESCRIBES THE SESSION
+    // R-095 CANCELLED, so it can no longer be the right words, and its producer
+    // never existed anyway: `injury_game_proximity` appears in `types/domain`
+    // and in this assertion and NOWHERE ELSE in product code — a note kind with
+    // no writer, the same shape as the `quality_low_volume` variant it was
+    // written to announce.
+    //
+    // **THE REPLACEMENT SENTENCE IS SAM'S TO WRITE, NOT THIS SEAT'S.** R-095
+    // says omit AND DISCLOSE; the athlete is owed a reason their Thursday is
+    // empty. Composing that sentence here would be authoring signed copy, which
+    // this cell's own note above forbids. Sam has been asked for the wording.
+    //
+    // What IS pinned meanwhile, because it is true and it protects the athlete:
+    // the CANCELLED sentence must never ship. A note promising a "short, sharp
+    // lower session" on a day that now has nothing would be the app lying about
+    // its own week.
     const notes = buildDeterministicCoachNoteDescriptors(noteDays);
-    const g2Note = notes.find((note) => note.sourceId.startsWith('injury_game_proximity:'));
-    assert(!!g2Note, 'the G-2 quality-lower session ships no Coach Note. notes: '
-      + notes.map((note) => note.sourceId).join(', '));
-    const SIGNED = 'Your Thursday session is deliberately small this week: your shoulder '
-      + 'is paused and there is a game on Saturday, so it is a short, sharp lower session '
-      + 'instead of a full one.';
-    assert(g2Note!.body === SIGNED,
-      `the composed Coach Note is not Sam's signed sentence.\n  signed: ${SIGNED}\n  shipped: ${g2Note!.body}`);
+    const CANCELLED = 'short, sharp lower session';
+    const liar = notes.find((note) => String(note.body ?? '').includes(CANCELLED));
+    assert(!liar,
+      `a Coach Note still promises the cancelled G-2 quality-lower ("${CANCELLED}") on a `
+      + `day R-095 leaves empty: ${liar?.body}`);
 
     // THE COUNTING HALF IS NOT PINNED HERE, AND THIS CELL DOES NOT PRETEND IT
     // IS. An assertion on `contract.power.achievedPrimerCount` was written,
@@ -566,7 +608,11 @@ function registerScenarios(): void {
       contract: JSON.parse(JSON.stringify(before)),
       generationConstraints: {
         injuries: [{
-          region: 'upper_body', injuryKeys: ['shoulder'], severity: 9, 
+          // `triggers` is required on the real constraint and every production
+          // builder fills it; the `as never` below hid its absence and the
+          // pipeline crashed on `.join` before reaching a single assertion.
+          region: 'upper_body', injuryKeys: ['shoulder'], severity: 9,
+          triggers: [],
           pauseAffectedTraining: true, removeRiskyWork: true,
         }],
       } as never,
@@ -644,6 +690,11 @@ function registerScenarios(): void {
               region,
               injuryKeys: [],
               severity,
+              triggers: [],
+              // Required on the real constraint. Without it `back_midline` — the
+              // one region with no fallback of its own — resolved to undefined.
+              bodyPart: region === 'upper_body' ? 'Shoulder'
+                : region === 'lower_body' ? 'Hamstring' : 'Lower back',
               pauseAffectedTraining: severity >= 8,
               removeRiskyWork: severity >= 6,
             }],

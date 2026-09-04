@@ -9812,3 +9812,41 @@ MEASURED after: **416 green / 416 athlete-weeks**, from 371, with the
 prohibited-pattern breach gone.
 
 Guard: `test:compiler-year` 416/416. Receipts: `docs/STATUS_VARIETY.md`.
+
+## THE G-2 DAY AN INJURED ATHLETE CANNOT USE — Sam, 2026-09-04
+
+**R-378** · *"a — unless something is missing from earlier in the week i.e. didn't
+do any groin work or hasn't hit any core this week or whatever — if he can do
+something and it's safe to do so then feel free to chuck something in — even if
+optional — otherwise give them nothing — dont just add junk or extra work in"* ·
+**AFFIRMS R-095 AND ADDS ITS ONE EXCEPTION.**
+
+Asked because R-095 (2026-08-16) reads *omit and disclose … never substituted
+with different lower work*, and Sam's instruction the same morning read *"fill
+that day with whatever genuinely fits — mobility, light lower"*. The two could
+not both be applied literally, so the conflict was put to him rather than
+resolved by a seat. **He chose A: the day is OMITTED.**
+
+- **DEFAULT IS NOTHING.** A G-2 day whose only remaining purpose the athlete's
+  injury prohibits is left out and disclosed. **Filling it is the exception, not
+  the rule** — *"dont just add junk or extra work in"*.
+- **THE ONE EXCEPTION IS A GENUINE WEEK-LEVEL GAP**, and only that: an exposure
+  the week owes and has not delivered by that day (Sam's examples: no groin
+  work, no core all week). **A gap is the licence. Preference, spare capacity
+  and "the day looks empty" are not.**
+- **AND IT MUST BE SAFE** — safe against the injury AND legal on G-2. R-095's
+  bans survive untouched: High Box Squat and Vertical Jump remain prohibited
+  there, and no dose reduction rescues either.
+- **IT MAY BE OPTIONAL.** ⚠ `THE LIVE GENERATOR PLACES NO OPTIONAL SESSION`
+  (2026-08-23) — so "optional" is a permission Sam granted, NOT a mechanism that
+  exists. Anything shipped as optional must name its producer and its reader.
+
+**NO NEW OWNER FOR THE GAP QUESTION.** "What has this week not delivered" is
+already owned by `rules/weeklyCompleteness` (requirements) and repaired by
+`rules/canonicalWeeklyPlaneCompletion`, which already finds a safe, legal, unused
+exercise for a missing frontal/core exposure and already records an honest typed
+exception when there is none — *"otherwise give them nothing"*, already built.
+**A second gap-finder is the defect, not the feature.**
+
+Guard: `test:injury-authority` G2-G4/G7, rebased off the cancelled quality-lower
+onto omit-and-disclose.

@@ -155,6 +155,43 @@ export function normalizeVisibleWorkoutIdentity(workout: Workout): Workout {
   const hasConditioningContent = hasVisibleConditioningContent(workout);
   const hasStrengthContent = strengthRows(workout).length > 0;
 
+  /* ── A CONDITIONING SESSION THAT CARRIES NO CONDITIONING (R-378 fallout) ───
+   *
+   * ⚠ **`hasVisibleConditioningContent` COUNTS THE TYPE ITSELF AS CONTENT** —
+   * `isConditioningTypedWorkout` is one of its arms — so a session typed
+   * `Conditioning` vouches for its own conditioning and every repair below is
+   * unreachable for it. That circularity is why the husk survived
+   * canonicalisation untouched.
+   *
+   * MEASURED on `female-5-home` week 11: a session named "Aerobic Conditioning"
+   * holding Single-Arm DB Row, Dead Bug and Side Plank — no block, no speed, no
+   * conditioning row — which `energy_session_content` red-flags as promising an
+   * energy session and delivering none. It appeared once the scheduler stopped
+   * assigning that day a strength purpose the athlete's injury prohibited: the
+   * strength half went, the conditioning label stayed, and completion rows
+   * landed on what was left.
+   *
+   * This asks the ROWS, never the type. A session is what it contains. */
+  const carriesRealConditioning = (workout.conditioningBlock?.options ?? []).length > 0
+    || finalRows.conditioningRows.length > 0
+    || finalRows.speedRows.length > 0;
+  if (!carriesRealConditioning && hasStrengthContent
+    && (workout.workoutType === 'Conditioning' || workout.hasCombinedConditioning)) {
+    const stripped = stripConditioningSuffix(workout.name) || workout.name;
+    return {
+      ...workout,
+      // A strength session still wearing a bare conditioning label is the same
+      // lie in a different field, so the label goes too.
+      name: looksLikeConditioningLabel(stripped) ? 'Strength' : stripped,
+      workoutType: 'Strength' as WorkoutType,
+      hasCombinedConditioning: false,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningBlock: undefined,
+      coachAddedConditioningLabel: undefined,
+    };
+  }
+
   if (!identity.isConditioningOnly) {
     if (!hasConditioningContent && hasStrengthContent && workout.hasCombinedConditioning) {
       return {

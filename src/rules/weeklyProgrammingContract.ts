@@ -34,6 +34,8 @@
  * to the prose, so re-wording the source cannot orphan a reader.
  */
 
+import type { MainStrengthPattern } from './strengthPatternContributions';
+
 /** The three season phases the contract lays out. */
 export type ContractPhase = 'In-season' | 'Pre-season' | 'Off-season';
 
@@ -149,6 +151,47 @@ export const PATTERNS_FOR_PURPOSE: Readonly<Record<SessionPurpose, readonly Move
   upper: ['horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull'],
   upper_push: ['horizontal_push', 'vertical_push'],
   upper_pull: ['horizontal_pull', 'vertical_pull'],
+};
+
+/**
+ * THE TOTAL LIST OF PURPOSES, and every map over the union is built from it.
+ *
+ * Same reason as `ALL_MAIN_STRENGTH_PATTERNS`: `satisfies` makes an eighth
+ * purpose a BUILD failure rather than a value that silently never appears. R-378
+ * needed to enumerate the alternatives to a purpose an injury has closed, and
+ * enumerating a union by hand is how one member quietly stops being considered.
+ */
+export const ALL_SESSION_PURPOSES = [
+  'full_body', 'lower', 'lower_squat', 'lower_hinge', 'upper', 'upper_push', 'upper_pull',
+] as const satisfies readonly SessionPurpose[];
+
+/**
+ * THE MAIN-STRENGTH PATTERNS A PURPOSE OFFERS — one owner, converged 2026-09-04.
+ *
+ * **THIS FACT HAD TWO COPIES AND THEY HAD ALREADY DRIFTED FROM THE TYPE.**
+ * `schedulerPlannedDays.MAIN_PATTERNS_FOR_PURPOSE` and
+ * `scheduleToCoachingPlan.MAIN_PATTERNS` held the same table, one typed
+ * `MainStrengthPattern[]` and one `string[]`. R-378's fix needed a third reader,
+ * and a third copy is the shape that caused most of 2026-09-04's defects, so the
+ * two were folded here instead — beside `PATTERNS_FOR_PURPOSE`, which answers the
+ * same question in §2's finer eight-pattern vocabulary.
+ *
+ * ⚠ **THE SINGLE-LEG SLOTS ARE DELIBERATELY ABSENT, AND THE OLD COMMENT SAYING
+ * THEY CANNOT BE NAMED IS STALE.** R-087 widened `MainStrengthPattern` to carry
+ * `single_leg_knee` / `single_leg_hip` on 2026-08-13; both copies were written
+ * before that and neither was swept. Adding them here would change what every
+ * lower day PLANS, which is its own slice with its own before/after — this
+ * convergence is content-identical to what both copies already shipped.
+ */
+export const MAIN_PATTERNS_FOR_PURPOSE:
+Readonly<Record<SessionPurpose, readonly MainStrengthPattern[]>> = {
+  full_body: ['squat', 'hinge', 'push', 'pull'],
+  lower: ['squat', 'hinge'],
+  lower_squat: ['squat'],
+  lower_hinge: ['hinge'],
+  upper: ['push', 'pull'],
+  upper_push: ['push'],
+  upper_pull: ['pull'],
 };
 
 /** WC-024. Which purposes load the legs, for lower-spacing (§3 "Lower spacing"). */
@@ -892,6 +935,10 @@ export const CLAUSE_MODALITY: Readonly<Record<string, ClauseModality>> = {
   WC_061: P('unavailableDays'),
   WC_062: P('clubNights (declared, never assumed)'),
   WC_063: P('availability is not a quota'),
+  // R-378. A day the athlete's injury leaves nothing to do is OMITTED, not
+  // filled. Filed with 060-063 because it answers their question — "can this
+  // athlete use this day at all" — off a different fact.
+  WC_064: P('prohibitedPatterns (injury)'),
   WC_100: D('layout: In-season 2 days'),
   WC_101: D('layout: In-season 3 days'),
   WC_102: D('layout: In-season 4, selector unmet'),

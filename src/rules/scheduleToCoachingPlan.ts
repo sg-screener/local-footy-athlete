@@ -32,7 +32,12 @@ import { speedBlockForTemplate } from './speedTemplates';
 import { withExposureTarget } from './weeklyExposureContract';
 import { schedulerExposureContract } from './schedulerExposureContract';
 import { section18ModeAndSubphase } from './section18WeekIdentity';
-import { GLOBAL_RULES, PURPOSE_IS_LOWER, type SessionPurpose } from './weeklyProgrammingContract';
+import {
+  GLOBAL_RULES,
+  MAIN_PATTERNS_FOR_PURPOSE,
+  PURPOSE_IS_LOWER,
+  type SessionPurpose,
+} from './weeklyProgrammingContract';
 import type { MaterialisedSession } from './materialiseAuthoredSessions';
 import type { WeeklySchedule } from './weeklyScheduler';
 import type { CapacityBand, DeterministicCoachNoteEffectSeed } from '../types/domain';
@@ -50,11 +55,10 @@ const ARCHETYPE_FOR_PURPOSE: Readonly<Record<SessionPurpose, string>> = {
   upper: 'upper', upper_push: 'upper', upper_pull: 'upper',
 };
 
-const MAIN_PATTERNS: Readonly<Record<SessionPurpose, string[]>> = {
-  full_body: ['squat', 'hinge', 'push', 'pull'],
-  lower: ['squat', 'hinge'], lower_squat: ['squat'], lower_hinge: ['hinge'],
-  upper: ['push', 'pull'], upper_push: ['push'], upper_pull: ['pull'],
-};
+/* The main-strength patterns per purpose come from
+ * `weeklyProgrammingContract.MAIN_PATTERNS_FOR_PURPOSE`. The table that stood
+ * here was a `string[]`-typed copy of `schedulerPlannedDays`' own; both are
+ * folded into that single owner (R-378). */
 
 /** The adapter's flavour word, read off the template's own category. */
 function flavourFor(category: string | null): 'aerobic' | 'tempo' | 'high-intensity' | undefined {
@@ -293,9 +297,9 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
         strengthPattern: ARCHETYPE_FOR_PURPOSE[purpose],
         strengthIntent: {
           archetype: ARCHETYPE_FOR_PURPOSE[purpose],
-          primaryPattern: MAIN_PATTERNS[purpose][0],
-          plannedPatterns: MAIN_PATTERNS[purpose],
-          effectivePatterns: MAIN_PATTERNS[purpose],
+          primaryPattern: MAIN_PATTERNS_FOR_PURPOSE[purpose][0],
+          plannedPatterns: [...MAIN_PATTERNS_FOR_PURPOSE[purpose]],
+          effectivePatterns: [...MAIN_PATTERNS_FOR_PURPOSE[purpose]],
         },
         ...(session.powerPrimer ? { powerPrimer: session.powerPrimer } : {}),
       });

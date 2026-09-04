@@ -388,8 +388,13 @@ function onboardingInjuryForGenerationConstraint(
     description: `${injury.bodyPart} active issue ${injury.severity}/10`,
     severity: injury.onboardingSeverity,
     severityScore: injury.severity,
-    whenItHurts: timingFromTriggers(injury.triggers),
-    movementTriggers: injury.triggers.length > 0 ? injury.triggers : undefined,
+    /* `triggers` is REQUIRED on `GenerationInjuryConstraint` and
+     * `buildInjuryLikeConstraint` always fills it, so no athlete reaches this
+     * undefined. A hand-built constraint that skips it used to crash generation
+     * here on `.join` — guarded because the cost is two `??`s and the failure
+     * mode was a TypeError from inside the injury pipeline with no stack. */
+    whenItHurts: timingFromTriggers(injury.triggers ?? []),
+    movementTriggers: (injury.triggers ?? []).length > 0 ? injury.triggers : undefined,
     notes: classifyBibleInjurySeverity(injury.severity).programResponse,
   };
 }
@@ -400,7 +405,11 @@ function bodyAreaForGenerationInjury(injury: GenerationInjuryConstraint): string
   if (key) return capitalise(key);
   if (injury.region === 'upper_body') return 'Shoulder';
   if (injury.region === 'lower_body') return 'Hamstring';
-  return capitalise(injury.bodyPart);
+  /* `bodyPart` is required on the constraint and every production builder fills
+   * it, so this fallback changes nothing for a well-formed injury — it exists
+   * because `back_midline` is the one region with no branch above, and an injury
+   * missing `bodyPart` crashed `injuryKey` on `.trim()` several frames later. */
+  return capitalise(injury.bodyPart ?? 'injury');
 }
 
 function triggerTextFromConstraint(

@@ -42,6 +42,7 @@ import {
   PURPOSE_IS_LOWER,
   type SessionPurpose,
 } from './weeklyProgrammingContract';
+import type { MainStrengthPattern } from './strengthPatternContributions';
 
 /** Monday-first, matching the scheduler's own week order. */
 const WEEK_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
@@ -66,6 +67,12 @@ export interface LegalityCandidate {
   readonly isGameMinusOne: (day: number) => boolean;
   readonly isGameMinusTwo: (day: number) => boolean;
   readonly isGamePlusOne: (day: number) => boolean;
+  /**
+   * R-378. The main-strength patterns this athlete's injury prohibits, SUPPLIED
+   * from `canonicalWeeklyInjuryStateFrom` — the same reading §18's safety policy
+   * judges by, never a second interpretation of the constraints.
+   */
+  readonly prohibitedPatterns?: readonly MainStrengthPattern[];
 }
 
 export interface LegalityRule {
@@ -94,6 +101,41 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
         c.isGameMinusTwo(s.day) && PURPOSE_IS_LOWER[s.purpose]);
       return bad ? `heavy lower-body work on G-2 (day ${bad.day})` : null;
     },
+  },
+  {
+    // ── R-378. THE DAY AN INJURED ATHLETE HAS NOTHING TO DO ON ──────────────
+    //
+    // **Sam, 2026-09-04:** *"if he can do something and it's safe to do so then
+    // feel free to chuck something in — even if optional — otherwise give them
+    // nothing — dont just add junk or extra work in"*, affirming R-095's
+    // omit-and-disclose for the G-2 case that prompted it.
+    //
+    // ⚠ **THE SCHEDULER HAD NO INJURY INPUT AT ALL**, so the reduction ladder's
+    // rung 1 — which offers `upper` where a constrained day may not hold heavy
+    // lower — handed the G-2 day to an athlete whose shoulder was paused. That
+    // shipped Bench Press and Seated DB Press two days before a game to someone
+    // who could not press. The ladder was doing exactly what it was written to
+    // do; it was never told the substitute was unavailable.
+    //
+    // **A PURPOSE IS ILLEGAL ONLY WHEN THE INJURY TAKES EVERY PATTERN IT
+    // OFFERS.** Prohibiting `push` alone does not close `upper` — `upper` can
+    // still be run as pull — and pretending otherwise would delete work the
+    // athlete can safely do, which is the opposite failure.
+    //
+    // **THIS CANNOT FILL THE DAY, ONLY EMPTY IT.** The exception Sam attached —
+    // repairing a genuine week-level gap — is not a second gap-finder here:
+    // `strengthPatternContributions.uncoveredMainPatternsForWeek` and
+    // `canonicalWeeklyPlaneCompletion` already own that question downstream,
+    // where the week's actual content is known and a plane-completion row can be
+    // placed safely or honestly refused.
+    clauseId: 'WC-064',
+    enforcedElsewhere: 'rules/weeklyScheduler — applied as a REMOVAL after the '
+      + 'ladder has chosen the week, never as a candidate filter inside it. '
+      + 'Ruling it out mid-search sends the ladder down a rung, and a reduced '
+      + 'rung is the authored SMALLER structure (three split days become two '
+      + 'full-body days), so the injury ended up ADDING sets — measured at '
+      + '12 to 20 on one day and 0 to 12 on another. Dropping the impossible '
+      + 'sessions from the healthy week can only ever remove.',
   },
   {
     clauseId: 'WC-050',

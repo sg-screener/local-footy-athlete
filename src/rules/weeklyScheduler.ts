@@ -28,10 +28,12 @@
  * the same week, and the answer is optimal rather than merely feasible.**
  */
 import {
+  ALL_SESSION_PURPOSES,
   CATEGORY_FOR_CONDITIONING,
   DEFAULT_SET_BUDGET,
   GLOBAL_RULES,
   INSEASON_SPRINT_RULE,
+  MAIN_PATTERNS_FOR_PURPOSE,
   PATTERNS_FOR_PURPOSE,
   PATTERN_PLANE,
   PURPOSE_IS_LOWER,
@@ -48,6 +50,7 @@ import {
   type SetBudget,
 } from './weeklyProgrammingContract';
 import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
+import type { MainStrengthPattern } from './strengthPatternContributions';
 import type { AthleteGender, SprintExposure, WeekKind } from '../types/domain';
 import {
   requiredRunningSpeedQualities,
@@ -142,6 +145,16 @@ export interface WeeklySchedulerInputs {
   readonly readiness: SchedulerReadiness;
   /** Days the athlete explicitly marked unavailable. Never used (WC-061). */
   readonly unavailableDays: readonly number[];
+  /**
+   * R-378 / WC-064. The main-strength patterns the athlete's injury prohibits.
+   *
+   * **NOT A SECOND INJURY READING.** It arrives from
+   * `canonicalWeeklyInjuryStateFrom`, the same call §18's safety policy uses, so
+   * the shape the scheduler lays out and the shape the week is judged by cannot
+   * disagree. Absent or empty means "no prohibition known", which is what every
+   * healthy week supplies.
+   */
+  readonly prohibitedPatterns?: readonly MainStrengthPattern[];
   /**
    * Target-week fixture days released by a bye, removal or move. These are
    * effective app-training days, not permanent profile preferences. A healthy
@@ -574,6 +587,7 @@ function legalityViolation(
     isGameMinusOne: (day) => isGameMinusOne(day, inputs),
     isGameMinusTwo: (day) => isGameMinusTwo(day, inputs),
     isGamePlusOne: (day) => isGamePlusOne(day, inputs),
+    prohibitedPatterns: inputs.prohibitedPatterns,
   });
 }
 
@@ -899,31 +913,43 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     }
   }
 
-  let best: { assignment: { day: number; purpose: SessionPurpose }[]; score: number } | null = null;
-  let reductionDisclosure: WeeklyReductionRecord | null = null;
-  for (const rung of rungs) {
-    const needed = rung.purposes.length;
-    if (usableGymDays.length < needed) continue;
-    for (const dayCombo of combinations(usableGymDays, needed)) {
-      for (const ordering of permutations(rung.purposes)) {
-        const assignment = dayCombo.map((day, index) => ({ day, purpose: ordering[index] }));
-        if (!assignmentIsLegal(assignment, inputs)) continue;
-        const score = scoreAssignment(assignment, inputs);
-        if (!best || score > best.score) best = { assignment, score };
+  /** The ladder, walked once. FIRST rung that produces anything wins: the rungs
+   * are ordered by preference, so a later rung is by construction a worse week. */
+  const walkLadder = (
+    legalityInputs: WeeklySchedulerInputs,
+  ): { assignment: { day: number; purpose: SessionPurpose }[];
+    rung: (typeof rungs)[number] } | null => {
+    for (const rung of rungs) {
+      const needed = rung.purposes.length;
+      if (usableGymDays.length < needed) continue;
+      let bestForRung: { assignment: { day: number; purpose: SessionPurpose }[];
+        score: number } | null = null;
+      for (const dayCombo of combinations(usableGymDays, needed)) {
+        for (const ordering of permutations(rung.purposes)) {
+          const assignment = dayCombo.map((day, index) => ({ day, purpose: ordering[index] }));
+          if (!assignmentIsLegal(assignment, legalityInputs)) continue;
+          const score = scoreAssignment(assignment, legalityInputs);
+          if (!bestForRung || score > bestForRung.score) bestForRung = { assignment, score };
+        }
       }
+      if (bestForRung) return { assignment: bestForRung.assignment, rung };
     }
-    // FIRST rung that produces anything wins: the ladder is ordered by
-    // preference, so a later rung is by construction a worse week.
-    if (best) {
-      reductionDisclosure = rung.reason === null ? null : {
+    return null;
+  };
+
+  const found = walkLadder(inputs);
+  let best: { assignment: { day: number; purpose: SessionPurpose }[] } | null =
+    found ? { assignment: found.assignment } : null;
+  let reductionDisclosure: WeeklyReductionRecord | null =
+    found && found.rung.reason !== null
+      ? {
         intendedStrengthCount: authored,
-        deliveredStrengthCount: best.assignment.length,
-        omittedPurpose: rung.omitted,
-        reason: rung.reason,
-      };
-      break;
-    }
-  }
+        deliveredStrengthCount: found.assignment.length,
+        omittedPurpose: found.rung.omitted,
+        reason: found.rung.reason,
+      }
+      : null;
+
   if (!best) {
     // A TRUE hard minimum failure: not even ONE strength session fits.
     return {
@@ -934,6 +960,94 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         + 'prohibition (game proximity, lower spacing or plane repetition)',
     };
   }
+  // ── R-378 / WC-064. THE INJURY MAY ONLY *REMOVE*. ────────────────────────
+  //
+  // **Sam, 2026-09-04:** *"otherwise give them nothing — dont just add junk or
+  // extra work in"*, affirming R-095's omit-and-disclose.
+  //
+  // ⚠ **APPLIED HERE, AFTER THE SEARCH, AND NOT AS A LEGALITY RULE INSIDE IT.**
+  // The first attempt made a prohibited purpose illegal during the ladder walk.
+  // It fixed the G-2 day and then quietly did something worse: an arrangement
+  // ruled out mid-search sends the ladder down a rung, and a reduced rung is the
+  // AUTHORED SMALLER STRUCTURE, not the same week minus one day — three split
+  // days become two FULL-BODY days. **Measured: a shoulder injury took one
+  // athlete's day from 12 sets to 20, and gave another day 12 sets where it
+  // previously had none.** An injury that ADDS work is the opposite of the
+  // ruling, and `injuryRecomposition` holds exactly that law.
+  //
+  // So the week is built as though the athlete were healthy, and the sessions
+  // their injury forbids are then DROPPED from it. Same days, same purposes,
+  // minus the impossible ones — it cannot re-shape, re-dose or re-place
+  // anything, which is the same "it can only REMOVE" discipline Sam chose for
+  // the row sweep in R-377.
+  //
+  // A purpose is dropped only when the injury takes EVERY pattern it offers:
+  // prohibiting `push` alone leaves `upper` runnable as pull, and deleting it
+  // would remove work the athlete can safely do.
+  const injuryProhibited = new Set(inputs.prohibitedPatterns ?? []);
+  if (injuryProhibited.size > 0) {
+    const impossible = (purpose: SessionPurpose): boolean => {
+      const offered = MAIN_PATTERNS_FOR_PURPOSE[purpose];
+      return offered.length > 0 && offered.every((pattern) => injuryProhibited.has(pattern));
+    };
+    if (best.assignment.some((slot) => impossible(slot.purpose))) {
+      // **SUBSTITUTE BEFORE DROPPING — "whatever can fit that makes sense".**
+      // Sam's sentence has two halves and the second only applies once the
+      // first fails: *"it can become whatever can fit that makes sense that
+      // week … if nothing fits and they can't press then it's nothing"*. A
+      // no-game week with a paused shoulder still has safe lower patterns and
+      // ordinary days to put them on, so it keeps its COUNT by substitution and
+      // must not authorise a frequency reduction (G1).
+      //
+      // Candidates are ranked same-region first, so a push day becomes a pull
+      // day before it becomes a lower day. Every candidate must be BOTH safe
+      // under the injury AND legal in place — the substitute is re-checked
+      // against the whole arrangement, so nothing walks past G-2, G-1 or
+      // spacing on its way in.
+      const region = (purpose: SessionPurpose): boolean => PURPOSE_IS_LOWER[purpose];
+      const substituted: { day: number; purpose: SessionPurpose }[] = [];
+      const dropped: { day: number; purpose: SessionPurpose }[] = [];
+      let working = [...best.assignment];
+      for (let index = 0; index < working.length; index += 1) {
+        const slot = working[index];
+        if (!impossible(slot.purpose)) continue;
+        const candidates = ALL_SESSION_PURPOSES
+          .filter((purpose) => purpose !== slot.purpose && !impossible(purpose))
+          .sort((a, b) => Number(region(a) !== region(slot.purpose))
+            - Number(region(b) !== region(slot.purpose)));
+        const fits = candidates.find((purpose) => {
+          const trial = working.map((entry, position) =>
+            position === index ? { day: entry.day, purpose } : entry);
+          return assignmentIsLegal(trial, inputs);
+        });
+        if (fits) {
+          substituted.push({ day: slot.day, purpose: fits });
+          working = working.map((entry, position) =>
+            position === index ? { day: entry.day, purpose: fits } : entry);
+        }
+      }
+      // Whatever could not be substituted is DROPPED — the day is left empty
+      // rather than filled with work the athlete cannot do.
+      const kept = working.filter((slot) => {
+        if (!impossible(slot.purpose)) return true;
+        dropped.push(slot);
+        return false;
+      });
+      if (dropped.length > 0) {
+        reductionDisclosure = {
+          intendedStrengthCount: authored,
+          deliveredStrengthCount: kept.length,
+          omittedPurpose: dropped[0]?.purpose ?? null,
+          reason: `${dropped.length} session(s) omitted — the athlete's active injury `
+            + `prohibits every main pattern they offer (${[...injuryProhibited].join(', ')}) `
+            + 'and nothing safe fits those days. The day is left empty rather than '
+            + 'filled with work they cannot do.',
+        };
+      }
+      best = { assignment: kept };
+    }
+  }
+
   const needed = best.assignment.length;
 
   const overlayOptional = inputs.phase === 'Off-season'

@@ -112,7 +112,7 @@ export function canonicalWeeklyInjuryStateFrom(args: {
   const activeSprintRestriction = (args.generationConstraints?.injuries ?? []).some((injury) =>
     (injury.region === 'lower_body' || injury.region === 'back_midline') &&
       (injury.pauseAffectedTraining || injury.removeRiskyWork ||
-        SPRINT_TRIGGER.test(injury.triggers.join(' '))));
+        SPRINT_TRIGGER.test((injury.triggers ?? []).join(' '))));
 
   return {
     kind: 'injury',

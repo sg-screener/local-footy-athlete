@@ -290,14 +290,35 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
 
   const microcycles = states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
-    const generationConstraints = args.activeConstraints
+    /* ⚠ AN EMPTY ARRAY IS TRUTHY, AND THAT DROPPED THE ATHLETE'S INJURIES.
+     *
+     * This read `args.activeConstraints ? build(...) : args.generationConstraints`.
+     * `generateProgramLocally` passes BOTH — a resolved `generationConstraints`
+     * and `activeConstraints`, which is `[]` whenever the constraints did not
+     * come from the coach-updates store — so the branch built a context from
+     * ZERO constraints and discarded the resolved one. A severe shoulder injury
+     * reached generation and arrived as no prohibition at all, which is why
+     * WC-064 could not see it and the G-2 day was still laid out as `upper_push`.
+     *
+     * Rebuilding is right when there ARE active constraints (they are dated and
+     * must be re-resolved against this week). With none, the resolved context is
+     * the better answer, and the empty build is kept only as the last resort so
+     * a caller supplying neither gets exactly what it got before. */
+    const generationConstraints = args.activeConstraints?.length
       ? buildGenerationConstraintContext({
           activeConstraints: args.activeConstraints,
           todayISO: blockState.weekStart,
           periodEndISO: blockState.weekEnd,
           temporarySourceFacts: args.temporarySourceFacts,
         })
-      : args.generationConstraints;
+      : args.generationConstraints ?? (args.activeConstraints
+        ? buildGenerationConstraintContext({
+            activeConstraints: args.activeConstraints,
+            todayISO: blockState.weekStart,
+            periodEndISO: blockState.weekEnd,
+            temporarySourceFacts: args.temporarySourceFacts,
+          })
+        : undefined);
     // The door changes the DOSE, not the week's identity. `weekKind` is
     // structure — the block plan's own statement about what this week is — and
     // Sam's law holds structure constant while the work shrinks. Overwriting it
