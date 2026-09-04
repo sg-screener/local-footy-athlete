@@ -81,11 +81,19 @@ export function isMainLift(row: Pick<WorkoutExercise, 'role' | 'exercise'>): boo
   // rows carry no `role` at all (measured 2026-08-13), so a reader that trusted
   // the field alone would see almost no main lifts and report a clean app.
   if (row.role) return row.role === 'main_lift';
+  // ⚠ **THE SAME FALLBACK THE SCREEN USES, AND IT MUST STAY THE SAME ONE.**
+  // Those 198 role-less rows are not roleless: they carry the composer's
+  // `section18Evidence.role`, which `sessionRoleForRow` reads before it reaches
+  // the name. Leaving this reader on the bare name classifier would make the
+  // law and the glass disagree about which rows are main lifts — the law would
+  // miss a real second main off the accessory bench (measured: `Leg Press`
+  // filled the squat seat 406 times out of 406) and could flag a supporting
+  // `Barbell Row` that is not one. One fact, one resolver.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { classifyExerciseRole } = require('../utils/sessionRoles') as {
-    classifyExerciseRole: (raw: string) => string;
+  const { sessionRoleForRow } = require('../utils/sessionRoles') as {
+    sessionRoleForRow: (row: unknown, raw: string) => string;
   };
-  return classifyExerciseRole(name) === 'main_lift';
+  return sessionRoleForRow(row, name) === 'main_lift';
 }
 
 export interface MainLiftPatternConflict {

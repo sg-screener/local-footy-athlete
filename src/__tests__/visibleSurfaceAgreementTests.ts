@@ -50,6 +50,7 @@ import { devE2EWeekStartForSeed } from '../dev/e2e/devE2ESeedIds';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { composeDayDetail } from '../utils/dayDetailComposition';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
+import { classifyExerciseRole } from '../utils/sessionRoles';
 import { buildSwapSuggestionPayload } from '../utils/swapSuggestionPayload';
 import { loadForReplacementExercise } from '../rules/blockBoundaryProgression';
 import * as fs from 'fs';
@@ -678,6 +679,92 @@ function run(): void {
   // canonical exclusion and leaves the slot empty. The live door, restart and
   // exact Restore behaviour are held by `test:exercise-removal-owner`.
   // ═══════════════════════════════════════════════════════════════════════
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [12] THE MAIN LIFT BADGE IS THE COMPOSER'S DECISION, NOT THE POOL ARRAY
+  //      (Sam, 2026-09-04)
+  //
+  // *"The screen is lying to you about main lifts."* MEASURED over the
+  // preserved 52-week driver: on **14 of 14** `lower_squat` days the athlete
+  // saw NO main lift at all. The composer had chosen one every single week —
+  // `Leg Press`, 406 selections out of 406 — and the screen badged it
+  // `accessory`, because `classifyExerciseRole` answers from WHICH ARRAY the
+  // name sits in (`STRENGTH_POOLS[slot].anchor` vs `.accessory`) rather than
+  // from the seat the row actually filled.
+  //
+  // **THAT IS A SECOND AUTHORITY ON A DECIDED FACT, and R-092 already named
+  // the first:** *"the composer DECIDES the role; §18 reads this rather than
+  // re-inferring it from the exercise name."* Both row producers —
+  // `materialiseComposedWeek` and the retained `defaultProgram` adapter —
+  // have written `section18Evidence.role` all along. Nothing new is authored
+  // here; the screen stops re-deriving and reads what was already recorded.
+  //
+  // ⚠ THE NAME CLASSIFIER IS NOT DELETED. Rows nobody has authored (athlete
+  // additions, legacy stored weeks) still have no evidence to read, and for
+  // them the pool lookup remains the honest answer. What it may no longer do
+  // is OVERRULE a row whose role was decided.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[12] The main lift badge is the composer\'s decision');
+
+  // Non-vacuity, both directions: these two names classify the WRONG way round
+  // by pool array alone, which is the whole defect. If either of these cells
+  // goes green-and-empty the fixture has stopped exercising the conflict.
+  check('non-vacuity: Goblet Squat is an ACCESSORY-array name',
+    classifyExerciseRole('Goblet Squat') === 'accessory',
+    classifyExerciseRole('Goblet Squat'));
+  check('non-vacuity: Barbell Row is an ANCHOR-array name',
+    classifyExerciseRole('Barbell Row') === 'main_lift',
+    classifyExerciseRole('Barbell Row'));
+
+  const badgeRow = (
+    identity: string,
+    role: 'main_strength' | 'strength_accessory',
+    slot: string,
+  ): any => ({
+    identity, slot, role,
+    mainStrengthPattern: role === 'main_strength' ? 'squat' : null,
+    doseCategory: 'main', sets: 3, repsMin: 5, repsMax: 5, load: 60,
+  });
+  const badgeDay: any = {
+    dayOfWeek: 1, planEntryId: 'p-badge', name: 'Lower Strength',
+    workoutType: 'Strength', sessionTier: 'core', kind: 'lower',
+    requiredSlots: ['squat'], declaredSlots: ['squat'],
+    rows: [
+      // The squat seat, filled off the accessory bench because no rack exists.
+      badgeRow('Goblet Squat', 'main_strength', 'squat'),
+      // A supporting row whose NAME is an anchor — the inverse leak.
+      badgeRow('Barbell Row', 'strength_accessory', 'horizontal_pull'),
+    ],
+  };
+  const badgeWorkout: any = materialiseComposedWeek(
+    { days: [badgeDay], gaps: [] } as any,
+    { microcycleId: 'mc-badge', weekStartISO: '2026-07-13' } as any,
+  )[0];
+  const badgeRows: any[] = badgeWorkout?.exercises ?? [];
+  check('non-vacuity: the materialiser produced both badge rows',
+    badgeRows.length === 2, `${badgeRows.length} rows`);
+  check('non-vacuity: the composer\'s decision reached §18 evidence',
+    badgeRows[0]?.section18Evidence?.role === 'main_strength'
+      && badgeRows[1]?.section18Evidence?.role === 'strength_accessory',
+    `${badgeRows[0]?.section18Evidence?.role} / ${badgeRows[1]?.section18Evidence?.role}`);
+
+  // THE ATHLETE-VISIBLE CLAIM. Not the evidence field — the session the
+  // athlete opens, built by the same owner every screen uses.
+  const badgeItems: any[] = buildSessionTemplate(badgeWorkout).items
+    .filter((item: any) => item.kind === 'exercise');
+  const badgeRoleOf = (name: string): string | undefined => badgeItems
+    .find((item: any) => String(item.row?.exercise?.name ?? item.row?.name ?? '') === name)
+    ?.role;
+  check('THE SEAT DECIDES: a main lift off the accessory bench badges Main Lift',
+    badgeRoleOf('Goblet Squat') === 'main_lift',
+    `Goblet Squat badged ${badgeRoleOf('Goblet Squat')}`);
+  check('AND THE INVERSE: an anchor name in a supporting seat does NOT',
+    badgeRoleOf('Barbell Row') === 'accessory',
+    `Barbell Row badged ${badgeRoleOf('Barbell Row')}`);
+  check('so the squat day the athlete opens carries a visible main lift',
+    badgeItems.some((item: any) => item.role === 'main_lift'),
+    badgeItems.map((item: any) => item.role).join(' | '));
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

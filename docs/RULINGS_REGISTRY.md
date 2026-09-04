@@ -9312,3 +9312,41 @@ the OPPOSITE — they pinned `cueTextOverride={exercise.notes}` as required — 
 are INVERTED here, not deleted. Proven on glass 2026-09-04: `Jefferson Curl`
 and `Bosch Hold` both read their curated cue in Movement Prep.
 Receipts: `docs/STATUS_LONGCUES.md`.
+
+**R-367** · The main-lift badge is the seat's, not the exercise's, 2026-09-04.
+
+Owner: variety. Sam: *"the screen is lying to you about main lifts."* Whether a
+row wears the main-lift badge is decided by THE SEAT IT FILLED, never by which
+pool array its name sits in. `utils/sessionRoles.sessionRoleForRow` is the one
+resolver: `section18Evidence.role === 'main_strength'` is a main lift;
+`'strength_accessory'` is not, and may not be promoted by an anchor-bench name;
+a row carrying no evidence still falls to `classifyExerciseRole`, which is
+retained for athlete additions and legacy stored weeks and is no longer allowed
+to overrule a decided row.
+
+This restores R-092 (*"the composer DECIDES the role; §18 reads this rather than
+re-inferring it from the exercise name"*) on the athlete's surface. Nothing new
+is authored: `materialiseComposedWeek` and the retained `defaultProgram` adapter
+have both written `section18Evidence.role` all along, and `deloadWeekRules`
+already read it with this exact precedence. The screen was a second authority
+and it was winning.
+
+MEASURED over the preserved 52-week driver, before: **14 of 14 `lower_squat`
+days shipped with no main lift on the glass**, while the composer had chosen one
+every week — `Leg Press`, 406 selections of 406, reason `single_legal_candidate`.
+After: 0 such days, and exactly **108 rows moved from `accessory` to
+`main_lift`** with the total row count, prehab, midline, power, conditioning and
+team-training counts all unchanged. Every day gaining a second main lift is one
+horizontal plus one vertical (or squat plus hinge), which is R-305's shape;
+`test:main-lift-pattern` reports 0 R-070 breaches across 35 generated sessions.
+
+`rules/mainLiftPatternLaw.isMainLift` reads the same resolver, so R-070 and the
+glass cannot disagree about which rows are main lifts.
+
+NOT COVERED: `deloadWeekRules` keeps an inline copy of the same precedence
+because its fallback resolves aliases with `resolveExerciseName`; folding it in
+is the next convergence and is named in `docs/STATUS_VARIETY.md`.
+
+Guard: `test:visible-surfaces` section [12], both directions, driving the real
+materialiser and the real session-template owner. Receipts:
+`docs/STATUS_VARIETY.md`.

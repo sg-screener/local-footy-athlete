@@ -133,3 +133,40 @@ export function classifyExerciseRole(rawName: string): SessionRole {
   // gets the least-claiming badge rather than being dropped or thrown on.
   return 'accessory';
 }
+
+/**
+ * ⚠ **THE SEAT DECIDES THE BADGE. THE POOL ARRAY ONLY GUESSES.** (Sam,
+ * 2026-09-04: *"the screen is lying to you about main lifts"*.)
+ *
+ * `classifyExerciseRole` above answers from WHICH ARRAY a name sits in —
+ * `STRENGTH_POOLS[slot].anchor` versus `.accessory`. That is a property of the
+ * exercise, and the badge is a property of the SEAT IT FILLED. MEASURED over
+ * the preserved 52-week driver: on **14 of 14** `lower_squat` days the athlete
+ * saw no main lift at all, because the composer's chosen squat — `Leg Press`,
+ * 406 selections out of 406 — lives on the accessory bench and was badged
+ * `accessory` on the glass.
+ *
+ * **R-092 ALREADY SETTLED WHO OWNS THIS:** *"the composer DECIDES the role;
+ * §18 reads this rather than re-inferring it from the exercise name."* Both row
+ * producers have written `section18Evidence.role` all along —
+ * `materialiseComposedWeek` for composed days, the retained `defaultProgram`
+ * adapter for the rest. **Nothing new is authored here.** The screen stops
+ * being a second authority and reads the decision that was already recorded.
+ *
+ * ⚠ **THE NAME CLASSIFIER IS NOT DELETED, AND THAT IS DELIBERATE.** Rows nobody
+ * has authored — athlete additions, legacy stored weeks — carry no evidence,
+ * and for them the pool lookup remains the honest answer. What it may no longer
+ * do is OVERRULE a row whose role was decided: a declared supporting row whose
+ * NAME happens to be an anchor (`Barbell Row` in a second pull seat) stops
+ * wearing the main-lift badge.
+ *
+ * Held by `test:visible-surfaces` section [12], both directions.
+ */
+export function sessionRoleForRow(row: unknown, rawName: string): SessionRole {
+  const declared = (row as { section18Evidence?: { role?: string } } | null | undefined)
+    ?.section18Evidence?.role;
+  if (declared === 'main_strength') return 'main_lift';
+  const classified = classifyExerciseRole(rawName);
+  if (declared === 'strength_accessory' && classified === 'main_lift') return 'accessory';
+  return classified;
+}

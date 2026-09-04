@@ -7,7 +7,7 @@ import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity, conditioningModeLabel, conditioningModeLabelForRow, conditioningRowForDisplay } from './conditioningVisibleIdentity';
 import {
   SESSION_ROLE_ORDER,
-  classifyExerciseRole,
+  sessionRoleForRow,
   sessionRoleRank,
   type SessionRole,
 } from './sessionRoles';
@@ -294,7 +294,13 @@ function exerciseItem(
     // would badge and ORDER as an accessory instead of leading the session. Role
     // is authored, not inferred; the name classifier is the fallback for rows
     // nobody has authored yet.
-    role: options.role ?? row?.role ?? classifyExerciseRole(rowName(row)),
+    //
+    // ⚠ **AND THE COMPOSER'S SEAT DECISION SITS BETWEEN THE TWO** (Sam,
+    // 2026-09-04). `sessionRoleForRow` reads `section18Evidence.role` — the
+    // role R-092 already made the composer's to decide — before falling back to
+    // the name. Without it the athlete's squat day showed NO main lift on 14 of
+    // 14 measured weeks, because the chosen squat came off the accessory bench.
+    role: options.role ?? row?.role ?? sessionRoleForRow(row, rowName(row)),
     presentation,
     row,
     superset: options.superset ?? null,
