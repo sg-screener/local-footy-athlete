@@ -617,3 +617,52 @@ meanwhile that the CANCELLED sentence must never ship.
 **THE YEAR IS PARTLY BLIND HERE.** Its shoulder episode is 4/10, which prohibits
 `push` only, so the severe both-patterns case that prompted all this never occurs
 in `year:diff`. The severe case is held by `test:injury-authority`.
+
+## R-379 FOLLOW-UP — THE SHOWCASE SEED, AND THE WALL IT FOUND (2026-09-05)
+
+Sam: *"give me a way to see it"*. `empty-day-reason-showcase` is that seed.
+
+**IT DOES EMPTY DAYS, AND THAT ALONE WAS NEW.** Four gym days, ZERO club nights,
+and both regions in the pause band. Measured on device: Tuesday and Thursday come
+back as **Rest Day**. No other seed reaches that state, and neither does the
+Injured door on the standard athlete: a severe shoulder alone empties NOTHING
+(the scheduler substitutes), and a second severe injury only took a Tuesday down
+to `Team Training`.
+
+**AND IT DOES NOT SHOW THE REASON LINE, WHICH IS THE FINDING.**
+
+The carry is proven on both sides of the gap:
+
+- `buildDevE2ESeed('empty-day-reason-showcase')` produces a stored week whose
+  `restDayReasonByDay` is `{4: 'injury'}`.
+- feeding that week to `buildProgramTabProjectedWeek` gives day 4 its
+  `restReason`, so the card would render the sentence.
+
+**What breaks it is between those two, and it is already a known open item.**
+`DevE2ESeedCoordinator`'s own ordering note records that *"an injury that severe
+REBUILDS the program"*, and the injury path **validates the existing base rather
+than re-authoring it** — the quarantined `I6` in `injuryAuthorityOwnershipTests`.
+So the days are emptied by the ROW filters, and the scheduler, the only owner
+that can say WHY a day is empty, never re-plans them.
+
+**THE OWNER IS I6, NOT THIS SEED AND NOT R-379.** The reason reaches the athlete
+on any week GENERATED with the injury known; it cannot reach a week the injury
+door rebuilt, because that rebuild does not re-plan. Sam has been told plainly.
+
+### Also landed here
+
+**The dev-harness injury seed could only express ONE lower-body moderate
+injury.** `region`, `severityBand`, `adjustmentLevel` and `triggers` were
+hard-coded in two places, and `devE2ESeedTestSupport` modelled only the FIRST
+episode with `.find` — the same "not just the first" lesson its own feedback
+comment already recorded. All four are now optional and default to exactly what
+was hard-coded, so `injury-case` is byte-identical.
+
+| gate | result |
+| --- | --- |
+| `test:rest-day-reason` | **19/19** |
+| `test:injury-authority` | **26/26** |
+| `test:dev-e2e-seeds` | **109/109** |
+| `test:compiler-year` | **416/416, 0 failure keys** |
+| `test:compile` | **0 errors** |
+| writer census | **0 unresolved / 1170** |

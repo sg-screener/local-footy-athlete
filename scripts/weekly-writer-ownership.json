@@ -102,14 +102,14 @@
       "reason": "hingecod 2026-09-03 re-review (drift: composed strength days, canonical dose policies, weekly selector, fixture proximity): the adapter that turns plan entries and coach inputs into workouts under the canonical compiler's ownership. Pure over its inputs; the equipment resolver is a read."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#buildDevE2ESeed": {
-      "fingerprint": "2b4047441f32c2668f7d6da34dbc5c9cab529071002fa466be1e2328222d4293",
+      "fingerprint": "814ddd1df9724996744f90a6be45e6c6e5f2875e0c7b968f266057e3ca2b1674",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: program_control auxiliary actions, practice-match marks, showcase seed dose from any supporting row): dev seed constructor packages canonical generated output with explicit feedback/injury/equipment/program-control actions and read-only witnesses; the coordinator installs it through the transaction doors."
+      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/dev/e2e/defaultDevE2ESeedCoordinator.ts#applyAuxiliaryState": {
-      "fingerprint": "d2e5165f4458b54838d765b4c89ac4525f5561e7faac3749a3145de5756ad917",
+      "fingerprint": "af10b8b080ac496d475e445afc18561da0ff7115e22dda8b296fa007476fab73",
       "classification": "canonical_input_writer",
-      "reason": "Diagnostic auxiliary installer submits injury and program-control actions to their owners, records equipment input through the accepted boundary and feedback through the outcome transaction; no hand-authored session mutation."
+      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/store/quiescentBoot.ts#rebuildDerivedWorldNow": {
       "fingerprint": "8ad0defe83ce1c3ebcfbd405c2a07eabf66121b20570391b56924146ca64c859",
@@ -117,9 +117,9 @@
       "reason": "Boot/settlement rebuild clears derived in-memory caches, runs canonical generation and grouped ledger compiler transforms, then compiles accepted source facts. Current fixture/session effects never call live mutation resolvers; legacy upgrades are isolated input metadata."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#witnessesForDevE2ESeed": {
-      "fingerprint": "304fe1bc3ba4b556ee6794b3c6f7e3f288d1ccdcf5cf2ef01244c16a2c5732c6",
+      "fingerprint": "382cd9c9b6fa800bbbd744f2680a61057d828228b0d615cce4cf6e51e648a2ea",
       "classification": "projection_display",
-      "reason": "Builds observer assertions from the unmodified canonical seed and known auxiliary input actions; no program mutation. Updated spent-week witness to typed optional-day eligibility and coach witness to the actual generated hamstring-session identity. Diagnostic matrix passes all initial witnesses."
+      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/rules/section18EffectiveWeekEvaluator.ts#buildLedger": {
       "fingerprint": "76729f2aa6ad946b8ee44b88cc4c20825b75358c88113f09be568265467e7717",
@@ -1547,9 +1547,9 @@
       "reason": "Injury preview invokes the same source-fact compiler from its pre-fact continuation and fails closed when absent. It never writes accepted state."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#deterministicProgram": {
-      "fingerprint": "77abcf331b468e4c128a8bf04c9a2197bf9f79e09cfdd84a0f5500ffa4fbf6b3",
+      "fingerprint": "92df32f02422176ef869780880dd8a2f53df606e0b16d84fa9a85f99be531dfa",
       "classification": "canonical_input_writer",
-      "reason": "Diagnostic seed requests the canonical generator with explicit profile/date/block inputs and returns its exact result. All 17 seeds use the normal four-week block; no shortened denominator or seed-specific output rewrite. Reviewed caller and generator boundary remain canonical."
+      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/rules/g1LandingAsk.ts#deloadedSession": {
       "fingerprint": "cb144a378635103b3df595a2321800559e547f8fca5f1ab55893eb9e009d8472",
@@ -3632,9 +3632,9 @@
       "reason": "hingecod 2026-09-03: classifies a plan entry's strength region. Pure."
     },
     "src/dev/e2e/defaultDevE2ESeedCoordinator.ts#<module>": {
-      "fingerprint": "35a99d820a457ea29ea62109135f61c2a2d3592199ce45c6aa3add1c18adec6b",
+      "fingerprint": "62895b569bd926b2dfa5dcf920421166f41d2211a50afd4a7c393fecb4e7d588",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: dev-only seed coordinator module — imports plus the DEFAULT_DEPS table binding the coordinator to the public doors (profile setters, accepted-state transaction, outcome transaction, injury episode, checkpoint/session harness). No load-time writes."
+      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/rules/fixtureStrengthPurposeSelection.ts#rankStrengthTemplatesForWeek": {
       "fingerprint": "8b4403d9e452d09067547dad933731eb8e31573b78fbfe0674803a136ecdccff",

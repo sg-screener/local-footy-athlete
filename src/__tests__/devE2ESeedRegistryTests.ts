@@ -36,6 +36,8 @@ const EXPLORER_SEEDS = [
 
 const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
   'session-layout-showcase': 'program,profile_exact,exercise_present',
+  // R-379: both injuries are witnessed; one alone does not empty a day.
+  'empty-day-reason-showcase': 'program,profile_exact,active_injury,active_injury',
   'conditioning-showcase': 'program,profile_exact',
   'block-rollover': 'program,profile_exact,accepted_week_count',
   'standard-in-season-week': 'program,profile_exact,calendar_mark',
@@ -101,7 +103,7 @@ try {
     // block-rollover, conditioning-showcase) while this stale count remained
     // red. 16 -> 17 is the R-227 revised Wednesday-signup glass world.
     'the seed registry count names the dedicated midweek-signup addition',
-    DEV_E2E_SEED_IDS.length === 17 &&
+    DEV_E2E_SEED_IDS.length === 18 &&
       DEV_E2E_SEED_IDS.includes('midweek-signup') &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===

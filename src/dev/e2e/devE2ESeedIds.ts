@@ -29,6 +29,31 @@ export const DEV_E2E_SEED_IDS = [
    * and the long name is `Half-Kneeling Single-Arm Overhead Press`, 39
    * characters and already in the authored pool. Nothing is invented. */
   'session-layout-showcase',
+  /* ── R-379, ADDED 2026-09-05 AT SAM'S REQUEST ("give me a way to see it").
+   * A day the app deliberately left EMPTY, so its reason line can be read on a
+   * device. It exists because that state is genuinely RARE: measured on a
+   * device, a severe shoulder emptied nothing at all (the week substitutes and
+   * keeps its shape), and a second severe injury only took a Tuesday down to
+   * team training. It takes BOTH regions paused AND no club night to absorb the
+   * freed day. **Nothing is hand-built: it answers onboarding with no team
+   * nights and reports two real injuries through the real episode writer, then
+   * the production generator decides the week.**
+   *
+   * ⚠ **WHAT IT SHOWS TODAY, AND WHAT IT DOES NOT.** Tuesday and Thursday come
+   * back as Rest Day, which is the point. **The R-379 reason line does NOT yet
+   * appear on them**, and the cause is not this seed: installing an injury
+   * REBUILDS the program (see `DevE2ESeedCoordinator`'s own ordering note), and
+   * the injury path *validates the existing base rather than re-authoring it* —
+   * the quarantined `I6` finding in `injuryAuthorityOwnershipTests`. So the days
+   * are emptied by the ROW filters, and the scheduler, which is the only owner
+   * that can say WHY a day is empty, never re-plans them.
+   *
+   * The carry itself is proven both sides of that gap: `buildDevE2ESeed` here
+   * produces a week whose stored `restDayReasonByDay` is `{4: 'injury'}`, and
+   * feeding that week to `buildProgramTabProjectedWeek` gives day 4 its
+   * `restReason`. **What is missing is the injury door re-planning the week**,
+   * which is `I6`'s owner and not this seed's to fix. */
+  'empty-day-reason-showcase',
   /* ── SANCTIONED 2026-08-26 FOR THE BLOCK-ROLLOVER DEVICE RUN (Sam: "do the
    * rollover test world now"). THE FIRST TWO-DATE SEED: its program is
    * generated at its own start (2026-07-13, block 1, four microcycles ending
@@ -77,6 +102,8 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   'one-set-strength': '2026-07-13',
   'fixture-move': '2026-07-13',
   'injury-case': '2026-07-13',
+  // R-379's showcase, on the same Monday anchor as the other one-week seeds.
+  'empty-day-reason-showcase': '2026-07-13',
   'equipment-restriction-case': '2026-07-13',
   'feedback-progression-case': '2026-07-13',
   'multi-reload-fixture-chain': '2026-07-13',

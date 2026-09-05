@@ -97,17 +97,33 @@ function visibleWorkoutForDate(
   return workoutForDate(seed.program, date);
 }
 
-function canonicalInjuryEpisode(
+/**
+ * ⚠ **EVERY EPISODE, NOT JUST THE FIRST — the same lesson the feedback entries
+ * already learned below.** This used to `.find` one injury, so a seed with two
+ * (R-379's empty-day showcase needs BOTH regions paused, because one alone lets
+ * the scheduler substitute and no day comes back empty) modelled only one and
+ * its second witness failed for a harness reason, not a product one.
+ *
+ * `region` and `triggers` come off the seed now as well; they were hard-coded to
+ * the lower-body values, which is the same reason an upper-body seed could not
+ * be expressed here.
+ */
+function canonicalInjuryEpisodes(
   seed: DevE2ESeed,
-): InjuryEpisodeV1 | null {
-  const injury = seed.auxiliaryState.find((item) =>
-    item.kind === 'canonical_injury_episode');
-  if (!injury || injury.kind !== 'canonical_injury_episode') return null;
+): InjuryEpisodeV1[] {
+  return seed.auxiliaryState.flatMap((item) =>
+    (item.kind === 'canonical_injury_episode' ? [injuryEpisodeFrom(seed, item)] : []));
+}
+
+function injuryEpisodeFrom(
+  seed: DevE2ESeed,
+  injury: Extract<DevE2ESeed['auxiliaryState'][number], { kind: 'canonical_injury_episode' }>,
+): InjuryEpisodeV1 {
   return {
     protocolVersion: 1,
     episodeId: injury.expectedEpisodeId,
     bodyPart: injury.bodyPart,
-    region: 'lower_body',
+    region: injury.region ?? 'lower_body',
     bucket: injury.injuryKey,
     severity: injury.severity,
     status: 'active',
@@ -115,7 +131,7 @@ function canonicalInjuryEpisode(
     createdAt: FIXED_TIMESTAMP,
     updatedAt: FIXED_TIMESTAMP,
     resolvedAt: null,
-    triggers: ['Sprinting', 'Running'],
+    triggers: [...(injury.triggers ?? ['Sprinting', 'Running'])],
     seriousSymptoms: false,
     transitionHistory: [{
       timestamp: FIXED_TIMESTAMP,
@@ -156,8 +172,8 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
   const dateOverrides: Record<string, Workout | null> = {};
   const overrideContexts: DevE2EWitnessState['overrideContexts'] = {};
 
-  const injuryEpisode = canonicalInjuryEpisode(seed);
-  const injuryAux = seed.auxiliaryState.find((item) =>
+  const injuryEpisodes = canonicalInjuryEpisodes(seed);
+  const injuryAuxes = seed.auxiliaryState.filter((item) =>
     item.kind === 'canonical_injury_episode');
   const equipment = seed.auxiliaryState.find((item) =>
     item.kind === 'temporary_equipment');
@@ -225,13 +241,14 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
     profile: seed.profile,
     calendarMarks,
     activeConstraints: [
-      ...(injuryAux?.kind === 'canonical_injury_episode'
-        ? [{
-            id: injuryAux.constraintId,
-            type: 'injury',
-            injuryEpisodeId: injuryAux.expectedEpisodeId,
-          }]
-        : []),
+      ...injuryAuxes.flatMap((injuryAux) =>
+        (injuryAux.kind === 'canonical_injury_episode'
+          ? [{
+              id: injuryAux.constraintId,
+              type: 'injury',
+              injuryEpisodeId: injuryAux.expectedEpisodeId,
+            }]
+          : [])),
       ...(equipment?.kind === 'temporary_equipment'
         ? [{
             id: `equipment-temporary:${equipment.date}`,
@@ -245,9 +262,9 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
           }]
         : []),
     ],
-    injuryEpisodes: injuryEpisode ? [injuryEpisode] : [],
+    injuryEpisodes,
     temporarySourceFacts: [
-      ...(injuryEpisode ? [injuryEpisode] : []),
+      ...injuryEpisodes,
       ...(equipmentFact ? [equipmentFact] : []),
     ],
     readinessSignalsByDate: {},

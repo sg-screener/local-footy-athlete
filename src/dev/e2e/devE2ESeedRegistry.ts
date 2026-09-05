@@ -33,6 +33,7 @@ import {
 import { DEV_E2E_STANDARD_PROFILE } from './devE2EStandardProfile';
 import { semanticFingerprint } from './semanticFingerprint';
 import type { ProgramControlAction } from '../../types/programControlAction';
+import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 
 export {
   DEV_E2E_DATE_ANCHORS,
@@ -48,10 +49,19 @@ export type DevE2EAuxiliaryState =
       kind: 'canonical_injury_episode';
       constraintId: string;
       expectedEpisodeId: string;
-      injuryKey: 'hamstring';
+      /* WIDENED 2026-09-05 (R-379's showcase). It was `'hamstring'` alone, and
+       * the coordinator hard-coded `region: 'lower_body'` with a MODERATE band
+       * beside it, so no seed could express an upper-body or a pause-band
+       * injury. Every field below is OPTIONAL and falls back to exactly what was
+       * hard-coded, so `injury-case` is byte-identical. */
+      injuryKey: 'hamstring' | 'shoulder';
       bodyPart: string;
       severity: number;
       date: string;
+      region?: 'upper_body' | 'lower_body' | 'back_midline';
+      severityBand?: 'mild' | 'slight' | 'moderate' | 'avoid';
+      adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
+      triggers?: readonly string[];
     }
   | { kind: 'temporary_equipment'; presetId: 'bodyweight_only'; date: string }
   | { kind: 'calendar_game'; date: string }
@@ -221,6 +231,9 @@ export interface DevE2EWitnessState {
 
 const FIXED_TIMESTAMP = '2026-07-13T12:00:00.000Z';
 const INJURY_CONSTRAINT_ID = 'dev-e2e-injury-right-hamstring';
+/** R-379's showcase: both regions paused, which is what empties a day. */
+const SHOWCASE_UPPER_INJURY_CONSTRAINT_ID = 'dev-e2e-showcase-injury-right-shoulder';
+const SHOWCASE_LOWER_INJURY_CONSTRAINT_ID = 'dev-e2e-showcase-injury-right-hamstring';
 /** Monday / Tuesday / Thursday — the days already recorded Done by Friday. */
 const SPENT_WEEK_DONE_OFFSETS = [0, 1, 3] as const;
 
@@ -259,6 +272,53 @@ function fixedProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   };
 }
 
+
+/**
+ * R-379's showcase generates WITH its injuries, and that is the whole seed.
+ *
+ * ⚠ **THE OTHER SEEDS GENERATE HEALTHY AND APPLY INJURIES AFTERWARDS**, which is
+ * why the showcase first came back showing the ordinary rest line: the week had
+ * already been authored by a scheduler that never saw a prohibition, so the days
+ * the injury emptied were emptied by the ROW filters and carried no reason. The
+ * reason is the SCHEDULER's statement, so the scheduler has to be the one that
+ * sees the injury.
+ *
+ * The same two constraints are used for generation and for the auxiliary state,
+ * so the world the athlete opens and the episodes the app holds cannot disagree.
+ */
+function showcaseInjuryConstraints(date: string): ActiveInjuryConstraint[] {
+  const base = {
+    type: 'injury' as const,
+    status: 'active' as const,
+    source: 'coach' as const,
+    severity: 9,
+    severityBand: 'avoid' as const,
+    adjustmentLevel: 'training_paused' as const,
+    seriousSymptoms: false,
+    rules: [],
+    startDate: date,
+    lastUpdatedAt: FIXED_TIMESTAMP,
+  };
+  return [
+    { ...base,
+      id: SHOWCASE_UPPER_INJURY_CONSTRAINT_ID,
+      bodyPart: 'Right shoulder',
+      bucket: 'shoulder',
+      region: 'upper_body' as const,
+      triggers: ['Pressing'],
+      safeFocus: ['Lower-body strength and pain-free conditioning'],
+      advice: ['Get the shoulder looked at before pressing again'] },
+    { ...base,
+      id: SHOWCASE_LOWER_INJURY_CONSTRAINT_ID,
+      bodyPart: 'Right hamstring',
+      bucket: 'hamstring',
+      region: 'lower_body' as const,
+      triggers: ['Sprinting', 'Running'],
+      safeFocus: ['Pain-free upper-body work'],
+      advice: ['Progress running only while symptoms stay settled'] },
+  ] as ActiveInjuryConstraint[];
+}
+
 function deterministicProgram(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
@@ -270,7 +330,9 @@ function deterministicProgram(
     todayISO: anchorDate,
     blockNumber: 1,
     previousProgram: null,
-    activeConstraints: [],
+    activeConstraints: seedId === 'empty-day-reason-showcase'
+      ? showcaseInjuryConstraints(anchorDate)
+      : [],
     readinessSignal: null,
     // Match normal onboarding/boot: a shortened seed changes the accepted
     // block's required-session denominator when it is reconstructed.
@@ -513,6 +575,14 @@ function canonicalInjuryEpisodeId(): string {
   return `injury-episode:v1:${INJURY_CONSTRAINT_ID}:${suffix}`;
 }
 
+/* R-379's showcase needs TWO episodes, so the id is derived from the constraint
+ * rather than closed over the single one above. Same shape, same timestamp
+ * source, so the ids stay as deterministic as the original. */
+function showcaseInjuryEpisodeId(constraintId: string): string {
+  const suffix = FIXED_TIMESTAMP.replace(/[^0-9]/g, '').slice(0, 17);
+  return `injury-episode:v1:${constraintId}:${suffix}`;
+}
+
 
 function cleanSourceFactWitnesses(): DevE2EWitness[] {
   return [
@@ -560,6 +630,23 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
       teamTrainingDaysPerWeek: 2,
       teamTrainingDays: ['Monday', 'Thursday'],
+    });
+  }
+  if (seedId === 'empty-day-reason-showcase') {
+    /* ⚠ **ONLY ONBOARDING ANSWERS, THE SAME RULE AS EVERY SHOWCASE SEED.** Sam,
+     * 2026-08-20: *"Do not alter production programming or exercise content to
+     * manufacture screenshots."* So this changes what the ATHLETE ANSWERED and
+     * lets the real generator decide the week.
+     *
+     * **ZERO TEAM NIGHTS IS THE WHOLE POINT AND IT WAS MEASURED.** With club
+     * nights, the days the injury frees come back as Team Training rather than
+     * empty, which is why the standard seed could never show this. Four gym days
+     * and no club nights leave a day with nothing to absorb it. */
+    return fixedProfile({
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
     });
   }
   if (seedId === 'conditioning-showcase') {
@@ -843,6 +930,26 @@ export function witnessesForDevE2ESeed(
       });
       break;
     }
+    case 'empty-day-reason-showcase':
+      /* Both episodes are witnessed, because the seed is worthless if only one
+       * lands: with a single region paused the scheduler substitutes and NO day
+       * comes back empty, so the showcase would silently show the ordinary rest
+       * line and look like the feature was never built. */
+      witnesses.push({
+        kind: 'active_injury',
+        bodyPart: 'Right shoulder',
+        severity: 9,
+        episodeId: showcaseInjuryEpisodeId(SHOWCASE_UPPER_INJURY_CONSTRAINT_ID),
+        constraintId: SHOWCASE_UPPER_INJURY_CONSTRAINT_ID,
+      });
+      witnesses.push({
+        kind: 'active_injury',
+        bodyPart: 'Right hamstring',
+        severity: 9,
+        episodeId: showcaseInjuryEpisodeId(SHOWCASE_LOWER_INJURY_CONSTRAINT_ID),
+        constraintId: SHOWCASE_LOWER_INJURY_CONSTRAINT_ID,
+      });
+      break;
     case 'injury-case':
       witnesses.push({
         kind: 'active_injury',
@@ -1050,6 +1157,38 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       }
       break;
     }
+    case 'empty-day-reason-showcase':
+      /* BOTH REGIONS, BOTH IN THE PAUSE BAND. One alone is not enough: the
+       * scheduler SUBSTITUTES a purpose the athlete can still do (R-378), and
+       * only when every main pattern is prohibited does a day come back empty.
+       * That is the ruling working, so the showcase has to reach past it. */
+      auxiliaryState.push({
+        kind: 'canonical_injury_episode',
+        constraintId: SHOWCASE_UPPER_INJURY_CONSTRAINT_ID,
+        expectedEpisodeId: showcaseInjuryEpisodeId(SHOWCASE_UPPER_INJURY_CONSTRAINT_ID),
+        injuryKey: 'shoulder',
+        bodyPart: 'Right shoulder',
+        severity: 9,
+        region: 'upper_body',
+        severityBand: 'avoid',
+        adjustmentLevel: 'training_paused',
+        triggers: ['Pressing'],
+        date: anchorDate,
+      });
+      auxiliaryState.push({
+        kind: 'canonical_injury_episode',
+        constraintId: SHOWCASE_LOWER_INJURY_CONSTRAINT_ID,
+        expectedEpisodeId: showcaseInjuryEpisodeId(SHOWCASE_LOWER_INJURY_CONSTRAINT_ID),
+        injuryKey: 'hamstring',
+        bodyPart: 'Right hamstring',
+        severity: 9,
+        region: 'lower_body',
+        severityBand: 'avoid',
+        adjustmentLevel: 'training_paused',
+        triggers: ['Sprinting', 'Running'],
+        date: anchorDate,
+      });
+      break;
     case 'injury-case':
       auxiliaryState.push({
         kind: 'canonical_injury_episode',
