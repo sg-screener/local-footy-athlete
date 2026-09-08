@@ -31,3 +31,7 @@ Signup/account recovery/profile email are NOT implemented in the current sources
 ## NOT COVERED
 
 Combined focused/release/year results pending at this checkpoint. Native layout, actual mail delivery, signup/recovery/profile-email implementation, physical-iPhone acceptance, cloud sync, merge and deployment. Current UI folder/server/simulator remain untouched.
+
+## Sam's inbox correction
+
+Sam explicitly supplied hello@localfootyathlete.app during integration. Compared changing each button with updating the shared configuration owner. Changed the shared default and .env.example for both Feedback and Ask a Human. The actual copied .env has no old overrides. Added two assertions to the existing environment suite: 11 pass / 2 fail before the change; 13 pass / 0 fail after it. The red run itself proves both assertions detect the old inbox. Earlier one22gym address finding above is superseded by this correction. Delivery, inbox setup and account features remain NOT COVERED. This email-only correction does not change training behavior; in-progress training checks continue without restart.

@@ -16,7 +16,7 @@ export interface ClientEnvConfig {
   isReady: boolean;
 }
 
-const DEFAULT_SUPPORT_EMAIL = 'one22gym@gmail.com';
+const DEFAULT_SUPPORT_EMAIL = 'hello@localfootyathlete.app';
 
 function readPublicEnv(): PublicEnv {
   return {

@@ -30,6 +30,8 @@ check('Supabase URL is normalised', normal.supabaseUrl === 'https://project.supa
 check('the generic functions base remains available',
   normal.supabaseFunctionsBaseUrl === 'https://project.supabase.co/functions/v1');
 check('the public anon key is read', normal.supabaseAnonKey === 'anon-key');
+check('Ask a Human defaults to the approved app inbox', normal.supportEmail === 'hello@localfootyathlete.app');
+check('Feedback defaults to the approved app inbox', normal.feedbackEmail === 'hello@localfootyathlete.app');
 
 const alias = getClientEnvConfig({
   EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
