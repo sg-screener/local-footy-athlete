@@ -54,6 +54,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 /* eslint-disable import/first */
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
+import type { ProgramControlActionResult } from '../utils/programControlActions';
 import { coldStartThroughOnboarding, followTheWeek } from './support/athleteJourney';
 import { addDaysISO } from '../utils/programBlockState';
 import { useProgramStore } from '../store/programStore';
@@ -146,6 +147,7 @@ const CASES = [
 
 /** Every main-strength plane the mission names, and what has been walked. */
 const PATTERNS_SEEN = new Set<string>();
+const MAIN_SEATS_SEEN = new Set<string>();
 
 let pass = 0;
 let fail = 0;
@@ -378,6 +380,13 @@ async function main(): Promise<void> {
     /* The FINER identity — see `finerPatternIdentityOf`. `mainPattern` alone
      * cannot separate a split squat from a squat, so a coverage claim built on
      * it would under-report every single-leg world this suite walks. */
+    // R-373 permits a graded unilateral exercise to lead the squat seat.
+    // Keep main-seat coverage separate from the finer movement-family census.
+    for (const row of workoutOn(target, weekStart)?.exercises ?? []) {
+      const evidence = row.section18Evidence;
+      if (unsafeBefore.includes(row.exercise.name) && evidence?.role === 'main_strength'
+        && evidence.mainStrengthPattern) MAIN_SEATS_SEEN.add(evidence.mainStrengthPattern);
+    }
     const patternsBefore = new Set(unsafeBefore.map((name) => {
       const identity = finerPatternIdentityOf(name);
       return identity === 'unknown'
@@ -457,18 +466,9 @@ async function main(): Promise<void> {
         { gone, arrived });
     }
 
-    /* ── [3] OWN LOAD — PROVENANCE, NOT COINCIDENCE ─────────────────────────
-     *
-     * ⚠ **THE FIRST CUT OF THIS CELL WAS A COINCIDENCE DETECTOR AND IT FIRED.**
-     * It flagged a replacement whose weight happened to EQUAL an outgoing lift's
-     * — and `Chest-Supported DB Row@25`, `Tricep Pushdown@25` and
-     * `Bulgarian Split Squats@25` are simply three things this athlete does with
-     * a 25kg dumbbell. Equality is not provenance.
-     *
-     * The real question is whether the number came from the replacement's OWN
-     * authority, so it is asked of that authority directly:
-     * `loadForReplacementExercise` structurally cannot see the outgoing row (it
-     * has no parameter for it), so agreeing with it IS the proof. */
+    /* [3] Each route owns its load: direct swaps use replacement history;
+     * new injury work uses the dated composed load; weekly core completion
+     * keeps the pool-authored support prescription. None sees an outgoing load. */
     const { loadForReplacementExercise } = require('../rules/blockBoundaryProgression');
     const recordedLoadByExercise = quiet(() => {
       const store = useProgramStore.getState() as unknown as {
@@ -480,16 +480,37 @@ async function main(): Promise<void> {
       }
       return out;
     });
-    const wrongLoad = arrived.filter((name) => {
-      const shown = loadOf(afterTarget, name);
-      const owned = quiet(() => loadForReplacementExercise({
-        exerciseName: name,
-        onboardingData: useProfileStore.getState().onboardingData,
-        recordedLoadByExercise,
-      })) as number | undefined;
-      if (owned === undefined) return false;  // UNSET — the athlete chooses; nothing to check.
-      return shown !== String(owned);
-    });
+    const profile = useProfileStore.getState().onboardingData;
+    const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
+    const loadEnvironment = resolveTapSwapEnvironment({ date: target, profile,
+      activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints, readinessSignal: null });
+    const { resolveComposedLoad } = require('../rules/composedDose');
+    const { classifyPoolSlot } = require('../data/exercisePoolsStrength');
+    const { resolveOffseasonSubphase } = require('../rules/offseasonSubphase');
+    const { POOL_REGISTRY } = require('../data/exercisePools');
+    const { buildAutomaticStrengthSupportRow } = require('../utils/sessionBuilder');
+    const arrivedRows = workoutOn(target, weekStart)!.exercises.filter(row => arrived.includes(row.exercise.name));
+    const wrongLoad = arrivedRows.filter(row => {
+      const name = row.exercise.name;
+      let owned: number | undefined;
+      if ((row as typeof row & { addedForInjury?: boolean }).addedForInjury) {
+        owned = quiet(() => resolveComposedLoad({ identity: name,
+          isMainLift: row.section18Evidence?.role === 'main_strength', poolSlot: classifyPoolSlot(name)?.slot ?? null,
+          seasonPhase: profile.seasonPhase,
+          offseasonSubphase: resolveOffseasonSubphase({ seasonPhase: profile.seasonPhase,
+            phaseWeekNumber: 1 + Math.floor((Date.parse(target) - Date.parse(INSTALL_DAY)) / (7 * 86400000)) }),
+          profile, kit: loadEnvironment.availableEquipmentTags, recordedLoads: recordedLoadByExercise }));
+      } else if (row.section18Evidence?.slot === 'core' && !row.substitutedFrom) {
+        const entry = Object.values(POOL_REGISTRY).flat().find((entry: any) => entry.name === name);
+        if (!entry) return true;
+        owned = buildAutomaticStrengthSupportRow(entry, row.workoutId, row.exerciseOrder, 'core').prescribedWeightKg;
+      } else {
+        owned = quiet(() => loadForReplacementExercise({ exerciseName: name, onboardingData: profile, recordedLoadByExercise }));
+      }
+      return owned === undefined || owned === 0
+        ? row.prescribedWeightKg != null && row.prescribedWeightKg !== 0
+        : row.prescribedWeightKg !== owned;
+    }).map(row => ({ id: row.id, name: row.exercise.name, weight: row.prescribedWeightKg }));
     ok(`${testCase.label} — every replacement wears the load its OWN authority gives it`,
       wrongLoad.length === 0, { wrongLoad, after: afterTarget });
 
@@ -668,6 +689,28 @@ async function main(): Promise<void> {
     ok('red flag — and no swap is claimed, because none was made',
       !/swapped for/.test(set.message ?? ''), set.message);
 
+    // The second injury closes the other half of the body. Ordinary planning
+    // would now empty days; the existing serious-symptom fact must still keep
+    // the original session visible and withheld.
+    const combined = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier', source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint: buildGuidedInjuryConstraint({
+        region: 'upper_body', area: 'shoulder', severity: 9, severityBand: 'avoid',
+        adjustmentLevel: 'training_paused', triggers: ['pressing'], seriousSymptoms: false,
+      }, { todayISO: target }) }, requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: target })) as ProgramControlActionResult;
+    ok('red flag — a second injury cannot turn the withheld session into an empty day',
+      combined.ok && JSON.stringify(rowsOf(target, weekStart)) === JSON.stringify(before));
+    const combinedBoot = await relaunchApp({ storage: localStorageData, todayISO: target });
+    ok('red flag — combined injuries preserve the withheld rows after reopening',
+      combinedBoot.ok && JSON.stringify(rowsOf(target, weekStart)) === JSON.stringify(before));
+    const clearedSecond = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_injury_modifier', source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { episodeId: combined.createdModifierIds?.[0] },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: target })) as ProgramControlActionResult;
+    ok('red flag — the additional injury clears before the original restore check', clearedSecond.ok);
+
     /* [6] CLEARING REVEALS THE EXACT ORIGINAL SESSION. */
     const cleared = await quietAsync(() => executeProgramControlActionDurably({
       type: 'clear_injury_modifier',
@@ -830,7 +873,9 @@ async function main(): Promise<void> {
   ];
   for (const [label, accepted] of REQUIRED_PATTERNS) {
     ok(`coverage — a real athlete world exercised the ${label} pattern`,
-      accepted.some((name) => PATTERNS_SEEN.has(name)), [...PATTERNS_SEEN].sort());
+      accepted.some((name) => PATTERNS_SEEN.has(name))
+        || ((label === 'squat' || label === 'hinge') && MAIN_SEATS_SEEN.has(label)),
+      { movementFamilies: [...PATTERNS_SEEN].sort(), mainSeats: [...MAIN_SEATS_SEEN].sort() });
   }
 
 

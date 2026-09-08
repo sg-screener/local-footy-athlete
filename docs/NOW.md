@@ -13,6 +13,8 @@ and this file gets one line pointing at it.**
 
 ## FOR SAM — the short list
 
+- **YEARCHECK annual repairs:** five repairs plus approved equipment, COD and settings-choice follow-ups implemented. 39/39 release groups verified across reruns; phone acceptance deferred. `docs/STATUS_YEARCHECK.md`.
+
 > **NOTHING IN THIS BLOCK MAY ASK SAM FOR SOMETHING HE HAS ALREADY GIVEN.** On
 > 2026-08-10 this list asked a second time for the rebuild he had run and for two
 > decisions he had made hours earlier — the granted-permission defect, third
@@ -27,12 +29,7 @@ and this file gets one line pointing at it.**
   reload tape also preserves the Saturday Game Day card after process death.
   `docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md`.
 
-- **⚠ SAM: THE REBUILD IS DONE AND THE WHITE SCREEN THAT FOLLOWED IS FIXED.**
-  `61ab9e46`. A refused development launch used to render nothing at all; it now
-  names its reason and offers a one-tap clear. **It will happen again after any
-  test run** — the leftover marker that causes it is named and NOT fixed — but it
-  now tells you what it is. **Reproduced and cleared on the simulator, in a flow;
-  not seen on your phone.** `docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`.
+- **Earlier device checkpoint:** `docs/NOW_HISTORY_2026-09-07_YEARCHECK.md` preserves the previous rebuild/white-screen entry.
 
 - **⚠ SAM: THE TEST RIG WORKS AND IT FOUND THE ROT YOU WARNED ABOUT.** One flow
   runs end to end in 18 seconds (`96dd6f01`), and on its first working run it
@@ -60,11 +57,11 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `codex/failure-only-state-export` · **PHONE BUILD:** `3a8a3bd6`, five-part compiler completion, status sections 38–39.
-- **CURRENT UNIT:** Re-audit fixes saved at `86efeadb`, owner `testtruth`: injury reporting fixed; completed Undo verified; numeric progression/deload guards active. Not installed on either phone.
-- **RECEIPT:** `docs/STATUS_TESTTRUTH.md` section 41: clean checkpoint release 14/14 units; annual 416/416 athlete-weeks; compiler 604/604; Undo 26/26; injury 70/70; all typecheck scopes zero. Four actual release-witness mutants rejected.
-- **NEXT:** phone installation and physical acceptance. Sam confirmed week-edit/reopen persistence on the previous phone build (section 39), not this new code. Concurrent UI edits were excluded from this checkpoint.
-- **OPEN:** phone acceptance, historical diagnostic/law debt and protected dormant builders. Saved checkpoint: 0 rivals / 0 derived writers / 1136 reviewed owners. R-262 modifier receipts remain in section 40; not an all-app pass.
+- **BRANCH:** `codex/failure-only-state-export` · **SOURCE OBSERVED:** `0bcc3353` · **LAST RECORDED SAM PHONE BUILD:** `3a8a3bd6`, testtruth status sections 38–39; recheck rcsteps for subsequent installation.
+- **CURRENT UNIT:** Sam's 22-item programming handoff: `docs/HANDOFF_PROGRAMMING_REMEDIATION_2026-08-28.md`. Documentation only; no implementation authorised in this turn. Release work remains owned by rcsteps, `docs/STATUS_RCSTEPS.md`.
+- **RECEIPT:** Original year/selector evidence is at `abe168cf`; later Bike-name, readiness/injury and full-block simulator fixes are recorded by rcsteps through `0bcc3353`. No fresh exact-version release or phone receipt claimed by this handoff.
+- **NEXT:** Assigned next-chat owner: work through handoff A–F, preserving rcsteps' fixes; distinguish new programming choices from existing rulings, extend final-year behavioural witnesses, then coordinate exact-candidate verification and physical acceptance.
+- **OPEN:** Selection/spacing/equipment/power-route issues and reported shoulder/Mobility-add cases are mapped P01–P22 in the handoff. Bike-name corruption is repaired, not a fresh open naming task. Final release/flow/install state must be read from rcsteps; dormant builders remain out of scope.
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails

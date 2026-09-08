@@ -105,7 +105,6 @@ function modelReadiness(snapshot: CoachSnapshot) {
       date: signal.date,
       bodyPart: signal.bodyPart,
       energy: signal.energy,
-      soreness: signal.soreness,
       painFlag: signal.painFlag,
       timeAvailableMinutes: signal.timeAvailableMinutes,
       flatToday: signal.flatToday,
@@ -198,7 +197,6 @@ export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
       },
       felt: {
         feelingsRecorded: snapshot.thisWeek.felt.feelingsRecorded,
-        sorenessRecorded: snapshot.thisWeek.felt.sorenessRecorded,
         gameFeelsRecorded: snapshot.thisWeek.felt.gameFeelsRecorded,
         gameFeelLatest: snapshot.thisWeek.felt.gameFeelLatest,
         differedFromPlan: snapshot.thisWeek.felt.differedFromPlan,

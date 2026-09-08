@@ -116,6 +116,7 @@ export function bootReplayableEntries(
   const annulled = annulledEntryIds(entries);
   return readable(entries).filter((entry) =>
     entry.decision.kind !== 'reversal' &&
+    entry.decision.kind !== 'legacy_exercise_target_upgrade' &&
     entry.decision.kind !== 'legacy_plan_change_effect_upgrade' &&
     entry.decision.kind !== 'legacy_fixture_effect_upgrade' &&
     entry.decision.kind !== 'legacy_day_placement_effect_upgrade' &&

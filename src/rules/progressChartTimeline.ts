@@ -1,3 +1,5 @@
+import { filterProgressPeriod, type ProgressDateRange } from './progressPeriod';
+
 /** Pure layout for Progress charts whose horizontal axis is real time. */
 
 export interface ProgressChartDatum {
@@ -40,8 +42,9 @@ export function buildProgressChartPoints(
   values: readonly ProgressChartDatum[],
   geometry: ProgressChartGeometry,
   higherIsBetter = true,
+  range?: ProgressDateRange,
 ): readonly ProgressChartPoint[] {
-  const dated = values
+  const dated = (range ? filterProgressPeriod(values, range, (value) => value.dateISO) : values)
     .map((value, index) => ({ ...value, day: isoDay(value.dateISO), index }))
     .filter((value): value is ProgressChartDatum & { day: number; index: number } =>
       value.day !== null && Number.isFinite(value.value))
@@ -99,4 +102,25 @@ export function progressChartDateRangeLabel(
   const first = shortDate(dates[0].dateISO, includeYear);
   const last = shortDate(dates[dates.length - 1].dateISO, includeYear);
   return first && last ? `${first} – ${last}` : null;
+}
+
+/** One scale supplies both the lift line and its weight labels. */
+export function progressLiftChartModel(values: readonly ProgressChartDatum[], geometry: ProgressChartGeometry, range: ProgressDateRange) {
+  const recorded = buildProgressChartPoints(values, geometry, true, range);
+  if (!recorded.length) return null;
+  const minimum = Math.min(...recorded.map(point => point.value));
+  const maximum = Math.max(...recorded.map(point => point.value));
+  const roughStep = Math.max((maximum - minimum) / 2, 1);
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const step = [1, 2, 5, 10].map(value => value * magnitude).find(value => value >= roughStep)!;
+  const lower = Math.max(0, Math.floor(minimum / step) * step - (minimum === maximum ? step : 0));
+  const upper = Math.max(lower + step * 2, Math.ceil(maximum / step) * step);
+  const y = (value: number) => geometry.padding + (upper - value) / (upper - lower) * (geometry.height - geometry.padding * 2);
+  return {
+    points: recorded.map(point => ({ ...point, y: y(point.value) })),
+    ticks: [upper, (upper + lower) / 2, lower].map(value => ({ value, y: y(value) })),
+    latest: recorded[recorded.length - 1].value,
+    change: recorded.length > 1 ? Math.round((recorded[recorded.length - 1].value - recorded[0].value) * 10) / 10 : null,
+    dates: [recorded[0].dateISO, recorded[recorded.length - 1].dateISO],
+  };
 }

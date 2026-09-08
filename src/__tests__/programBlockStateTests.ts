@@ -29,7 +29,7 @@ import {
   getWeekInBlock,
   getWeeksSinceDeload,
 } from '../utils/programBlockState';
-import { buildProgressionContext } from '../utils/strengthProgressionIntegration';
+import { buildProgressionContext } from './support/legacyStrengthProgression';
 import type { OnboardingData } from '../types/domain';
 import { seedManualOverride } from './support/programOverrideHarness';
 

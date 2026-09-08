@@ -75,6 +75,7 @@ export type SessionTemplateItem =
   | {
       kind: 'conditioning_choice';
       role: 'conditioning';
+      optional?: boolean;
       options: Array<{ title: string; description: string; rows: any[]; modalityLabel?: string }>;
     }
   | {
@@ -166,7 +167,7 @@ function orderItems(
  * it is.
  */
 function isOptional(item: SessionTemplateItem): boolean {
-  return item.kind === 'exercise' && item.optional;
+  return (item.kind === 'exercise' || item.kind === 'conditioning_choice') && item.optional === true;
 }
 
 /** D2's five-tier order (§3.1), with the optional cluster below all of it. */
@@ -428,9 +429,10 @@ export function buildSessionTemplate(
   // conditioning day, the choice box for a day that carries conditioning
   // alongside anything else.
   if (componentRows.conditioningRows.length > 0) {
+    const optionalConditioning = workout.attachedConditioningKind === 'finisher';
     if (isConditioningOnly) {
       for (const row of componentRows.conditioningRows) {
-        items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
+        items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning', optional: optionalConditioning }));
       }
     } else {
       // Athlete additions are extra work, never another alternative to the
@@ -450,10 +452,11 @@ export function buildSessionTemplate(
          * structured dose, so hand it straight to the ordinary phase renderer.
          * Multiple genuinely equivalent options keep the picker below. */
         for (const row of options[0].rows) {
-          items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning' }));
+          items.push(exerciseItem(row, 'conditioning_phase', { role: 'conditioning', optional: optionalConditioning }));
         }
       } else if (options.length > 1) {
-        items.push({ kind: 'conditioning_choice', role: 'conditioning', options });
+        items.push({ kind: 'conditioning_choice', role: 'conditioning', options,
+          ...(optionalConditioning ? { optional: true } : {}) });
       }
     }
   }

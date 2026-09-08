@@ -36,6 +36,8 @@ export type DecisionProvenance =
  * never paraphrases the decision it records.
  */
 export type AthleteDecision =
+  | { kind: 'legacy_exercise_target_upgrade'; sourceEntryId: string;
+      acceptedTarget: import('../rules/acceptedExerciseTarget').AcceptedExerciseTarget; }
   | { kind: 'lighter_day'; acceptedEffect: CanonicalAcceptedLighterDayEffect }
   | {
       kind: 'plan_change';

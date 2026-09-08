@@ -1,3 +1,4 @@
+import { OFFSEASON_PREPARATION } from './offseasonSubphasePolicy';
 /**
  * Weekly Exposure Contract v2.
  *
@@ -893,7 +894,7 @@ interface Section18ModePolicy {
     defaultTarget: number;
     preferred: Section18Range;
     max: number | null;
-    stress: Section18ConditioningStress[];
+    stress: readonly Section18ConditioningStress[];
     optionalFlush: Section18Range;
     requiredAppMediumHardMinimum: number;
     requiredAppHardMinimum: number;
@@ -1132,12 +1133,12 @@ function policyFor(input: Pick<
     case 'early_offseason':
       return {
         strength: { required: 0, defaultTarget: 0, preferred: { min: 2, max: 3 }, max: 3 },
-        conditioning: { required: 0, defaultTarget: 0, preferred: { min: 1, max: 2 }, max: 3, stress: ['light'], optionalFlush: { min: 1, max: 2 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
+        conditioning: OFFSEASON_PREPARATION.exposureConditioning,
         // The first four Off-season weeks are the no-Speed recovery/transition
         // opening. `early_offseason` owns weeks 1-2; `mid_offseason` below owns
         // weeks 3-4. Running Speed starts only when late Off-season begins.
         sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
-        power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'early_offseason' },
+        power: OFFSEASON_PREPARATION.power,
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
         // early off-season, where 3 full rest days are permitted."* The exception
@@ -1154,11 +1155,11 @@ function policyFor(input: Pick<
     case 'mid_offseason':
       return {
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 1 },
+        conditioning: OFFSEASON_PREPARATION.exposureConditioning,
         // Weeks 3-4 remain Speed-free. The strength/conditioning transition can
         // resume without acceleration or maximum-velocity work being added.
         sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
-        power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
+        power: OFFSEASON_PREPARATION.power,
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
         // early off-season, where 3 full rest days are permitted."* The exception
@@ -1512,7 +1513,7 @@ export function buildSection18WeeklyExposureContractV2(
       },
       optionalNonCoreAchievedCount: null,
       legacyUnknownAchievedCount: null,
-      requiredCoreStress: policy.conditioning.stress,
+      requiredCoreStress: [...policy.conditioning.stress],
       intensityPolicy: {
         requiredAppMediumHardMinimum: Math.min(
           policy.conditioning.requiredAppMediumHardMinimum,

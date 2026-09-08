@@ -15,6 +15,7 @@ export type CanonicalWeeklyExerciseEdit =
       readonly targetName: string;
       readonly targetComponentId: string | null;
       readonly replacement: ExercisePrescriptionPayload;
+      readonly acceptedTarget?: import('./acceptedExerciseTarget').AcceptedExerciseTarget;
       readonly substitutedFrom?: {
         readonly baseExerciseName: string;
         readonly originExerciseName?: string;
@@ -24,6 +25,8 @@ export type CanonicalWeeklyExerciseEdit =
     }
   | {
       readonly kind: 'add';
+      readonly additionId?: string;
+      readonly additionFactVersions?: readonly string[];
       readonly decisionId: string;
       readonly occurredAt: string;
       readonly dateISO: string;
@@ -55,6 +58,7 @@ function addDays(dateISO: string, amount: number): string {
 export function canonicalWeeklyExerciseEditStateFrom(args: {
   readonly weekStartISO: string;
   readonly entries: readonly DecisionLedgerEntry[];
+  readonly targetUpgrades?: readonly DecisionLedgerEntry[];
 }): CanonicalWeeklyExerciseEditState {
   const weekStartISO = args.weekStartISO.slice(0, 10);
   const weekEndISO = addDays(weekStartISO, 6);
@@ -70,6 +74,8 @@ export function canonicalWeeklyExerciseEditStateFrom(args: {
         targetName: action.payload.fromExercise,
         targetComponentId: action.payload.fromExerciseId ?? null,
         replacement: action.payload.toExercise,
+        acceptedTarget: action.payload.acceptedTarget ?? (args.targetUpgrades ?? args.entries)
+          .flatMap(e => e.decision.kind === 'legacy_exercise_target_upgrade' && e.decision.sourceEntryId === entry.id ? [e.decision.acceptedTarget] : []).at(-1),
         ...(action.payload.substitutedFrom
           ? { substitutedFrom: action.payload.substitutedFrom }
           : {}),
@@ -82,7 +88,8 @@ export function canonicalWeeklyExerciseEditStateFrom(args: {
       if (dateISO < weekStartISO || dateISO > weekEndISO || !action.payload.exercise) continue;
       edits.push({
         kind: 'add', decisionId: entry.id, occurredAt: entry.occurredAt, dateISO,
-        exercise: action.payload.exercise,
+        exercise: action.payload.exercise, additionId: action.payload.additionId,
+        additionFactVersions: action.payload.additionFactVersions,
       });
     } else if (action.type === 'remove_exercise') {
       const dateISO = action.payload.date.slice(0, 10);

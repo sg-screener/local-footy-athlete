@@ -254,18 +254,7 @@ function injuryFromConstraint(
     });
   }
 
-  if (constraint.type === 'soreness') {
-    const soreness = constraint as ActiveSorenessConstraint;
-    return buildInjuryLikeConstraint({
-      id: soreness.id,
-      sourceType: 'soreness',
-      bodyPart: soreness.bodyPart,
-      bucket: soreness.bucket,
-      severity: Math.max(1, soreness.severity - 2),
-      region: undefined,
-      triggers: triggerTextFromConstraint(soreness),
-    });
-  }
+
 
   return null;
 }

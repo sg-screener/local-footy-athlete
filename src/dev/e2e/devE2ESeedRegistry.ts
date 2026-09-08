@@ -1133,7 +1133,9 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       auxiliaryState.push({ kind: 'program_control', todayISO: anchorDate, action: oneSet
         ? { ...common, type: 'swap_exercise', payload: { date: anchorDate,
           fromExercise: row.exercise.name, fromExerciseId: row.id, toExercise: prescription } }
-        : { ...common, type: 'add_exercise', payload: { date: anchorDate, exercise: prescription } } });
+        : { ...common, type: 'add_exercise', payload: { date: anchorDate, exercise: prescription,
+          additionId: `ex-coach-add-half-kneeling-single-arm-overhead-press-${anchorDate}`,
+          additionFactVersions: [] } } });
       break;
     }
     case 'spent-week-friday': {

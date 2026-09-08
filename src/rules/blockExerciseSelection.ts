@@ -111,6 +111,8 @@ export type SelectionReason =
   | 'progressed_from_own_history'
   /** Held the default maximum of two consecutive blocks. */
   | 'two_block_maximum_reached'
+  /** The whole-week stagger uses a selector-provided quality-preserving alternative. */
+  | 'staggered_block_rotation'
   /** The recorded history does not support keeping it. */
   | 'history_does_not_support_retention'
   /** Single-leg and accessory slots change at every new block. */
@@ -160,6 +162,8 @@ export interface ExerciseSelectionInputs {
    * used" — the structured variety rule that replaces the cursor.
    */
   readonly recentSelections: readonly BlockExerciseSelection[];
+  /** Calendar tenure across all delivered seats, derived from accepted history. */
+  readonly identityWeeksHeld?: Readonly<Record<string, number>>;
   /** Identities `blockBoundaryProgression.progressedFromOwnHistory` supports. */
   readonly progressedIdentities: readonly ComposedExerciseIdentity[];
   readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
@@ -259,8 +263,12 @@ export function decideExerciseForBlock(
   // automatic variety while another legal movement can fill the same slot.
   const fallback = inputs.slot === 'hinge' ? 'Deadlift' : inputs.slot === 'squat' ? 'Leg Press' : null;
   const preferred = inputs.legalCandidates.filter(id => id !== fallback);
-  const automaticCandidates = fallback && preferred.length > 0 && !inputs.pinnedIdentities.includes(fallback as ComposedExerciseIdentity)
+  const ordinaryCandidates = fallback && preferred.length > 0 && !inputs.pinnedIdentities.includes(fallback as ComposedExerciseIdentity)
     ? preferred : inputs.legalCandidates;
+  const withinTenure = inputs.role === 'main_bilateral' && inputs.identityWeeksHeld
+    ? ordinaryCandidates.filter(id => (inputs.identityWeeksHeld![id] ?? 0) + 4 <= 8)
+    : ordinaryCandidates;
+  const automaticCandidates = withinTenure.length > 0 ? withinTenure : ordinaryCandidates;
   const phaseOrdered = inputs.slot === 'hinge'
     ? orderByPreference(
       automaticCandidates,
@@ -339,6 +347,11 @@ export function decideExerciseForBlock(
   );
 
   // ── RULE 4 — CONTINUITY ───────────────────────────────────────────────────
+  if (previousIdentity !== null && ordinaryCandidates.includes(previousIdentity)
+    && !automaticCandidates.includes(previousIdentity)) {
+    return decide(leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),
+      'rotated', 'two_block_maximum_reached', planeCohort);
+  }
   if (previousIdentity !== null && !phaseOrdered.includes(previousIdentity)) {
     return decide(
       leastRecentlyUsed(planeCohort, inputs.recentSelections, decisionIdentity),

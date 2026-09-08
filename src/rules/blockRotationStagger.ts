@@ -33,6 +33,20 @@
  * toward the "at least two" floor.
  */
 import type { SessionSlot } from './sessionSlotCoverage';
+import type { BlockExerciseSelection } from './blockExerciseSelection';
+
+/** Count calendar time for the delivered identity, including its other seats. */
+export function consecutiveIdentityWeeks(history: readonly BlockExerciseSelection[],
+  identity: string, beforeISO: string): number {
+  const prior = history.filter(row => row.blockStartISO < beforeISO);
+  const starts = [...new Set(prior.map(row => row.blockStartISO))].sort().reverse();
+  let first = beforeISO;
+  for (const start of starts) {
+    if (!prior.some(row => row.blockStartISO === start && row.identity === identity)) break;
+    first = start;
+  }
+  return (Date.parse(`${beforeISO}T12:00:00Z`) - Date.parse(`${first}T12:00:00Z`)) / 604800000;
+}
 
 /** The six seats this rule governs. A seventh would be a ruling, not an edit. */
 export const STAGGER_CORE_SLOTS: readonly SessionSlot[] = [
@@ -58,10 +72,14 @@ export interface StaggerSeat {
    * ceiling rather than a preference.
    */
   readonly blocksHeld: number;
+  /** Dated identity tenure; legacy pure callers may still supply block counts. */
+  readonly weeksHeld?: number;
   /** The grade of the identity it currently holds, when the pool authors one. */
   readonly currentGrade: 'A' | 'B' | null;
   /** The grade it would move to, when the pool authors one. */
   readonly candidateGrade: 'A' | 'B' | null;
+  /** Next suitable A-grade alternative from the same selection owner. */
+  readonly aGradeAlternative?: string | null;
   /**
    * The recorded lift is no longer legal — injury, kit, exclusion, phase. This
    * seat moves whatever the quota says, and does not spend a rotation.
@@ -87,6 +105,7 @@ export interface StaggerDecision {
   readonly slot: SessionSlot;
   readonly rotates: boolean;
   readonly reason: StaggerReason;
+  readonly replacementIdentity?: string;
 }
 
 /**
@@ -125,63 +144,67 @@ export function decideBlockRotationStagger(
   seats: readonly StaggerSeat[],
 ): readonly StaggerDecision[] {
   const order = new Map(STAGGER_CORE_SLOTS.map((slot, index) => [slot, index]));
-  const decisions = new Map<SessionSlot, StaggerDecision>();
-  const decide = (slot: SessionSlot, rotates: boolean, reason: StaggerReason) => {
-    decisions.set(slot, { slot, rotates, reason });
+  const queue = seats.slice().sort((a, b) =>
+    (b.weeksHeld ?? b.blocksHeld * 4) - (a.weeksHeld ?? a.blocksHeld * 4)
+    || (order.get(a.slot) ?? 99) - (order.get(b.slot) ?? 99));
+  const due = (seat: StaggerSeat) => seat.weeksHeld !== undefined
+    ? seat.weeksHeld + 4 > 8 : seat.blocksHeld >= STAGGER_MAX_HELD_BLOCKS;
+  type Option = { rotates: boolean; identity: string | null; grade: 'A' | 'B' | null; alternate: boolean };
+  const options = (seat: StaggerSeat): Option[] => {
+    const normal: Option = { rotates: seat.wouldRotateTo !== seat.previousIdentity,
+      identity: seat.wouldRotateTo, grade: seat.candidateGrade, alternate: false };
+    if (seat.forced) return [{ ...normal, rotates: true }];
+    const result: Option[] = [{ rotates: false, identity: seat.previousIdentity,
+      grade: seat.currentGrade, alternate: false }];
+    if (seat.wouldRotateTo !== null && normal.rotates) result.push(normal);
+    if (seat.aGradeAlternative && seat.aGradeAlternative !== seat.previousIdentity
+      && seat.aGradeAlternative !== seat.wouldRotateTo) result.push({ rotates: true,
+        identity: seat.aGradeAlternative, grade: 'A', alternate: true });
+    return result;
   };
-
-  const movable = seats.filter((seat) => seat.wouldRotateTo !== null
-    && seat.wouldRotateTo !== seat.previousIdentity);
-  for (const seat of seats) {
-    if (seat.forced) decide(seat.slot, true, 'forced_move');
-    else if (!movable.includes(seat)) decide(seat.slot, false, 'no_alternative');
-  }
-
-  // Longest-held first, then the authored slot order. Never a runtime shuffle:
-  // two athletes in the same state must get the same week.
-  const queue = movable
-    .filter((seat) => !seat.forced)
-    .slice()
-    .sort((left, right) => (right.blocksHeld - left.blocksHeld)
-      || ((order.get(left.slot) ?? 99) - (order.get(right.slot) ?? 99)));
-
-  const gradeNow = new Map(seats.map((seat) => [seat.slot, seat.currentGrade]));
-  let spent = 0;
-  for (const seat of queue) {
-    const mustMove = seat.blocksHeld >= STAGGER_MAX_HELD_BLOCKS;
-    if (!mustMove && spent >= STAGGER_MAX_ROTATIONS) {
-      decide(seat.slot, false, 'quota_full');
-      continue;
+  const available = queue.map(options);
+  const overdueCount = queue.filter((seat, i) => !seat.forced && due(seat)
+    && available[i].some(option => option.rotates)).length;
+  const target = Math.max(STAGGER_MIN_ROTATIONS,
+    Math.min(queue.filter((seat, i) => !seat.forced && available[i].some(o => o.rotates)).length,
+      Math.max(STAGGER_MAX_ROTATIONS, overdueCount)));
+  let best: Option[] | null = null;
+  let bestScore: number[] | null = null;
+  const beats = (score: number[], prior: number[]) => {
+    for (let i = 0; i < score.length; i++) if (score[i] !== prior[i]) return score[i] > prior[i];
+    return false;
+  };
+  // Six seats give at most 3^6 plans. Judge the resulting week, never an
+  // intermediate prefix where the next quality-preserving move has not landed.
+  const visit = (plan: Option[]) => {
+    if (plan.length < queue.length) {
+      for (const option of available[plan.length]) visit([...plan, option]);
+      return;
     }
-    const after = new Map(gradeNow);
-    after.set(seat.slot, seat.candidateGrade);
-    if (!staggerGuardrailsHold([...after.values()])) {
-      decide(seat.slot, false, 'guardrail_hold');
-      continue;
-    }
-    gradeNow.set(seat.slot, seat.candidateGrade);
-    spent += 1;
-    decide(seat.slot, true, mustMove ? 'held_two_blocks' : 'quota_rotation');
-  }
-
-  /* ⚠ **THE FLOOR IS A FLOOR, NOT A TARGET, AND IT MAY NOT MANUFACTURE A MOVE.**
-   * Sam asked for *"two or three"*, and this loop tops up toward two when the
-   * quota under-delivered — but only from seats that had a legal alternative and
-   * were held back by the quota, never by relaxing a guardrail or by moving a
-   * seat with nowhere to go. A week with only one movable seat rotates one. */
-  if (spent < STAGGER_MIN_ROTATIONS) {
-    for (const seat of queue) {
-      if (spent >= STAGGER_MIN_ROTATIONS) break;
-      if (decisions.get(seat.slot)?.reason !== 'quota_full') continue;
-      const after = new Map(gradeNow);
-      after.set(seat.slot, seat.candidateGrade);
-      if (!staggerGuardrailsHold([...after.values()])) continue;
-      gradeNow.set(seat.slot, seat.candidateGrade);
-      spent += 1;
-      decide(seat.slot, true, 'quota_rotation');
-    }
-  }
-
-  return seats.map((seat) => decisions.get(seat.slot)
-    ?? { slot: seat.slot, rotates: false, reason: 'quota_full' });
+    if (!staggerGuardrailsHold(plan.map(option => option.grade))) return;
+    const moved = plan.filter((option, i) => option.rotates && !queue[i].forced).length;
+    const overdueMoved = plan.filter((option, i) => option.rotates && !queue[i].forced && due(queue[i])).length;
+    const score = [overdueMoved, -Math.abs(moved - target),
+      ...plan.map((option, i) => !queue[i].forced && option.rotates ? 1 : 0),
+      -plan.filter(option => option.alternate).length];
+    if (!bestScore || beats(score, bestScore)) { best = [...plan]; bestScore = score; }
+  };
+  visit([]);
+  const chosen = best as Option[] | null;
+  const result = new Map<SessionSlot, StaggerDecision>();
+  queue.forEach((seat, i) => {
+    const option = chosen?.[i];
+    const rotates = seat.forced || option?.rotates === true;
+    const movable = available[i].some(candidate => candidate.rotates);
+    const blockedByGrade = chosen && available[i].filter(candidate => candidate.rotates)
+      .every(candidate => !staggerGuardrailsHold(chosen.map((current, index) =>
+        index === i ? candidate.grade : current.grade)));
+    const reason: StaggerReason = seat.forced ? 'forced_move'
+      : !movable ? 'no_alternative'
+      : rotates ? due(seat) ? 'held_two_blocks' : 'quota_rotation'
+      : chosen && !blockedByGrade ? 'quota_full' : 'guardrail_hold';
+    result.set(seat.slot, { slot: seat.slot, rotates, reason,
+      ...(rotates && option?.alternate && option.identity ? { replacementIdentity: option.identity } : {}) });
+  });
+  return seats.map(seat => result.get(seat.slot)!);
 }

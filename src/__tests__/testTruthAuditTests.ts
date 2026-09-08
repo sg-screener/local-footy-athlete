@@ -186,12 +186,17 @@ ok('the measured failure census has a valid decision for every reviewed label',
     // 193 measured rows + 3 guards promoted 2026-09-03 (seat censusaudit):
     // block-selection-authority, programming-selection-trace-observer,
     // legality-enforcer-liveness. + 1 on 2026-09-03 (seat integrate, R-363):
-    // injury-matrix-sheet is release unit 31.
-    && Object.keys(decisionRegistry.decisions).length === 197
+    // injury-matrix-sheet is release unit 31. Two additional rows hold the
+    // empty-day screen journey and Coach bundle; settings is promoted in place.
+    // R-383 adds the full annual repair journey witness.
+    // R-380 adds the soreness witness; R-381 adds four-week preparation; R-382 adds dated conditioning access.
+    // R-387 adds the manual Add, dose, dumbbell and retained-game repair witness.
+    // R-389 adds the next-day Speed dose and placement witness.
+    && Object.keys(decisionRegistry.decisions).length === 208
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 34
+  censusCounts.current_contract === 46
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',
@@ -200,7 +205,9 @@ ok('only witnessed contracts and the explicit ownership/year acceptance requirem
       'test:slot-coverage', 'test:power-counting', 'test:section18-v2', 'test:exercise-intake',
       'test:estimated-1rm', 'test:lived-history-foundations', 'test:session-section-add',
       'test:block-selection-authority', 'test:programming-selection-trace-observer',
-      'test:legality-enforcer-liveness', 'test:injury-matrix-sheet']
+      'test:legality-enforcer-liveness', 'test:injury-matrix-sheet',
+      'test:settings-persistence', 'test:rest-day-reason', 'test:coach-chat-integration',
+      'test:progression-dose-ownership', 'test:offseason-preparation', 'test:conditioning-gym-access', 'test:annual-audit-repairs', 'test:annual-audit-second-repairs', 'test:saturday-speed', 'test:full-body-erg-rest', 'test:whole-week-planning']
       .every(label => decisionRegistry.decisions[label]?.kind === 'current_contract'
         && decisionRegistry.decisions[label]?.witnessScript === label)
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',
@@ -218,7 +225,7 @@ ok('only witnessed contracts and the explicit ownership/year acceptance requirem
     && censusCounts.test_infrastructure === 4
     && decisionRegistry.decisions['test:plan-change-producer']?.kind === 'aggregate'
     && censusCounts.aggregate === 5
-    && censusCounts.rewrite_test === 148,
+    && censusCounts.rewrite_test === 147,
   censusCounts);
 
 const reportAudit = buildAudit({

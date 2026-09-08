@@ -87,7 +87,7 @@ import {
   applyStrengthProgression,
   DEFAULT_PROGRESSION_CONTEXT,
   type StrengthProgressionContext,
-} from '../utils/strengthProgressionIntegration';
+} from './support/legacyStrengthProgression';
 
 // ─── Simple test runner ───
 

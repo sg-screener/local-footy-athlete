@@ -68,7 +68,7 @@ export const TrainingCommitmentScreen: React.FC<
           color={colors.text.primary}
           style={styles.sectionTitle}
         >
-          How many days each week can you get to a gym?
+          How many strength sessions would you like each week?
         </Text>
         <Text
           variant="bodySmall"

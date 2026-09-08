@@ -874,6 +874,11 @@ export function carriesStrengthComponent(
   return getSessionComponentRows(workout).strengthRows.length > 0;
 }
 
+export function requiresStrengthComponent(workout: Partial<Workout> | null | undefined): boolean {
+  return carriesStrengthComponent(workout) && workout?.sessionTier !== 'optional'
+    && workout?.sessionTier !== 'recovery' && !workout?.composedOptionalKind;
+}
+
 export function getSessionComponents(
   workout: Partial<Workout> | null | undefined,
 ): SessionComponent[] {

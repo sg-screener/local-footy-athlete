@@ -1,3 +1,4 @@
+import { captureAcceptedExerciseChoices, upgradeAcceptedExerciseChoices, acceptedExerciseChoicesSurvive } from './acceptedExerciseChoice';
 import type {
   DayOfWeek,
   OnboardingData,
@@ -444,6 +445,7 @@ export async function commitProfileProgramTransaction(
       acceptedRevision: before.revision,
     };
   }
+  const acceptedExerciseChoices = captureAcceptedExerciseChoices(input.todayISO);
   let base: AcceptedCompositionBaseV1;
   try {
     base = factFreeBase({
@@ -517,6 +519,7 @@ export async function commitProfileProgramTransaction(
     todayISO: input.todayISO,
     allowAcceptedStateOnlyChange: true,
     mutate: () => {
+      upgradeAcceptedExerciseChoices(acceptedExerciseChoices);
       const result = commitAcceptedStateTransaction({
         // THE EVENING-1 SEASON-CHANGE FAILURE'S LAYER. A phase shift, an
         // equipment answer, a training-day change — every one of them is the
@@ -539,13 +542,15 @@ export async function commitProfileProgramTransaction(
         validateWeekStarts: weeks,
         skipConstraintProjection: true,
       });
+      require('./quiescentBoot').rebuildDerivedWorldNow();
       committedBaseFingerprint = semanticFingerprint(
-        result.context.acceptedCompositionBase?.surfaces ?? null,
+        useProgramStore.getState().acceptedMaterialContext?.acceptedCompositionBase?.surfaces ?? null,
       );
       return result;
     },
     didApply: () => true,
     verifyCandidate: () => {
+      if (!acceptedExerciseChoicesSurvive(acceptedExerciseChoices)) return { ok: false, reason: 'accepted_exercise_choice_not_preserved' };
       if (input.testHooks?.verifyCandidate?.() === false) {
         return { ok: false, reason: 'profile_program_candidate_test_rejection' };
       }
@@ -566,6 +571,7 @@ export async function commitProfileProgramTransaction(
       return { ok: true };
     },
     verifyAfterPersistence: () => {
+      if (!acceptedExerciseChoicesSurvive(acceptedExerciseChoices)) return { ok: false, reason: 'accepted_exercise_choice_not_preserved' };
       if (input.testHooks?.verifyAfterPersistence?.() === false) {
         return { ok: false, reason: 'profile_program_readback_test_rejection' };
       }
@@ -589,25 +595,13 @@ export async function commitProfileProgramTransaction(
     return {
       ok: false,
       changedProgram: false,
-      message: 'The profile and program were rolled back because the accepted result could not be verified.',
+      message: transaction.reason === 'accepted_exercise_choice_not_preserved'
+        ? 'Your settings were not changed because the rebuild could not keep your chosen exercise. Your previous program is still in place.'
+        : 'The profile and program were rolled back because the accepted result could not be verified.',
       reason: transaction.reason,
     };
   }
-  // THE DECISION HAS LANDED, SO THE WORLD SETTLES BY RE-DERIVING — R5.1's
-  // switchover, and the same call the injury door and the undo door already
-  // make (`injuryEpisodeTransaction.ts`, `undoLastDecision.ts`). It IS
-  // `rebuildDerivedWorld` under the replay latch, so the week the athlete sees
-  // after changing their setup is the week they see after a relaunch BY
-  // CONSTRUCTION rather than by two engines happening to agree.
-  //
-  // This is what makes the fixture marks above safe to stop hand-carrying: the
-  // projection is rebuilt from the answer that just changed. Deliberately AFTER
-  // the rollback check — a refused transaction has nothing to settle, and
-  // re-deriving over a rolled-back world would publish the very state the
-  // refusal protected the athlete from.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
-  await settleDerivedWorldAfterDecision();
+  // The visible rebuild was verified inside the transaction above.
   const accepted = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext,
   );

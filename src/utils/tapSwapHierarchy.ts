@@ -1,3 +1,4 @@
+import { equipmentTagsOnDate } from '../rules/canonicalWeeklyAvailabilityState';
 import {
   EXERCISE_TAGS,
   getExerciseTags,
@@ -95,6 +96,7 @@ export interface TapSwapEnvironment {
    * speak the coarse vocabulary, at the point of use.
    */
   injurySeverities: Partial<Record<InjuryKey, number>>;
+  selectionRoute?: 'automatic' | 'manual';
   /** Projected from the dated injury decisions, never persisted separately. */
   injuryTriggers?: Partial<Record<InjuryKey, readonly string[]>>;
   primaryInjury: TapSwapPrimaryInjury | null;
@@ -276,11 +278,11 @@ export function resolveTapSwapEnvironment(args: {
     ...(injuryTriggers[args.primaryInjury.bucket] ?? []), ...args.primaryInjury.triggers,
   ])];
 
-  const availableEquipmentTags = resolveEquipmentAvailability(
+  const availableEquipmentTags = equipmentTagsOnDate(args.profile ?? {}, args.date, resolveEquipmentAvailability(
     args.profile,
     constraints,
     args.date,
-  );
+  ));
   let capacity = deriveScheduleReadiness({
     onboardingData: args.profile,
     signal: args.readinessSignal,
@@ -482,7 +484,7 @@ function withoutUnjustifiedRegressions(
 export function assessTapSwapCandidateSafety(
   name: string,
   environment: TapSwapEnvironment,
-  context?: { readonly sourceExercise?: string | null },
+  context?: { readonly sourceExercise?: string | null; readonly route?: 'automatic' | 'manual' },
 ): TapSwapSafetyDecision {
   if (environment.medicalStop) {
     return { safe: false, reason: 'A medical-stop constraint is active.' };
@@ -515,7 +517,7 @@ export function assessTapSwapCandidateSafety(
     return { safe: false, reason: 'The required equipment or training space is not available.' };
   }
   if (!exerciseProgrammingAllows(canonical, { experienceLevel: environment.experienceLevel,
-    daysToGame: environment.daysToGame, route: 'manual' })) {
+    daysToGame: environment.daysToGame, route: context?.route ?? environment.selectionRoute ?? 'manual' })) {
     return { safe: false, reason: 'The movement does not meet experience or game-proximity requirements.' };
   }
 

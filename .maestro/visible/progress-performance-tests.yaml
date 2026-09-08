@@ -23,13 +23,6 @@ name: Progress performance tests and measurements
       id: "progress-performance-tests"
     direction: DOWN
     visibilityPercentage: 60
-- repeat:
-    times: 2
-    commands:
-      - swipe:
-          start: 50%, 80%
-          end: 50%, 28%
-          duration: 450
 - assertVisible: "Performance tests"
 - assertVisible:
     id: "progress-test-aerobic"
@@ -65,7 +58,7 @@ name: Progress performance tests and measurements
 - extendedWaitUntil:
     visible:
       id: "progress-test-aerobic"
-      text: ".*11:30.*4.2% improved.*"
+      text: ".*11:30.*4.2% better.*"
     timeout: 30000
 - scrollUntilVisible:
     element:

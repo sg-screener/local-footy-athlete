@@ -1,0 +1,26 @@
+// Real annual onboarding/actions, with retained daily and reopen evidence.
+const fs=require('fs'),path=require('path'),Module=require('module');
+const root=path.resolve(__dirname,'..'),repo=root;
+const original=path.join(repo,'scripts/athlete-cohort-year.cjs');
+let code=fs.readFileSync(original,'utf8');
+const replace=(a,b)=>{if(code.split(a).length!==2)throw Error('Missing observer anchor: '+a);code=code.replace(a,b)};
+replace('const preset = PRESETS[presetId];',`const controlledDays={2:['Monday','Thursday'],3:['Monday','Wednesday','Thursday'],4:['Monday','Tuesday','Wednesday','Thursday'],5:['Monday','Tuesday','Wednesday','Thursday','Friday']};
+const n=Number(presetId.replace('controlled-',''));
+const preset = controlledDays[n]?{label:'Controlled '+n+' gym days',gender:'male',experience:'2-5 years',kit:'commercial_gym',weeks:52,days:{offSeason:controlledDays[n],preSeason:controlledDays[n],inSeason:controlledDays[n]}}:PRESETS[presetId];`);
+replace('driver._compile(code, driver.filename);',`const observe=(a,b)=>{if(code.split(a).length!==2)throw Error('Missing final driver anchor: '+a);code=code.replace(a,b)};
+observe('      w.days.push(shown);',\`      w.days.push(shown);
+      const evidenceDir=path.join(output,'raw');fs.mkdirSync(evidenceDir,{recursive:true});
+      fs.writeFileSync(path.join(evidenceDir,date+'.json.gz'),require('zlib').gzipSync(JSON.stringify({date,profile:useProfileStore.getState().onboardingData,day,template,shown,accepted:useProgramStore.getState().acceptedMaterialContext,projected,flow})));
+\`);
+observe('    result.restarts.push({date,ok:same,error:boot.error});',\`    fs.writeFileSync(path.join(output,'raw','week-'+(i+1)+'-reloaded.json.gz'),require('zlib').gzipSync(JSON.stringify({before,after:visibleSignature(view(weekStart,date)),storage:Object.fromEntries(storage),profile:useProfileStore.getState().onboardingData,program:useProgramStore.getState().currentProgram,visibleWeek:view(weekStart,date),boot})));
+    result.restarts.push({date,ok:same,error:boot.error});\`);
+observe("save('programming-selection-traces.json', { schemaVersion: 1, revision: data.revision, sourceDriverSha256, traceBatches: selectionTraceBatches });", "save('base-empty-selection-traces.json', { schemaVersion: 1, revision: data.revision, sourceDriverSha256, traceBatches: selectionTraceBatches });");
+observe('    const r=await quietAsync(()=>executeProgramControlActionDurably(action,{todayISO:date}));',\`    const week=app('src/utils/sessionResolver').getMondayForDate(date);
+    const sig=d=>({date:d.date,rows:(d.workout?.exercises??[]).map(r=>({name:r.exercise?.name,sets:r.prescribedSets,min:r.prescribedRepsMin,max:r.prescribedRepsMax,kg:r.prescribedWeightKg??null}))});
+    const old=view(week,date).filter(d=>d.date<date).map(sig);
+    const r=await quietAsync(()=>executeProgramControlActionDurably(action,{todayISO:date}));
+    const next=view(week,date).filter(d=>d.date<date).map(sig);
+    fs.appendFileSync(path.join(output,'action-history.ndjson'),JSON.stringify({date,label,action,ok:r.ok,before:old,after:next,changed:JSON.stringify(old)!==JSON.stringify(next)})+'\\\\n');\`);
+fs.writeFileSync(path.join(output,'executed-driver.cjs'),code);
+driver._compile(code, driver.filename);`);
+const m=new Module(original,module);m.filename=original;m.paths=Module._nodeModulePaths(path.dirname(original));m._compile(code,original);

@@ -1,3 +1,4 @@
+import { reductionExplanationCoversWeek } from './blockBoundaryProgression';
 /**
  * PROJECTION COPY — the words `project()` is allowed to say.
  *
@@ -174,7 +175,7 @@ export function conditioningDoseValueCopyId(
   field: ConditioningDoseField,
   modality?: import('../types/domain').ConditioningOption['modality'],
 ): string | null {
-  const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+  const suffix = modality ? modality === 'running' ? '.running' : modality === 'row' || modality === 'ski' ? '.' + modality : '.machine' : '';
   return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}${suffix}`)
     ? `${DOSE_VALUE_PREFIX}${field}.${templateName}${suffix}`
     : null;
@@ -304,14 +305,14 @@ export function registerProjectionCopy(): void {
     {
       id: BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID,
       source: 'sam_ruling',
-      provenance: 'SIGNED — Sam, 2026-08-16, the approved meaning for the '
+      provenance: 'SIGNED — Sam, 2026-08-16; duration corrected by Sam 2026-09-07 to one week. The approved meaning for the '
         + 'completed-but-very-hard block. Rendered only from a stored '
         + '`hard_block_reduced` row of TrainingProgram.blockBoundaryExplanation, '
         + 'and only when that row says the loads were in fact held and work was '
         + 'in fact reduced. Guard: test:block-two-difficult-missed.',
       text: 'You completed the last block, but it felt very hard and recovery was low, '
         + "so we've kept your training weights and reduced the amount of work in this "
-        + 'block. You can change it if needed.',
+        + 'week. You can change it if needed.',
     },
     // ── THE MISSED-SESSION QUESTION — SIGNED, Sam 2026-08-16. ──
     //
@@ -639,17 +640,23 @@ export function registerProjectionCopy(): void {
     {
       id: 'day.rest.reason.injury',
       source: 'sam_ruling',
-      provenance: 'SIGNED ON SIGHT 2026-09-05 ("they\'ll do"), R-379. Shown when '
-        + 'an injury closed the session the day would otherwise have held (R-378). '
-        + 'Sam is to correct the wording once he has seen it on a device.',
-      text: 'No session today. Your shoulder is still sore, so there is nothing here worth doing.',
+      provenance: 'Sam approved this replacement in the scopebridge task on 2026-09-06 '
+        + '("yep approve"). R-379; applies to any injury that closes the session (R-378).',
+      text: 'No session today while you recover from injury.',
     },
     {
       id: 'day.rest.reason.game_proximity',
       source: 'sam_ruling',
-      provenance: 'SIGNED ON SIGHT 2026-09-05, R-379. A day held clear because a '
-        + 'fixture is close.',
-      text: 'Kept clear for Saturday. You will train again Monday.',
+      provenance: 'Sam approved this replacement in the scopebridge task on 2026-09-06 '
+        + '("yep approve"). R-379; does not assume a particular game or next training date.',
+      text: 'Kept clear to help you stay fresh for your game.',
+    },
+    {
+      id: 'day.rest.reason.fatigue',
+      source: 'sam_ruling',
+      provenance: 'Sam approved this sentence in the scopebridge task on 2026-09-06 '
+        + '("yep approve"). Explains a session emptied by the existing dated fatigue policy.',
+      text: 'No session today. Take the day to recover.',
     },
     {
       id: 'day.rest.reason.illness',
@@ -2277,8 +2284,8 @@ export function registerProjectionCopy(): void {
     template.name,
     ...(template.sections?.map((section) => section.name) ?? []),
   ]);
-  for (const name of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike'] as const) {
-    const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+  for (const name of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike', 'row', 'ski'] as const) {
+    const suffix = modality ? modality === 'running' ? '.running' : modality === 'row' || modality === 'ski' ? '.' + modality : '.machine' : '';
     const dose = conditioningVisibleDoseFor(name, modality);
     if (!dose) continue;
     const fields: readonly (readonly [ConditioningDoseField, string])[] = [
@@ -2307,8 +2314,8 @@ export function registerProjectionCopy(): void {
    * recognise the complete rendered line without widening SignedCopy's global
    * placeholder rule back to arbitrary text. */
   const renderedDoseEntries: SignedCopyEntry[] = [];
-  for (const templateName of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike'] as const) {
-    const suffix = modality ? modality === 'running' ? '.running' : '.machine' : '';
+  for (const templateName of conditioningDoseNames) for (const modality of [undefined, 'running', 'bike', 'row', 'ski'] as const) {
+    const suffix = modality ? modality === 'running' ? '.running' : modality === 'row' || modality === 'ski' ? '.' + modality : '.machine' : '';
     for (const [field, labelId] of CONDITIONING_DOSE_COPY_LINES) {
       const valueId = conditioningDoseValueCopyId(templateName, field, modality);
       if (!valueId) continue;
@@ -2667,10 +2674,13 @@ export function weekRefusalIsSpeakable(
 }
 
 export function blockBoundaryExplanationSentences(
-  program: { blockBoundaryExplanation?: readonly import('./blockBoundaryProgression').BlockBoundaryExplanationRow[] },
+  program: { blockBoundaryExplanation?: readonly import('./blockBoundaryProgression').BlockBoundaryExplanationRow[]; microcycles?: readonly { startDate?: string }[] },
+  weekStartISO?: string,
 ): SignedCopy[] {
   const out: SignedCopy[] = [];
   for (const row of program.blockBoundaryExplanation ?? []) {
+    if (row.kind === 'hard_block_reduced' && weekStartISO &&
+      !reductionExplanationCoversWeek(row, weekStartISO, program.microcycles?.[0]?.startDate)) continue;
     // The reduction row leads the stored explanation, so its sentence leads the
     // athlete's list for free — the order is the decision's, not this loop's.
     // R-343's bodyweight_progressed row carries NO sentence (Sam, 2026-09-02:

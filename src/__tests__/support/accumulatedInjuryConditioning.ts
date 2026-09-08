@@ -65,6 +65,25 @@ export async function accumulatedInjuryConditioning(
       readinessActionForKind('tired_today', { anchorDateISO: date, todayISO: date }), { todayISO: date }));
     ok(`${gender}: active readiness precedes shoulder during deload`, tired.ok);
     const view = () => quiet(() => deriveVisibleWeekLive(weekStart, date));
+    // R-389 can separate the generated energy work from the Row lift. Reach
+    // this regression's mixed identity through the real Add door instead of
+    // depending on a particular automatic placement remaining crowded.
+    if (!view().some(day => day.workout?.conditioningBlock?.options.length &&
+      day.workout.exercises.some(row => row.exercise.name.includes('Row') &&
+        row.section18Evidence?.role !== 'conditioning'))) {
+      const target = view().find(day => day.date >= date && day.workout?.conditioningBlock?.options.length);
+      const lift = view().flatMap(day => day.workout?.exercises ?? []).find(row =>
+        row.exercise.name.includes('Row') && row.section18Evidence?.role !== 'conditioning');
+      if (!target || !lift) throw new Error('Mixed Row journey needs a live conditioning day and a real Row lift');
+      const added = await quietAsync(() => executeProgramControlActionDurably({
+        type: 'add_exercise', source, scope: 'today_only',
+        payload: {date: target.date, exercise: {name: lift.exercise.name, sets: lift.prescribedSets,
+          repsMin: lift.prescribedRepsMin, repsMax: lift.prescribedRepsMax,
+          weight: lift.prescribedWeightKg ?? 0}},
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true,
+      }, {todayISO: date}));
+      if (!added.ok) throw new Error(JSON.stringify(added));
+    }
     const before = view();
     const baseline = visibleSignature(before);
     const presses = (days: ReturnType<typeof view>) => days.filter(d => d.date >= date).flatMap(d =>

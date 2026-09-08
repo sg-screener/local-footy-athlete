@@ -10,8 +10,10 @@ import { getAthletePrefs } from './athletePreferencesStore';
 import { recordedLoadsFromFeedback } from '../rules/blockBoundaryProgression';
 import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import { resolveBlockGridPosition } from '../utils/programBlockState';
+import type { CanonicalWeeklyExerciseEdit } from '../rules/canonicalWeeklyExerciseEditState';
 
-export function captureSourceFactCompilerInput(state: ProgramState, facts: readonly TemporarySourceFact[]): CanonicalWeeklySourceFactInput {
+export function captureSourceFactCompilerInput(state: ProgramState, facts: readonly TemporarySourceFact[],
+  deferredExerciseEdits: readonly CanonicalWeeklyExerciseEdit[] = state.sourceFactCompilerInput?.exerciseEdits ?? []): CanonicalWeeklySourceFactInput {
   const anchor = state.currentProgram?.generationAnchorISO;
   if (!anchor) throw new Error('source_fact_compilation_requires_generation_anchor');
   const context = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
@@ -39,6 +41,7 @@ export function captureSourceFactCompilerInput(state: ProgramState, facts: reado
       athleteExclusions: getAthletePrefs().exclusions ?? [], temporarySourceFacts: facts },
     profile, markedDays: context.markedDays, facts, programsByWeek,
     recordedLoads: recordedLoadsFromFeedback(state.sessionFeedback ?? {}),
+    exerciseEdits: deferredExerciseEdits,
   };
 }
 
@@ -55,10 +58,10 @@ export function previewAcceptedSourceFacts(facts: readonly TemporarySourceFact[]
   return { input, compiled: compileCanonicalSourceFactWeeks({ ...input, facts }) };
 }
 
-export function compileAcceptedSourceFacts(facts: readonly TemporarySourceFact[]): string[] {
+export function compileAcceptedSourceFacts(facts: readonly TemporarySourceFact[], deferredExerciseEdits: readonly CanonicalWeeklyExerciseEdit[] = []): string[] {
   const state = useProgramStore.getState();
   if (!state.currentProgram) return [];
-  const input = captureSourceFactCompilerInput(state, facts);
+  const input = captureSourceFactCompilerInput(state, facts, deferredExerciseEdits);
   const compiled = compileCanonicalSourceFactWeeks(input);
   const compatibility = composeTemporarySourceFactCompatibility({ temporarySourceFacts: facts });
   // THIS COMPILER OWNS THE FACT-DERIVED CONSTRAINTS AND ONLY THOSE. A

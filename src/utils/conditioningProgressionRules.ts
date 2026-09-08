@@ -53,8 +53,6 @@ export interface ConditioningProgressionInput {
   completionQuality: CompletionQuality;
   /** True when recentRPE/completion came from an athlete log instead of fallback defaults. */
   hasRecentFeedback?: boolean;
-  /** Post-session soreness from structured feedback, when available. */
-  sorenessLevel?: 'none' | 'mild' | 'moderate' | 'high';
   /** Active injuries with 'avoid' or 'modify' affecting this modality. */
   hasAvoidInjury: boolean;
   hasModifyInjury: boolean;
@@ -250,7 +248,7 @@ export function resolveConditioningProgression(
       note = 'Partial conditioning completion - hold next dose';
     } else if (
       input.hasRecentFeedback &&
-      (input.recentRPE >= 8 || input.sorenessLevel === 'moderate' || input.sorenessLevel === 'high')
+      input.recentRPE >= 8
     ) {
       state = 'hold';
       note = 'Conditioning feedback was hard - hold next dose';

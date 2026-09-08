@@ -98,7 +98,7 @@ const BLOCK_2_START = '2026-08-03';
 const APPROVED_REDUCED_SENTENCE =
   'You completed the last block, but it felt very hard and recovery was low, '
   + "so we've kept your training weights and reduced the amount of work in this "
-  + 'block. You can change it if needed.';
+  + 'week. You can change it if needed.';
 
 /** The lift the guards track: barbell-required, main, and retained across blocks. */
 /**
@@ -442,7 +442,7 @@ console.log('\n[3] SECONDARY VOLUME FALLS BEFORE MEANINGFUL INTENSITY');
 {
   // A secondary lift the composer authored at three sets in a build week.
   const secondaryKeys = [...goodRows.entries()]
-    .filter(([key, facts]) => !key.startsWith('w4:') && facts.sets === 3 && key.includes('Single-Leg RDL'));
+    .filter(([key, facts]) => key.startsWith('w1:') && facts.sets === 3 && key.endsWith(':Lateral Lunge'));
   ok(
     'a three-set secondary lift exists in the control to reduce',
     secondaryKeys.length > 0,
@@ -900,8 +900,8 @@ function strengthWorkout(rows: Record<string, unknown>[]): Workout {
     requiredStrengthSessions: 12,
   });
   ok(
-    'HIGH SORENESS ALONE reduces — effort is not the only door',
-    sorenessOnly.recoveryVerdict === 'very_hard' && sorenessOnly.reduces,
+    'historical soreness alone cannot cause a new reduction',
+    sorenessOnly.recoveryVerdict === 'good' && !sorenessOnly.reduces,
     `verdict ${sorenessOnly.recoveryVerdict}`,
   );
   const effortOnly = readBlockHistory({

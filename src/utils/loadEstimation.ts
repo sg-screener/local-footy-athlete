@@ -1021,6 +1021,12 @@ export function effectiveLoadRatio(profile: ExerciseLoadProfile): number {
   return profile.ratio * (profile.implements ?? 1);
 }
 
+/** The lattice describes one implement; saved/displayed kilograms are totals. */
+function prescribableExerciseTotal(totalKg: number, profile: ExerciseLoadProfile): number {
+  const implementsCount = profile.implements ?? 1;
+  return prescribableWeight(totalKg / implementsCount, profile.equipment) * implementsCount;
+}
+
 export function roundToEquipment(weight: number, equipment: EquipmentClass): number {
   return roundDownToLattice(weight, equipment);
 }
@@ -1148,11 +1154,13 @@ export function normaliseAutomaticExerciseLoadChange(args: {
   readonly targetKg: number;
 }): number | null {
   const kind = automaticLoadKindForExercise(args.exerciseName);
+  const authority = resolveLoadAuthority(args.exerciseName);
+  const implementsCount = authority.kind === 'prescribed' ? authority.profile.implements ?? 1 : 1;
   return kind ? normaliseAutomaticLoadChange({
-    baseKg: args.baseKg,
-    targetKg: args.targetKg,
+    baseKg: args.baseKg / implementsCount,
+    targetKg: args.targetKg / implementsCount,
     kind,
-  }) : null;
+  }) * implementsCount : null;
 }
 
 /**
@@ -1209,7 +1217,7 @@ export function estimateStartingWeight(
 
   const { profile } = authority;
   const anchor1RM = profile.anchor === 'squat' ? anchors.squat1RM : anchors.bench1RM;
-  return prescribableWeight(anchor1RM * effectiveLoadRatio(profile), profile.equipment);
+  return prescribableExerciseTotal(anchor1RM * effectiveLoadRatio(profile), profile);
 }
 
 /**
@@ -1260,8 +1268,7 @@ export function startingWeightForAthlete(
   const { initialLoadMultiplier } = resolveTrainingAgePolicy(onboardingData.experienceLevel);
   if (initialLoadMultiplier === 1) return base;
 
-  const { equipment } = authority.profile;
-  return prescribableWeight(base * initialLoadMultiplier, equipment);
+  return prescribableExerciseTotal(base * initialLoadMultiplier, authority.profile);
 }
 
 
@@ -1331,7 +1338,7 @@ export function familySeedFromRecord(
   const capped = estimate !== null && estimate > 0
     ? Math.min(borrowed, estimate * FAMILY_SEED_CAP_MULTIPLIER)
     : borrowed;
-  const rounded = prescribableWeight(capped, target.equipment);
+  const rounded = prescribableExerciseTotal(capped, target);
   return rounded > 0 ? rounded : null;
 }
 

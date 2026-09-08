@@ -554,14 +554,14 @@ ok('a 1-running-day week breaches the 2-day floor',
 // The floor is SCOPED OFF in two authored cases. Each is claimed by a TYPED
 // reason, never a bare boolean, so the build can check the reason still holds.
 ok('the floor is lifted in early off-season (weeks 1-2)',
-  !auditWeekAgainstCaps(oneCounts, { runningFloorExemption: 'early_off_season_weeks_1_2' })
+  !auditWeekAgainstCaps(oneCounts, { runningFloorExemption: 'off_season_preparation_weeks_1_4' })
     .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'));
 ok('the floor is lifted in bye recovery',
   !auditWeekAgainstCaps(oneCounts, { runningFloorExemption: 'bye_recovery' })
     .some((f) => f.cap === 'maxRunningExposures' && f.kind === 'under'));
 ok('exactly the two authored floor exemptions exist',
   RUNNING_FLOOR_EXEMPTIONS.length === 2 &&
-  RUNNING_FLOOR_EXEMPTIONS.includes('early_off_season_weeks_1_2') &&
+  RUNNING_FLOOR_EXEMPTIONS.includes('off_season_preparation_weeks_1_4') &&
   RUNNING_FLOOR_EXEMPTIONS.includes('bye_recovery'),
   RUNNING_FLOOR_EXEMPTIONS.join(', '));
 {

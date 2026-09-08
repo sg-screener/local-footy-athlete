@@ -643,7 +643,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) =>
               <EducationCard
                 icon="refresh-cw"
                 title="It adapts with you"
-                body="Miss a session? Busy week? Feeling sore? Your program can adjust with you."
+                body="Miss a session? Busy week? Your program can adjust with you."
               />
             </Animated.View>
             <Animated.View style={{ opacity: card3Opacity, transform: [{ translateY: card3TranslateY }] }}>

@@ -17,7 +17,7 @@ export const SLICE3_GOLDEN_SCENARIOS: readonly Slice3GoldenScenario[] = [
   golden('early-offseason-healthy', 'Healthy experienced early off-season strength plus easy off-feet aerobic work.', [
     'ALL-COND-MODALITY-01', 'OS-EARLY-COND-01', 'OS-PWR-PHASE-01',
   ]),
-  golden('mid-offseason-primer', 'Mid off-season heavy lower session eligible for primer-only power.', [
+  golden('mid-offseason-preparation', 'Mid off-season preparation blocks power.', [
     'OS-PWR-PHASE-01', 'ALL-PWR-CONTENT-01',
   ]),
   golden('late-offseason-valid-contrast', 'Late off-season same-family heavy squat and explosive lower contrast.', [

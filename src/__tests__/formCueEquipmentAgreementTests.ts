@@ -72,7 +72,6 @@ const benchCueNames = [
   'Copenhagen Plank (Half)',
   'RFE Split Squat Jump',
   'Single-Leg Hip Thrust',
-  'Pigeon Stretch',
 ] as const;
 
 for (const name of benchCueNames) {
@@ -85,6 +84,9 @@ for (const name of benchCueNames) {
   check(`${name} withholds bench-specific wording when no bench is present`,
     withoutBench.text === null && withoutBench.missingCueForImplement === true);
 }
+
+check('Pigeon Stretch keeps its cue with improvised household support',
+  cueForImplement('Pigeon Stretch','bodyweight',['bodyweight']).text !== null);
 
 check('bench dependencies are typed rather than inferred from cue prose',
   benchCueNames.every((name) => CUE_REQUIRED_APPARATUS[name]?.includes('bench')),

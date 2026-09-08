@@ -22,7 +22,7 @@ const FAQ_DATA: FAQItem[] = [
   },
   {
     question: 'What does the AI coach actually change?',
-    answer: 'It can adjust the visible program when your week changes: injury, soreness, fatigue, missed sessions, schedule changes or preferences. The chat understands what you mean, but deterministic program rules make the final changes.',
+    answer: 'It can adjust the visible program when your week changes: injury, fatigue, missed sessions, schedule changes or preferences. The chat understands what you mean, but deterministic program rules make the final changes.',
   },
   {
     question: 'What is a Coach Update?',
@@ -33,7 +33,7 @@ const FAQ_DATA: FAQItem[] = [
     answer: 'A session changes when the current week, game timing or coach adjustment makes the original session a poor fit. The app tries to keep useful training in while removing or reducing the risky part.',
   },
   {
-    question: 'What happens if I’m injured or sore?',
+    question: 'What happens if I’m injured?',
     answer: 'Tell the coach what hurts and how bad it is. The app can restrict risky exposures, keep pain-free work moving and show a Coach Update while that restriction is active.',
   },
   {
@@ -50,7 +50,7 @@ const FAQ_DATA: FAQItem[] = [
   },
   {
     question: 'When should I tap Update coach?',
-    answer: 'Use it when an injury, soreness, fatigue, schedule issue or preference changes. Also use it when something improves, worsens or clears so the active Coach Update can change with you.',
+    answer: 'Use it when an injury, fatigue, schedule issue or preference changes. Also use it when something improves, worsens or clears so the active Coach Update can change with you.',
   },
   {
     question: 'When should I see a physio?',

@@ -18,10 +18,11 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   applyStrengthProgression,
   DEFAULT_PROGRESSION_CONTEXT,
-} from '../utils/strengthProgressionIntegration';
+} from './support/legacyStrengthProgression';
 import type { Workout, WorkoutExercise } from '../types/domain';
 import {
   automaticLoadKindForExercise,
+  resolveLoadAuthority,
 } from '../utils/loadEstimation';
 import { isAutomaticLoadRung } from '../data/equipmentLattice';
 import { athleteAnswers, ARCHETYPES } from './compilerYear/catalog';
@@ -79,8 +80,8 @@ console.log('\nR-313 — equipment-specific automatic load increments\n');
 ok('barbell progression uses the next 2.5 kg total-load rung',
   progressed('Back Squat', 100) === 102.5,
   progressed('Back Squat', 100));
-ok('dumbbell progression uses the next per-hand rung',
-  progressed('DB Bench Press', 10) === 12.5,
+ok('two-dumbbell total advances from two 5 kg bells to two 6 kg bells',
+  progressed('DB Bench Press', 10) === 12,
   progressed('DB Bench Press', 10));
 ok('a fixed kettlebell progresses from 24 kg to the real 28 kg bell',
   progressed('Kettlebell Swings', 24) === 28,
@@ -118,8 +119,10 @@ const visibleLoadedRows = () => visible().flatMap(day =>
 const typedVisible = visibleLoadedRows().map(({ date, row }) => {
   const name = row.exercise?.name ?? '';
   const kind = automaticLoadKindForExercise(name);
+  const authority = resolveLoadAuthority(name);
+  const implementsCount = authority.kind === 'prescribed' ? authority.profile.implements ?? 1 : 1;
   return { date, name, kg: row.prescribedWeightKg ?? 0, kind,
-    valid: kind ? isAutomaticLoadRung(row.prescribedWeightKg ?? 0, kind) : true };
+    valid: kind ? isAutomaticLoadRung((row.prescribedWeightKg ?? 0) / implementsCount, kind) : true };
 });
 ok('[live non-vacuity] a real cold-generated visible week reaches typed loaded rows',
   typedVisible.some(item => item.kind !== null), typedVisible);

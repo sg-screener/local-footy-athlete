@@ -13,6 +13,7 @@ import { coachRevisionExistingExerciseNames } from './coachRevisionTemplateConte
 
 export interface CanonicalPlanChangeCandidateInput {
   change: TemplatePlanChange;
+  additionFactVersions?: readonly string[];
   currentDay: ResolvedDay;
   todayISO: string;
   /**
@@ -276,6 +277,7 @@ function rawCandidate(
   change: TemplatePlanChange,
   source: Workout | null,
   transformTemplate?: (template: Workout) => Workout,
+  additionFactVersions?: readonly string[],
 ): CanonicalPlanChangeCandidateResult | Workout {
   const built = buildCoachRevisionTemplateWorkout(change.templateId, change.date,
     change.kind === 'add_template' ? coachRevisionExistingExerciseNames(source, change.date) : undefined);
@@ -289,7 +291,7 @@ function rawCandidate(
   // A second instance of the same template owns new rows; existing rows keep
   // their ids, logs and removal/Undo targets. Identity is deterministic per day.
   const occupiedIds = new Set(source?.exercises.map(row => row.id));
-  if (change.kind === 'add_template' && (built.composedOptionalKind === 'mobility' || built.workoutType === 'Recovery')) {
+  if (change.kind === 'add_template') {
     const occupiedSessions = new Set(source?.exercises.map(row => row.workoutId));
     const baseId = built.id;
     let instance = 2;
@@ -298,11 +300,11 @@ function rawCandidate(
       let id = row.id, suffix = 2;
       while (occupiedIds.has(id)) id = `${row.id}:addition-${suffix++}`;
       occupiedIds.add(id);
-      return { ...row, id, workoutId: built.id };
+      return { ...row, id, workoutId: built.id, automaticSelection: undefined, additionFactVersions, athleteAdditionId: `${built.id}:${id}` };
     });
   }
   const template = transformTemplate ? transformTemplate(built) : built;
-  if (source && visibleDayLooksLikeGame({ workout: source })) {
+  if (change.kind !== 'add_template' && source && visibleDayLooksLikeGame({ workout: source })) {
     return {
       ok: false,
       code: 'protected_anchor_day',
@@ -346,6 +348,7 @@ export function materializeCanonicalPlanChangeCandidate(
     input.change,
     input.currentDay.workout ?? null,
     input.transformTemplate,
+    input.additionFactVersions,
   );
   if ('ok' in raw && raw.ok === false) return raw;
 

@@ -63,18 +63,18 @@ section('2. Fully completed flow');
   // honest when it names which side moved.
   const fullIds = ids('full');
   assert(
-    fullIds.join(',') === 'completion,expectation,feeling,soreness,notes',
+    fullIds.join(',') === 'completion,expectation,feeling,notes',
     `full flow expands feel, soreness, note (${fullIds.join(',')})`,
   );
   assert(labels('full').includes('How did the session feel?'), 'full uses session feel copy');
-  assert(labels('full').includes('How sore are you?'), 'full includes soreness');
+  assert(!labels('full').some(label => /sore/i.test(label)), 'full never asks soreness (Sam 2026-09-07)');
 }
 
 section('3. Partially completed flow');
 {
   const partialIds = ids('partial');
   assert(
-    partialIds.join(',') === 'completion,expectation,partialReason,feeling,soreness,notes',
+    partialIds.join(',') === 'completion,expectation,partialReason,feeling,notes',
     `partial flow puts reason directly after completion (${partialIds.join(',')})`,
   );
   assert(
@@ -111,7 +111,7 @@ section('5. Hidden fields are not submitted');
     feeling: 'very_hard',
     soreness: 'high',
     partialReason: 'too_hard_today',
-    skipReason: 'sore_tight',
+    skipReason: 'busy_no_time',
     notes: '  had to pull the pin  ',
     difficulty: 9,
     conditioning: { sessionName: 'Intervals', rpe: 9 },
@@ -129,7 +129,7 @@ section('5. Hidden fields are not submitted');
   });
   assert(!!skipped, 'skipped payload builds when skip reason is present');
   assert(skipped?.completion === 'skipped', 'skipped payload keeps completion');
-  assert(skipped?.skipReason === 'sore_tight', 'skipped payload keeps explicit skip reason');
+  assert(skipped?.skipReason === 'busy_no_time', 'skipped payload keeps explicit skip reason');
   assert(skipped?.notes === 'had to pull the pin', 'skipped payload trims notes');
   assert(!('feeling' in (skipped || {})), 'skipped payload omits stale feeling');
   assert(!('soreness' in (skipped || {})), 'skipped payload omits stale soreness');
@@ -149,7 +149,7 @@ section('5. Hidden fields are not submitted');
     difficulty: 6,
   });
   assert(full?.feeling === 'good', 'full payload keeps feeling');
-  assert(full?.soreness === 'none', 'full payload keeps soreness');
+  assert(!Object.hasOwn(full!, 'soreness'), 'full payload omits retired soreness');
   assert(!('partialReason' in (full || {})), 'full payload omits stale partial reason');
   assert(!('skipReason' in (full || {})), 'full payload omits stale skip reason');
   assert(full?.difficulty === 6, 'full payload keeps existing difficulty save');
@@ -168,7 +168,7 @@ section('6. Switching clears invalid stale values');
     'skipped',
   );
   assert(fullToSkipped.feeling === null, 'full to skipped clears feeling');
-  assert(fullToSkipped.soreness === null, 'full to skipped clears soreness');
+  assert(!Object.hasOwn(fullToSkipped, 'soreness'), 'full to skipped clears soreness');
   assert(fullToSkipped.partialReason === null, 'full to skipped clears partial reason');
 
   const skippedToFull = sanitizeFeedbackDraftForCompletion(
@@ -183,7 +183,7 @@ section('6. Switching clears invalid stale values');
   );
   assert(skippedToFull.skipReason === null, 'skipped to full clears skip reason');
   assert(skippedToFull.feeling === null, 'skipped to full requires a fresh feeling answer');
-  assert(skippedToFull.soreness === null, 'skipped to full requires fresh soreness answer');
+  assert(!Object.hasOwn(skippedToFull, 'soreness'), 'skipped to full omits retired soreness answer');
 
   const partialToFull = sanitizeFeedbackDraftForCompletion(
     {
@@ -197,7 +197,7 @@ section('6. Switching clears invalid stale values');
   );
   assert(partialToFull.partialReason === null, 'partial to full clears partial reason');
   assert(partialToFull.feeling === 'easy', 'partial to full keeps valid feeling');
-  assert(partialToFull.soreness === 'mild', 'partial to full keeps valid soreness');
+  assert(!Object.hasOwn(partialToFull, 'soreness'), 'partial to full does not carry retired soreness');
 }
 
 section('7. Save requirements');
@@ -392,7 +392,7 @@ section('9. Component-aware payloads do not imply other components');
         conditioning: 'skipped',
       },
       componentReasons: {
-        strength: { partialReason: null, skipReason: 'sore_tight' },
+        strength: { partialReason: null, skipReason: 'busy_no_time' },
         conditioning: { partialReason: null, skipReason: 'busy_no_time' },
       },
       feeling: 'hard',
@@ -458,7 +458,7 @@ section('9. Component-aware payloads do not imply other components');
       completion: 'partial',
       componentCompletions: { strength: 'skipped', team_training: 'full' },
       componentReasons: {
-        strength: { partialReason: null, skipReason: 'sore_tight' },
+        strength: { partialReason: null, skipReason: 'busy_no_time' },
         team_training: { partialReason: null, skipReason: null },
       },
       feeling: 'good',
@@ -620,7 +620,7 @@ section('12. Optional components save without penalising the main session');
       componentCompletions: { strength: 'full', speed: 'skipped', recovery_addon: 'partial' },
       componentReasons: {
         strength: { partialReason: null, skipReason: null },
-        speed: { partialReason: null, skipReason: 'sore_tight' },
+        speed: { partialReason: null, skipReason: 'busy_no_time' },
         recovery_addon: { partialReason: 'ran_out_of_time', skipReason: null },
       },
       feeling: 'good',
@@ -641,21 +641,9 @@ section('13. Power primer completion stays separate from strength and conditioni
   const powerComponents = getSessionComponents({
     name: 'Upper Body Strength',
     workoutType: 'Strength',
-    exercises: [{ id: 'we-bench', exerciseId: 'ex-bench', exercise: { name: 'Bench Press' } }],
-    powerBlock: {
-      id: 'power-1',
-      title: 'Power Primer',
-      placement: 'pre_lift',
-      prescription: '3 x 3 — full rest, fast & sharp',
-      options: [{ name: 'Explosive Push-up', sets: 3, repsMin: 3, repsMax: 3 }],
-      notes: ['Stop if reps slow down.'],
-      counting: {
-        hardExposure: false,
-        mainStrength: false,
-        conditioningCredit: 'none',
-        isFinisher: false,
-      },
-    },
+    exercises: [{ id: 'we-bench', exerciseId: 'ex-bench', exercise: { name: 'Bench Press' } },
+      { id: 'we-power', exerciseId: 'ex-power', role: 'power', prescribedSets: 3, prescribedRepsMin: 3, prescribedRepsMax: 3, exercise: { name: 'Explosive Push-up' } }],
+
   } as any);
   const completions = { power: 'skipped', strength: 'full' } as const;
   assert(
@@ -685,7 +673,7 @@ section('13. Power primer completion stays separate from strength and conditioni
     components: powerComponents,
     componentCompletions: completions,
     componentReasons: {
-      power: { partialReason: null, skipReason: 'sore_tight' },
+      power: { partialReason: null, skipReason: 'busy_no_time' },
       strength: { partialReason: null, skipReason: null },
     },
     feeling: 'good',

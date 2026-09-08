@@ -26,7 +26,7 @@ const {
   applyStrengthProgression,
   buildProgressionContext,
   DEFAULT_PROGRESSION_CONTEXT,
-} = require('../utils/strengthProgressionIntegration');
+} = require('./support/legacyStrengthProgression');
 
 const {
   resolveProgression,
@@ -43,7 +43,7 @@ const {
   formatDate,
   addDays,
 } = require('../utils/sessionResolver');
-const { compileCanonicalStrengthWeek: authorWeekStrengthProgression } = require('../rules/canonicalWeeklyProgressionCompiler');
+const { authorWeekStrengthProgression } = require('./support/acceptedProgressionTestAdapter');
 
 // ─── Test Scaffolding ───
 

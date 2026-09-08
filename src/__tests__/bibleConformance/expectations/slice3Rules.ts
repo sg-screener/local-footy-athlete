@@ -34,9 +34,9 @@ export const SLICE3_BIBLE_RULES: readonly Slice3Rule[] = [
   {
     id: 'OS-PWR-PHASE-01', category: 'power', section: 'Power phase rules',
     anchorQuote: 'Off-season\nBest time to build power properly because there is less game-day pressure.',
-    statement: 'Early off-season has no power, mid permits primer only, and late may permit structurally valid contrast.',
-    applicableScenarios: ['early-offseason-healthy', 'mid-offseason-primer', 'late-offseason-valid-contrast'],
-    expectation: { early: 'none', mid: 'primer', late: ['primer', 'contrast'] },
+    statement: 'Off-season preparation has no power in weeks 1-4; late may permit structurally valid contrast.',
+    applicableScenarios: ['early-offseason-healthy', 'mid-offseason-preparation', 'late-offseason-valid-contrast'],
+    expectation: { early: 'none', mid: 'none', late: ['primer', 'contrast'] },
   },
   {
     id: 'ALL-PWR-CONTRAST-01', category: 'power', section: 'Contrast training',
@@ -49,7 +49,7 @@ export const SLICE3_BIBLE_RULES: readonly Slice3Rule[] = [
     id: 'ALL-PWR-CONTENT-01', category: 'power', section: 'Power content ownership',
     anchorQuote: 'Power work is not conditioning. It should be fast, sharp and high quality.',
     statement: 'Final power metadata and visible identity agree with final surviving strength and power content.',
-    applicableScenarios: ['mid-offseason-primer', 'late-offseason-valid-contrast', 'late-offseason-invalid-contrast'],
+    applicableScenarios: ['mid-offseason-preparation', 'late-offseason-valid-contrast', 'late-offseason-invalid-contrast'],
     expectation: { contentOwnsIdentity: true },
   },
   {

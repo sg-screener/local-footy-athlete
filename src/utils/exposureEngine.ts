@@ -851,35 +851,6 @@ export function buildFatigueConstraint(args: {
 }
 
 /**
- * Build a soreness constraint. Like an injury but milder — limited,
- * not blocked. Region required.
- */
-export function buildSorenessConstraint(args: {
-  id?: string;
-  region: ConstraintRegion;
-  severity: number;
-  startDate?: string;
-}): Constraint {
-  // Soreness is one tier lower than the equivalent injury.
-  const downscaled = Math.max(1, args.severity - 2);
-  const sets = regionToBlockedRegional(args.region, downscaled, generalSeverityToTier(downscaled));
-  return {
-    id: args.id ?? `soreness-${args.region}-${Date.now()}`,
-    type: 'soreness',
-    region: args.region,
-    severity: args.severity,
-    status: 'active',
-    startDate: args.startDate ?? new Date().toISOString(),
-    blockedExposures: sets.blocked,
-    limitedExposures: sets.limited,
-    allowedExposures: sets.allowed,
-    safeFocus: sets.safeFocus,
-    advice: [],
-    label: `soreness:${args.region}@${args.severity}/10`,
-  };
-}
-
-/**
  * Build a busy-week / schedule constraint. Treated like a milder
  * fatigue — drops max-effort + heavy-strength exposures so the athlete
  * can still get useful sessions in without the high-cost ones.

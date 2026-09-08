@@ -1,3 +1,4 @@
+import { exclusionIsActiveOn } from '../../rules/exerciseExclusions';
 import { compileCanonicalProgram, type CanonicalProgramCompilerInput } from '../../rules/canonicalProgramCompiler';
 import { compileCanonicalProgramWeeks, canonicalReadinessFactFrom, canonicalIllnessFactFrom, type CanonicalProgramWeeksInput } from '../../rules/canonicalWeeklyRowCompiler';
 export { GeneratedWeekRefusedError } from '../../rules/canonicalWeeklyRowCompiler';
@@ -581,7 +582,8 @@ function coachingInputsToSchedulerInputs(
     weekStartISO: args.weekStartISO,
     phase: inputs.seasonPhase as never,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
-    gymAccessDays: nums(inputs.selectedDays),
+    gymAccessDays: nums(inputs.equipmentAccessDays ?? inputs.selectedDays),
+    strengthSessionTarget: inputs.strengthSessionTarget,
     clubNights: offSeason ? [] : nums(inputs.teamTrainingDays),
     gameDay: !offSeason && inputs.hasGame ? toNumber(inputs.gameDay) : null,
     // **ALWAYS RECURRING.** `hasGame` + a usual game day means there was a
@@ -705,6 +707,7 @@ function resolveGenerationConstraints(
 function exclusionsForSelectionAuthority(
   prefs: AthletePoolPrefsArg,
   recordSelections: 'author' | 'replay' | false | undefined,
+  blockStartISO: string,
 ): AthletePoolPrefsArg {
   // ONLY AN EXPLICIT REPLAY IS WITHHELD FROM. `'author'`, `false` and absent all
   // author: a probe that asks "would a 2-day week even build?" must see the
@@ -721,13 +724,20 @@ function exclusionsForSelectionAuthority(
   // that derived list in as a week-wide ban. Withholding the decisions while
   // leaving their own projection behind withholds nothing.
   //
-  // So the derived names are withdrawn BY NAME, which leaves a genuinely
+  // The in-block derived names are withdrawn BY NAME, which leaves a genuinely
   // hand-built `excluded` list — the tests', the dev seeds' and the coach
   // path's — exactly as it arrived.
-  const derived = new Set(dated.map((exclusion) => exclusion.exercise));
+  // A standing answer from an EARLIER block was already an input when this
+  // block was authored. Withholding it resurrects an excluded tracked anchor
+  // and then removes the replacement from every week during reconstruction.
+  // Answers made inside this block remain dated projections, never reselection.
+  const originalExclusions = dated.filter(exclusion =>
+    exclusion.decidedOnISO < blockStartISO && exclusionIsActiveOn(exclusion, blockStartISO));
+  const derived = new Set(dated.filter(exclusion => !originalExclusions.includes(exclusion))
+    .map((exclusion) => exclusion.exercise));
   return {
     ...prefs,
-    exclusions: [],
+    exclusions: originalExclusions,
     excluded: (prefs?.excluded ?? []).filter(
       (name) => !derived.has(canonicalExerciseName(String(name ?? '').trim())),
     ),
@@ -825,6 +835,7 @@ export function canonicalProgramInputFromProfile(
     blockEndISO: rotationPreviousBlock.endISO,
     // THE ACCEPTED PREVIOUS BLOCK'S OWN REQUIREMENT, never the athlete's
     // requested availability and never a recalculated planning target.
+    requiredStrengthDates: options.progressionHistory?.acceptedBlocks?.[rotationPreviousBlock.startISO]?.requiredStrengthDates,
     requiredStrengthSessions:
       options.progressionHistory?.acceptedBlocks?.[
         rotationPreviousBlock.startISO]?.requiredStrengthSessions ?? 0,
@@ -866,6 +877,7 @@ export function canonicalProgramInputFromProfile(
     athletePrefs: exclusionsForSelectionAuthority(
       athletePrefsAsRecorded,
       options.recordSelections,
+      blockStart,
     ),
     progressedIdentities,
     ...(options.recordedLoads ? { recordedLoads: options.recordedLoads } : {}),
@@ -918,6 +930,8 @@ export function canonicalProgramInputFromProfile(
     progression: {
       blockStartISO: blockStart, blockNumber: options.blockNumber ?? 1,
       asOfISO: effectiveTodayISO,
+      acceptedBlocks: options.progressionHistory?.acceptedBlocks,
+      previousRequiredStrengthDates: options.progressionHistory?.acceptedBlocks?.[previousBlockBoundsISO(blockStart).startISO]?.requiredStrengthDates,
       previousRequiredStrengthSessions: options.progressionHistory?.acceptedBlocks?.[previousBlockBoundsISO(blockStart).startISO]?.requiredStrengthSessions ?? 0,
       profile: baseProfile,
       state: {

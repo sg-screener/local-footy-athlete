@@ -116,10 +116,7 @@ export function availableTrainingDays(args: {
   weekOrder: readonly DayOfWeek[];
 }): DayOfWeek[] {
   const { profile, weekOrder } = args;
-  const taken = new Set<DayOfWeek>([
-    ...(profile.preferredTrainingDays ?? []),
-    ...(profile.teamTrainingDays ?? []),
-  ]);
+  const taken = new Set<DayOfWeek>();
   const gameDay = storedGameAnchor(profile);
   if (gameDay) taken.add(gameDay);
 
@@ -133,7 +130,7 @@ export function availableTrainingDays(args: {
     if (constraint.dayOfWeek) taken.add(constraint.dayOfWeek);
   }
 
-  return weekOrder.filter((day) => !taken.has(day));
+  return weekOrder.filter((day) => (profile.preferredTrainingDays ?? []).includes(day) && !taken.has(day));
 }
 
 export function decideExtraSessionOffer(args: {
@@ -183,18 +180,8 @@ export function decideExtraSessionOffer(args: {
 
   const offeredSessionsPerWeek = currentSessionsPerWeek + EXTRA_SESSION_STEP;
   const trainingDays = patchFor(offeredSessionsPerWeek).preferredTrainingDays;
-  // ── A PATCH THAT COULD NOT GROW IS THE WHOLE AVAILABILITY REFUSAL ──
-  //
-  // `commitmentPatchFor` returns the largest day set it can honestly build from
-  // the days the athlete has free; if that is not the count asked for, there is
-  // nowhere legal to put the session and the offer is not honourable.
-  //
-  // ⚠ **AN EXPLICIT `availableTrainingDays(...).length === 0` CHECK STOOD ABOVE
-  // AND WAS DECORATION.** Zero free days means the patch cannot grow, so this
-  // line already refused every world that one did. Mutation E10 deleted it and
-  // all 80 cells stayed green — two gates catching one fixture, the same shape
-  // the second rung's `reduces` gate turned out to be.
-  if (trainingDays.length !== offeredSessionsPerWeek) {
+  // Equipment access can exceed the requested frequency; it may never be invented.
+  if (trainingDays.length < offeredSessionsPerWeek) {
     return { offer: false, refusal: 'no_available_day' };
   }
   if (!isCommitmentLegal(offeredSessionsPerWeek)) {

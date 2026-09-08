@@ -260,7 +260,7 @@ function progressOwnsTheLoadHero(body: string): boolean {
   if (screenStart < 0 || screenEnd < 0) return false;
   const screen = body.slice(screenStart, screenEnd);
   const title = screen.indexOf('testID="progress-tab-title"');
-  const load = screen.indexOf('<LoadContinuum load={snapshot.load} />');
+  const load = screen.indexOf('<LoadContinuum load={periodHistory.load} range={range} comparison={loadComparison}');
   const lifts = screen.indexOf('testID="progress-main-lifts"');
   const tests = screen.indexOf('testID="progress-performance-tests"');
   const measurements = screen.indexOf('testID="progress-measurements"');
@@ -349,11 +349,11 @@ console.log('\n[5] LIVENESS — MUTATIONS DIE FOR THE RIGHT REASON');
   ok('a fabricated conversation bypass kills shared ownership',
     conversationUsesSnapshot(screen) && !conversationUsesSnapshot(bypass));
   const movedLoad = progress
-    .replace('<LoadContinuum load={snapshot.load} />', '')
+    .replace(/<LoadContinuum\b[\s\S]*?\/>/, '')
     .replace(
-      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />',
-      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" />\n'
-        + '<LoadContinuum load={snapshot.load} />',
+      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" inline />',
+      '<ProgressHeading title={PROGRESS_TAB_COPY.mainLifts} testID="progress-main-lifts" inline />\n'
+        + '<LoadContinuum load={periodHistory.load} range={range} comparison={loadComparison} />',
     );
   ok('moving Load below the main-lift heading kills the hierarchy guard',
     progressOwnsTheLoadHero(progress) && !progressOwnsTheLoadHero(movedLoad));

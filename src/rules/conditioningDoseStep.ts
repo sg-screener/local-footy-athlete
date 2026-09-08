@@ -91,15 +91,17 @@ type ConditioningDeltaQuantity = Pick<ConditioningDoseQuantity, 'min' | 'max'>;
  * authored increase. `Math.min` is what makes the authored maximum a wall: this
  * function cannot return a number the sheet does not contain.
  */
-function oneRungUp(quantity: ConditioningDeltaQuantity): { from: number; to: number } | null {
-  const from = prescribedFrom(quantity);
+function oneRungUp(quantity: ConditioningDeltaQuantity, actual?: number | null): { from: number; to: number } | null {
+  const from = actual === undefined ? prescribedFrom(quantity) : actual;
+  if (from === null || !Number.isFinite(from) || from < quantity.min || from > quantity.max) return null;
   if (quantity.max <= from) return null;
   return { from, to: Math.min(from + 1, quantity.max) };
 }
 
 /** One rung DOWN — the rest-reduction rung. Bounded by the authored minimum. */
-function oneRungDown(quantity: ConditioningDeltaQuantity): { from: number; to: number } | null {
-  const from = prescribedFrom(quantity);
+function oneRungDown(quantity: ConditioningDeltaQuantity, actual?: number | null): { from: number; to: number } | null {
+  const from = actual === undefined ? prescribedFrom(quantity) : actual;
+  if (from === null || !Number.isFinite(from) || from < quantity.min || from > quantity.max) return null;
   if (quantity.min >= from) return null;
   return { from, to: Math.max(from - 1, quantity.min) };
 }
@@ -118,7 +120,24 @@ function oneRungDown(quantity: ConditioningDeltaQuantity): { from: number; to: n
  * correct and is reported as `authored_dose_is_a_single_value`'s sibling rather
  * than silently becoming a step of +1 on a number nobody authored.
  */
-export function nextAuthoredDose(template: ConditioningTemplate): ConditioningStepOutcome {
+export interface CurrentConditioningDose {
+  readonly sets: number | null;
+  readonly work: string | null;
+  readonly rest: string | null;
+}
+
+function currentInAuthoredUnits(text: string | null, authored: ConditioningDoseQuantity): number | null {
+  if (!text) return null;
+  const parsed = parseConditioningDose(text);
+  if (!parsed.ok || parsed.quantity.min !== parsed.quantity.max) return null;
+  if (parsed.quantity.unit === authored.unit) return parsed.quantity.min;
+  const seconds = doseSeconds(parsed.quantity);
+  if (!seconds) return null;
+  return authored.unit === 'minutes' ? seconds.min / 60
+    : authored.unit === 'seconds' ? seconds.min : null;
+}
+
+export function nextAuthoredDose(template: ConditioningTemplate, current?: CurrentConditioningDose): ConditioningStepOutcome {
   const sets = parseConditioningDose(template.setsRounds);
   const work = parseConditioningDose(template.workPeriod);
   const rest = parseConditioningDose(template.restPeriod);
@@ -129,7 +148,7 @@ export function nextAuthoredDose(template: ConditioningTemplate): ConditioningSt
 
   // ── RUNG 1: one more authored rep, round, block or set ───────────────────
   if (sets.ok) {
-    const rung = oneRungUp(sets.quantity);
+    const rung = oneRungUp(sets.quantity, current?.sets);
     if (rung) {
       return {
         stepped: true,
@@ -151,7 +170,7 @@ export function nextAuthoredDose(template: ConditioningTemplate): ConditioningSt
   if (work.ok) {
     const seconds = doseSeconds(work.quantity);
     if (seconds && seconds.max > seconds.min) {
-      const rung = oneRungUp(work.quantity);
+      const rung = oneRungUp(work.quantity, current ? currentInAuthoredUnits(current.work, work.quantity) : undefined);
       if (rung) {
         return {
           stepped: true,
@@ -168,7 +187,7 @@ export function nextAuthoredDose(template: ConditioningTemplate): ConditioningSt
 
   // ── RUNG 3: a shorter authored rest ──────────────────────────────────────
   if (rest.ok) {
-    const rung = oneRungDown(rest.quantity);
+    const rung = oneRungDown(rest.quantity, current ? currentInAuthoredUnits(current.rest, rest.quantity) : undefined);
     if (rung) {
       return {
         stepped: true,

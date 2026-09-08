@@ -1,12 +1,16 @@
 /** Injury facts constrain accepted sessions; they never become athlete edits. */
-import type { OnboardingData, Workout } from '../types/domain';
+import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
+import { POOL_REGISTRY } from '../data/exercisePools';
+import { getExerciseTags } from '../data/exerciseTags';
+import type { TapSwapChoice } from '../utils/tapSwapHierarchy';
 import type { ActiveConstraint, ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import { planInjuryRecomposition } from '../utils/injurySessionRecomposition';
-import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
+import { assessTapSwapCandidateSafety, resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { applyExclusionsToAuthoredDay } from './exerciseExclusions';
 import { canonicalWeeklyInjuryStateFrom } from './canonicalWeeklyInjuryState';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
-import { compileCanonicalExerciseEditOnWorkout } from './canonicalWeeklyExerciseEditCompiler';
+import { compileCanonicalExerciseEditOnWorkout, resolveCanonicalExerciseEditTarget } from './canonicalWeeklyExerciseEditCompiler';
+import type { CanonicalWeeklyExerciseEdit } from './canonicalWeeklyExerciseEditState';
 import { loadForReplacementExercise, type readBlockHistory } from './blockBoundaryProgression';
 import { applyInjurySessionAdjustment, deriveInjurySessionAdjustment } from '../utils/injurySessionAdjustment';
 import { isRedFlagInjurySeverity } from './injuryWithheldRows';
@@ -34,6 +38,28 @@ interface InjurySessionInput {
   weekExerciseNames: readonly string[];
   weekAutomaticExerciseNames: readonly string[];
   otherMainStrengthPatterns?: readonly MainStrengthPattern[];
+  programmingContext?: import('../utils/injurySessionAdjustment').InjuryProgrammingContext;
+  programmingContextByDate?: Readonly<Record<string, import('../utils/injurySessionAdjustment').InjuryProgrammingContext>>;
+}
+
+/** A replacement owns its units and cues. Only compatible strength-slot dose
+ * can be inherited; a stretch is never converted to eight seconds by a swap. */
+export function injuryReplacementPrescription(original: WorkoutExercise | undefined, choice: TapSwapChoice) {
+  const name = choice.name ?? '';
+  const pool = Object.values(POOL_REGISTRY).flat().find(row => row.name === name);
+  const explicit = choice.prescription;
+  const authored = pool ?? getExerciseTags(name)?.prescription;
+  const prescriptionType = explicit?.prescriptionType ?? authored?.prescriptionType ?? 'reps';
+  const compatible = (original?.prescriptionType ?? 'reps') === prescriptionType;
+  return {
+    sets: Math.min(original?.prescribedSets ?? 3, explicit?.sets ?? authored?.sets ?? original?.prescribedSets ?? 3),
+    repsMin: explicit?.repsMin ?? authored?.repsMin ?? (compatible ? original?.prescribedRepsMin : undefined) ?? 8,
+    repsMax: explicit?.repsMax ?? authored?.repsMax ?? (compatible ? original?.prescribedRepsMax : undefined) ?? 12,
+    prescriptionType,
+    perSide: explicit?.perSide ?? authored?.perSide ?? getExerciseTags(name)?.unilateral ?? false,
+    restSeconds: explicit?.restSeconds ?? authored?.restSeconds ?? (compatible ? original?.restSeconds : undefined) ?? 0,
+    notes: explicit?.notes ?? pool?.notes ?? '',
+  };
 }
 
 /** The preview and the accepted fold execute this exact transformation. */
@@ -44,12 +70,16 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
   const primaryInjury = stage.bucket ? { bucket: stage.bucket, severity: stage.severity,
     triggers: stage.triggers,
     seriousSymptoms: stage.seriousSymptoms === true } : null;
-  const environment = resolveTapSwapEnvironment({ date: args.dateISO, profile: args.profile,
-    activeConstraints: [...args.constraints], primaryInjury });
+  const environment = { ...resolveTapSwapEnvironment({ date: args.dateISO, profile: args.profile,
+    activeConstraints: [...args.constraints], primaryInjury }), selectionRoute: 'automatic' as const };
   const visible = applyExclusionsToAuthoredDay({ workout: args.workout, dateISO: args.dateISO,
     exclusions: args.exclusions }) ?? args.workout;
   const plan = planInjuryRecomposition({ workout: visible, environment, primaryInjury,
-    existingAutomaticExerciseNames: args.weekAutomaticExerciseNames });
+    existingAutomaticExerciseNames: args.weekAutomaticExerciseNames,
+    prohibitedMainPatterns: canonicalWeeklyInjuryStateFrom({ profile: args.profile,
+      generationConstraints: buildGenerationConstraintContext({
+        activeConstraints: args.constraints, todayISO: args.dateISO,
+      }) }).prohibitedPatterns });
   let workout = args.workout;
   for (const substitution of plan.substitutions) {
     if (!substitution.to.name) continue;
@@ -61,12 +91,7 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
       kind: 'swap', decisionId: stage.id, occurredAt: stage.lastUpdatedAt ?? stage.startDate,
       dateISO: args.dateISO, targetName: substitution.from, targetComponentId: null,
       replacement: { name: substitution.to.name,
-        // An injury swap keeps the already-reduced dose ceiling, including
-        // scheduled deload/readiness. Missing replacement dose is not 3 new sets.
-        sets: Math.min(originalRow?.prescribedSets ?? 3,
-          substitution.to.prescription?.sets ?? originalRow?.prescribedSets ?? 3),
-        repsMin: substitution.to.prescription?.repsMin ?? 8,
-        repsMax: substitution.to.prescription?.repsMax ?? 12,
+        ...injuryReplacementPrescription(originalRow, substitution.to),
         weight: loadForReplacementExercise({ exerciseName: substitution.to.name,
           onboardingData: args.profile, recordedLoadByExercise: args.recordedLoads }),
       },
@@ -94,7 +119,7 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
     .filter(workoutExerciseWasAutomaticallySelected)
     .map(row => row.exercise?.name ?? '').filter(Boolean));
   const adjustment = deriveInjurySessionAdjustment({ workout: substitutedVisible, environment,
-    profile: args.profile, recordedLoads: args.recordedLoads, bodyPart: stage.bodyPart,
+    profile: args.profile, programmingContext: args.programmingContextByDate?.[args.dateISO] ?? args.programmingContext, recordedLoads: args.recordedLoads, bodyPart: stage.bodyPart,
     redFlag: isRedFlagInjurySeverity(stage.seriousSymptoms, stage.severity),
     weekExerciseNames: substitutedWeekNames,
     weekAutomaticExerciseNames: substitutedWeekAutomaticNames,
@@ -141,12 +166,14 @@ export function compileCanonicalInjuryStage(args: InjurySessionInput & {
 
 export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'workout' | 'dateISO' | 'weekExerciseNames' | 'weekAutomaticExerciseNames' | 'otherMainStrengthPatterns'> & {
   workoutsByDate: Readonly<Record<string, Workout>>;
+  reservedExerciseNames?: readonly string[];
   /**
    * R-354: the first date this compile may shape. Days before it are history
    * — the source-fact fold pins them from the accepted week — and no pass in
    * here may add to them. Absent, every date is placeable (boot replays).
    */
   historyBeforeISO?: string;
+  exerciseEdits?: readonly CanonicalWeeklyExerciseEdit[];
 }) {
   const stages = args.constraints.filter((constraint): constraint is ActiveInjuryConstraint =>
     constraint.type === 'injury' && constraint.status === 'active' && !!constraint.bucket)
@@ -159,9 +186,9 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
     // Fold chronologically; later days see the additions already made to the
     // week, so a single report cannot duplicate its new compound on every day.
     for (const [dateISO, workout] of Object.entries(workoutsByDate).sort(([left], [right]) => left.localeCompare(right))) {
-      if (stages[index].startDate.slice(0, 10) > dateISO) continue;
-      const weekExerciseNames = Object.values(workoutsByDate).flatMap(day =>
-        day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean));
+      if (!filterConstraintsForDate([stages[index]], dateISO).length) continue;
+      const weekExerciseNames = [...(args.reservedExerciseNames ?? []), ...Object.values(workoutsByDate).flatMap(day =>
+        day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean))];
       const weekAutomaticExerciseNames = Object.values(workoutsByDate).flatMap(day =>
         day.exercises.filter(workoutExerciseWasAutomaticallySelected)
           .map(row => row.exercise?.name ?? '').filter(Boolean));
@@ -173,7 +200,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
         weekExerciseNames, weekAutomaticExerciseNames, otherMainStrengthPatterns,
         stage: stages[index],
         constraints: [...args.constraints.filter(constraint => constraint.type !== 'injury'),
-          ...stages.slice(0, index + 1)] });
+          ...filterConstraintsForDate(stages.slice(0, index + 1), dateISO)] });
       workoutsByDate[dateISO] = result.workout;
       (stagesByDate[dateISO] ??= []).push(result);
     }
@@ -202,17 +229,23 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
    * cannot become a second programming authority. Supporting work is untouched:
    * the ban is on TRAINING that pattern as a main lift, and whether an
    * individual exercise is safe is already owned above. */
-  const prohibitedPatterns = new Set(canonicalWeeklyInjuryStateFrom({
+  for (const [dateISO, workout] of Object.entries(workoutsByDate)) {
+    const datedConstraints = filterConstraintsForDate([...args.constraints], dateISO);
+    const prohibitedPatterns = new Set(canonicalWeeklyInjuryStateFrom({
     profile: args.profile,
     // The SAME builder the rest of generation uses to turn this week's active
     // constraints into an injury context — never a second reading of them here.
     generationConstraints: buildGenerationConstraintContext({
-      activeConstraints: args.constraints,
-      todayISO: Object.keys(args.workoutsByDate).sort()[0] ?? '',
+      activeConstraints: datedConstraints,
+      todayISO: dateISO,
     }),
   }).prohibitedPatterns);
   if (prohibitedPatterns.size > 0) {
-    for (const [dateISO, workout] of Object.entries(workoutsByDate)) {
+      // R-115: serious symptoms block training while keeping the original
+      // session visible. Those rows are not active main-pattern prescriptions.
+      if (filterConstraintsForDate([...args.constraints], dateISO).some(constraint =>
+        constraint.type === 'injury' && constraint.status === 'active'
+        && isRedFlagInjurySeverity(constraint.seriousSymptoms, constraint.severity))) continue;
       const rows = workout.exercises ?? [];
       const kept = rows.filter((row) => {
         const evidence = row.section18Evidence;
@@ -245,7 +278,22 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
         return completeWeeklyCore({ ...weeklyCompletionArgs, workoutsByDate: frontal.workoutsByDate }).workoutsByDate;
       })()
     : workoutsByDate;
-  const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, workout]) => {
+  const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, original]) => {
+    let workout = original;
+    // Base edits retain their existing order. The edit compiler carries only
+    // injury-era edits and unresolved targets here, after those rows exist.
+    // The same ledger translation and edit compiler own both paths.
+    const datedConstraints = filterConstraintsForDate([...args.constraints], dateISO);
+    const environment = resolveTapSwapEnvironment({ date: dateISO, profile: args.profile,
+      activeConstraints: datedConstraints });
+    for (const edit of args.exerciseEdits ?? []) {
+      if (edit.kind !== 'swap' || edit.dateISO !== dateISO) continue;
+      const target = resolveCanonicalExerciseEditTarget(workout, edit);
+      if (target.kind !== 'found') continue;
+      if (target.row.unavailableForInjury ||
+          !assessTapSwapCandidateSafety(edit.replacement.name, environment).safe) continue;
+      workout = compileCanonicalExerciseEditOnWorkout(workout, edit);
+    }
     const reasons = new Set<UsefulStrengthReductionReason>(
       workout.usefulStrengthSessionContract?.reductionReasons ?? [],
     );

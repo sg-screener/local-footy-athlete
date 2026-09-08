@@ -1,3 +1,4 @@
+import { isOffseasonPreparation } from '../rules/offseasonSubphasePolicy';
 /**
  * Canonical final content owner for generated and mutated workouts.
  *
@@ -508,7 +509,7 @@ function updatePowerForPhase(args: {
   // `'not_off_season'` on an off-season week is contradicting itself, and that
   // is surfaced loudly rather than resolved into a guess — see the throw below.
   const earlyOffseason = args.context.phase === 'Off-season' &&
-    args.context.offseasonSubphase === 'early_offseason';
+    isOffseasonPreparation(args.context.offseasonSubphase);
   if (
     args.context.phase === 'Off-season' &&
     args.context.offseasonSubphase === 'not_off_season'
@@ -565,8 +566,6 @@ function updatePowerForPhase(args: {
   const gMinusTwoContrast = args.context.hasGame && args.context.gOffset === -2 && isContrast;
   if (
     isContrast && (
-      (args.context.phase === 'Off-season' &&
-        args.context.offseasonSubphase === 'mid_offseason') ||
       preSeasonTeamContrast ||
       gMinusTwoContrast
     )
@@ -576,9 +575,7 @@ function updatePowerForPhase(args: {
       item: blockTitle,
       reason: gMinusTwoContrast
         ? 'game_proximity_primer_only:G-2'
-        : preSeasonTeamContrast
-        ? 'preseason_team_day_primer_only'
-        : 'mid_offseason_primer_only',
+        : 'preseason_team_day_primer_only',
     });
     // The downgrade is a DOSE/pairing change on the row, not a new object: drop
     // the contrast pairing sentence from the notes and mark the row a primer.
@@ -670,7 +667,7 @@ function finaliseWorkoutAfterMutationUnchecked(
   }
 
   const earlyOffseason = context.phase === 'Off-season' &&
-    context.offseasonSubphase === 'early_offseason';
+    isOffseasonPreparation(context.offseasonSubphase);
   const originalJson = JSON.stringify(inputWorkout);
   let workout: Workout = {
     ...inputWorkout,

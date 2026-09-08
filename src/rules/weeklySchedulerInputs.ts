@@ -90,6 +90,7 @@ export function weeklySchedulerInputsFrom(args: {
 }): WeeklySchedulerInputs {
   const profile = args.profile as OnboardingData & {
     preferredTrainingDays?: readonly string[];
+    trainingDaysPerWeek?: number;
     teamTrainingDays?: readonly string[];
     gameDay?: string;
   };
@@ -129,6 +130,7 @@ export function weeklySchedulerInputsFrom(args: {
     phase: profile.seasonPhase as ContractPhase,
     offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
     gymAccessDays: dayNumbers(profile.preferredTrainingDays),
+    strengthSessionTarget: profile.trainingDaysPerWeek,
     clubNights: offSeason ? [] : dayNumbers(profile.teamTrainingDays),
     gameDay: targetGameDays[0] ?? null,
     gameDays: targetGameDays,

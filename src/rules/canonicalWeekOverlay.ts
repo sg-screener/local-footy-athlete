@@ -78,6 +78,7 @@ export function compileWeekOverlay(args: {
     // and every judge derives on read (S4c) — retiring this write would only
     // blind the cannot-derive fallback. Priced, measured, and closed.
     exposureContractV2: sourceMicrocycle.exposureContractV2,
+    restDayReasonByDay: sourceMicrocycle.restDayReasonByDay,
     workoutsByDate,
     createdAt: now,
     updatedAt: now,

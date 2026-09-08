@@ -58,6 +58,8 @@ import {
   type RequestedSpeedQuality,
 } from './sprintExposureGate';
 import { BIBLE_WEEKLY_CAPS } from './weeklyExposureCounts';
+import { combinedConditioningMustBeOffFeet } from './conditioningSelection';
+import { OFFSEASON_PREPARATION } from './offseasonSubphasePolicy';
 import {
   athleticTransverseExposureRule,
   type AthleticTransverseSafetyConstraint,
@@ -82,7 +84,19 @@ export interface SchedulerReadiness {
   readonly deloadKeepsSessions?: boolean;
 }
 
+export interface LowerBodyWorkload {
+  readonly workingSets: number;
+  /** Missing completion/dose is not evidence of a rested day. */
+  readonly unknown: boolean;
+}
+
 export interface WeeklySchedulerInputs {
+  /** Resolved strength prescriptions/completions, supplied before final energy placement. */
+  readonly lowerBodyWorkloadByDay?: Readonly<Partial<Record<number, LowerBodyWorkload>>>;
+  /** Refining placement cannot silently promote an existing metabolic dose. */
+  readonly retainedMetabolicCategoriesByDay?: Readonly<Partial<Record<number, ContractConditioningCategory>>>;
+  /** Reasons supplied by the input owner that removed an anchor; filled days clear them. */
+  readonly restDayReasonByDay?: Readonly<Partial<Record<number, RestDayReason>>>;
   /** Monday of the week being scheduled, ISO. */
   readonly weekStartISO: string;
   /**
@@ -105,19 +119,20 @@ export interface WeeklySchedulerInputs {
   readonly appRunningPermitted?: boolean;
   /** Current dated equipment, supplied by the compiler; no machine is assumed. */
   readonly offLegAvailableDays?: readonly number[];
-  /** Explicit mild soreness reports effective on these dates, not inferred fatigue. */
-  readonly mildSorenessDays?: readonly number[];
   /** Off-season only; decides the §8 overlay. */
   readonly offseasonBlock: OffseasonBlock | null;
   /** Current week within the selected season phase. Null means not known. */
   readonly phaseWeekNumber?: number | null;
   /** One-based week inside an accepted Christmas club shutdown. */
   readonly christmasBreakWeekNumber?: number | null;
+  readonly christmasRestrictedWeeks?: readonly number[];
   /**
    * Days the athlete can reach a gym or their usual strength equipment.
    * Day-of-week numbers, 0 = Sunday. **Not total active days** (contract §2).
    */
   readonly gymAccessDays: readonly number[];
+  /** Requested strength frequency, independent of equipment-access dates. */
+  readonly strengthSessionTarget?: number;
   /** The athlete's REAL club nights. Never assumed (WC-062). */
   readonly clubNights: readonly number[];
   /** Every actual fixture in the target week. Present (including `[]`) on live paths. */
@@ -485,6 +500,7 @@ export function fortnightlyCodDoseDue(inputs: WeeklySchedulerInputs): boolean {
     offseasonBlock: inputs.offseasonBlock,
     phaseWeekNumber: inputs.phaseWeekNumber ?? null,
     christmasBreakWeekNumber: inputs.christmasBreakWeekNumber ?? null,
+    christmasRestrictedWeeks: inputs.christmasRestrictedWeeks,
     rollingWindowComplete: false,
     athleticExposures,
     safetyConstraints,
@@ -714,7 +730,50 @@ function permutations<T>(items: readonly T[]): T[][] {
 
 // ─── SCHEDULE ──────────────────────────────────────────────────────────────
 
-export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResult {
+export type StrengthWeekAssignment = readonly {day: number; purpose: SessionPurpose}[];
+export interface WeeklyScheduleSearch {
+  /** Compiler trial only; never a saved athlete answer. */
+  readonly assignment?: StrengthWeekAssignment;
+  readonly evaluate?: (assignment: StrengthWeekAssignment) => readonly number[] | null;
+}
+
+function metabolicIsOffFeet(day: number, category: ContractConditioningCategory, inputs: WeeklySchedulerInputs, purpose?: SessionPurpose | null): boolean {
+  return combinedConditioningMustBeOffFeet({category,
+    strengthRegion: purpose ? (PURPOSE_IS_LOWER[purpose] ? 'lower' : 'upper') : undefined,
+    hasAvailableMachine: (inputs.offLegAvailableDays ?? inputs.gymAccessDays).includes(day),
+    seasonPhase: inputs.phase,
+  });
+}
+
+/** Rank complete legal weeks; lower is preferred. Actual dose is supplied by composition. */
+export function wholeWeekPlacementCost(week: WeeklySchedule, inputs: WeeklySchedulerInputs): readonly number[] {
+  const speed = week.days.filter(d => d.sprintComponent || d.conditioning === 'sprint_high_speed');
+  const metabolic = week.days.filter(d => d.conditioning !== null
+    && d.conditioning !== 'sprint_high_speed' && d.conditioningCategory !== 'recovery_flush');
+  const active = new Set(week.days.filter(d => d.owner === 'strength' || d.clubTraining || d.game
+    || (d.conditioning !== null && d.conditioningCategory !== 'recovery_flush')).map(d => d.dayOfWeek));
+  let run = 0, longest = 0;
+  for (const day of [...WEEK_ORDER, ...WEEK_ORDER]) {run = active.has(day) ? run + 1 : 0; longest = Math.max(longest, run);}
+  const freshness = speed.reduce((cost, day) => {
+    const previous = (day.dayOfWeek + 6) % 7;
+    const dose = inputs.lowerBodyWorkloadByDay?.[previous];
+    return cost + Number(dose?.unknown || (dose?.workingSets ?? 0) >= 10)
+      + Number(inputs.clubNights.includes(previous))
+      + Number((inputs.lowerBodyWorkloadByDay?.[day.dayOfWeek]?.workingSets ?? 0) >= 10)
+      + Number((inputs.lowerBodyWorkloadByDay?.[(day.dayOfWeek + 1) % 7]?.workingSets ?? 0) >= 10)
+      + Number(metabolic.some(d => d.dayOfWeek === previous
+        && ['repeat_sprint', 'glycolytic', 'aerobic_power'].includes(d.conditioningCategory ?? '')
+        && !metabolicIsOffFeet(d.dayOfWeek, d.conditioningCategory!, inputs, d.purpose)));
+  }, 0);
+  return [Math.max(0, active.size - BIBLE_WEEKLY_CAPS.hardDaysAbsoluteMax),
+    -week.demand.mainStrength, -speed.length, -metabolic.length, freshness,
+    speed.filter(d => d.owner === 'strength' && metabolic.some(m => m.dayOfWeek === d.dayOfWeek)).length,
+    speed.filter(d => d.purpose !== null && PURPOSE_IS_LOWER[d.purpose]).length,
+    Math.max(0, Math.min(7, longest) - GLOBAL_RULES.consecutiveHardDays.preferred),
+    active.size];
+}
+
+export function scheduleWeek(inputs: WeeklySchedulerInputs, search: WeeklyScheduleSearch = {}): WeeklySchedulerResult {
   const deliveredEnergy = inputs.deliveredEnergySystemDays ?? [];
   const deliveredAppDays = new Set(deliveredEnergy
     .filter((day) => day.appProgrammed).map((day) => day.dayOfWeek));
@@ -797,7 +856,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
    * `accessIntended` below is what the athlete's answer would author, and
    * when fewer sessions are delivered the reduction is DISCLOSED through
    * the same record fixture-compressed weeks already use. */
+  const requestedStrengthDays = Math.max(1, Math.min(6, inputs.strengthSessionTarget || inputs.gymAccessDays.length));
   const effectiveGymDays = Math.min(
+    requestedStrengthDays,
     Math.max(inputs.gymAccessDays.length, 0),
     Math.max(usableGymDays.length, SMALLEST_APPROVED_LAYOUT),
     6);
@@ -934,14 +995,35 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     for (const rung of rungs) {
       const needed = rung.purposes.length;
       if (usableGymDays.length < needed) continue;
+      if (search.assignment) {
+        const candidate = search.assignment;
+        if (candidate.length === needed
+          && JSON.stringify(candidate.map(s => s.purpose).sort()) === JSON.stringify([...rung.purposes].sort())
+          && new Set(candidate.map(s => s.day)).size === needed
+          && candidate.every(s => usableGymDays.includes(s.day))
+          && assignmentIsLegal(candidate, legalityInputs)) return {assignment: [...candidate], rung};
+        continue;
+      }
+
       let bestForRung: { assignment: { day: number; purpose: SessionPurpose }[];
-        score: number } | null = null;
+        score: number; costs: readonly number[] } | null = null;
       for (const dayCombo of combinations(usableGymDays, needed)) {
         for (const ordering of permutations(rung.purposes)) {
           const assignment = dayCombo.map((day, index) => ({ day, purpose: ordering[index] }));
+          if (search.assignment && JSON.stringify(assignment) !== JSON.stringify(search.assignment)) continue;
           if (!assignmentIsLegal(assignment, legalityInputs)) continue;
           const score = scoreAssignment(assignment, legalityInputs);
-          if (!bestForRung || score > bestForRung.score) bestForRung = { assignment, score };
+          const costs = search.assignment ? [] : search.evaluate ? search.evaluate(assignment) : (() => {
+            const candidate = scheduleWeek(inputs, {assignment});
+            return scheduleRefused(candidate) ? null : wholeWeekPlacementCost(candidate, inputs);
+          })();
+          if (costs === null) continue;
+          const ranked = [...costs, -score];
+          const previous = bestForRung ? [...bestForRung.costs, -bestForRung.score] : null;
+          const firstDifference = previous ? ranked.findIndex((value, index) => value !== previous[index]) : -1;
+          if (!previous || (firstDifference >= 0 && ranked[firstDifference] < previous[firstDifference])) {
+            bestForRung = { assignment, score, costs };
+          }
         }
       }
       if (bestForRung) return { assignment: bestForRung.assignment, rung };
@@ -998,7 +1080,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // would remove work the athlete can safely do.
   /** R-379. Days the app deliberately empties, and why. Empty is the normal
    * answer: a day with no entry keeps the standing rest line. */
-  const restDayReasons: Partial<Record<number, RestDayReason>> = {};
+  const restDayReasons: Partial<Record<number, RestDayReason>> = { ...inputs.restDayReasonByDay };
   const injuryProhibited = new Set(inputs.prohibitedPatterns ?? []);
   if (injuryProhibited.size > 0) {
     const impossible = (purpose: SessionPurpose): boolean => {
@@ -1131,7 +1213,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // and budgeted like any other stimulus: two club nights plus the hard
   // session plus the fly ARE the four, and no extra aerobic session is owed.
   // Where it does not (in-season caps, P15/R-268), Speed still rides a receiver.
-  const clubSpeedRides = clubSpeedTopUp && !overlay.speedInsideConditioningTarget;
+  const clubSpeedRides = clubSpeedTopUp && hasScheduledGame(inputs) && !overlay.speedInsideConditioningTarget;
   // WC-143 + R-338 (2026-09-03): the NO-CLUB game week's Speed rides its early
   // fast session — Sam's Q2 shape is one session, "a short sprint workout into
   // ... flying runs or glycolytic sessions". In-season the contract counts
@@ -1186,7 +1268,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           .filter(([, purpose]) => PURPOSE_IS_LOWER[purpose])
           .map(([day]) => day),
       });
-  const plannedSprintDay = deliveredSprintDays.size > 0
+  let plannedSprintDay = deliveredSprintDays.size > 0
     ? null
     : unrestrictedPlannedSprintDay !== null
       && isGovernableEnergyDay(unrestrictedPlannedSprintDay)
@@ -1291,8 +1373,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     // gym day. Considering every legal day here lets the exhaustive selector
     // leave a packed strength day as strength/mobility only when that avoids a
     // three-day energy-system streak.
-    ...(inputs.phase === 'Off-season' && inputs.offseasonBlock === 'normal_build'
-      ? WEEK_ORDER : []),
+    ...(((inputs.phase === 'Off-season' && inputs.offseasonBlock === 'normal_build') || inputs.lowerBodyWorkloadByDay || inputs.phase === 'In-season') ? WEEK_ORDER : []),
   ]));
   const legalConditioningCandidates = conditioningCandidates.filter((day) =>
     isGovernableEnergyDay(day)
@@ -1305,10 +1386,37 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // receivers are genuinely short. Room is measured against the metabolic
   // budget, and the selection below still retries with stacking permitted if
   // the spacing rules cannot seat the whole budget on separate days.
+  const chooseHardConditioningDay = (speedDay: number | null, metabolicDays: readonly number[]): number | null => {
+    const retainedHard = hardQuality === null ? undefined : metabolicDays.find(day =>
+      day !== speedDay && inputs.retainedMetabolicCategoriesByDay?.[day] === hardQuality);
+    if (retainedHard !== undefined) return retainedHard;
+    const hardEligible = metabolicDays.filter((day) => {
+    // Fresh Speed owns its receiver. Hard conditioning uses another legal day.
+    if (day === speedDay) return false;
+    if (inputs.phase === 'In-season' && hardQuality === 'repeat_sprint'
+      && !(inputs.offLegAvailableDays ?? inputs.gymAccessDays).includes(day)) return false;
+    const retained = inputs.retainedMetabolicCategoriesByDay?.[day];
+    if (retained && retained !== hardQuality) return false;
+    if (!hasScheduledGame(inputs)) return true;
+    if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
+    return !isGamePlusOne(day, inputs);
+  });
+  const laterHardEligible = speedDay === null ? [] : hardEligible.filter((day) =>
+    orderIndex(day) > orderIndex(speedDay));
+  const hardPool = laterHardEligible.length > 0 ? laterHardEligible : hardEligible;
+  const hardDayForSprint = hardQuality === null ? null : (
+    hardPool.find((day) => {
+      const purpose = purposeByDay.get(day);
+      return purpose === undefined || !PURPOSE_IS_LOWER[purpose];
+    })
+    ?? hardPool[0] ?? null);
+    return hardDayForSprint;
+  };
+  const chooseConditioningDays = (plannedSprintDay: number | null): number[] => {
   const receiversBesideSpeed = legalConditioningCandidates.filter((day) => day !== plannedSprintDay);
-  const roomForOwnSpeedDay = speedStimulus === 1
+  const roomForOwnSpeedDay = plannedSprintDay !== null
     && receiversBesideSpeed.length >= metabolicBudget;
-  const conditioningDays = (() => {
+  return (() => {
     const select = (
       candidatesForCount: readonly number[],
       speedHasOwnDay: boolean,
@@ -1336,6 +1444,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       const positions = [...new Set([...anchors, ...days])].map(orderIndex).sort((a, b) => a - b);
       const gaps = positions.map((p, i) => (positions[(i + 1) % positions.length] - p + 7) % 7);
       return [
+        Object.keys(inputs.retainedMetabolicCategoriesByDay ?? {}).filter(day => !days.includes(Number(day))).length,
+        Number(hardQuality !== null && !inputs.retainedMetabolicCategoriesByDay
+          && chooseHardConditioningDay(plannedSprintDay, days) === null),
         // With no room, Speed must occupy one selected conditioning receiver;
         // otherwise it would become additive after this budget is spent. With
         // room (R-337) it owns its day and this preference is silent.
@@ -1356,7 +1467,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           && !PURPOSE_IS_LOWER[purposeByDay.get(day)!] && sprintDayIsLegal(day, inputs)) ? 1 : 0,
         hardQuality !== null && !days.some(day => !PURPOSE_IS_LOWER[purposeByDay.get(day)!]
           && !isGameMinusTwo(day, inputs)) ? 1 : 0,
-        inputs.appRunningPermitted === false || inputs.offseasonBlock === 'early_optional' ? 0
+        inputs.appRunningPermitted === false || !overlay.runningRequired ? 0
           : Math.max(0, GLOBAL_RULES.running.min - new Set(running).size),
         Math.max(0, cyclicStreak([...training, ...days]) - GLOBAL_RULES.consecutiveHardDays.preferred),
         // Preserve the cross-week Off-season boundary: Sunday conditioning is
@@ -1402,6 +1513,39 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       ? separated
       : select(legalConditioningCandidates, false);
   })();
+  };
+  // Compare complete energy arrangements before preferring fewer training days.
+  // Strength is already fixed; this does not add a stimulus or reselect a lift.
+  let conditioningDays = chooseConditioningDays(plannedSprintDay);
+  if (plannedSprintDay !== null && inputs.lowerBodyWorkloadByDay) {
+    const arrangements = new Map<number, number[]>();
+    const baselineEnergyStreak = energyStreak([...deliveredAppDays]);
+    for (const candidate of speedCandidates) {
+      const day = candidate.dayOfWeek;
+      if (!isGovernableEnergyDay(day) || !sprintDayIsLegal(day, inputs)) continue;
+      const metabolic = chooseConditioningDays(day);
+      const active = new Set([...committedDays, ...metabolic, day]);
+      if (active.size > Math.max(committedDays.size, BIBLE_WEEKLY_CAPS.hardDaysAbsoluteMax)) continue;
+      if (energyStreak([...deliveredAppDays, ...metabolic, day]) > Math.max(2, baselineEnergyStreak)) continue;
+      // Never buy a separated day by dropping work that the original arrangement fitted.
+      if (metabolic.length < conditioningDays.length) continue;
+      arrangements.set(day, metabolic);
+    }
+    const placementCostByDay = Object.fromEntries([...arrangements].map(([day, metabolic]) => [day, [
+      Number(purposeByDay.has(day) && metabolic.includes(day)),
+      Number(purposeByDay.has(day) && PURPOSE_IS_LOWER[purposeByDay.get(day)!]),
+      new Set([...committedDays, ...metabolic, day]).size,
+    ]]));
+    plannedSprintDay = selectFreshSpeedDay({
+      inputs,
+      candidates: speedCandidates.filter(candidate => arrangements.has(candidate.dayOfWeek)),
+      placementCostByDay,
+      previousHardConditioningByDay: Object.fromEntries([...arrangements].map(([day, metabolic]) =>
+        [day, chooseHardConditioningDay(day, metabolic) === (day + 6) % 7
+          && !metabolicIsOffFeet((day + 6) % 7, hardQuality!, inputs, purposeByDay.get((day + 6) % 7))])),
+    }) ?? plannedSprintDay;
+    conditioningDays = arrangements.get(plannedSprintDay) ?? conditioningDays;
+  }
   // WC-144 (Sam's Q3 ruling, 2026-08-26 — the pre-season hard runner leaving
   // an all-lower receiver set for a free weekend day) was BUILT HERE and
   // BACKED OUT 2026-08-27: the moved Saturday session collides with the
@@ -1474,23 +1618,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // longer a redundant second refusal sitting behind an owner that already did
   // the job — it is one arm of the single question *"is this a week we may add
   // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
-  const hardEligible = conditioningDays.filter((day) => {
-    // Fresh Speed owns its receiver. Hard conditioning uses another legal day.
-    if (day === plannedSprintDay) return false;
-    if (!hasScheduledGame(inputs)) return true;
-    if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
-    return !isGamePlusOne(day, inputs);
-  });
-  const laterHardEligible = plannedSprintDay === null ? [] : hardEligible.filter((day) =>
-    orderIndex(day) > orderIndex(plannedSprintDay));
-  const hardPool = laterHardEligible.length > 0 ? laterHardEligible : hardEligible;
-  const hardDayForSprint = hardQuality === null ? null : (
-    hardPool.find((day) => {
-      const purpose = purposeByDay.get(day);
-      return purpose === undefined || !PURPOSE_IS_LOWER[purpose];
-    })
-    ?? hardPool[0] ?? null);
-  const hardDay = hardDayForSprint;
+  const hardDay = chooseHardConditioningDay(plannedSprintDay, conditioningDays);
   const normalOffseasonTempoDay = inputs.phase === 'Off-season'
     && inputs.offseasonBlock === 'normal_build'
     ? [...conditioningDays].reverse().find((day) =>
@@ -1500,6 +1628,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     day: number,
     defaultCategory: ContractConditioningCategory,
   ): ContractConditioningCategory => {
+    const retained = inputs.retainedMetabolicCategoriesByDay?.[day];
+    if (retained) return retained;
     if (day === hardDay && hardQuality !== null) return hardQuality;
     if (day === normalOffseasonTempoDay) return 'tempo';
     return defaultCategory;
@@ -1553,7 +1683,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const standaloneConditioningBudget = Math.max(0,
     metabolicBudget - conditioningDays.length);
   let runningSlotsToReserve = inputs.appRunningPermitted === false ||
-    (inputs.phase === 'Off-season' && inputs.offseasonBlock === 'early_optional')
+    !overlay.runningRequired
     ? 0 : Math.max(0, GLOBAL_RULES.running.min - plannedRunningDays.size - standaloneConditioningBudget);
   for (const day of [...conditioningDays].reverse()) {
     if (runningSlotsToReserve === 0) break;
@@ -1731,7 +1861,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     longestStreakWith(a) - longestStreakWith(b)
     || WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b));
 
-  if (inputs.phase !== 'Off-season' || inputs.offseasonBlock !== 'early_optional') {
+  if (overlay.runningRequired || residualConditioning > 0) {
     const placedEnergyDays = new Set<number>([
       ...deliveredAppDays,
       ...conditioningDaySet,
@@ -1827,7 +1957,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     const intention = topUp && entry.owner === 'rest_or_recovery' ? topUp : entry;
     // Safety changes the modality, not the session count or its energy-system
     // target. The conditioning specialist resolves reachable off-feet content.
-    return inputs.appRunningPermitted === false && intention.conditioning === 'running'
+    return intention.conditioning === 'running' && (inputs.appRunningPermitted === false
+      || (intention.conditioningCategory !== null && metabolicIsOffFeet(intention.dayOfWeek, intention.conditioningCategory, inputs, intention.purpose)))
       ? { ...intention, conditioning: 'off_leg' as const }
       : intention;
   });
@@ -1842,21 +1973,33 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // P03, 2026-08-28: automatic gendered extras are fixture-relative only.
   // Preserve G−1, including a pre-season practice match; no off-season/no-game
   // offer. This does not govern manual Add or the separate Mobility top-up.
+  const preparationReceivers = inputs.phase === 'Off-season' && inputs.offseasonBlock === 'transition'
+    ? withRunning.filter(entry => entry.owner === 'strength' && !entry.clubTraining && !entry.game
+      && entry.conditioning === null && !entry.sprintComponent
+      && isGovernableEnergyDay(entry.dayOfWeek)
+      && inputs.gymAccessDays.includes(entry.dayOfWeek)
+      && inputs.offLegAvailableDays?.includes(entry.dayOfWeek))
+      .filter((entry, index, entries) => index === 0 || index === entries.length - 1)
+      .slice(0, OFFSEASON_PREPARATION.exposureConditioning.preferred.max)
+    : [];
   const withFlush = withRunning.map((entry): SessionIntention => {
+    if (preparationReceivers.includes(entry)) return {
+      ...entry, conditioning: 'off_leg', conditioningCategory: 'recovery_flush',
+      conditioningRole: 'finisher',
+    };
     // Sam, 2026-08-28: G+2 offers an off-leg flush unless conditioning or club
-    // already occupies the day. It becomes required only with reported mild
-    // soreness. This never borrows a machine or displaces existing work.
+    // already occupies the day. R-380 retires soreness as an input; the flush
+    // remains optional and never displaces existing work.
     if (inputs.phase !== 'In-season' || entry.game || entry.clubTraining
       || entry.conditioning !== null || entry.sprintComponent
       || inputs.unavailableDays.includes(entry.dayOfWeek)
       || !inputs.offLegAvailableDays?.includes(entry.dayOfWeek)
       || scheduledGameProximity(entry.dayOfWeek, inputs).daysSincePreviousGame !== 2
       || isGameMinusOne(entry.dayOfWeek, inputs) || isGamePlusOne(entry.dayOfWeek, inputs)) return entry;
-    const required = inputs.mildSorenessDays?.includes(entry.dayOfWeek) === true;
     return { ...entry, owner: entry.owner === 'strength' ? 'strength' : 'conditioning',
       conditioning: 'off_leg', conditioningCategory: 'recovery_flush',
-      conditioningRole: entry.owner === 'strength' ? (required ? 'component' : 'finisher') : 'standalone',
-      optional: entry.owner === 'strength' ? entry.optional : !required,
+      conditioningRole: entry.owner === 'strength' ? 'finisher' : 'standalone',
+      optional: entry.owner === 'strength' ? entry.optional : true,
       clauseId: 'R-265' };
   });
   // R-329/R-331 — exchange one existing easy/moderate conditioning component
@@ -1870,7 +2013,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       && (entry.conditioningCategory === 'aerobic_base'
         || entry.conditioningCategory === 'tempo')
       && !entry.clubTraining && !entry.game;
-    const receiver = withFlush.find(isReceiver);
+    // Keep the aerobic base: a due COD session exchanges tempo first.
+    const receiver = withFlush.find(entry => isReceiver(entry) && entry.conditioningCategory === 'tempo')
+      ?? withFlush.find(entry => isReceiver(entry) && entry.conditioningCategory === 'aerobic_base'
+        && withFlush.filter(day => day.conditioningCategory === 'aerobic_base').length > 1);
     if (!receiver) return withFlush;
     return withFlush.map((entry): SessionIntention => entry !== receiver ? entry : ({
       ...entry,
@@ -2003,13 +2149,13 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
    * a real reduction reported as nothing at all is the measured defect. An
    * existing ladder disclosure (which carries the more specific reason)
    * stands; only the silent case gains one. */
-  const accessLayout = inputs.gymAccessDays.length > layoutGymDays
+  const accessLayout = requestedStrengthDays > layoutGymDays
     ? baseLayoutFor({
       phase: inputs.phase,
-      gymDayCount: Math.min(inputs.gymAccessDays.length, 6),
+      gymDayCount: requestedStrengthDays,
       weekendAvailable,
       fourthSession: {
-        gymDayCount: Math.min(inputs.gymAccessDays.length, 6),
+        gymDayCount: requestedStrengthDays,
         age: inputs.age,
         consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
         highReadiness: inputs.readiness.highReadiness,
@@ -2117,6 +2263,9 @@ export interface FreshSpeedSelectionInput {
   readonly candidates: readonly SpeedPlacementCandidate[];
   readonly heavyLowerDays?: readonly number[];
   readonly hardConditioningDays?: readonly number[];
+  /** Complete arrangement costs, after freshness and before receiver consolidation. */
+  readonly placementCostByDay?: Readonly<Partial<Record<number, readonly number[]>>>;
+  readonly previousHardConditioningByDay?: Readonly<Partial<Record<number, boolean>>>;
 }
 
 /** R-330. Deterministic automatic Speed receiver selection, preferences only. */
@@ -2140,9 +2289,13 @@ export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number
     WEEK_ORDER[(orderIndex(day) + WEEK_ORDER.length - 1) % WEEK_ORDER.length];
   const freshnessCost = (day: number): number => {
     const previous = previousDay(day);
-    return Number(heavyLower.has(previous))
-      + Number(hardConditioning.has(previous))
-      + Number(inputs.clubNights.includes(previous));
+    const dose = inputs.lowerBodyWorkloadByDay?.[previous];
+    const lowerCost = dose ? dose.unknown || dose.workingSets >= 10 : heavyLower.has(previous);
+    return Number(lowerCost)
+      + Number(hardConditioning.has(previous) || selection.previousHardConditioningByDay?.[day] === true)
+      + Number(inputs.clubNights.includes(previous))
+      + Number((inputs.lowerBodyWorkloadByDay?.[day]?.workingSets ?? 0) >= 10)
+      + Number((inputs.lowerBodyWorkloadByDay?.[(day + 1) % 7]?.workingSets ?? 0) >= 10);
   };
   const laterFreshExists = (day: number): boolean => legal.some((candidate) =>
     orderIndex(candidate.dayOfWeek) > orderIndex(day)
@@ -2150,15 +2303,12 @@ export function selectFreshSpeedDay(selection: FreshSpeedSelectionInput): number
   const score = (candidate: SpeedPlacementCandidate): readonly number[] => {
     const day = candidate.dayOfWeek;
     const isGPlusTwo = scheduledGameProximity(day, inputs).daysSincePreviousGame === 2;
-    // R-338 (Sam, 2026-09-02): among equally fresh days, an existing strength
-    // day beats opening a new one, and upper beats lower — *"keep it on the
-    // friday ... i'd rather them do it after lower body work than the next
-    // day"*. Freshness still comes first: the day after heavy lower, hard
-    // conditioning or a club night loses to a fresh alternative.
+    // Resolved working dose determines next-day freshness. Complete arrangement
+    // costs precede the older upper/lower/standalone consolidation tie-break.
     const role = candidate.role === 'upper_strength' ? 0
       : candidate.role === 'other_strength' ? 1 : 2;
     return [isGPlusTwo && laterFreshExists(day) ? 1 : 0,
-      freshnessCost(day), role, orderIndex(day)];
+      freshnessCost(day), ...(selection.placementCostByDay?.[day] ?? []), role, orderIndex(day)];
   };
   legal.sort((left, right) => {
     const a = score(left); const b = score(right);

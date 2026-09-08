@@ -1,3 +1,6 @@
+import { semanticFingerprint } from './programSemanticSnapshot';
+import { athleteAdditionWarnings, athleteAdditionWarningText } from '../rules/athleteAdditionWarnings';
+import { getEffectiveGameDates } from './sessionResolver';
 /**
  * Tap-first plan changes: preview and commit both stage the same typed
  * accepted mutation. The retired parallel CoachRevisionProposal builder had
@@ -259,7 +262,6 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   },
 };
 
-const MAX_VISIBLE_SESSIONS_PER_DAY = 2;
 
 type VisibleSessionKind = CoachRevisionSectionKind;
 
@@ -572,6 +574,18 @@ export function removeEmptiesTheDay(options: PlanChangeDayOptions): boolean {
  * projects, silently. If that cell reds, the read moves out of `projectParts` or
  * this function stops taking the shortcut.
  */
+function additionAssessment(date: string, workout: Workout, visibleWeek: ResolvedDay[]): ProgramEditRiskAssessment {
+  const existingIds = new Set(visibleWeek.find(day => day.date === date)?.workout?.exercises.map(row => row.id));
+  const gameDates = [...getEffectiveGameDates(buildScheduleStateImperative(), date)];
+  const warnings = [...new Set(workout.exercises.filter(row => !existingIds.has(row.id)).flatMap(row =>
+    athleteAdditionWarnings({ dateISO: date, exerciseName: row.exercise.name, gameDates, week: visibleWeek })))];
+  const findings = warnings.map(warning => ({ ruleId: `athlete_add_${warning}`, level: 'soft' as const,
+    message: athleteAdditionWarningText(warning), dates: [date], sessions: [workout.name],
+    canOverride: true, source: 'program_edit_guard' as const }));
+  return { decision: findings.length ? 'confirm' : 'allow', highestLevel: findings.length ? 'soft' : 'info',
+    findings, introducedRuleIds: findings.map(finding => finding.ruleId), worsenedRuleIds: [] };
+}
+
 function projectedDay(day: ResolvedDay): ProjectedDayParts {
   return projectParts({ week: [day], weekStart: day.date }).days[0];
 }
@@ -614,7 +628,7 @@ export function listPlanChangeOptionsForDay(args: {
   // the same read that makes the projection call every part of a game day
   // uneditable. Two owners answering "is this a game day?" is how the menu came
   // to lock a day the projection was offering to edit.
-  if (projected.kind === 'game') return empty('game_day');
+
 
   const snap = snapshotProjectedDay(day);
 
@@ -648,15 +662,11 @@ export function listPlanChangeOptionsForDay(args: {
       : undefined,
   });
 
-  // Add-on-top: strength and conditioning can stack until the day has two
-  // visible parts. Duplicate strength+strength or conditioning+conditioning
-  // is still blocked; rest is owned by bin/remove rather than add.
+  // R-387: another session remains available regardless of existing kinds/count.
   const visibleSessionKinds = visibleSessionKindsForSnapshot(snap);
   const visibleSessionCount = snap.workout?.sections.length ?? 0;
   const canAddOnTop =
-    projected.capabilities.canAdd &&
-    visibleSessionCount > 0 &&
-    visibleSessionCount < MAX_VISIBLE_SESSIONS_PER_DAY;
+    projected.capabilities.canAdd && visibleSessionCount > 0;
 
   return {
     date: args.date,
@@ -670,11 +680,7 @@ export function listPlanChangeOptionsForDay(args: {
     move,
     binScopes: canRemove ? binScopesForSnapshot(snap, project({ week: [day], weekStart: day.date }).days[0].parts) : [],
     addOnTopCategories: canAddOnTop
-      ? categories.filter((category) => {
-          const addedKind = categoryAddsSessionKind(category.id);
-          if (addedKind === 'recovery') return true;
-          return !visibleSessionKinds.includes(addedKind);
-        })
+      ? categories
       : [],
     visibleSessionCount,
     visibleSessionKinds,
@@ -1014,18 +1020,8 @@ export function resolveTemplatePlanChange(args: {
 // whatever this returns and never invents its own caution.
 
 export interface PlanChangeWarning {
-  code: 'game_week_fresh' | 'burnout_volume';
+  code: 'game_week_fresh' | 'repeat_heavy';
   message: string;
-}
-
-/** Labels of the hard (work-capacity) registry sessions, for counting
- *  how much hard work already sits on a week. */
-function hardSessionLabels(): Set<string> {
-  return new Set(
-    listCoachRevisionTemplates()
-      .filter((template) => template.category === 'work_capacity')
-      .map((template) => template.label),
-  );
 }
 
 export function planChangeWarningForCategory(args: {
@@ -1033,35 +1029,12 @@ export function planChangeWarningForCategory(args: {
   date: string;
   visibleWeek: ResolvedDay[];
 }): PlanChangeWarning | null {
-  if (args.category !== 'conditioning_hard') return null;
-
-  // Game week (the date's Monday-week contains a game): freshness first.
-  const byeDates = new Set(byeUnlockedDatesForWeek(args.visibleWeek));
-  if (!byeDates.has(args.date)) {
-    return {
-      code: 'game_week_fresh',
-      message:
-        "Make sure you don't overdo it - we want you fresh for game day.",
-    };
-  }
-
-  // No game, but the week is already loaded with hard work: burnout.
-  const monday = getMondayForDate(args.date);
-  const hardLabels = hardSessionLabels();
-  const hardCount = args.visibleWeek.filter((day) =>
-    getMondayForDate(day.date) === monday &&
-    !!day.workout &&
-    (hardLabels.has(day.workout.name) || day.workout.intensity === 'High'),
-  ).length;
-  if (hardCount >= 2) {
-    return {
-      code: 'burnout_volume',
-      message:
-        "That's a lot of hard work in one week. Adding more risks burnout - keep something in the tank.",
-    };
-  }
-
-  return null;
+  const picked = pickTemplateForCategory(args);
+  if (!picked) return null;
+  const workout = buildCoachRevisionTemplateWorkout(picked.templateId, args.date);
+  if (!workout) return null;
+  const finding = additionAssessment(args.date, workout, args.visibleWeek).findings[0];
+  return finding ? { code: finding.ruleId === 'athlete_add_near_game' ? 'game_week_fresh' : 'repeat_heavy', message: finding.message } : null;
 }
 
 
@@ -1352,6 +1325,8 @@ export function g1LandingAskForChange(args: {
   change: AthleteOwnedPlanChange;
   visibleWeek: ResolvedDay[];
 }): G1LandingAskContext | null {
+  // R-387: deliberate Add uses the shared warning and keeps the chosen dose.
+  if (args.change.kind === 'add_category' || args.change.kind === 'add_template') return null;
   const targetDate = landingDateForChange(args.change);
   if (!targetDate) return null;
   const landingWorkout = landingWorkoutForChange(args);
@@ -1517,6 +1492,7 @@ function materializeAthleteCandidate(
 ): CanonicalPlanChangeCandidateResult {
   return materializeCanonicalPlanChangeCandidate({
     ...input,
+    additionFactVersions: useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.map(semanticFingerprint),
     transformTemplate: g1RouteTemplateTransform(input.change),
   });
 }
@@ -1727,11 +1703,6 @@ export function resolveAthleteMutation(args: {
   if (change.kind === 'add_category' || change.kind === 'add_template') {
     const addDay = args.visibleWeek.find((day) => day.date === change.date);
     if (!addDay) return { ok: false, error: 'not_visible' };
-    // Game day is fully locked — no add, no override.
-    if (protectedAnchorsForDaySnapshot(snapshotProjectedDay(addDay))
-      .some((anchor) => anchor.kind === 'game')) {
-      return { ok: false, error: 'protected_game_day' };
-    }
     // OCCUPIED-DAY STACK ADDS COME HOME — the legacy deferral is retired.
     //
     // This line said "out of scope this stage" and deferred to a legacy writer
@@ -1751,7 +1722,7 @@ export function resolveAthleteMutation(args: {
     //
     // The semantics are Sam's doubling law at the add door: what is there stays,
     // the new session stacks beside it, and the day becomes the combined shape
-    // generation already produces. Game day is still locked above.
+    // generation already produces. The game itself stays on its date.
     //
     // A day emptied by an active whole-DAY removal is a RESTORATION, not a
     // net-new add — and that too is typed now (Stage B stage 1): the addition
@@ -2096,7 +2067,9 @@ export function previewPlanChangeRisk(args: {
             appliedDates: resolution.appliedDates,
             rejected: [],
             proposedWeek,
-            assessment: emptyAssessment,
+            assessment: resolution.kind === 'add_session'
+              ? additionAssessment(resolution.input.date, resolution.input.addedWorkout, args.visibleWeek)
+              : emptyAssessment,
           }, {
             selectedOutcome: staged.outcome,
             ownershipBoundary: 'typed_athlete_mutation',

@@ -391,14 +391,7 @@ export type DeterministicCoachNoteEffectKind =
   | 'beginner_policy'
   | 'testing_bias'
   | 'subphase_policy'
-  | 'bye_week'
-  // The G-2 quality-lower session (ruling 4a + the signing batch, Sam
-  // 2026-08-06). Its own kind because it is the INTERSECTION of two facts —
-  // a paused region and a fixture two days out — and neither alone produces
-  // it: `subphase_policy` is a phase decision and `bye_week` is a fixture
-  // absence, so folding it into either would let the note fire on a week
-  // that never built the session.
-  | 'injury_game_proximity';
+  | 'bye_week';
 
 export type DeterministicCoachNoteEffectReason =
   | 'adaptation_reduced'
@@ -1297,6 +1290,8 @@ export interface UserRemovalConstraint {
 }
 
 export interface WeekScopedWorkoutOverlay {
+  /** Derived explanations for the dates this overlay owns; reconstructed from facts. */
+  restDayReasonByDay?: Readonly<Partial<Record<number, import('../rules/restDayReason').RestDayReason>>>;
   id: string;
   weekStart: string;
   weekEnd: string;
@@ -1389,6 +1384,10 @@ export interface ConditioningBlock {
  * Represents a single exercise within a workout
  */
 export interface WorkoutExercise {
+  /** Accepted athlete Add decision; distinct even for repeated exercise names. */
+  athleteAdditionId?: string;
+  /** Fact versions already present when the athlete deliberately chose this row. */
+  additionFactVersions?: readonly string[];
   /**
    * Selected by the automatic weekly exercise selector. This survives
    * persistence so rebuilds can recover the same history; athlete-added rows
@@ -1623,7 +1622,7 @@ export interface WorkoutExercise {
      * automatic de-duplication provenance and deliberately renders no athlete
      * explainer (R-295).
      */
-    readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day' | 'accepted_on_another_day';
+    readonly cause: 'excluded_today' | 'kit_today' | 'injury' | 'already_on_day' | 'accepted_on_another_day' | 'reserved_for_main_lift';
   };
 
   // Timestamps

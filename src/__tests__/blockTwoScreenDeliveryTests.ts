@@ -230,7 +230,7 @@ const TRACKED: string = (() => {
 const APPROVED_REDUCED_SENTENCE =
   'You completed the last block, but it felt very hard and recovery was low, '
   + "so we've kept your training weights and reduced the amount of work in this "
-  + 'block. You can change it if needed.';
+  + 'week. You can change it if needed.';
 const APPROVED_QUESTION_SENTENCE =
   'You have been completing about 2 of your 3 planned sessions. '
   + 'Would a smaller weekly program fit your life better?';
@@ -316,10 +316,26 @@ const hardProgram = build(veryHardBlock1());
 clearLedger();
 
 const hardPrompts = deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
   currentProgram: hardProgram,
   blockNumber: 2,
   ledgerEntries: ledger(),
 });
+for (const weekStartISO of ['2026-08-10', '2026-08-17']) {
+  const restored = JSON.parse(JSON.stringify(hardProgram));
+  const later = deriveBlockBoundaryPrompts({ currentProgram: restored,
+    blockNumber: 2, ledgerEntries: [], weekStartISO });
+  ok(`expired reduction notice is absent after reload in ${weekStartISO}`,
+    later.notice === null);
+  for (const row of restored.blockBoundaryExplanation ?? []) {
+    delete row.effectiveFrom; delete row.effectiveUntil;
+  }
+  ok(`historical undated notice also expires in ${weekStartISO}`,
+    deriveBlockBoundaryPrompts({currentProgram:restored,blockNumber:2,
+      ledgerEntries:[],weekStartISO}).notice===null);
+
+}
+
 
 ok(
   'the derivation produces a notice for a very-hard block',
@@ -348,10 +364,8 @@ ok(
   const storedSetsFor = (name: string): number[] => {
     const sets: number[] = [];
     for (const [weekIndex, microcycle] of hardProgram.microcycles.entries()) {
-      // Week 4 is the deload and carries its own halved dose — the notice
-      // describes the BUILD weeks, so comparing it would be comparing two
-      // different rulings' numbers.
-      if (weekIndex === 3) continue;
+      // R-380: this notice describes only the first week's reduction.
+      if (weekIndex !== 0) continue;
       for (const workout of microcycle.workouts) {
         for (const exercise of workout.exercises ?? []) {
           if ((exercise.exercise?.name ?? '') === name) sets.push(exercise.prescribedSets);
@@ -369,7 +383,7 @@ ok(
     `ids: ${JSON.stringify(testIDs(noticeTree))}`,
   );
   ok(
-    'every rendered line names the sets the block ACTUALLY stores',
+    'every rendered line names the sets the affected week ACTUALLY stores',
     row.setsReduced.every((change) => {
       const rendered = textOf(nodeWithTestID(noticeTree, `home-block-boundary-change-${change.exerciseName}`));
       const stored = storedSetsFor(change.exerciseName);
@@ -412,12 +426,14 @@ console.log('\n[2] DISMISSING IT — THE REAL TAP');
   ok(
     'the card is gone on the next derivation',
     deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
       currentProgram: hardProgram, blockNumber: 2, ledgerEntries: ledger(),
     }).notice === null,
   );
   ok(
     'IT STAYS GONE ACROSS A RELOAD — the acknowledgement is durable, not local state',
     deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
       currentProgram: hardProgram, blockNumber: 2,
       // The ledger as it comes back off disk.
       ledgerEntries: JSON.parse(JSON.stringify(ledger())) as DecisionLedgerEntry[],
@@ -427,6 +443,7 @@ console.log('\n[2] DISMISSING IT — THE REAL TAP');
   ok(
     'and it is still shown to an athlete who has NOT acknowledged (control)',
     deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
       currentProgram: hardProgram, blockNumber: 2, ledgerEntries: [],
     }).notice !== null,
     'the notice never renders at all — the cells above pass vacuously',
@@ -637,6 +654,7 @@ console.log('\n[6] NO QUESTION AT EXACTLY 75%, AND NONE ON A WELL-ATTENDED BLOCK
       }
       const goodProgram = build(good);
       const prompts = deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
         currentProgram: goodProgram, blockNumber: 2, ledgerEntries: [],
       });
       return prompts.notice === null && conversationOrNull({
@@ -737,6 +755,7 @@ console.log('\n[7] THE CHEAP GATES ARE REAL GATES — U3, U4 and U6 survived wit
   ok(
     'a stored row whose loads were NOT held renders NO CARD AT ALL',
     deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
       currentProgram: lyingProgram, blockNumber: 2, ledgerEntries: [],
     }).notice === null,
     'the athlete would be told their weights were kept on a block where they were not',

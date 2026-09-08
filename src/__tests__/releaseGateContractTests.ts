@@ -75,7 +75,8 @@ ok('liveness: removing the canonical command from the agent contract is detected
   !documentsCanonicalGate(agentContract.replace('npm run test:release', 'npm run test:bible')));
 ok('the gate starts with test truth and carries no diagnostic-fleet command',
   gate.units[0]?.label === BOOTSTRAP_SCRIPT
-    && gate.units.every((unit: any) => !/^test:bible(?::|$)/.test(unit.label)),
+    && gate.units.every((unit: any) => !/^test:bible(?::|$)/.test(unit.label))
+    && pkg.scripts[BOOTSTRAP_SCRIPT].split(' && ').includes('npm run test:year-diff'),
   gate.units);
 ok('the real all-scope typecheck runs after bootstrap, before product witnesses',
   gate.units[1]?.label === 'test:compile'

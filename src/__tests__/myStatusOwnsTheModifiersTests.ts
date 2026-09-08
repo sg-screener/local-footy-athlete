@@ -280,7 +280,7 @@ run('the accepted readiness family selects only relevant status answers', () => 
     modifierAffects: ['current_day'],
     appliesToDate: '2026-08-31',
   }] as never)[0];
-  assert(soreness, 'no soreness note was projected');
+  assert(!soreness, 'retired historical soreness must not project an active note');
 
   assert(fatigue.readinessKind === 'fatigue',
     `the cooked note lost its canonical family: ${String(fatigue.readinessKind)}`);
@@ -288,8 +288,6 @@ run('the accepted readiness family selects only relevant status answers', () => 
     `the illness note lost its canonical family: ${String(illness.readinessKind)}`);
   assert(poorSleep.readinessKind === 'poor_sleep',
     `the poor-sleep note lost its canonical family: ${String(poorSleep.readinessKind)}`);
-  assert(soreness.readinessKind === 'soreness',
-    `the soreness note lost its canonical family: ${String(soreness.readinessKind)}`);
 
   const cookedOptions = statusUpdateOptionsForNote(fatigue);
   assert(JSON.stringify(cookedOptions) === JSON.stringify([
@@ -302,10 +300,6 @@ run('the accepted readiness family selects only relevant status answers', () => 
   const poorSleepOptions = statusUpdateOptionsForNote(poorSleep);
   assert(!poorSleepOptions.includes('still_sick'),
     `poor sleep was offered an illness answer: ${poorSleepOptions.join(', ')}`);
-  const sorenessOptions = statusUpdateOptionsForNote(soreness);
-  assert(JSON.stringify(sorenessOptions) === JSON.stringify([
-    'good_now', 'still_not_right', 'worse',
-  ]), `soreness options are ${sorenessOptions.join(', ')}`);
 });
 
 run('the sheet reads those words through signedCopy, not literals', () => {

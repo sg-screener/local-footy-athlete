@@ -1,3 +1,4 @@
+import { displayReps } from '../../rules/prescriptionDisplay';
 /**
  * THE COMPLETE ATHLETE JOURNEY — one real athlete, production doors only.
  *
@@ -392,7 +393,7 @@ export interface DayIntent {
    * rule refuses a skip with no reason, exactly as the screen does, so a robot
    * that skips must say why (default: no time).
    */
-  skipReason?: 'busy_no_time' | 'sore_tight' | 'injured_niggle' | 'sick_low_energy' | 'didnt_feel_like_it' | 'equipment_unavailable' | 'other';
+  skipReason?: 'busy_no_time' | 'injured_niggle' | 'sick_low_energy' | 'didnt_feel_like_it' | 'equipment_unavailable' | 'other';
 }
 
 export type DayOutcome =
@@ -605,7 +606,7 @@ export function typeLoadsForSession(
   let typed = 0;
   for (const row of (workout.exercises ?? []) as unknown as {
     id: string; exerciseId: string; prescribedSets?: number;
-    prescribedRepsMax?: number; prescribedWeightKg?: number;
+    prescribedRepsMin?: number; prescribedRepsMax?: number; prescribedWeightKg?: number; prescriptionType?: string;
     exercise?: { name?: string };
   }[]) {
     const rowName = (row as { exercise?: { name?: string } }).exercise?.name ?? '';
@@ -614,7 +615,7 @@ export function typeLoadsForSession(
     // ── R-343: A BODYWEIGHT LIFT IS LOGGED TOO — AT BODYWEIGHT, WITH ITS REPS ──
     // The first version skipped every zero-load row, so a Pull-Up done for the
     // full range left no set behind it and the block boundary could never see
-    // the athlete had reached the top. Confirming the card at bodyweight is
+    // the athlete had reached the target. Confirming the card at bodyweight is
     // the same honest act as confirming it at 80 kg; no weight is invented.
     const mode = resolveLoadControlMode(rowName);
     const atBodyweight = (!Number.isFinite(weight) || weight <= 0)
@@ -627,7 +628,9 @@ export function typeLoadsForSession(
         loggedWorkoutId: `journey:${dateISO}`,
         workoutExerciseId: row.id,
         setNumber,
-        actualReps: Number(row.prescribedRepsMax) || undefined,
+        actualReps: (!row.prescriptionType || row.prescriptionType === 'reps')
+          ? displayReps(row.prescribedRepsMin, row.prescribedRepsMax) ?? undefined
+          : undefined,
         ...(atBodyweight ? {} : { actualWeightKg: weight }),
         createdAt: `${dateISO}T12:00:00.000Z`,
         updatedAt: `${dateISO}T12:00:00.000Z`,

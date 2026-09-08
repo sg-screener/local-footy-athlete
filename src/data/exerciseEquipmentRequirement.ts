@@ -41,6 +41,8 @@
  * authority on Sam's answers, and the first exercise where that is false would
  * split them.
  */
+import { POOL_REGISTRY } from './exercisePools';
+
 export type EquipmentRequirement = string | readonly string[];
 
 export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
@@ -48,6 +50,16 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Single-Leg Hop and Stick": [],
   "Foam Roller Thoracic Extension": ["foam_roller", ["dumbbells", "barbell"]],
   "Band-Assisted Pull-Up": ["bands", ["rack", "pullup_bar"]],
+  "90/90 Breathing": [],
+  "ATG Split Squat": [],
+  "Butterfly Stretch": [],
+  "Calf Stretch": [],
+  "Chest / Pec Stretch (Doorway)": [],
+  "Couch Stretch": [],
+  "Elephant Walks": [],
+  "Lat Stretch": [],
+  "Pissing Dog Against Wall": [],
+  "Pigeon Stretch": [],
   "Sleeper Stretch": [],
   "Bench Thoracic Extension": [["bench", "plyo_box"]],
   "Rotational Medicine-Ball Slam": ["medicine_ball"],
@@ -262,7 +274,13 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
 
 /** Sam's sheet convention: absent from the table is UNKNOWN, not bodyweight. */
 export function equipmentRequiredFor(name: string): readonly EquipmentRequirement[] | null {
-  return EXERCISE_EQUIPMENT_REQUIREMENT[name] ?? null;
+  const explicit = EXERCISE_EQUIPMENT_REQUIREMENT[name];
+  if (explicit) return explicit;
+  // Authored support-pool apparatus is evidence too. All admission routes ask
+  // this owner, rather than treating a missing equipment-sheet row as no kit.
+  const pooled = Object.values(POOL_REGISTRY).flat().filter(row => row.name === name);
+  if (pooled.length === 0) return null;
+  return pooled.flatMap(row => row.equipment).filter(tag => tag !== 'bodyweight');
 }
 
 /**

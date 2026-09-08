@@ -182,7 +182,7 @@ async function main(): Promise<void> {
      * calf and plyo row `caution` or `avoid` for a knee (34 + 3 of 37 measured
      * 2026-09-03), so a four-compound lower session (a93f3ad2) holds no
      * knee-`good` row at 7. The control is the session, not a safe row in it;
-     * [7] below reads `safeRows` and answers for the empty case honestly. */
+     * [7] accounts for every original row through the actual review categories. */
     ok('the athlete has a real lower-body session (five rows or more) for this knee to adjust',
       beforeRows.length >= 5, beforeRows);
   }
@@ -318,11 +318,26 @@ async function main(): Promise<void> {
     ok('every paused row has LEFT the active session — no greyed-out cards',
       review.paused.every((change) => !afterRows.includes(change.from)),
       { afterRows });
-    ok('the safe rows the athlete already had are untouched — and when the 6-7 band leaves none, every original row was paused, not silently dropped',
-      safeRows.length > 0
-        ? safeRows.every(name => afterRows.includes(name))
-        : beforeRows.every(name => review.paused.some((change) => change.from === name)),
-      { safeRows, afterRows, paused: review.paused.map((c) => c.from) });
+    ok('the safe rows the athlete already had are untouched',
+      safeRows.every(name => afterRows.includes(name)), { safeRows, afterRows });
+    // Approved injury integration: main-pattern restrictions now enter the
+    // ladder's paused list before final filtering. Other planner withdrawals
+    // retain their category. Every original row must still be accounted for.
+    const unexplained = (shown: SessionInjuryReview) => beforeRows.filter(name =>
+      !afterRows.includes(name) && !shown.paused.some(change => change.from === name)
+      && !shown.withdrawn.includes(name)
+      && !shown.changes.some(change => change.from === name && !!change.to && afterRows.includes(change.to))
+      && !shown.conditioningChanges.some(change => change.from === name
+        && (!change.to || afterRows.includes(change.to))));
+    ok('every removed original row is disclosed by its actual injury-review category',
+      unexplained(review).length === 0, { unexplained: unexplained(review), beforeRows, afterRows, review });
+    const removedByInjury = [...review.paused.map(change => change.from), ...review.withdrawn]
+      .filter(name => beforeRows.includes(name) && !afterRows.includes(name));
+    ok('the journey reaches actual removals, and hiding any explanation makes the disclosure check fail',
+      removedByInjury.length > 0 && removedByInjury.every(name => unexplained({ ...review,
+        paused: review.paused.filter(change => change.from !== name),
+        withdrawn: review.withdrawn.filter(candidate => candidate !== name),
+      }).includes(name)), { removedByInjury });
     ok('the added block is on the session',
       review.added.every((candidate) => afterRows.includes(candidate.name)),
       { added: review.added.map((c) => c.name), afterRows });
@@ -442,22 +457,24 @@ async function main(): Promise<void> {
       activeConstraints: [], readinessSignal: null,
       primaryInjury: { bucket: 'knee', severity: 6 } as never,
     }));
-    const askOn = (dateISO?: string) => chooseInjurySessionAdditions({
+    const askOn = (dateISO?: string, alreadyAdded: string[] = []) => chooseInjurySessionAdditions({
       environment, profile: useProfileStore.getState().onboardingData,
       keptRowNames: ['Band Pallof Press'], pausedRowNames: ['Back Squat', 'RDLs', 'Leg Press'],
-      weekExerciseNames: ['Back Squat', 'RDLs', 'Leg Press', 'Band Pallof Press'],
+      weekExerciseNames: ['Back Squat', 'RDLs', 'Leg Press', 'Band Pallof Press', ...alreadyAdded],
       excludedByAthlete: [], pausedCount: 3, originalRowCount: 6,
       injuredHalf: 'lower', keptSets: 2, dateISO,
     }).map((candidate) => candidate.name);
     const monday = askOn('2026-07-13');
-    const wednesday = askOn('2026-07-15');
+    // R-386: later days consume earlier additions, just as the week compiler does.
+    // Merely changing a date must not bypass the normal history-based chooser.
+    const wednesday = askOn('2026-07-15', monday);
     ok('CONTROL — both days really do get an added block',
       monday.length > 0 && wednesday.length > 0, { monday, wednesday });
     ok('the same date always answers the same way — the review stays a promise',
       JSON.stringify(monday) === JSON.stringify(askOn('2026-07-13')), monday);
     ok('two affected days do not open with the same compound',
       monday[0] !== wednesday[0], { monday, wednesday });
-    ok('a dateless ask still answers — rotation is an offset, not a requirement',
+    ok('a dateless ask still answers through the same chooser',
       askOn(undefined).length > 0);
   }
 

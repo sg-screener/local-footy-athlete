@@ -74,8 +74,9 @@ console.log('\n[3] The compiler and screen consume the policy');
   const home = read('screens', 'home', 'HomeScreenV2.tsx');
   ok('pretty flat uses the canonical lighter-day compiler',
     compiler.includes('compileCanonicalLighterDayWorkout(workout).workout'));
-  ok('cooked removes that dated workout',
-    /policy\.effect === 'rest'\) return \[date, null\]/.test(compiler));
+  const restBranch = compiler.match(/if \(policy\.effect === 'rest'\) \{([\s\S]*?)\n\s*\}/)?.[1];
+  ok('the rest branch records its typed reason beside the dated removal',
+    !!restBranch && restBranch.includes("= 'fatigue'") && restBranch.includes('return [date, null]'));
   ok('the contract records low readiness rather than an unexplained deficit',
     /reason: 'low_readiness'/.test(compiler) && compiler.includes('compileCanonicalFrequencyReducedContract'));
   ok('fatigue does not enter the old opt-in lighter offer',

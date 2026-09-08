@@ -13,6 +13,7 @@ import {
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import { exerciseProgrammingAllows } from './exerciseFilter';
+import { equipmentTagsOnDate } from '../rules/canonicalWeeklyAvailabilityState';
 import { getSessionComponentRows } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import {
@@ -414,6 +415,8 @@ function retainPerformed(
 export function selectMobilityPrehabFlow(
   context: MobilityPrehabFlowContext,
 ): MobilityPrehabFlow | null {
+  if (context.athlete.onboardingData) context = { ...context, athlete: { ...context.athlete,
+    equipmentTags: equipmentTagsOnDate(context.athlete.onboardingData, context.date, context.athlete.equipmentTags) } };
   const { workout } = context;
   if (!workout) return null;
 

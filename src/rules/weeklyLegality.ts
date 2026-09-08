@@ -129,7 +129,7 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
     // where the week's actual content is known and a plane-completion row can be
     // placed safely or honestly refused.
     clauseId: 'WC-064',
-    enforcedElsewhere: 'rules/weeklyScheduler — applied as a REMOVAL after the '
+    enforcedElsewhere: 'scheduleWeek — applied as a REMOVAL after the '
       + 'ladder has chosen the week, never as a candidate filter inside it. '
       + 'Ruling it out mid-search sends the ladder down a rung, and a reduced '
       + 'rung is the authored SMALLER structure (three split days become two '

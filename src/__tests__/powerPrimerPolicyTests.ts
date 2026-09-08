@@ -166,7 +166,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
 // ── 5. Beginner is conservative ──
 {
   const off = decidePowerPrimer(ctx({ isBeginner: true, offseasonSubphase: 'mid_offseason' }));
-  ok('beginner mid off-season → conservative primer (never contrast)', off?.kind === 'primer' && off.sets === 2, JSON.stringify(off));
+  ok('beginner mid off-season → no power during preparation', off === null, JSON.stringify(off));
   ok('beginner in-season → skips power', decidePowerPrimer(ctx({ isBeginner: true, phase: 'In-season' })) === null);
 }
 
@@ -190,7 +190,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   ok('missing off-season context is conservative → no power', decidePowerPrimer(ctx({ offseasonSubphase: undefined })) === null);
 
   const mid = decidePowerPrimer(ctx({ offseasonSubphase: 'mid_offseason', powerGoalNudge: true }));
-  ok('mid off-season → primer only even with power nudge', mid?.kind === 'primer', JSON.stringify(mid));
+  ok('mid off-season → no power even with power nudge', mid === null, JSON.stringify(mid));
 
   const late = decidePowerPrimer(ctx({ offseasonSubphase: 'late_offseason' }));
   ok('late off-season → contrast eligible when every safety gate passes', late?.kind === 'contrast', JSON.stringify(late));
@@ -242,7 +242,7 @@ function profile(over: Partial<OnboardingData> = {}): OnboardingData {
 function workoutsFor(
   data: OnboardingData,
   weekKind?: 'deload',
-  weekInBlock: number = 4,
+  weekInBlock: number = 5,
   phaseEntryISO: string = '2026-07-06',
 ) {
   // ── SAME INSTRUMENT DEFECT AS THE INJURY SUITE ──────────────────────────
@@ -520,8 +520,8 @@ function workoutsFor(
 // R-270 restored the three approved medicine-ball movements. R-296 collapses
 // their former ball/wall/space answers into one `Medicine ball` capability.
 {
-  const noBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench'] }));
-  const withBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench', 'Medicine Ball'] }));
+  const noBall = workoutsFor(profile({ recentTrainingLoad: 'Pretty consistent', equipment: ['Barbell', 'Dumbbells', 'Bench'] }));
+  const withBall = workoutsFor(profile({ recentTrainingLoad: 'Pretty consistent', equipment: ['Barbell', 'Dumbbells', 'Bench', 'Medicine Ball'] }));
 
   ok('no-ball power rows never require a medicine ball',
     noBall.flatMap((w) => powerRows(w)).every((r) =>

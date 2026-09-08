@@ -88,7 +88,7 @@ const skippedTransitionStart = feedbackForm.indexOf("if (nextCompletion === 'ski
 const skippedTransition = feedbackForm.slice(skippedTransitionStart, skippedTransitionStart + 300);
 assert(
   completionIndex >= 0 && partialReasonIndex > completionIndex && partialReasonIndex < feelingIndex,
-  'generic partial reason renders before feel and soreness follow-ups',
+  'generic partial reason renders before effort follow-ups',
 );
 assert(
   completionIndex >= 0 && skipReasonIndex > completionIndex && skipReasonIndex < feelingIndex,
@@ -97,8 +97,8 @@ assert(
 assert(
   skippedTransitionStart >= 0 &&
     skippedTransition.includes('feeling: null') &&
-    skippedTransition.includes('soreness: null'),
-  'skipped transition clears hidden feel and soreness state',
+    !skippedTransition.includes('soreness:'),
+  'skipped transition clears effort without writing retired soreness',
 );
 
 console.log('\n=== 5. Combined sessions expose only resolved component questions ===');

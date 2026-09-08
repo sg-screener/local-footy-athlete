@@ -139,12 +139,23 @@ export function factHorizon(fact: TemporarySourceFact): DurableFactHorizon {
     // its affected week is bookkeeping, not licence to rewrite done days.
     return {
       startsFrom: reported && reported > first ? reported : first,
-      endsAfter: fact.status === 'active' || fact.status === 'improving'
+      endsAfter: fact.resolvedOnISO ? addDays(fact.resolvedOnISO, -1)
+        : fact.status === 'active' || fact.status === 'improving'
         ? null : addDays(last, 6),
     };
   }
   const nonInjury = fact as { effectiveFrom: string; effectiveUntil: string | null };
-  return { startsFrom: nonInjury.effectiveFrom, endsAfter: nonInjury.effectiveUntil ?? null };
+  // Sam 2026-09-07: historical open fatigue cannot remain a multi-week dose.
+  // Preserve the stored fact; bound its effect using the existing deload owner.
+  const fatigueEnd = !('episodeId' in fact) && fact.factKind === 'fatigue'
+    ? resolveReadinessDeload({ declaredOnISO: nonInjury.effectiveFrom, lowReadiness: true })!.endISO
+    : null;
+  const reportedEnd = nonInjury.effectiveUntil ?? null;
+  const clearEnd = fact.resolvedOnISO ? addDays(fact.resolvedOnISO, -1) : null;
+  const end = clearEnd && (!reportedEnd || clearEnd < reportedEnd) ? clearEnd : reportedEnd;
+  return { startsFrom: nonInjury.effectiveFrom,
+    endsAfter: fatigueEnd && (!end || end > fatigueEnd) ? fatigueEnd : end };
+
 }
 
 /** Is the fact in effect on this date? */

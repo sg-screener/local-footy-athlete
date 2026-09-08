@@ -176,7 +176,7 @@ export function reselectRepeatedStrengthIdentities(args: {
     const candidates = [...pool.anchor.entries, ...pool.accessory.entries]
       .map((entry) => entry.name)
       .filter((name) => !spent.has(canonicalExerciseName(name)) && !onDay.has(canonicalExerciseName(name)))
-      .filter((name) => assessTapSwapCandidateSafety(name, environment, { sourceExercise: from }).safe);
+      .filter((name) => assessTapSwapCandidateSafety(name, environment, { sourceExercise: from, route: 'automatic' }).safe);
     const choice = selector.chooseFallback({
       sameCategory: candidates,
       accessories: [],

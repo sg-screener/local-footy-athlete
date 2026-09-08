@@ -481,13 +481,21 @@ export function patternsCompletingLadder(
  * local normalise is honest and has zero blast radius; a shared one taken blind
  * is how two fixes were already spent on layers not in the chain.
  */
+// Keep these imports lazy because the selection modules refer back to this
+// module. Resolve each module once; whole-week search asks these same catalogue
+// questions for many candidate layouts.
+let strengthPoolModule: typeof import('../data/exercisePoolsStrength') | undefined;
+let canonicalNamesModule: typeof import('../utils/exerciseCanonicalisation') | undefined;
+let automaticSelectionModule: typeof import('./automaticWeeklyExerciseSelection') | undefined;
+let exercisePoolsModule: typeof import('../data/exercisePools') | undefined;
+
 function isUpperAccessory(name: string): boolean {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { classifyPoolSlot } = require('../data/exercisePoolsStrength') as {
+  const { classifyPoolSlot } = (strengthPoolModule ??= require('../data/exercisePoolsStrength')) as {
     classifyPoolSlot: (n: string) => { slot: string; role: string } | null;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+  const { canonicalExerciseName } = (canonicalNamesModule ??= require('../utils/exerciseCanonicalisation')) as {
     canonicalExerciseName: (raw: string) => string;
   };
   const direct = classifyPoolSlot(name);
@@ -505,7 +513,7 @@ function isUpperAccessory(name: string): boolean {
  */
 function automaticRouteFor(name: string): AutomaticExerciseRoute {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { automaticExerciseRouteForIdentity } = require('./automaticWeeklyExerciseSelection') as {
+  const { automaticExerciseRouteForIdentity } = (automaticSelectionModule ??= require('./automaticWeeklyExerciseSelection')) as {
     automaticExerciseRouteForIdentity: (n: string) => AutomaticExerciseRoute;
   };
   return automaticExerciseRouteForIdentity(name);
@@ -518,13 +526,13 @@ function authoredPoolMembership(name: string): {
   readonly primaryGrade: 'A' | 'B' | null;
 } | null {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { findPoolEntry } = require('../data/exercisePoolsStrength') as {
+  const { findPoolEntry } = (strengthPoolModule ??= require('../data/exercisePoolsStrength')) as {
     findPoolEntry: (n: string) => {
       slot: string; role: string; entry: { group?: string; primaryGrade?: 'A' | 'B' };
     } | null;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+  const { canonicalExerciseName } = (canonicalNamesModule ??= require('../utils/exerciseCanonicalisation')) as {
     canonicalExerciseName: (raw: string) => string;
   };
   const membership = findPoolEntry(name) ?? findPoolEntry(canonicalExerciseName(name));
@@ -537,11 +545,11 @@ function authoredPoolMembership(name: string): {
 /** Is this name in Sam's shoulder-health pool? (R-130b's `shoulder_prehab`.) */
 function isShoulderHealthPoolMember(name: string): boolean {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { POOL_REGISTRY } = require('../data/exercisePools') as {
+  const { POOL_REGISTRY } = (exercisePoolsModule ??= require('../data/exercisePools')) as {
     POOL_REGISTRY: Record<string, readonly { name: string }[]>;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+  const { canonicalExerciseName } = (canonicalNamesModule ??= require('../utils/exerciseCanonicalisation')) as {
     canonicalExerciseName: (raw: string) => string;
   };
   const canonical = canonicalExerciseName(name);

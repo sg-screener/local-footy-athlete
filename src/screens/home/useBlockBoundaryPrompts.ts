@@ -1,7 +1,7 @@
 /**
  * THE ONE BLOCK-BOUNDARY PROMPT THE PROGRAM SURFACE STILL DRAWS.
  *
- * The very-hard block's stored explanation, until the athlete reads it.
+ * The reduced week's stored explanation, until acknowledged or expired.
  *
  * ## ⚠ WHAT LEFT THIS FILE, AND WHERE IT WENT — R-105
  *
@@ -46,6 +46,7 @@ import type { TrainingProgram } from '../../types/domain';
 import type { DecisionLedgerEntry } from '../../types/decisionLedger';
 import {
   isReductionExplanationRow,
+  reductionExplanationCoversWeek,
   type BlockBoundaryReductionExplanationRow,
 } from '../../rules/blockBoundaryProgression';
 import { blockBoundaryReducedSentence } from '../../rules/projectionCopy';
@@ -67,6 +68,7 @@ export interface BlockBoundaryPromptInputs {
   currentProgram: TrainingProgram | null | undefined;
   blockNumber: number | null | undefined;
   ledgerEntries: readonly DecisionLedgerEntry[];
+  weekStartISO: string;
 }
 
 /**
@@ -76,18 +78,19 @@ export interface BlockBoundaryPromptInputs {
 export function deriveBlockBoundaryPrompts(
   input: BlockBoundaryPromptInputs,
 ): BlockBoundaryPrompts {
-  const { currentProgram, blockNumber, ledgerEntries } = input;
-  return { notice: deriveNotice(currentProgram, blockNumber, ledgerEntries) };
+  const { currentProgram, blockNumber, ledgerEntries, weekStartISO } = input;
+  return { notice: deriveNotice(currentProgram, blockNumber, ledgerEntries, weekStartISO) };
 }
 
 function deriveNotice(
   program: TrainingProgram | null | undefined,
   blockNumber: number | null | undefined,
   ledgerEntries: readonly DecisionLedgerEntry[],
+  weekStartISO: string,
 ): BlockBoundaryNoticeModel | null {
   if (!program || typeof blockNumber !== 'number') return null;
   const row = (program.blockBoundaryExplanation ?? []).find(isReductionExplanationRow);
-  if (!row) return null;
+  if (!row || !reductionExplanationCoversWeek(row, weekStartISO, program.microcycles[0]?.startDate)) return null;
   // ⚠ ACKNOWLEDGEMENT IS READ OFF THE LEDGER, NOT OFF LOCAL STATE.
   // "It survives reload until acknowledged" is the requirement, and a
   // `useState` dismissal satisfies the first half of that sentence and breaks
@@ -113,9 +116,9 @@ export function acknowledged(
 export function useBlockBoundaryPrompts(
   input: BlockBoundaryPromptInputs,
 ): BlockBoundaryPrompts {
-  const { currentProgram, blockNumber, ledgerEntries } = input;
+  const { currentProgram, blockNumber, ledgerEntries, weekStartISO } = input;
   return useMemo(
-    () => deriveBlockBoundaryPrompts({ currentProgram, blockNumber, ledgerEntries }),
-    [currentProgram, blockNumber, ledgerEntries],
+    () => deriveBlockBoundaryPrompts({ currentProgram, blockNumber, ledgerEntries, weekStartISO }),
+    [currentProgram, blockNumber, ledgerEntries, weekStartISO],
   );
 }

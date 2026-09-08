@@ -14,8 +14,8 @@
  * (`docs/WEEKLY_WRITER_CENSUS_AUDIT_2026-09-03.md` §4.3.8).
  *
  * THE RULE THIS HOLDS: when a delegation note names a function — a camelCase
- * identifier — that function must be exported from `src/rules` AND called from
- * production code outside its own file. Prose owners ("composer daily movement
+ * identifier — that function must be defined AND called in production source,
+ * including private functions called within their own module. Prose owners ("composer daily movement
  * ceiling", "WC-043 spacing above") are not identifiers and are not checked
  * here; the first identifier in the note is taken as the owner.
  *
@@ -122,6 +122,8 @@ for (const rule of delegated) {
 ok('ANCHOR — at least one delegation note names a function (WC-135 does)', named > 0);
 ok('WC-135 is delegated to scheduleWeek by name',
   delegated.some((rule) => rule.clauseId === 'WC-135' && namedEnforcer(rule.enforcedElsewhere ?? '') === 'scheduleWeek'));
+ok('WC-064 names the live scheduling function rather than its module filename',
+  delegated.some((rule) => rule.clauseId === 'WC-064' && namedEnforcer(rule.enforcedElsewhere ?? '') === 'scheduleWeek'));
 
 console.log(`\nLegality enforcer liveness: passed=${pass} failures=${fail}`);
 if (fail > 0) {

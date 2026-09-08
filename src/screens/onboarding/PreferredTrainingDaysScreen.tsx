@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text } from '../../components/common';
@@ -31,62 +31,16 @@ export const PreferredTrainingDaysScreen: React.FC<
   );
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const cap = trainingDaysUnsure ? 3 : trainingDaysPerWeek || 0;
-  const isFlexible = !trainingDaysUnsure && (!trainingDaysPerWeek || trainingDaysPerWeek === 0);
-  const isAtCap = !isFlexible && selectedDays.length >= cap;
   const isValid = selectedDays.length >= 1;
-
-  /**
-   * Hard cap at `trainingDaysPerWeek` with no auto-rotate — the prior screen's
-   * gym-access answer is treated as the ceiling, and the athlete picks any
-   * subset up to that. "Not sure" is also capped at 3 while keeping its own
-   * copy and visual state upstream.
-   */
-  const toggleDay = (day: DayOfWeek) => {
-    setSelectedDays((prev) => {
-      if (prev.includes(day)) {
-        return prev.filter((d) => d !== day);
-      }
-      if (!isFlexible && prev.length >= cap) {
-        return prev; // at cap — ignore taps on unselected tiles
-      }
-      return [...prev, day];
-    });
-  };
-
-  /**
-   * Graceful handling of upstream changes: if the athlete goes back and
-   * lowers `trainingDaysPerWeek`, trim the local selection so nothing
-   * exceeds the new cap.
-   */
-  useEffect(() => {
-    if (isFlexible) return;
-    if (selectedDays.length > cap) {
-      setSelectedDays((prev) => prev.slice(0, cap));
-    }
-  }, [cap, isFlexible, selectedDays.length]);
-
-  const subtitle = useMemo(() => {
-    if (trainingDaysUnsure) {
-      return "We'll start with 3 gym days. Pick the days you can usually get there.";
-    }
-    if (isFlexible) {
-      return 'Pick every day you can usually get to a gym or your usual strength equipment.';
-    }
-    return `Pick up to ${cap} day${cap === 1 ? '' : 's'} you can usually get to a gym or your usual strength equipment.`;
-  }, [cap, isFlexible, trainingDaysUnsure]);
+  const toggleDay = (day: DayOfWeek) => setSelectedDays(prev =>
+    prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  const subtitle = 'Choose every day you can access your strength equipment. We will fit your requested sessions into these days. Running can use other available days.';
 
   const handleContinue = () => {
     if (isValid) {
-      let nextTrainingDays = selectedDays.length;
-      if (trainingDaysUnsure) {
-        nextTrainingDays = 3;
-      } else if (!isFlexible) {
-        nextTrainingDays = cap;
-      }
       void commitAndAdvance({
         preferredTrainingDays: selectedDays,
-        trainingDaysPerWeek: nextTrainingDays,
+        trainingDaysPerWeek: trainingDaysUnsure ? 3 : trainingDaysPerWeek || 3,
       }, () => navigation.navigate('Equipment'));
     }
   };
@@ -107,7 +61,7 @@ export const PreferredTrainingDaysScreen: React.FC<
           color={colors.text.primary}
           style={styles.title}
         >
-          Which days can you usually get there?
+          Which days can you access your strength equipment?
         </Text>
         {subtitle ? (
           <Text
@@ -119,13 +73,10 @@ export const PreferredTrainingDaysScreen: React.FC<
           </Text>
         ) : null}
 
-        {/* The shared picker owns the same 4-over-3 weekday grid as Game Day,
-         * Team Training and the in-app season-shift flow. Cap-aware dimming
-         * remains this screen's only behavioural difference. */}
+        {/* Equipment access is independent of the requested session count. */}
         <DayGrid
           selectedDays={selectedDays}
           onToggleDay={toggleDay}
-          isDimmed={() => isAtCap}
         />
       </View>
     </OnboardingLayout>

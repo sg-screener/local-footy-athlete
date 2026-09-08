@@ -173,8 +173,8 @@ section('[3] typed power remains bounded by subphase and final strength content'
     workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),
     { phase: 'Off-season', offseasonSubphase: 'mid_offseason' },
   );
-  ok('mid off-season keeps valid power only as primer',
-    powerRows(mid.workout)[0]?.power?.kind === 'primer');
+  ok('mid off-season removes power during preparation',
+    powerRows(mid.workout).length === 0);
 
   const late = finaliseWorkoutAfterMutation(
     workout('Lower Squat', [power('contrast', 'lower'), heavySquat]),

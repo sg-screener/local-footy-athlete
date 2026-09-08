@@ -107,7 +107,7 @@ const factCase = (name: string, fact: Parameters<typeof transactTemporarySourceF
   },
 });
 const cases: Case[] = [
-  ...(['flat_today', 'cooked_week', 'poor_sleep_week', 'sore_today', 'illness_moderate', 'illness_severe'] as const).map(readiness),
+  ...(['flat_today', 'cooked_week', 'poor_sleep_week', 'illness_moderate', 'illness_severe'] as const).map(readiness),
   factCase('time cap', { operation: 'create', todayISO: YEAR_START,
     fact: createTemporaryTimeCapFact({ observedDate: YEAR_START, scope, maxSessionMinutes: 35,
       targetKind: 'all_sessions', sourceSurface: 'status_card' }) }),
@@ -133,6 +133,30 @@ const cases: Case[] = [
   } },
 ];
 async function main() {
+  // R-380: this retired action is checked as a refusal, not an active modifier.
+  // Historical data enters through the actual persisted input boundary only.
+  try {
+    await fresh(); const baseline = signature();
+    const rejected = await quietAsync(() => executeProgramControlActionDurably(
+      readinessActionForKind('sore_today', { anchorDateISO: YEAR_START, todayISO: YEAR_START }),
+      { todayISO: YEAR_START }));
+    check('retired soreness/new action is rejected without changing training', !rejected.ok && signature() === baseline);
+    await flushPendingStorageWrites();
+    const { historicalSorenessFact } = require('./support/historicalSorenessFact');
+    const historical = historicalSorenessFact({ observedDate: YEAR_START, scope,
+      athleteReportedLevel: 'high', distribution: 'general', sourceSurface: 'test' });
+    const key = require('../store/programStore').PROGRAM_STORE_PERSISTENCE_KEY;
+    const envelope = JSON.parse(storage.get(key)!);
+    check('retired soreness/reached persisted program inputs', Array.isArray(envelope.state?.inputs?.temporarySourceFacts));
+    envelope.state.inputs.temporarySourceFacts.push(historical);
+    storage.set(key, JSON.stringify(envelope));
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check('retired soreness/reopen preserves historical record', boot.ok &&
+      snapshot().temporarySourceFacts.some(fact => 'factId' in fact && fact.factId === historical.factId));
+    check('retired soreness/history never appears on My Status, Day or Week',
+      !noteForFact(historical.factId) && !programNotes().some(note => note.temporarySourceFactIds?.includes(historical.factId)));
+    check('retired soreness/history does not change training after reopen', signature() === baseline);
+  } catch (error) { check('retired soreness/read-only lifecycle', false, String(error)); }
   for (const c of cases) {
     try {
       await fresh(); const baseline = signature();

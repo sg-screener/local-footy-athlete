@@ -1,4 +1,5 @@
 /** Pure ordered fold of accepted exercise edits over one authored week. */
+import { resolveAcceptedExerciseTarget, type AcceptedExerciseTarget } from './acceptedExerciseTarget';
 import type { Workout, WorkoutExercise, OverrideContext } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { POWER_EXERCISE_POOL } from './powerExercisePool';
@@ -58,8 +59,13 @@ export type CanonicalExerciseEditTargetResolution =
 
 export function resolveCanonicalExerciseEditTarget(
   workout: Workout,
-  target: { targetComponentId: string | null; targetName: string },
+  target: { targetComponentId: string | null; targetName: string; acceptedTarget?: AcceptedExerciseTarget },
 ): CanonicalExerciseEditTargetResolution {
+  if (target.acceptedTarget) {
+    const index = resolveAcceptedExerciseTarget(workout,target.acceptedTarget,target.targetComponentId);
+    if (index !== null) return { kind: 'found', index, row: workout.exercises[index]! };
+    return { kind: 'not_found' };
+  }
   if (target.targetComponentId) {
     const id = String(target.targetComponentId);
     const exact = workout.exercises.findIndex((row) =>
@@ -135,7 +141,7 @@ export function compileCanonicalExerciseEditOnWorkout(
       prescriptionType: edit.replacement.prescriptionType ?? found.prescriptionType,
       perSide: edit.replacement.perSide ?? found.perSide,
       restSeconds: edit.replacement.restSeconds ?? found.restSeconds,
-      notes: edit.replacement.notes || found.notes,
+      notes: edit.replacement.notes ?? found.notes,
       substitutedFrom: edit.substitutedFrom,
       unavailableForInjury: undefined,
       exercise: {
@@ -157,8 +163,9 @@ export function compileCanonicalExerciseEditOnWorkout(
   }
 
   const name = canonicalExerciseName(edit.exercise.name.trim());
-  if (!name || workout.exercises.some((row) =>
-    canonicalExerciseName(rowName(row)) === canonicalExerciseName(name))) return workout;
+  if (!name) return workout;
+  const additionId = edit.additionId ?? `legacy-add:${edit.dateISO}:${name}`;
+  if (workout.exercises.some(row => row.athleteAdditionId === additionId)) return workout;
   const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || 'exercise';
   const exerciseId = `ex-coach-add-${slug}`;
   const prescribedRepsMin = safeNumber(edit.exercise.repsMin, 8);
@@ -176,11 +183,9 @@ export function compileCanonicalExerciseEditOnWorkout(
     ...(edit.exercise.sessionSection ? { sessionSection: edit.exercise.sessionSection } : {}),
     ...(edit.exercise.composedOptionalKind ? { composedOptionalKind: edit.exercise.composedOptionalKind } : {}),
     ...(edit.exercise.sessionSection === 'optional' ? { optionalNoPenalty: true } : {}),
-    // One date cannot contain the same canonical exercise twice, so date +
-    // canonical name is the accepted component identity. It is identical in
-    // the live write and at boot; ledger-generated ids are not available until
-    // after the live write has landed.
-    id: `${exerciseId}-${edit.dateISO}`,
+    athleteAdditionId: additionId,
+    additionFactVersions: edit.additionFactVersions,
+    id: edit.additionId ?? `${exerciseId}-${edit.dateISO}`,
     workoutId: workout.id,
     exerciseId,
     exerciseOrder,
@@ -220,14 +225,19 @@ export function compileCanonicalExerciseEditOnWorkout(
 export function compileCanonicalWeeklyExerciseEdits(args: {
   readonly workouts: readonly Workout[];
   readonly state: CanonicalWeeklyExerciseEditState;
-}): { workouts: Workout[]; materialDates: string[]; overrideContextsByDate: Record<string, OverrideContext> } {
+}): { workouts: Workout[]; materialDates: string[]; overrideContextsByDate: Record<string, OverrideContext>; deferredEdits: CanonicalWeeklyExerciseEdit[] } {
   const byDay = new Map(args.workouts.map((workout) => [workout.dayOfWeek, clone(workout)]));
   const materialDates = new Set<string>();
   const overrideContextsByDate: Record<string, OverrideContext> = {};
+  const deferredEdits: CanonicalWeeklyExerciseEdit[] = [];
   for (const edit of args.state.edits) {
     if (edit.kind === 'remove' || ('derivedSource' in edit && edit.derivedSource)) continue;
     const dayOfWeek = new Date(`${edit.dateISO}T12:00:00`).getDay();
     const current = byDay.get(dayOfWeek);
+    if (edit.kind === 'swap' && (!current || resolveCanonicalExerciseEditTarget(current, edit).kind === 'not_found')) {
+      deferredEdits.push(edit);
+      continue;
+    }
     if (!current) continue;
     const next = compileCanonicalExerciseEditOnWorkout(current, edit);
     if (JSON.stringify(next) === JSON.stringify(current)) continue;
@@ -239,5 +249,6 @@ export function compileCanonicalWeeklyExerciseEdits(args: {
     workouts: [...byDay.values()].sort((left, right) => left.dayOfWeek - right.dayOfWeek),
     materialDates: [...materialDates].sort(),
     overrideContextsByDate,
+    deferredEdits,
   };
 }

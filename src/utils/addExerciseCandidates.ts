@@ -1,3 +1,4 @@
+import { POOL_REGISTRY } from '../data/exercisePools';
 /**
  * WHAT THE ATHLETE MAY ADD TO A SESSION — THE APP'S OWN VOCABULARY, FILTERED
  * BY THE APP'S OWN LEGALITY OWNER.
@@ -388,6 +389,10 @@ function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax
   const nordic = automaticNordicPrescriptionForIdentity(name);
   if (nordic) return { ...nordic };
   const tags = getExerciseTags(resolveExerciseName(name));
+  const authored = Object.values(POOL_REGISTRY).flat().find(row => resolveExerciseName(row.name) === resolveExerciseName(name));
+  if (authored && authored.prescriptionType !== 'distance') return { sets: authored.sets, repsMin: authored.repsMin, repsMax: authored.repsMax,
+    prescriptionType: authored.prescriptionType, perSide: authored.perSide ?? tags?.unilateral,
+    restSeconds: authored.restSeconds, notes: authored.notes };
   if (tags?.prescription) return { ...tags.prescription };
   if (!tags) return { sets: 2, repsMin: 8, repsMax: 12 };
   if (tags.movement === 'conditioning') {
@@ -415,12 +420,10 @@ function bandFor(name: string): Pick<AddCandidate, 'sets' | 'repsMin' | 'repsMax
  * is behind a button: a count on level 1 is the length of the list the last
  * level renders, because all of them read this.
  *
- * A name already on the day is not offered — adding it would either duplicate
- * the row or invite a caller to overwrite it, and an Add that overwrites is a
- * Swap. Safety is `assessTapSwapCandidateSafety`, the same function the swap
- * ladder uses, so Add and Swap cannot disagree about what is safe today.
+ * Athlete Add exposes the catalogue, including repeats. Automatic alternatives
+ * retain the normal injury, kit and experience filters (R-387).
  */
-function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
+function legalNamesByLeaf(args: AddCandidateArgs, automaticAlternative = false): Map<AddLeafId, string[]> {
   const present = new Set(
     (args.existingExerciseNames ?? []).map((name) => resolveExerciseName(name).toLowerCase()),
   );
@@ -428,14 +431,14 @@ function legalNamesByLeaf(args: AddCandidateArgs): Map<AddLeafId, string[]> {
   for (const group of selectableVocabularyGroups()) {
     const target = LEAF_FOR_POOL[group.id];
     for (const name of group.names) {
-      if (present.has(resolveExerciseName(name).toLowerCase())) continue;
-      if (exerciseVariationConflictsWithSession({
+      if (automaticAlternative && present.has(resolveExerciseName(name).toLowerCase())) continue;
+      if (automaticAlternative && exerciseVariationConflictsWithSession({
         candidate: name,
         existingExerciseNames: args.existingExerciseNames ?? [],
         replacingExerciseName: args.replacingExerciseName,
       })) continue;
-      if (!assessTapSwapCandidateSafety(name, args.environment).safe) continue;
-      if ((args.section === 'primer' || args.sessionKind === 'primer') && !exerciseProgrammingAllows(name, {
+      if (automaticAlternative && !assessTapSwapCandidateSafety(name, args.environment).safe) continue;
+      if (automaticAlternative && (args.section === 'primer' || args.sessionKind === 'primer') && !exerciseProgrammingAllows(name, {
         ...args.environment, route: 'primer',
       })) continue;
       const leaf = target === 'by_conditioning_tier'
@@ -507,7 +510,7 @@ export function legalAddAlternativesForExercise(
   const nearestLeaf = originalLeaf && familyForLeaf(originalLeaf) === family
     ? originalLeaf
     : null;
-  const filed = legalNamesByLeaf(args);
+  const filed = legalNamesByLeaf(args, true);
   const leaves = [
     ...(nearestLeaf ? [nearestLeaf] : []),
     ...Object.values(ADD_GROUPS)
@@ -601,7 +604,16 @@ export function legalAddFamilies(args: AddCandidateArgs): AddFamilyOffer[] {
 export function legalAddCandidates(
   args: AddCandidateArgs & { leaf: AddLeafId },
 ): AddCandidate[] {
-  const names = legalNamesByLeaf(args).get(args.leaf) ?? [];
+  return additionCandidates(args, false);
+}
+
+/** Automatic injury adjustments still obey automatic selection restrictions. */
+export function legalAutomaticAdditionCandidates(args: AddCandidateArgs & { leaf: AddLeafId }): AddCandidate[] {
+  return additionCandidates(args, true);
+}
+
+function additionCandidates(args: AddCandidateArgs & { leaf: AddLeafId }, automatic: boolean): AddCandidate[] {
+  const names = legalNamesByLeaf(args, automatic).get(args.leaf) ?? [];
   return names.map((name) => ({
     name,
     ...bandFor(name),

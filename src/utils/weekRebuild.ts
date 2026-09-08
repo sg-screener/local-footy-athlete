@@ -65,7 +65,7 @@ import {
   type AcceptedProgramSurfaces,
   type ReversibleAdjustmentCreationInput,
 } from '../store/acceptedStateTransaction';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
@@ -319,6 +319,8 @@ function canonicalActiveConstraints() {
 // ─── The canonical rebuild ───────────────────────────────────────────
 
 export interface RebuildLocalWeekArgs {
+  /** Dated constraints supplied by accepted fixture replay. */
+  fixtureConstraints?: readonly ActiveConstraint[];
   baseProfile: OnboardingData;
   /** undefined = rebuild with profile as-is; null = remove game; day = set game. */
   newGameDay?: DayOfWeek | null;
@@ -526,7 +528,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           beforeMarkedDays: state.acceptedMaterialContext.markedDays,
           afterMarkedDays: markedDays,
           sourceSurfaces: storedWorldSurfaces(state),
-          activeConstraints: canonicalActiveConstraints(),
+          activeConstraints: args.fixtureConstraints ?? canonicalActiveConstraints(),
           primaryWeekStarts: [targetWeekStart!],
           // THE FIXTURE IDENTITY LAW (Sam's ruling, option A, 2026-08-05):
           // this rebuild IS the fixture decision, so the week it is about
@@ -574,7 +576,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           markedDays,
           sourceSurfaces: storedWorldSurfaces(state),
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
-          activeConstraints: canonicalActiveConstraints(),
+          activeConstraints: args.fixtureConstraints ?? canonicalActiveConstraints(),
           // Same law, the non-rolling path: this projection IS the decision.
           appliesFixtureDecision: true,
         });

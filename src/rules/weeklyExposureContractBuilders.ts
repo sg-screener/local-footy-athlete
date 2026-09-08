@@ -1,3 +1,4 @@
+import { OFFSEASON_PREPARATION } from './offseasonSubphasePolicy';
 import type {
   CapacityBand,
   SeasonPhase,
@@ -722,7 +723,7 @@ export function buildEarlyOffseasonExposureContract(
     // OPTIONAL — required stays 0. Bible Section 1: weeks 1-2 are the optional
     // block and zero completed sessions is a valid honest week.
     strength: { required: 0, preferredMin: 3, preferredMax: 3, selectedTarget: 0 },
-    conditioning: { required: 0, preferredMin: 1, preferredMax: 2, selectedTarget: 0 },
+    conditioning: { required: OFFSEASON_PREPARATION.exposureConditioning.required, preferredMin: OFFSEASON_PREPARATION.exposureConditioning.preferred.min, preferredMax: OFFSEASON_PREPARATION.exposureConditioning.preferred.max, selectedTarget: OFFSEASON_PREPARATION.exposureConditioning.defaultTarget },
     sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: 0 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 3 },
     allowCombined: false,
@@ -743,7 +744,7 @@ export function buildMidOffseasonExposureContract(
   return applyCommonSafetyReductions(createBaseContract(input, {
     mode: 'mid_offseason', subphase: 'mid_offseason',
     strength: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.mainStrength },
-    conditioning: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.coreConditioning },
+    conditioning: { required: OFFSEASON_PREPARATION.exposureConditioning.required, preferredMin: OFFSEASON_PREPARATION.exposureConditioning.preferred.min, preferredMax: OFFSEASON_PREPARATION.exposureConditioning.preferred.max, selectedTarget: OFFSEASON_PREPARATION.exposureConditioning.defaultTarget },
     // Off-season weeks 3-4 are the transition block, but still carry zero
     // automatic Speed. The late-Off-season builder below starts the floor.
     sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: selected.sprintHighSpeed },

@@ -34,11 +34,11 @@ export type AutomaticLoadKind = EquipmentKind | 'weighted_bodyweight';
  * How the available weights are spaced.
  *
  *   step  — a constant increment from zero (barbell 2.5, kettlebell 4 …)
- *   rungs — an explicit ladder, for equipment whose spacing changes partway up
+ *   piecewise — continuing steps, with different spacing above a threshold
  */
 export type Lattice =
   | { readonly kind: 'step'; readonly stepKg: number }
-  | { readonly kind: 'rungs'; readonly rungsKg: readonly number[] }
+  | { readonly kind: 'piecewise'; readonly thresholdKg: number; readonly belowStepKg: number; readonly aboveStepKg: number }
   | { readonly kind: 'none' };
 
 export interface EquipmentSpec {
@@ -62,13 +62,6 @@ export const EQUIPMENT_LATTICE_RULING = {
     + 'number is their number.',
 } as const;
 
-/** Dumbbells: 1 kg steps to 10, then 2.5 kg steps. Sam, 2026-07-28. */
-const DUMBBELL_RUNGS: readonly number[] = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-  12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50,
-  52.5, 55, 57.5, 60,
-];
-
 export const EQUIPMENT: Record<EquipmentKind, EquipmentSpec> = {
   // Every minimum is now Sam-ruled. Barbell 20 and kettlebell 8 came with the
   // floor-out ruling; dumbbell 1, cable 2.5 and machine 10 closed the table on
@@ -80,7 +73,7 @@ export const EQUIPMENT: Record<EquipmentKind, EquipmentSpec> = {
   // 1 kg matches the lattice start. Before Sam ruled it the minimum was 5 while
   // the lattice began at 1, so 1-4 kg dumbbells were loadable and never
   // prescribed — a floor that quietly contradicted the ladder above it.
-  dumbbell: { lattice: { kind: 'rungs', rungsKg: DUMBBELL_RUNGS }, minimumKg: 1, minimumRuled: true },
+  dumbbell: { lattice: { kind: 'piecewise', thresholdKg: 10, belowStepKg: 1, aboveStepKg: 2.5 }, minimumKg: 1, minimumRuled: true },
   bodyweight: { lattice: { kind: 'none' }, minimumKg: 0, minimumRuled: true },
 };
 
@@ -129,11 +122,9 @@ export function roundDownToAutomaticLoadLattice(
     return Math.floor(weightKg / lattice.stepKg) * lattice.stepKg;
   }
 
-  let best = 0;
-  for (const rung of lattice.rungsKg) {
-    if (rung <= weightKg && rung > best) best = rung;
-  }
-  return best;
+  const origin = weightKg < lattice.thresholdKg ? 0 : lattice.thresholdKg;
+  const step = weightKg < lattice.thresholdKg ? lattice.belowStepKg : lattice.aboveStepKg;
+  return origin + Math.floor((weightKg - origin) / step) * step;
 }
 
 /**
@@ -151,7 +142,9 @@ export function nextAutomaticLoadRung(
     const rungIndex = Math.floor((baseKg + 1e-9) / lattice.stepKg) + 1;
     return rungIndex * lattice.stepKg;
   }
-  return lattice.rungsKg.find(rung => rung > baseKg + 1e-9) ?? null;
+  const origin = baseKg < lattice.thresholdKg - 1e-9 ? 0 : lattice.thresholdKg;
+  const step = baseKg < lattice.thresholdKg - 1e-9 ? lattice.belowStepKg : lattice.aboveStepKg;
+  return origin + (Math.floor((baseKg - origin + 1e-9) / step) + 1) * step;
 }
 
 /**

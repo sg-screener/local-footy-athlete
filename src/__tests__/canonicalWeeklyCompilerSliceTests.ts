@@ -28,6 +28,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import ts from 'typescript';
 import type { OnboardingData, UserRemovalConstraint, Workout } from '../types/domain';
 import {
   compileCanonicalWeek,
@@ -63,7 +64,6 @@ import {
   setJourneyClock,
   swapOptionsFor,
 } from './support/athleteJourney';
-import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '../rules/canonicalWeeklyProgressionCompiler';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveProgression, type ProgressionInput } from '../utils/progressionRules';
 import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
@@ -159,10 +159,25 @@ function productionCallers(
   for (const absolute of productTypeScriptFiles()) {
     const rel = relative(ROOT, absolute).replace(/\\/g, '/');
     const source = overrides[rel] ?? readFileSync(absolute, 'utf8');
+    let internalBody: readonly [number, number] | null = null;
+    if (symbol === 'scheduleWeek' && rel === 'rules/weeklyScheduler.ts') {
+      const tree = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true);
+      const owner = tree.statements.find((node): node is ts.FunctionDeclaration =>
+        ts.isFunctionDeclaration(node) && node.name?.text === symbol);
+      if (!owner?.body) throw new Error('Find the scheduler body before excluding its internal trials');
+      internalBody = [owner.body.getStart(tree), owner.body.end];
+    }
+    let offset = 0;
     for (const line of source.split('\n')) {
-      if (declaration.test(line)) continue;
-      call.lastIndex = 0;
-      if (call.test(line)) callers.add(rel);
+      if (!declaration.test(line)) {
+        call.lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = call.exec(line))) {
+          const position = offset + match.index;
+          if (!internalBody || position < internalBody[0] || position >= internalBody[1]) callers.add(rel);
+        }
+      }
+      offset += line.length + 1;
     }
   }
   return [...callers].sort();
@@ -300,11 +315,17 @@ async function main(): Promise<void> {
   ok('the ownership instrument found a real compiler source region',
     compilerSource.length > 1_000 && compilerSource.includes('compileCanonicalWeek'));
   const scheduleMutation = compilerSource.replace(
-    'const schedule = scheduleWeek({',
-    'const schedule = scheduleWeek_REMOVED({',
+    'const schedule = scheduleWeek(searchInputs, {',
+    'const schedule = scheduleWeek_REMOVED(searchInputs, {',
   );
+  ok('[MUTATION] the compiler scheduler call was actually removed', scheduleMutation !== compilerSource);
   ok('[MUTATION] removing the compiler scheduler call makes ownership red',
     productionCallers('scheduleWeek', { [COMPILER_PATH]: scheduleMutation }).length === 0);
+  const schedulerPath = 'rules/weeklyScheduler.ts';
+  const externalCall = readFileSync(join(ROOT, schedulerPath), 'utf8')
+    + '\nexport const rivalPlanner = () => scheduleWeek({} as never);\n';
+  ok('[MUTATION] a separate caller in the scheduler module remains forbidden',
+    productionCallers('scheduleWeek', { [schedulerPath]: externalCall }).includes(schedulerPath));
 
   const serviceSource = readFileSync(join(ROOT, 'services/api/generateProgram.ts'), 'utf8');
   // The handovers moved with their executable owner, not to an exempted path.
@@ -984,7 +1005,20 @@ async function main(): Promise<void> {
       fixtureEditCompilerSource.includes('for (const effect of args.effects)'));
   ok('live fixture actions and boot commit the same accepted effect',
     acceptedTransactionSource.includes('commitCanonicalAcceptedFixtureEditEffect') &&
-      quiescentBootSource.includes('commitCanonicalAcceptedFixtureEditEffect(effect)'));
+      quiescentBootSource.includes('commitCanonicalAcceptedFixtureEditEffect(effect, fixtureConstraints)'));
+  const hasDatedFixtureReplay = (source: string) =>
+    source.includes('const acceptedOnISO = effect.acceptedAt.slice(0, 10)') &&
+    source.includes('factHorizonCoversDate(fact, acceptedOnISO)') &&
+    source.includes('commitCanonicalAcceptedFixtureEditEffect(effect, fixtureConstraints)');
+  ok('fixture replay supplies facts true on the explicit accepted athlete date',
+    hasDatedFixtureReplay(quiescentBootSource));
+  ok('[MUTATION] dropping fixture replay constraints is detected',
+    !hasDatedFixtureReplay(quiescentBootSource.replace(
+      'commitCanonicalAcceptedFixtureEditEffect(effect, fixtureConstraints)',
+      'commitCanonicalAcceptedFixtureEditEffect(effect)')));
+  ok('[MUTATION] admitting later facts into earlier fixture replay is detected',
+    !hasDatedFixtureReplay(quiescentBootSource.replace(
+      'factHorizonCoversDate(fact, acceptedOnISO)', 'true')));
   ok('boot compiles fixture effects instead of re-entering the live transaction',
     !quiescentBootSource.includes("require('./fixtureMutationTransaction')") &&
       !quiescentBootSource.includes('executeFixtureMutationInMemory({'));
@@ -2785,13 +2819,21 @@ async function main(): Promise<void> {
       fifthRaw()?.exercises.some((row) => row.exercise?.name === safeAdd?.name),
     JSON.stringify({ exerciseAdd, owner: fifthRaw()?.athletePlacement }));
 
-  const swapFrom = fifthRaw()?.exercises.find((row) => row.exercise?.name !== safeAdd?.name)
-    ?.exercise?.name ?? '';
-  const swapChoice = swapOptionsFor({
-    dateISO: fifthDate,
-    originalExercise: swapFrom,
-    existingExerciseNames: fifthRaw()?.exercises.map((row) => row.exercise?.name ?? '') ?? [],
-  })[0];
+  // The fifth session may share a Speed day. Its first row can be a warm-up
+  // heading, so choose an exercise with an actual offered Swap action.
+  const swapSeat = fifthRaw()?.exercises
+    .filter((row) => row.exercise?.name !== safeAdd?.name)
+    .map((row) => ({
+      name: row.exercise?.name ?? '',
+      choice: swapOptionsFor({
+        dateISO: fifthDate,
+        originalExercise: row.exercise?.name ?? '',
+        existingExerciseNames: fifthRaw()?.exercises.map((entry) => entry.exercise?.name ?? '') ?? [],
+      })[0],
+    })).find((seat) => seat.choice);
+  ok('the athlete-owned fifth offers a real exercise Swap', Boolean(swapSeat));
+  const swapFrom = swapSeat?.name ?? '';
+  const swapChoice = swapSeat?.choice;
   const exerciseSwap = swapChoice
     ? await quietAsync(() => executeProgramControlActionDurably({
         type: 'swap_exercise',
@@ -3042,9 +3084,7 @@ async function main(): Promise<void> {
   setJourneyClock(deloadWeekStart);
   followTheWeek(deloadWeekStart);
   const deloadBeforeProgression = quiet(() => deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart));
-  const progressedDeload = quiet(() => authorWeekStrengthProgression(
-    deloadWeekStart, buildScheduleStateImperative(),
-  ));
+  const progressedDeload = quiet(() => deriveVisibleWeekLive(deloadWeekStart, deloadWeekStart));
   const prescriptions = (days: Array<{ workout?: Workout | null }>): string => JSON.stringify(
     days.flatMap((day) => day.workout ? rowSignature(day.workout) : []),
   );

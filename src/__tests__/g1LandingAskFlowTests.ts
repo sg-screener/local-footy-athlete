@@ -872,7 +872,7 @@ run('19 a routeless SWAP onto G-1 answers with the ask and applies nothing', () 
     `route (a) would keep "${preview.g1Ask.keptSessionName}", not the day's Gunshow`);
 });
 
-run('20 a routeless ADD onto G-1 answers with the ask and applies nothing', () => {
+run('20 R-387 Add onto G-1 previews the chosen work with an overridable warning', () => {
   const program = seed(profile());
   const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
   // Sam's device case: G-1 holds a recovery session and the athlete adds an
@@ -887,18 +887,10 @@ run('20 a routeless ADD onto G-1 answers with the ask and applies nothing', () =
     kind: 'add_category', date: friday, category: 'strength_full',
   });
 
-  assert(preview.g1Ask, 'an add onto G-1 did not raise the ask');
-  assert(preview.appliedDates.length === 0,
-    `the ask applied ${preview.appliedDates.join(', ')}`);
-  assert(storeFingerprint() === before, 'raising the ask mutated accepted state');
-  // RE-POINTED 2026-08-01 (deleted-type retirement): the planted workout is
-  // deliberately LEGACY-shaped ('Recovery Session'), and the resolver now
-  // rebuilds a displaceable recovery-shaped template as the mobility flow its
-  // contents are — so the session the athlete SEES, and the ask must name, is
-  // "Mobility". The cell's law is unchanged: the ask names what the day keeps.
-  assert(preview.g1Ask.keptSessionName === 'Mobility',
-    `route (a) would keep "${preview.g1Ask.keptSessionName}" — the visible session on `
-    + 'the day is the rebuilt "Mobility" flow (deleted-type retirement, 2026-08-01)');
+  assert(preview.ok && !preview.g1Ask, 'Add must use the warning without forcing another session route');
+  assert(preview.assessment.findings.some(finding => finding.ruleId === 'athlete_add_near_game' && finding.canOverride),
+    'the day-before-game warning is missing');
+  assert(storeFingerprint() === before, 'previewing Add mutated accepted state');
 });
 
 run('21 an EMPTY G-1 raises the ask with nothing to keep', () => {
@@ -1050,7 +1042,7 @@ run('24 route (c) through the ADD door lands the DELOAD_LAW dose, not the full s
   }
 });
 
-run('25 committing a routeless landing refuses with the ask, whatever the door', () => {
+run('25 R-387 Add continues while a routeless swap still requires its existing answer', () => {
   const program = seed(profile());
   const weekStart = program.microcycles[1]!.startDate.slice(0, 10);
   const friday = addDaysISO(weekStart, 4);
@@ -1063,6 +1055,11 @@ run('25 committing a routeless landing refuses with the ask, whatever the door',
     const week = fresh.microcycles[1]!.startDate.slice(0, 10);
     const before = storeFingerprint();
     const result = commitChange(week, change);
+    if (change.kind === 'add_category') {
+      assert(result.ok && result.appliedDates.includes(friday), 'R-387 Add did not commit its chosen work');
+      assert(storeFingerprint() !== before, 'successful Add left accepted state unchanged');
+      continue;
+    }
     assert(!result.ok, `a routeless ${change.kind} onto G-1 committed without an answer`);
     assert(result.appliedDates.length === 0,
       `the refused ${change.kind} still applied ${result.appliedDates.join(', ')}`);

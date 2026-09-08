@@ -102,8 +102,6 @@ import { getSessionComponents } from '../../utils/sessionComponents';
 
 type Step =
   | { kind: 'actions' }
-  | { kind: 'add_blocked_max_sessions' }
-  | { kind: 'add_blocked_duplicate'; duplicate: 'strength' | 'conditioning' }
   /** WHAT KIND OF SESSION — Add's single five-type path. */
   | { kind: 'pick_type' }
   | { kind: 'pick_conditioning' }
@@ -592,35 +590,18 @@ export function PlanChangeSheet({
     );
 
   const startAdd = () => {
-    if ((options?.visibleSessionCount ?? 0) >= 2) {
-      setStep({ kind: 'add_blocked_max_sessions' });
-      return;
-    }
     setStep({ kind: 'pick_type' });
   };
 
   /**
    * Adding a TYPE, before the athlete has picked a variant of it.
    *
-   * The duplicate check is at the type row rather than at the category, because
-   * "this day already has strength work" is true of Upper, Lower, Full, Gunshow
-   * and Accessories alike, and finding that out after two more taps is a worse
-   * answer than finding it out at the row that caused it. Mobility adds a
-   * recovery-kind part, which never duplicates and never blocks (Sam's charter:
-   * "you can always add a recovery or mobility flow to any day").
+   * R-387: choosing a type never rejects a duplicate or imposes a session cap.
    */
   const chooseType = (
     adds: 'strength' | 'conditioning' | 'recovery',
     go: () => void,
   ) => {
-    if ((options?.visibleSessionCount ?? 0) >= 2) {
-      setStep({ kind: 'add_blocked_max_sessions' });
-      return;
-    }
-    if (adds !== 'recovery' && (options?.visibleSessionKinds ?? []).includes(adds)) {
-      setStep({ kind: 'add_blocked_duplicate', duplicate: adds });
-      return;
-    }
     go();
   };
 
@@ -792,44 +773,6 @@ export function PlanChangeSheet({
             onPress={onClose}
             style={{ marginTop: 8 }}
           />
-        </View>
-      )}
-
-      {options && options.locked === null && step.kind === 'add_blocked_max_sessions' && (
-        <View>
-          <Text style={styles.blockingTitle}>Please remove a session first</Text>
-          <Text style={styles.confirmText}>
-            This day already has 2 sessions. Remove one before adding another.
-          </Text>
-          <MenuOption
-            label="Remove a session"
-            icon={removeIcon(DANGER)}
-            danger
-            onPress={startBin}
-          />
-          <BackRow onPress={() => setStep({ kind: 'actions' })} />
-        </View>
-      )}
-
-      {options && options.locked === null && step.kind === 'add_blocked_duplicate' && (
-        <View>
-          <Text style={styles.blockingTitle}>
-            {step.duplicate === 'strength'
-              ? 'Already has strength work'
-              : 'Already has conditioning work'}
-          </Text>
-          <Text style={styles.confirmText}>
-            {step.duplicate === 'strength'
-              ? 'This day already includes a strength session. Remove one before adding another.'
-              : 'This day already includes conditioning. Remove one before adding another.'}
-          </Text>
-          <MenuOption
-            label="Remove a session"
-            icon={removeIcon(DANGER)}
-            danger
-            onPress={startBin}
-          />
-          <BackRow onPress={() => setStep({ kind: 'pick_type' })} />
         </View>
       )}
 

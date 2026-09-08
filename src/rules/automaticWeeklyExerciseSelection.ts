@@ -287,6 +287,8 @@ export interface AutomaticWeeklyExerciseSelector {
   beginSession(): void;
   canUse(candidate: AutomaticWeeklySelectionCandidate): boolean;
   accept(candidate: AutomaticWeeklySelectionCandidate): void;
+  /** Input is the complete, ranked, safe candidate set for this power slot. */
+  acceptPower(candidates: readonly AutomaticWeeklySelectionCandidate[]): AutomaticWeeklySelectionCandidate | null;
   chooseFallback(request: AutomaticFallbackRequest): AutomaticFallbackChoice | null;
   movementPlaneContextFor(
     requestedSlot: SessionSlot,
@@ -453,6 +455,17 @@ export function createAutomaticWeeklyExerciseSelector(
     },
     canUse,
     accept,
+    acceptPower(candidates) {
+      const legal = candidates.filter(candidate => candidate.route === 'power'
+        && !candidate.requestedAsMain && !violatesDedicatedDayOwnership(candidate));
+      const picked = legal.find(canUse) ?? legal[0] ?? null;
+      if (picked) {
+        const identity = canonicalExerciseName(picked.identity);
+        used.add(identity);
+        planeDelivered.add(identity);
+      }
+      return picked;
+    },
     chooseFallback,
     movementPlaneContextFor,
     checkpoint: () => ({

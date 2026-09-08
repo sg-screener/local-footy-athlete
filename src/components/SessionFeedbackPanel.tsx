@@ -9,7 +9,7 @@
  * On save: persists feedback, calls onSave() so the parent can navigate away.
  *
  * Feedback feeds into the progression context on subsequent sessions
- * via feelingToRPE(), soreness-based adaptation, and deriveCompletionQuality().
+ * through the canonical recorded-effort and component-completion readers.
  *
  * ## PRESENTATION — ONE SHELL, THREE FORMS (Sam, 2026-08-22)
  * Every form in this file is a plain body inside a `Sheet`: the sheet draws the
@@ -44,7 +44,6 @@ import {
   useProgramStore,
   type FeedbackFeeling,
   type FeedbackCompletion,
-  type FeedbackSoreness,
   type SessionFeedback,
 } from '../store/programStore';
 import {
@@ -145,15 +144,6 @@ const FEELING_OPTIONS: { key: FeedbackFeeling; label: string; color: string }[] 
   { key: 'very_hard', label: 'Very Hard', color: '#EF5350' },
 ];
 
-// ─── Soreness options ───
-
-const SORENESS_OPTIONS: { key: FeedbackSoreness; label: string; color: string }[] = [
-  { key: 'none',     label: 'None',     color: '#81C784' },
-  { key: 'mild',     label: 'Mild',     color: '#D8D800' },
-  { key: 'moderate', label: 'Moderate', color: '#FFB74D' },
-  { key: 'high',     label: 'High',     color: '#EF5350' },
-];
-
 // ─── Completion options ───
 
 const COMPLETION_OPTIONS: { key: FeedbackCompletion; label: string }[] = [
@@ -214,7 +204,6 @@ function draftFromExistingFeedback(
         componentCompletions,
         componentReasons,
         feeling: existing?.feeling ?? null,
-        soreness: existing?.soreness ?? null,
         partialReason: existing?.partialReason ?? null,
         skipReason: existing?.skipReason ?? null,
       },
@@ -228,7 +217,6 @@ function draftFromExistingFeedback(
       componentCompletions,
       componentReasons,
       feeling: existing?.feeling ?? null,
-      soreness: existing?.soreness ?? null,
       partialReason: existing?.partialReason ?? null,
       skipReason: existing?.skipReason ?? null,
     },
@@ -729,7 +717,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const existingDraft = draftFromExistingFeedback(existing, sessionComponents);
 
   const [feeling, setFeeling] = useState<FeedbackFeeling | null>(existingDraft.feeling);
-  const [soreness, setSoreness] = useState<FeedbackSoreness | null>(existingDraft.soreness);
   const [completion, setCompletion] = useState<FeedbackCompletion | null>(existingDraft.completion);
   const [componentCompletions, setComponentCompletions] = useState<
     Record<string, FeedbackCompletion | null>
@@ -803,7 +790,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     const nextDraft = draftFromExistingFeedback(existing, sessionComponents);
     const conditioning = existing?.conditioning;
     setFeeling(nextDraft.feeling);
-    setSoreness(nextDraft.soreness);
     setCompletion(nextDraft.completion);
     setComponentCompletions(nextDraft.componentCompletions ?? {});
     setComponentReasons(nextDraft.componentReasons ?? {});
@@ -837,7 +823,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     expectation,
     expectationReason,
     feeling,
-    soreness,
     partialReason,
     skipReason,
   };
@@ -956,7 +941,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         componentCompletions,
         componentReasons,
         feeling,
-        soreness,
         partialReason,
         skipReason,
       },
@@ -964,7 +948,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     );
     setCompletion(nextDraft.completion);
     setFeeling(nextDraft.feeling);
-    setSoreness(nextDraft.soreness);
     setPartialReason(nextDraft.partialReason);
     setSkipReason(nextDraft.skipReason);
     if (nextCompletion === 'skipped') {
@@ -975,7 +958,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     componentCompletions,
     componentReasons,
     feeling,
-    soreness,
     partialReason,
     skipReason,
     resetConditioningFields,
@@ -999,7 +981,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         componentCompletions: nextComponentCompletions,
         componentReasons,
         feeling,
-        soreness,
         partialReason,
         skipReason,
       },
@@ -1010,7 +991,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     setComponentReasons(nextDraft.componentReasons ?? {});
     setCompletion(nextDraft.completion);
     setFeeling(nextDraft.feeling);
-    setSoreness(nextDraft.soreness);
     setPartialReason(nextDraft.partialReason);
     setSkipReason(nextDraft.skipReason);
 
@@ -1028,7 +1008,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     sessionComponents,
     completion,
     feeling,
-    soreness,
     partialReason,
     skipReason,
     resetConditioningFields,
@@ -1154,7 +1133,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
       // along after the athlete taps back to "as expected".
       expectationReason: expectationAsksWhy(expectation) ? expectationReason : null,
       feeling,
-      soreness,
       partialReason,
       skipReason,
       notes,
@@ -1240,7 +1218,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     sessionComponents,
     activeComponents,
     feeling,
-    soreness,
     strengthComponentCompletion,
     partialReason,
     skipReason,
@@ -1588,25 +1565,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         </>
       ) : null}
 
-      {hasSection('soreness') ? (
-        <>
-          <SectionLabel style={styles.section}>
-            {FEEDBACK_FORM_SECTION_LABELS.soreness}
-          </SectionLabel>
-          <View style={styles.row}>
-            {SORENESS_OPTIONS.map((opt) => (
-              <FeedbackChip
-                key={opt.key}
-                testID={`feedback-soreness-${opt.key}`}
-                label={opt.label}
-                selected={soreness === opt.key}
-                selectedColor={opt.color}
-                onPress={() => setSoreness(opt.key)}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
+
 
       {showConditioningPerformance ? (
         <>

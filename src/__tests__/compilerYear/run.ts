@@ -428,12 +428,14 @@ export async function realCompilerMutation(): Promise<Check> {
   finally { compilerModule.compileCanonicalWeek = original; }
   const originalProgram = programCompilerModule.compileCanonicalProgram;
   let finalClean = false;
+  let placementPreviewObserved = false;
   let finalMutationReached = false;
   let finalRowLossCaught = false;
   let missingSpecialistCaught = false;
   let strengthIntentLossCaught = false;
   programCompilerModule.compileCanonicalProgram = (input) => {
     const observed = observeFinalRows(input, originalProgram);
+    placementPreviewObserved ||= observed.placementPreviewObserved;
     finalClean = observed.checks.every((c) => c.ok);
     missingSpecialistCaught = finalRowChecks(input, observed.output,
       observed.sources.filter(source => source.producer !== 'strength'))
@@ -457,6 +459,6 @@ export async function realCompilerMutation(): Promise<Check> {
   try {
     await quietAsync(() => coldStartThroughOnboarding({ profile: athleteAnswers(ARCHETYPES.find((a) => a.id === 'male-3-experienced-gym')!), installDayISO: YEAR_START }));
   } finally { programCompilerModule.compileCanonicalProgram = originalProgram; }
-  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught && finalClean && finalMutationReached && finalRowLossCaught && missingSpecialistCaught && strengthIntentLossCaught,
-    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}; final rows clean=${finalClean}, row removal reached=${finalMutationReached}, caught=${finalRowLossCaught}; missing specialist observation caught=${missingSpecialistCaught}; strength intent loss caught=${strengthIntentLossCaught}.` };
+  return { id: 'real_compiler_mutation', ok: injected && clean && caught && primarySpeedClean && lostSpeedCaught && finalClean && finalMutationReached && finalRowLossCaught && missingSpecialistCaught && strengthIntentLossCaught && placementPreviewObserved,
+    detail: `real compiler outputs: clean=${clean}, duplicate-day injected=${injected}, rejected=${caught}; primary speed identity clean=${primarySpeedClean}, dropped speed block rejected=${lostSpeedCaught}; final rows clean=${finalClean}, row removal reached=${finalMutationReached}, caught=${finalRowLossCaught}; missing specialist observation caught=${missingSpecialistCaught}; strength intent loss caught=${strengthIntentLossCaught}; placement preview separately observed=${placementPreviewObserved}.` };
 }

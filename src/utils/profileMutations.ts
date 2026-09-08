@@ -151,12 +151,7 @@ export function applyPhaseShift(
   // sites that don't re-ask).
   if (input.preferredTrainingDays !== undefined) {
     updates.preferredTrainingDays = input.preferredTrainingDays;
-    // Keep `trainingDaysPerWeek` consistent with the day set when the user
-    // adjusts availability. Onboarding models this as: explicit
-    // `trainingDaysPerWeek === count` OR "flexible" (undefined/0, any count).
-    // Mirror that here — if the original profile was in flexible mode, keep
-    // it flexible by setting the count to the new selection length.
-    updates.trainingDaysPerWeek = input.preferredTrainingDays.length;
+
   }
 
   if (input.targetPhase === 'Off-season') {

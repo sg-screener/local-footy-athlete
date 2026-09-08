@@ -206,6 +206,8 @@ export interface RemoveExerciseInput {
 
 export interface AddExerciseAtDateInput {
   date: string;
+  additionId?: string;
+  additionFactVersions?: readonly string[];
   exercise: {
     name: string;
     sets: number;
@@ -613,16 +615,12 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
     return { success: false, reason: 'No exercise name provided.' };
   }
   const displayName = formatExerciseDisplayName(name) || name;
-  const duplicate = current.exercises.some(
-    (ex) => (ex.exercise?.name || '').toLowerCase().trim() === name.toLowerCase(),
-  );
-  if (duplicate) {
-    return { success: false, reason: `${displayName} is already in this session.` };
-  }
 
   const occurredAt = new Date().toISOString();
   const canonicalWorkout = compileCanonicalExerciseEditOnWorkout(current, {
     kind: 'add',
+    additionId: input.additionId,
+    additionFactVersions: input.additionFactVersions,
     decisionId: `live-add:${date}:${occurredAt}`,
     occurredAt,
     dateISO: date.slice(0, 10),
@@ -633,8 +631,6 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
   assertLiveWorkoutWrite(date, newWorkout);
-  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
-  if (blocked) return blocked;
   if (!writeCoachOverride(date, canonicalWorkout, canonicalExerciseEditOverrideContext('add')).ok) {
     return OVERRIDE_WRITE_REFUSED;
   }

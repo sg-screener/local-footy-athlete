@@ -10,7 +10,7 @@
  * overlapping-injury/one-remaining regression and render-writer mutation.
  */
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
-import { legalAddCandidates, type AddCandidate, type AddLeafId } from './addExerciseCandidates';
+import { legalAutomaticAdditionCandidates as legalAddCandidates, type AddCandidate, type AddLeafId } from './addExerciseCandidates';
 import type { TapSwapEnvironment } from './tapSwapHierarchy';
 import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import { SET_CEILING } from '../rules/weeklyLegality';
@@ -26,7 +26,27 @@ import {
   createAutomaticWeeklyExerciseSelector,
   realMovementSlotsForAutomaticExercise,
 } from '../rules/automaticWeeklyExerciseSelection';
+import { resolveComposedDose, resolveComposedLoad, type ComposedDoseInput } from '../rules/composedDose';
+import { classifyPoolSlot } from '../data/exercisePoolsStrength';
+import { composedIdentityFor } from '../rules/composedRowLegality';
+import { anchorCandidates, experiencePreferred, gradedFirstAmongLegal } from '../rules/composeWeek';
+import { decideExerciseForBlock, type BlockExerciseSelection } from '../rules/blockExerciseSelection';
+import { consecutiveIdentityWeeks } from '../rules/blockRotationStagger';
+import { applyStrengthDeloadToExercises, type DeloadWeekPolicy } from '../rules/deloadWeekRules';
+import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
 import { slotDayKindForPatterns, type SessionSlot } from '../rules/sessionSlotCoverage';
+
+export interface InjuryProgrammingContext {
+  mainStrengthRole?: boolean;
+  seasonPhase: ComposedDoseInput['seasonPhase'];
+  offseasonSubphase: ComposedDoseInput['offseasonSubphase'];
+  deloadPolicy?: DeloadWeekPolicy | null;
+  blockNumber?: number;
+  blockStartISO?: string;
+  selectionHistory?: readonly BlockExerciseSelection[];
+  pinnedIdentities?: readonly string[];
+  progressedIdentities?: readonly string[];
+}
 
 /** Sam: *"add no more than three safe exercises"*. */
 export const INJURY_ADJUSTMENT_MAX_ADDED = 3;
@@ -160,6 +180,7 @@ function setsOf(row: { prescribedSets?: number | null } | AddCandidate): number 
 
 export function chooseInjurySessionAdditions(args: {
   environment: TapSwapEnvironment;
+  programmingContext?: InjuryProgrammingContext;
   profile: OnboardingData | null | undefined;
   /** Every load the athlete has logged, by name (Sam, 2026-09-03). Outranks the estimate. */
   recordedLoads?: Readonly<Record<string, number>>;
@@ -258,18 +279,21 @@ export function chooseInjurySessionAdditions(args: {
     ? [...args.keptRowNames, ...chosen.map((entry) => entry.name)]
       .filter((name) => patternOf(name) === pattern).length
     : 0;
-  const take = (candidate: InjurySessionAddition | undefined, options?: { repeat?: boolean }): boolean => {
+  const take = (raw: InjurySessionAddition | undefined, options?: { injuryCompound?: boolean }): boolean => {
+    const candidate = raw ? contextualInjuryAddition(raw, args.programmingContext, args.profile, args.environment.availableEquipmentTags, args.recordedLoads) : undefined;
     if (!candidate) return false;
     if (chosen.length >= roomForRows) return false;
     if (sets + setsOf(candidate) > SET_CEILING) return false;
     if (isVariantOfAlreadyChosen(candidate.name, chosen)) return false;
+    if (exerciseVariationConflictsWithSession({ candidate: candidate.name,
+      existingExerciseNames: [...args.keptRowNames, ...chosen.map(row => row.name)] })) return false;
     if (candidate.mainStrengthPattern && patternCountToday(candidate.mainStrengthPattern) >= 2) return false;
-    if (options?.repeat) {
-      // A REPEAT of work the week already carries (R-355 doubling): the weekly
-      // once-per-identity rule is deliberately not asked — that rule is the
-      // reason the unused bench is empty on limited kit. Everything else
-      // (room, sets, variants, the day's pattern cap) still holds.
+    // R-386: one injury compound may use the vacated session position even
+    // when the healthy week's family budget is spent. Both unused and repeat
+    // candidates use this same admission; repetition cannot buy extra rights.
+    if (options?.injuryCompound) {
       chosen.push(candidate);
+      inTheWeek.add(normalise(candidate.name));
       sets += setsOf(candidate);
       return true;
     }
@@ -305,9 +329,9 @@ export function chooseInjurySessionAdditions(args: {
       environment: args.environment,
       profile: args.profile ?? null,
       recordedLoads: args.recordedLoads,
-      // Everything the week already has is "existing" as far as the door is
-      // concerned, so it never offers a duplicate in the first place.
-      existingExerciseNames: [...inTheWeek],
+      // Near-variation restrictions belong to today. Exact weekly identity
+      // exclusion is applied separately below.
+      existingExerciseNames: [...args.keptRowNames, ...chosen.map(row => row.name)],
     }).filter((candidate) => !inTheWeek.has(normalise(candidate.name))),
     `injury-session:${args.dateISO ?? 'undated'}:${leaf}`,
     (candidate) => normalise(candidate.name),
@@ -377,56 +401,62 @@ export function chooseInjurySessionAdditions(args: {
       ? args.otherMainStrengthPatterns.filter(existing => existing === pattern).length
       : restOfWeek.filter(name => mainPatternForExerciseMovement(getExerciseTags(name)?.movement) === pattern).length;
   };
-  const compounds = safeHalf === 'lower'
-    ? leaves.flatMap(legal).sort((left, right) => lowerCount(left) - lowerCount(right))
-    : leaves.flatMap(leaf => legal(leaf).slice(0, 1));
-  for (const candidate of compounds) {
-    if (candidate && take({ ...candidate,
-      mainStrengthPattern: mainPatternForExerciseMovement(getExerciseTags(candidate.name)?.movement),
-    })) break;
-  }
-  // ── 1b. R-355 DOUBLING: NOTHING UNUSED? REPEAT SOMETHING SAFE THE WEEK HAS ──
-  //
-  // Sam, 2026-09-02: "if you have limited equipment you can double up on
-  // things when injured." When every unused legal compound in the unaffected
-  // half is gone (limited kit), a safe compound the REST of the week already
-  // carries is repeated on this day rather than an unrelated filler or an
-  // empty position. Today's own rows, the paused rows and the athlete's
-  // exclusions are never repeated.
-  // LIMITED KIT MEANS THE UNUSED BENCH IS EMPTY — not that the weekly seat
-  // budget refused it. Measured 2026-09-02 on the 52-week audit (full gym,
-  // calf injury, week 22): every upper seat was already spent for the week,
-  // the selector refused the unused compounds as mains, and the repeat rung
-  // then doubled Barbell Row and Pull-Ups on top of the days that had them.
-  // Doubling fires only when the kit offers no unused legal compound at all —
-  // OR when the day keeps nothing. R-355(c)'s own words: repeat a safe
-  // compound "before leaving the position empty". A lower-back report on a
-  // lower day pauses every row; with the unused bench refused by the weekly
-  // seat budget and no repeat, the day had nothing kept and nothing added, so
-  // the apply step (R-115: never a blank day) left every unsafe row standing
-  // with "could not be made safe" (red at `4e2ebbf2`, `test:injury-fallback-journey`
-  // "lower back, limiting"). The week-22 calf case that gated doubling KEPT
-  // rows on the day, so it still does not double.
-  if (chosen.length === 0 && (compounds.length === 0 || args.keptRowNames.length === 0)) {
-    const neverRepeated = new Set([
-      ...args.keptRowNames, ...args.pausedRowNames, ...args.excludedByAthlete,
-    ].map(normalise));
-    const repeatable = new Set(restOfWeek.map(normalise));
-    const repeats = stableDecisionOrder(
-      leaves.flatMap((leaf) => legalAddCandidates({
-        leaf,
-        environment: args.environment,
-        profile: args.profile ?? null,
-        recordedLoads: args.recordedLoads,
-        existingExerciseNames: [],
-      })).filter((candidate) => repeatable.has(normalise(candidate.name))
-        && !neverRepeated.has(normalise(candidate.name))),
-      `injury-session-repeat:${args.dateISO ?? 'undated'}`,
-      (candidate) => normalise(candidate.name),
-    );
-    for (const candidate of repeats) {
-      if (take({ ...candidate, mainStrengthPattern: patternOf(candidate.name) }, { repeat: true })) break;
+  const allCompounds = leaves.flatMap(leaf => legalAddCandidates({ leaf,
+    environment: args.environment, profile: args.profile ?? null, recordedLoads: args.recordedLoads,
+    existingExerciseNames: args.keptRowNames,
+  })).filter(candidate => ![...args.pausedRowNames, ...args.excludedByAthlete]
+    .some(name => normalise(name) === normalise(candidate.name)));
+  const families = [...new Set(allCompounds.map(candidate => finerPatternIdentityOf(candidate.name)))];
+  // Preserve the unaffected-half and least-covered pattern policy, then choose
+  // the exact family. Never widen a horizontal-push request into another press.
+  families.sort((a, b) => {
+    const candidateA = allCompounds.find(c => finerPatternIdentityOf(c.name) === a)!;
+    const candidateB = allCompounds.find(c => finerPatternIdentityOf(c.name) === b)!;
+    if (safeHalf === 'lower') return lowerCount(candidateA) - lowerCount(candidateB);
+    const pushFirst = leaves[0] === 'upper_push';
+    const broad = (family: string) => family.includes('push') ? (pushFirst ? 0 : 1) : (pushFirst ? 1 : 0);
+    return broad(String(a)) - broad(String(b))
+      || identityCount([String(a)]) - identityCount([String(b)])
+      || String(a).localeCompare(String(b));
+  });
+  const context = args.programmingContext;
+  for (const family of families) {
+    const slot = family as SessionSlot;
+    const pool = new Set(anchorCandidates(slot));
+    const familyCandidates = allCompounds.filter(c => finerPatternIdentityOf(c.name) === family
+      && pool.has(composedIdentityFor(c.name)));
+    const unused = familyCandidates.filter(c => !inTheWeek.has(normalise(c.name)));
+    const repeats = familyCandidates.filter(c => restOfWeek.some(n => normalise(n) === normalise(c.name)));
+    // Exhaust every suitable unused choice in this family before repeating.
+    for (const cohort of [unused, repeats]) {
+      let candidates = cohort;
+      while (candidates.length > 0) {
+        const ids = candidates.map(c => composedIdentityFor(c.name));
+        const suitable = gradedFirstAmongLegal(args.profile ? experiencePreferred(ids, args.profile) : ids)
+          .filter(id => ids.includes(id));
+        if (!suitable.length) break;
+        const history = (context?.selectionHistory ?? []).filter(row => row.slot === slot
+          && row.blockStartISO < (context?.blockStartISO ?? args.dateISO ?? ''))
+          .sort((a,b) => b.blockStartISO.localeCompare(a.blockStartISO));
+        const decision = decideExerciseForBlock({ phase: context?.seasonPhase ?? args.profile?.seasonPhase ?? 'Off-season',
+          blockNumber: context?.blockNumber ?? 1, slot, group: null, role: 'main_bilateral',
+          legalCandidates: suitable, previousSelection: history[0] ?? null,
+          // This temporary injury position must never restore another day's seat
+          // or enter the athlete's permanent block-rotation record.
+          currentBlockSelection: null, recentSelections: history,
+          movementPlaneContext: weeklySelector.movementPlaneContextFor(slot),
+          identityWeeksHeld: Object.fromEntries(ids.map(id => [id, consecutiveIdentityWeeks(
+            context?.selectionHistory ?? [], id, context?.blockStartISO ?? args.dateISO ?? '1970-01-01')])),
+          pinnedIdentities: (context?.pinnedIdentities ?? []).map(composedIdentityFor),
+          progressedIdentities: (context?.progressedIdentities ?? []).map(composedIdentityFor),
+        });
+        const candidate = candidates.find(c => composedIdentityFor(c.name) === decision.identity)!;
+        if (take({ ...candidate, mainStrengthPattern: patternOf(candidate.name) }, { injuryCompound: true })) break;
+        candidates = candidates.filter(c => c !== candidate);
+      }
+      if (chosen.length) break;
     }
+    if (chosen.length) break;
   }
 
   // ── 2. MIDLINE, ONE PER PRESCRIPTION SHAPE ───────────────────────────────
@@ -486,6 +516,35 @@ export function injuryAdjustmentSummary(args: {
  * this projection is recomputed on every render and on every boot, and a row
  * whose id moved would lose the tick the athlete had already put in it.
  */
+export function contextualInjuryAddition(candidate: InjurySessionAddition,
+  context: InjuryProgrammingContext | undefined, profile: OnboardingData | null | undefined,
+  kit?: readonly string[], recordedLoads?: Readonly<Record<string, number>>): InjurySessionAddition {
+  const dose = resolveComposedDose({ identity: candidate.name,
+    isMainLift: !!candidate.mainStrengthPattern && context?.mainStrengthRole !== false, poolSlot: classifyPoolSlot(candidate.name)?.slot ?? null,
+    seasonPhase: context?.seasonPhase ?? profile?.seasonPhase ?? 'Off-season',
+    offseasonSubphase: context?.offseasonSubphase ?? null,
+    authoredFallback: [candidate.sets, candidate.repsMin, candidate.repsMax] });
+  const weightKg = profile && kit ? resolveComposedLoad({ identity: candidate.name,
+    isMainLift: !!candidate.mainStrengthPattern && context?.mainStrengthRole !== false,
+    poolSlot: classifyPoolSlot(candidate.name)?.slot ?? null,
+    seasonPhase: context?.seasonPhase ?? profile.seasonPhase ?? 'Off-season',
+    offseasonSubphase: context?.offseasonSubphase ?? null, profile, kit, recordedLoads,
+  }) : candidate.weightKg;
+  let result = { ...candidate, ...dose, weightKg };
+  if (context?.deloadPolicy) {
+    const row = injuryAdjustmentRows({ workout: { id: 'dose', exercises: [] } as unknown as Workout,
+      added: [result], startOrder: 0 })[0];
+    // Selection already supplied the useful injury block. Reduce its dose once;
+    // don't re-run accessory removal against a one-row temporary array.
+    const reduced = applyStrengthDeloadToExercises([row], {
+      ...context.deloadPolicy, preserveExerciseSelection: true,
+    })[0];
+    result = { ...result, sets: reduced.prescribedSets, weightKg: reduced.prescribedWeightKg ?? null,
+      notes: reduced.notes ?? result.notes };
+  }
+  return result;
+}
+
 export function injuryAdjustmentRows(args: {
   workout: Workout;
   added: readonly InjurySessionAddition[];
@@ -511,7 +570,8 @@ export function injuryAdjustmentRows(args: {
         provenance: 'composer_declaration',
       },
       ...(candidate.weightKg !== null ? { prescribedWeightKg: candidate.weightKg } : {}),
-      restSeconds: 60,
+      restSeconds: candidate.restSeconds ?? 60,
+      ...(candidate.notes ? { notes: candidate.notes } : {}),
       exercise: {
         id: `injury-adjustment-${slug}`,
         name: candidate.name,
@@ -537,6 +597,7 @@ export interface InjurySessionAdjustmentInputs {
    * caller that knows the injury passes it.
    */
   environment: TapSwapEnvironment;
+  programmingContext?: InjuryProgrammingContext;
   profile: OnboardingData | null | undefined;
   /** Every load the athlete has logged, by name (Sam, 2026-09-03). Outranks the estimate. */
   recordedLoads?: Readonly<Record<string, number>>;
@@ -614,8 +675,13 @@ export function deriveInjurySessionAdjustment(
   // strength fillers — a paused stretch simply comes off. Measured: a knee
   // injury paused Crab Hold on a Mobility day and the block added Push-ups.
   const strengthSession = workout.workoutType !== 'Mobility' && workout.workoutType !== 'Recovery';
-  const added = !strengthSession ? [] : chooseInjurySessionAdditions({
+  const added = !strengthSession || args.pausedRowNames.length === 0 ? [] : chooseInjurySessionAdditions({
     environment: args.environment,
+    programmingContext: { ...args.programmingContext,
+      seasonPhase: args.programmingContext?.seasonPhase ?? args.profile?.seasonPhase ?? 'Off-season',
+      offseasonSubphase: args.programmingContext?.offseasonSubphase ?? null,
+      mainStrengthRole: rows.some(row => row.section18Evidence?.role === 'main_strength'),
+    },
     profile: args.profile,
     recordedLoads: args.recordedLoads,
     keptRowNames,
@@ -697,10 +763,10 @@ export function applyInjurySessionAdjustment<T extends Workout | null | undefine
    * the mark `markInjuryWithheldRows` already put on them. Hiding is the
    * treatment for an ADJUSTED session, not for a paused one.
    */
-  if (kept.length === 0 && adjustment.added.length === 0) return workout;
+  const fullyPaused = kept.length === 0 && adjustment.added.length === 0;
   return {
     ...workout,
-    exercises: [
+    exercises: fullyPaused ? workout.exercises : [
       ...kept,
       ...injuryAdjustmentRows({
         workout,

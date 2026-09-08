@@ -116,7 +116,6 @@ export interface CoachSnapshotRecordedSession {
   readonly skipReason?: JournalSessionOutcome['reason'];
   readonly partialReason?: JournalSessionOutcome['reason'];
   readonly feeling?: JournalSessionOutcome['feeling'];
-  readonly soreness?: JournalSessionOutcome['soreness'];
   readonly gameFeel?: JournalSessionOutcome['gameFeel'];
   readonly expectation?: JournalSessionOutcome['expectation'];
   readonly strength?: JournalLoadSessionInput['strength'];
@@ -174,7 +173,8 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
       completion: feedback.completion,
       reason: feedback.skipReason ?? feedback.partialReason ?? null,
       feeling: feedback.feeling ?? null,
-      soreness: feedback.soreness ?? null,
+      // Historical Journal schema only; no current soreness observation.
+      soreness: null,
       gameFeel: feedback.game?.feel ?? feedback.gameFeel ?? null,
       expectation: feedback.expectation ?? null,
     };

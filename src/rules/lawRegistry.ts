@@ -141,6 +141,54 @@ export interface LawRow {
  */
 export const LAW_REGISTRY: readonly LawRow[] = [
   {
+    id: 'LAW-yearproof-contextual-injury-and-completion',
+    law: 'R-386: unused same-family injury choices use normal selection before repeat; day and week restrictions stay separate; contextual dose and units survive repair; optional strength cannot inflate required completion; feedback recovery defers Christmas COD to the next healthy existing date.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-386',
+    guard: { state: 'guarded', by: 'test:yearproof-repairs', chainStatus: 'in_chain', receipt: 'Named YP1–YP5 input regressions and phase/recovery, kit/experience, preference/history matrices; nine in-memory fault mutations must fail their named check; four real onboarding frequencies cover required/extra credit, legacy-count correction and reload. Bounded real-action evidence: output/yearproof-fixes-2026-09-08.' },
+  },
+  {
+    id: 'LAW-accepted-choice-settings-rebuild',
+    law: 'R-385: accepted exercise choices retain their dated authored target through profile rebuilding; the final visible result is verified inside the rollback boundary before success. Ambiguous missing targets are never guessed.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-385',
+    guard: { state: 'guarded', by: 'test:settings-persistence', chainStatus: 'in_chain', receipt: 'Real offered-swap/history/settings/reopen journey, typed and legacy targets, plus a deliberately broken target resolver that must trigger an honest refusal and exact rollback/reopen.' },
+  },
+  {
+    id: 'LAW-annual-audit-followup',
+    law: 'R-385: household-support exercises including Pigeon need no gym equipment; five implement counts are confirmed; skipped Christmas COD resumes in the next healthy week.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-385',
+    guard: { state: 'guarded', by: 'test:annual-audit-second-repairs', chainStatus: 'in_chain', receipt: 'Direct policy/target checks and live source mutations, plus real settings and annual journeys. See output/yearcheck-followup-2026-09-07.' },
+  },
+  {
+    id: 'LAW-annual-audit-second-repairs',
+    law: 'R-384: implement-aware automatic total loads, completed-exposure load history, dated authored apparatus, replacement-owned units and cues, identity-based rotation tenure. Lateral Bounds 1+; power repeats only when safe alternatives are exhausted; Band Pull-Apart is shoulder prehab, not horizontal pulling.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-384',
+    guard: { state: 'guarded', by: 'test:annual-audit-second-repairs', chainStatus: 'in_chain', receipt: 'Red-first direct failures and real annual reproduction retained in output/yearcheck-fixes-2026-09-07; final journey verification recorded separately.' },
+  },
+  {
+    id: 'LAW-annual-audit-repairs',
+    law: 'R-383: Broad Jumps, Jump Squats and Depth Jumps require 1+ years. Automatic non-power choices use authored experience minimums on every route. Clearing a dated restriction ends its effect from the declared date and preserves earlier prescriptions, including fixture changes. Preserve Strength-before-Speed display and optional pre-game Primer.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-383',
+    guard: { state: 'guarded', by: 'test:annual-audit-repairs', chainStatus: 'in_chain', receipt: 'Independent annual before-change evidence retained. New experience and dated-access checks failed before implementation. The real controlled-frequency journey compares every report/Clear with earlier dates and reopens every reached week; implementation acceptance remains pending the full report.' },
+  },
+  {
+    id: 'LAW-conditioning-gym-access',
+    law: 'R-382: machine conditioning uses selected gym dates through one dated capability owner, including injury replacement. Extra outdoor running remains eligible. Due COD exchanges tempo first and preserves the last aerobic-base receiver.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-382',
+    guard: { state: 'guarded', by: 'test:conditioning-gym-access', chainStatus: 'in_chain', receipt: 'Original eight-week journey failed on off-gym Saturday bike work; two/three-day journeys, dated access matrix and applied mutation controls.' },
+  },
+  {
+    id: 'LAW-offseason-preparation',
+    law: 'R-381: off-season weeks 1-4 use body-armour lifting and optional light off-feet aerobic work; no automatic power, running, hard conditioning or compulsory conditioning top-ups. Weeks 3-4 actually offer light aerobic add-ons on gym days with no completion penalty; only weeks 1-2 have optional lifting. Keep the dated clock, deload timing and historical logs.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-381',
+    guard: { state: 'guarded', by: 'test:offseason-preparation', chainStatus: 'in_chain', receipt: 'Original real two-, three- and four-day five-week journeys failed 22 assertions before correction; checks visible generation and restart.' },
+  },
+  {
+    id: 'LAW-progression-dose-ownership',
+    law: 'R-380: no active soreness input or inferred soreness; fatigue/deload reductions last at most one week; one accepted block progression owner; earned first bodyweight load excludes added sets. Preserve historical athlete records.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-380',
+    guard: { state: 'guarded', by: 'test:progression-dose-ownership', chainStatus: 'in_chain', receipt: 'Original actual seven-week three-day journey and form/save reproduction failed before the approved correction on 2026-09-07; checks final visible dose and restart.' },
+  },
+  {
     id: 'LAW-b-stance-rdl-intake',
     law: 'R-368: B-Stance RDL is a loaded single-leg hip-dominant lift for everyone, in the hinge accessory pool\'s single_leg_hip group. Barbell or dumbbell, dumbbells resolved first; no kettlebell and not bodyweight-capable. Same dose category, load profile, experience gate, season and game-day rating, and automatic/manual routes as Single-Leg RDL, held as equalities rather than copies. It differs where Sam authored it to: hamstring Avoid, knee Good, stability moderate, eccentric high, load moderate. It joins the romanian_deadlift variation family, so R-233\'s one-RDL-variant-per-day covers it.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-368',
@@ -714,11 +762,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-bodyweight-lift-earns-added-load',
-    law: 'R-343: at a block boundary an authored-unloaded lift the athlete can add load to (bodyweight_plus) with no recorded load, in a block that qualifies on completion and recovery, completed at the top of its prescribed rep range as proven by real logged sets (actualReps >= prescribedRepsMax; completion alone claims nothing about reps), is suggested the lattice\'s smallest added load as a bodyweight_progressed row with its own athlete-facing sentence; from then on R-096 clause 1 governs it; rotation reads the same earned-a-rise predicate; a very-hard block, a rep short, or no per-set detail leaves it at BW; an automatic in-block step the weighted-bodyweight lattice can only express as zero holds the load.',
-    ruledAt: 'docs/RULINGS_REGISTRY.md R-343',
+    law: 'R-343 as clarified by R-388: at a block boundary an authored-unloaded lift the athlete can add load to (bodyweight_plus) with no recorded load, in a block that qualifies on completion and recovery, completed at the displayed prescribed rep target as proven by real logged sets (actualReps >= displayReps(prescribedRepsMin, prescribedRepsMax); completion alone claims nothing about reps), is suggested the lattice\'s smallest added load as a bodyweight_progressed row with its own athlete-facing sentence; from then on R-096 clause 1 governs it; rotation reads the same earned-a-rise predicate; a very-hard block, a rep short, or no per-set detail leaves it at BW; an automatic in-block step the weighted-bodyweight lattice can only express as zero holds the load.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-388',
     guard: {
       state: 'guarded',
-      by: 'test:block-two-progression',
+      by: 'test:yearscan-repairs',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-02 by seat `hingecod`. RED FIRST: the audited year carried Pull-Ups at BW for 52 weeks; the boundary wrote nothing for an unloaded row and the audit robot logged no set for it. THE CHANGE: readBlockHistory records top-of-range completions from logged sets; decideBlockBoundaryLoads emits bodyweight_progressed; a signed added-load sentence; the journey helper logs bodyweight rows at bodyweight with reps; the in-block wave holds a load the lattice would zero. Five new cells (top of range -> BW + 2.5 kg, stored kind and sentence, one rep short holds, no per-set detail holds, very-hard block holds). MUTATION: dropping the reps proof reds two cells; never suggesting reds three. AFTER: block-two-progression 47/47, ladder 59/59, boot-preservation 20/20, equipment-load-increments 9/9, athlete-journey 61/64 (three inherited), signed-copy 7/7; regenerated year Pull-Ups BW -> +2.5 at week 5 -> +27.5 by week 52, 52/52 restarts. Receipt: docs/STATUS_HINGECOD.md.',
     },
@@ -2817,8 +2865,30 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-progress-lift-calculation-explanation',
+    law: 'Main lifts has an accessible How it is calculated info button that opens the shared dismissible popup. Its simple explanation follows the existing estimator: last-set weight, completed reps and spare reps, a reps-to-weight table, best estimate per week and the latest plotted week value. Pull-Up added-load, non-dominant Bulgarian split-squat and legacy-record notes appear for the applicable selected histories. The explanation changes no calculation or training record.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-392 — Sam requested a small calculation info control and a very simple popup explaining the actual calculation.',
+    guard: {
+      state: 'guarded',
+      by: 'test:estimated-1rm + test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-09-08, progresspreview. Two red-first popup cells pass after wiring. Progress has 71 passing cells, including the real estimator example of six completed reps plus two spare reps. Three injected faults are caught: inert button, hidden popup and ignored spare reps. The native flow opens the popup, checks the definition and Pull-Up note, captures it and closes with Got it. Compile is zero errors; Coach Snapshot is 38/38. Receipts: output/progress-preview-2026-09-08/calculation-*.log and screenshots 21/22. NOT COVERED: physical-iPhone acceptance, enlarged accessibility text and physiological calibration.',
+    },
+  },
+  {
+    id: 'LAW-progress-period-selection',
+    law: 'Progress offers 4 weeks, 12 weeks and Year. One selected date range filters load history, all lift series and displayed performance results, and each visible chart fits its available in-period recorded dates to the usable width while retaining elapsed-time spacing. Period controls and the available-history dates share a fixed-allocation row in every mode. The widened selector uses the Program Day/Week yellow selected fill/text, with larger 13-point labels and a 13-point date in a stable 112-point slot. The load card omits the measured-session count and shows signed percentage change for its latest weekly AU against the mean of a complete 4/12/52 previous measured weeks for the selected period, naming the selected comparison period. Short, gapped or zero baselines never fabricate a percentage or silently substitute a shorter comparison. The displayed start never predates available in-period records; the end is the selected through-today date. The LFA logo remains unchanged. The training-load card stacks a full-width status, guidance and continuum section above a full-width weekly AU value and graph section, with a functioning read-only Load history page under the Progress tab. The page offers 4/12-week/Year filtering, selectable weekly AU bars, a complete previous-four-week baseline, and navigation into recorded-session summaries. Weekly totals and component breakdowns use the canonical session-load owner; missing duration/effort is not invented, combined components count once, and future records are excluded. Four/twelve calendar weeks include the current week; Year is the trailing calendar year. Future/invalid records and records outside the range do not appear. Missing history is never filled with invented points. Switching periods changes presentation only, preserves full saved histories and leaves the existing current-week sweet-spot/deload calculation intact.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-392 — Sam requested the functional top period selector from his reference, starting this redesign at the top.',
+    guard: {
+      state: 'guarded',
+      by: 'test:estimated-1rm + test:coach-snapshot',
+      chainStatus: 'in_chain',
+      receipt: 'UPDATED 2026-09-08, progresspreview. 67 Progress cells and 38 Coach Snapshot cells pass. Five current in-memory faults are caught: pre-history dates, wrapping controls, stacked load card, cramped chart axis and inert load history. Native taps verify all three periods, available-history dates, history values and open/close behavior; screenshots 11–17 include normal/below/above states. Final compilation has zero product/devtools/test errors. Receipts: output/progress-preview-2026-09-08/header-*.log and docs/STATUS_PROGRESSPREVIEW.md. NOT COVERED: physical-iPhone Release acceptance, dense year-long native charts and enlarged accessibility text.',
+    },
+  },
+  {
     id: 'LAW-progress-load-owns-the-dashboard-hero',
-    law: 'Training load owns the wide Progress hero immediately below the Progress title. Its signed four-week-normal continuum says In the sweet spot, Potentially overtraining or Potentially undertraining; a low-load stored deload says Deload week instead. The card explains that the range builds fitness without training too hard or undertraining and charts the existing completed weekly load history in AU, refusing a one-point graph. Coach does not render a second load surface.',
+    law: 'Training load owns the wide Progress hero immediately below the Progress title. Its signed four-week-normal continuum says In the sweet spot, Potentially overtraining or Potentially undertraining; a low-load stored deload says Deload week instead. The card explains that the range builds fitness without overdoing it or undertraining and charts the existing completed weekly load history in AU, refusing a one-point graph. Coach does not render a second load surface.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-139 and R-281 — Sam moved Load into Progress, then required the exact sweet-spot/potential-over-or-under interpretation, a deload exception and weekly AU history.',
     guard: {
       state: 'guarded',
@@ -3324,7 +3394,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-progress-shows-four-fixed-predicted-one-rep-max-graphs',
-    law: 'Progress headings carry no decorative lime dash. The section heading is Main lifts (Estimated 1RM), and each of the four cards shows only its currently selected lift rather than permanent inline alternatives or a repeated estimate caption. Tapping that lift opens one two-option selector: Pull-Up (added weight)/Lat Pulldown, Bench Press/OHP, RDL/Trap-Bar Deadlift, or Back Squat/Bulgarian Split Squat. The default selection order remains those four first choices, including an honest No data yet card with no lime dash when a lift has no usable history. Graph values are Brzycki predicted 1RM from the week\'s best completed 1–10-rep set, preferring one real weight-and-reps pair and otherwise using a fully completed prescription; partial work without set detail and sets above ten reps create no point. Pull-Up calculates bodyweight plus added load and displays the predicted added-load maximum with a plus prefix.',
+    law: 'Progress headings carry no decorative lime dash. The section heading is Main lifts (Estimated 1 rep max), and each of the four cards shows only its currently selected lift rather than permanent inline alternatives or a repeated estimate caption. Tapping that lift opens one two-option selector: Pull-Up/Lat Pulldown, Bench Press/OHP, RDL/Trap-Bar Deadlift, or Back Squat/Bulgarian Split Squat. The default selection order remains those four first choices, including an honest No data yet card with no lime dash when a lift has no usable history. Graph values are Brzycki predicted 1RM from the week\'s best completed 1–10-rep set, preferring one real weight-and-reps pair and otherwise using a fully completed prescription; partial work without set detail and sets above ten reps create no point. Pull-Up calculates bodyweight plus added load and displays the predicted added-load maximum as a weight such as 34kg below the lift name.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-255 and R-280 — Sam required four permanent predicted-1RM slots, then simplified each card to one selected lift with a tap-to-change pair and an explicit Pull-Up added-weight label.',
     guard: {
       state: 'guarded',
@@ -3353,7 +3423,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-programming-followup-approved-pools-flush-and-add',
-    law: 'R-265: Leg Press/conventional Deadlift stay manual/fallback choices; existing block choices restore. Box/Broad/Jump Squat enter the ordinary power pool without invented preference or dose. G+2 in-season off-leg flush is optional unless an explicit mild soreness report makes it required, absent existing conditioning/club, subject to kit and safety. Added Mobility/Recovery must inspect the whole day and contain no repeated exercise; separate sessions, the daily limit, logging, Undo and restart remain.',
+    law: 'R-265: Leg Press/conventional Deadlift stay manual/fallback choices; existing block choices restore. Box/Broad/Jump Squat enter the ordinary power pool without invented preference or dose. G+2 in-season off-leg flush remains optional, absent existing conditioning/club and subject to kit and safety; R-380 retires its former soreness trigger. Added Mobility/Recovery must inspect the whole day and contain no repeated exercise; separate sessions, the daily limit, logging, Undo and restart remain.',
     ruledAt: 'docs/RULINGS_REGISTRY.md R-265 — Sam answered the five follow-up programming decisions, 2026-08-28.',
     guard: { state: 'guarded', by: 'test:canonical-weekly-compiler', chainStatus: 'in_chain',
       receipt: 'programmingSelectionDecisions, unilateralPriorityJourney, gPlusTwoFlushJourney and lowLoadAdditionJourney are invoked by programmingInputTruth in the canonical suite. The real no-rack/no-barbell journeys hold P16 weekly priority without relabelling or losing bilateral coverage. Initial failures and current verification limits are recorded in PROGRAMMING_FOLLOWUP_2026-08-28.md. Conditioning clarity also checks actual composed prescriptions, available machine sequences and restart.' },
@@ -3418,6 +3488,30 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED 2026-09-03 by seat `warmuprear`. RED FIRST: 2/8 green, 6 red — none of the five reached the shoulder-prehab candidate door, neither Face Pull name had variation-family identity, the main/warm-up exclusion was vacuous, and the band-only candidate was absent. THE CHANGE: one explicit alsoEligibleExercises relation on the existing shoulder-prehab slot plus one face_pull identity in the existing variation-family owner; the flow selector now applies exact and family collision checks to the main workout, fresh picks, performed retention and selection receipts. AFTER: 9/9, all five observed across 730 dated upper warm-ups, no Face Pull pair, both main/warm-up directions exercised, performed work retained, original catalogue pools pinned and equipment filters preserved. MUTATION: emptying the extra eligibility relation kills its list, candidate-door and actual-selection cells. Receipt: docs/STATUS_WARMUPREAR.md.',
     },
+  },
+  {
+    id: 'LAW-yearscan-approved-repairs',
+    law: 'R-387/R-388: athlete Add allows catalogue choices, repeat exercises and sessions, Off-season power and training beside a game without automatic kit/injury/experience/phase or count vetoes. Accepted addition identities and prescriptions survive reconstruction; later athlete reports can adjust earlier additions and Clear restores them. Only near-game and repeated-main-lift warnings are shown, both overridable. Automatic programming still owns its own restrictions. Dumbbell steps continue above 60 kg per implement; retained weekdays cannot mint recurring Off-season fixtures. The displayed rep target governs first added-load eligibility. Goals change canonical weekly prescriptions within Bible phase/recovery limits and one bounded allowance, including through profile edits and restart. A deliberate Add overrides existing injury versions in compilation and skip markers; unrelated reports do not revoke it. Movement Prep stays unchanged. Conditioning advances its actual count, duration or recovery field and visible instruction together and holds during scheduled deloads.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-388',
+    guard: { state: 'guarded', by: 'test:yearscan-repairs', chainStatus: 'in_chain',
+      receipt: 'Owner yearscan. Recorded red-first baseline, real onboarding with two/three/four/five-day schedules, duplicate Add and storage reopen, near-game heavy Add and Undo, real-game retention, injury and restricted-kit Add, all authored dose step kinds and a four-week feedback/rollover journey. The chained mutation runner restores the defects in memory and requires each named test group to fail. Evidence: output/yearscan-fixes-2026-09-08/. Physical device acceptance remains outstanding.' },
+  },
+  {
+    id: 'LAW-next-day-speed-dose',
+    law: 'R-389: normal-volume full-body/lower training does not automatically penalise next-day Speed. Ten lower working sets is a soft scheduling preference, not a ban. Resolved prescriptions and recorded completions determine dose. Among equally fresh legal whole-week arrangements, avoid strength + Speed + metabolic triples before consolidation; preserve strength assignments, stimulus counts and metabolic dose. The three-day annual pre-season week uses Saturday Speed.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-389',
+    guard: { state: 'guarded', by: 'test:saturday-speed', chainStatus: 'in_chain',
+      receipt: 'Owner yearbook. Red-first dose selector; actual onboarding, working-row and completed-set checks, twelve frequency/phase worlds with restart, eight live source mutations. Exact annual replay and evidence in output/saturday-speed-fix-2026-09-08/. Physical iPhone acceptance remains outstanding.' },
+  },
+  { id: 'LAW-three-day-full-body-erg-rest',
+    law: 'R-390: three available pre-season gym days prefer three full-body sessions with the six main seats distributed before composition. Longer aerobic RowErg/SkiErg blocks use complete rest for their prescribed recovery duration. Existing conditioning progression is retained.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-390',
+    guard: { state: 'guarded', by: 'test:full-body-erg-rest', chainStatus: 'in_chain', receipt: 'Owner yearbook. Real onboarding, actual lower dose and six-seat distribution, Saturday Speed and reopen, typed erg modality projection, retained progression and live fault controls. output/full-body-erg-rest-2026-09-08/. Phone acceptance outstanding.' },
+  },
+  { id: 'LAW-whole-week-planning',
+    law: 'R-391: strength-session frequency is independent of equipment-access days. The canonical planner compares complete legal weekly arrangements using actual lower dose; only the chosen candidate supplies rows and selections. Byes do not force Speed onto metabolic days. Equipment access and explicit unavailable dates are respected; delivered work, phase work targets and accepted edits remain protected.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-391',
+    guard: {state: 'guarded', by: 'test:whole-week-planning', chainStatus: 'in_chain', receipt: 'Owner yearbook. Real onboarding, bye removal, frequency/access edits, unavailable dates and restart; source fault controls. Verification in output/whole-week-planner-2026-09-08/. Physical device acceptance outstanding.'},
   },
 ];
 

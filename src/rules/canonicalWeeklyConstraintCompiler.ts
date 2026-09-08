@@ -1,3 +1,5 @@
+import { restDayReasonsForWeek } from './restDayReason';
+import { composeTemporarySourceFactCompatibility, sourceFactsForHistoricalCompilation } from './temporarySourceFact';
 /** Final ephemeral compiler stage. Applies accepted constraints once to resolved
  * dates. Screens consume its output unchanged; accepted source rows are not saved
  * with temporary filters baked in. Existing injury adjudication wins over legacy
@@ -8,7 +10,7 @@ import {
   applyConstraintsToSession,
   applyConstraintsToTypedComponents,
   validateWorkoutAgainstConstraints,
-  buildInjuryConstraint, buildFatigueConstraint, buildSorenessConstraint,
+  buildInjuryConstraint, buildFatigueConstraint,
   buildScheduleConstraint, buildMissedSessionConstraint,
   type Constraint,
 } from '../utils/exposureEngine';
@@ -31,6 +33,8 @@ export interface CanonicalDayConstraintInput {
   overrideContext?: OverrideContext;
   /** Today's ISO date — used to skip past-date filtering. */
   todayISO: string;
+  /** Constraints already selected for this exact date remain true when it is reopened later. */
+  datedHistoricalConstraints?: boolean;
   /** Additional constraints (fatigue, soreness, schedule, etc.) to layer on top. */
   extraConstraints?: Constraint[];
   /**
@@ -167,7 +171,7 @@ export function compileCanonicalDayConstraints(input: CanonicalDayConstraintInpu
     }
   }
 
-  if (preprocessedWorkout && day.date >= todayISO) {
+  if (preprocessedWorkout && (day.date >= todayISO || input.datedHistoricalConstraints)) {
     preprocessedWorkout = alignPowerToFinalWorkoutContent(preprocessedWorkout).workout;
   }
 
@@ -187,8 +191,10 @@ export function compileCanonicalDayConstraints(input: CanonicalDayConstraintInpu
   if (!visibleDay.workout) {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
-  // Past dates are immutable.
-  if (visibleDay.date < todayISO) {
+  // Undated, forward-looking changes cannot alter history. Dated accepted
+  // facts still shape their original dates; skipping them would reveal rows
+  // hidden on the day itself (R-383).
+  if (visibleDay.date < todayISO && !input.datedHistoricalConstraints) {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
   // Recovery / game stubs untouched.
@@ -321,16 +327,6 @@ export function compileActiveExposureConstraints(activeConstraints: any[]): any[
     .filter((constraint) => constraint?.type === 'fatigue' && constraint.status !== 'resolved')
     .sort((left, right) => (right.severity ?? 0) - (left.severity ?? 0) ||
       String(right.lastUpdatedAt ?? '').localeCompare(String(left.lastUpdatedAt ?? '')))[0];
-  const strongestSorenessByBucket = new Map<string, any>();
-  for (const constraint of activeConstraints) {
-    if (constraint?.type !== 'soreness' || !constraint.bucket || constraint.status === 'resolved') continue;
-    const prior = strongestSorenessByBucket.get(constraint.bucket);
-    if (!prior || (constraint.severity ?? 0) > (prior.severity ?? 0) ||
-      ((constraint.severity ?? 0) === (prior.severity ?? 0) &&
-        String(constraint.lastUpdatedAt ?? '') > String(prior.lastUpdatedAt ?? ''))) {
-      strongestSorenessByBucket.set(constraint.bucket, constraint);
-    }
-  }
   for (const [index, c] of activeConstraints.entries()) {
     if (!c || c.status === 'resolved') continue;
     // Legacy partial constraints must not trigger the builders' device-clock
@@ -358,13 +354,6 @@ export function compileActiveExposureConstraints(activeConstraints: any[]): any[
     } else if (c.type === 'fatigue') {
       if (c !== strongestFatigue) continue;
       out.push(buildFatigueConstraint({ ...identity, severity: c.severity }));
-    } else if (c.type === 'soreness' && c.bucket) {
-      if (strongestSorenessByBucket.get(c.bucket) !== c) continue;
-      out.push(buildSorenessConstraint({
-        ...identity,
-        region: bucketToRegion(c.bucket),
-        severity: c.severity,
-      }));
     } else if (c.type === 'schedule') {
       out.push(buildScheduleConstraint({ ...identity, severity: c.severity }));
     } else if (c.type === 'missed_session') {
@@ -391,20 +380,36 @@ export function compileCanonicalResolvedWeek(input: {
   const days = compileCanonicalTravelDates(input);
   // Bare accepted-base composition is not a request to bake temporary display
   // constraints into storage. Only explicit constraint inputs enter this stage.
-  if (!state.activeConstraints) return days;
+  const reasons = restDayReasonsForWeek(state.currentProgram, input.weekStartISO,
+    state.weekScopedOverlays?.[input.weekStartISO]);
   const accepted = hasStoredWeekDeclaration({
     overlay: state.weekScopedOverlays?.[input.weekStartISO],
     coveringMicrocycle: selectMicrocycleForDate(state.currentProgram, state.currentMicrocycle, input.weekStartISO),
     weekStart: input.weekStartISO, reader: 'canonicalWeeklyConstraintCompiler.acceptedContract',
   });
+  // Cleared facts stay inactive in saved/current status. Their dated views
+  // still belong to the old day, including this final display-only projection.
+  const historical = composeTemporarySourceFactCompatibility({ temporarySourceFacts:
+    sourceFactsForHistoricalCompilation((state.temporarySourceFacts ?? [])
+      .filter(fact => fact.status === 'resolved' || fact.status === 'expired')),
+  }).activeConstraints;
+  const currentIds = new Set((state.activeConstraints ?? []).map(constraint => constraint.id));
+  const effectiveConstraints = [...(state.activeConstraints ?? []),
+    ...historical.filter(constraint => !currentIds.has(constraint.id))];
   return days.map((day) => {
-    const constraints = filterConstraintsForDate(state.activeConstraints ?? [], day.date);
-    if (accepted && !constraints.some(isTemporaryFactConstraint)) return day;
-    return compileCanonicalDayConstraints({
-      day, todayISO: input.todayISO, overrideContext: state.overrideContexts?.[day.date],
+    const constraints = filterConstraintsForDate(effectiveConstraints, day.date);
+    const compiled = (!state.activeConstraints && !historical.length) || (accepted && !constraints.some(isTemporaryFactConstraint))
+      ? day : compileCanonicalDayConstraints({
+      day, todayISO: input.todayISO, datedHistoricalConstraints: constraints.some(isTemporaryFactConstraint), overrideContext: state.overrideContexts?.[day.date],
       modalityPreferences: state.modalityPreferences ?? {},
       extraConstraints: compileActiveExposureConstraints(accepted ? constraints.filter(isTemporaryFactConstraint) : constraints),
     }).day;
+    const reason = compiled.restReason ?? reasons[day.dayOfWeek];
+    // Every public date/week reader receives the same effective day, including
+    // the Program screen and the reopened headless journey.
+    if (reason && !compiled.workout) return { ...compiled, restReason: reason };
+    const { restReason: _staleReason, ...filled } = compiled;
+    return filled;
   });
 }
 
@@ -416,7 +421,7 @@ function compileCanonicalTravelDates(input: {
   return input.days.map(day => {
     if (!dateIsInsideAwaySpan(day.date, spans)) return day;
     const rest = (): ResolvedDay => ({ ...day, isToday: day.date === input.todayISO,
-      workout: null, source: 'rest', indicator: 'rest' });
+      workout: null, source: 'rest', indicator: 'rest', restReason: 'away' });
     if (day.source === 'game' || day.indicator === 'game' || day.workout?.workoutType === 'Game') return rest();
     if (!day.workout) return day;
     const team = getTeamTrainingWorkoutState(day.workout);

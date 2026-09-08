@@ -3,6 +3,7 @@ import { coldStartThroughOnboarding, quiet, quietAsync, relaunchApp } from './at
 import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { visibleSignature } from '../compilerYear/invariants';
 import { presetEquipmentAnswer } from './equipmentAnswerFixture';
+import { slotsFilledByRow } from '../../rules/sessionSlotCoverage';
 import { getExerciseTags } from '../../data/exerciseTags';
 
 export async function unilateralPriorityJourney(storage:Map<string,string>,ok:(label:string,value:boolean,detail?:string)=>void) {
@@ -21,8 +22,14 @@ export async function unilateralPriorityJourney(storage:Map<string,string>,ok:(l
     const knee=rows.filter(r=>{const t=getExerciseTags(r.exercise.name);return t?.movement==='lunge'||(t?.movement==='squat'&&t.unilateral);});
     ok(`unilateral/${gender}/no-${missing}: missing kit does not repeat a fallback Leg Press ahead of single-leg work`,legPress.length<=1&&knee.length>0,
       JSON.stringify(view().map(d=>({date:d.date,rows:d.workout?.exercises.map(r=>r.exercise.name)}))));
-    ok(`unilateral/${gender}/no-${missing}: required bilateral squat coverage stays honestly bilateral`,rows.some(r=>{
-      const t=getExerciseTags(r.exercise.name);return t?.movement==='squat'&&!t.unilateral;}));
+    // R-373 supersedes bilateral-only primaries. Count the selected seat once,
+    // retaining the catalogue's unilateral identity instead of relabelling it.
+    const squatPrimaries=rows.filter(r=>r.section18Evidence?.role==='main_strength'
+      && slotsFilledByRow(r).includes('squat'));
+    ok(`unilateral/${gender}/no-${missing}: the required squat primary is supplied exactly once`,
+      squatPrimaries.length===1,JSON.stringify(squatPrimaries.map(r=>r.exercise.name)));
+    ok(`unilateral/${gender}/no-${missing}: a primary never claims its single-leg seat too`,
+      squatPrimaries.every(r=>slotsFilledByRow(r).length===1));
     const before=visibleSignature(view());
     const boot=await quietAsync(()=>relaunchApp({storage,todayISO:date}));
     ok(`unilateral/${gender}/no-${missing}: selection and single-leg work survive restart`,boot.ok&&before===visibleSignature(view()));

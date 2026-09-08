@@ -6,10 +6,10 @@ import {
   buildStrengthWorkoutHistoryFromFeedback,
   DEFAULT_PROGRESSION_CONTEXT,
   deriveMissedStrengthSessionsThisWeek,
-} from '../utils/strengthProgressionIntegration';
+} from './support/legacyStrengthProgression';
 import { deriveAdaptation } from '../utils/feedbackAdapter';
 import type { ScheduleState } from '../utils/sessionResolver';
-import { compileCanonicalStrengthWeek as authorWeekStrengthProgression } from '../rules/canonicalWeeklyProgressionCompiler';
+import { authorWeekStrengthProgression } from './support/acceptedProgressionTestAdapter';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 
 let pass = 0;

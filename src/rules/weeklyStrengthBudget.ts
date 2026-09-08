@@ -116,6 +116,15 @@ export function createWeeklyStrengthBudget(
   days: readonly WeeklyStrengthBudgetDay[],
 ): WeeklyStrengthBudget {
   const reserved: Partial<Record<WeeklyMainStrengthSlot, string>> = {};
+  // R-390: the six main lifts belong to three useful sessions before any
+  // exercise is selected. The third day keeps both vertical upper mains and
+  // receives its lower work through the existing unilateral/support slots.
+  if (days.length === 3 && days.every((day) => day.strengthIntent.archetype === 'full_body')) {
+    const pairs: readonly (readonly WeeklyMainStrengthSlot[])[] = [
+      ['squat', 'horizontal_push'], ['hinge', 'horizontal_pull'], ['vertical_push', 'vertical_pull'],
+    ];
+    days.forEach((day, index) => pairs[index].forEach((slot) => { reserved[slot] = day.planEntryId; }));
+  }
   for (const day of days) {
     for (const slot of explicitlyOwnedSlots(day.strengthIntent)) {
       reserved[slot] ??= day.planEntryId;

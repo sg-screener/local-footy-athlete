@@ -56,7 +56,7 @@ export const TermsScreen: React.FC = () => {
         Coach chat
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        The coach can help you train around soreness, fatigue, missed sessions, schedule changes and practical constraints. Do not rely on the coach for emergency advice, diagnosis or treatment decisions.
+        The coach can help you train around fatigue, missed sessions, schedule changes and practical constraints. Do not rely on the coach for emergency advice, diagnosis or treatment decisions.
       </Text>
 
       <Text variant="h4" style={styles.sectionTitle}>

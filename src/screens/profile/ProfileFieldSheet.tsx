@@ -1,3 +1,4 @@
+import { HorizontalNumberPicker } from '../../components/HorizontalNumberPicker';
 /**
  * ONE SETUP ANSWER, IN THE APP'S OWN POPUP.
  *
@@ -89,6 +90,8 @@ export interface ProfileFieldSheetProps {
 
   weekDays: readonly DayOfWeek[];
   lfaDays: readonly DayOfWeek[];
+  strengthSessions: number;
+  onChangeStrengthSessions: (value: number) => void;
   onToggleLfaDay: (day: DayOfWeek) => void;
   teamDays: readonly DayOfWeek[];
   onToggleTeamDay: (day: DayOfWeek) => void;
@@ -107,8 +110,8 @@ const QUESTION: Record<ProfileFieldId, { section: string; question: string; note
   },
   lfaDays: {
     section: 'Program setup',
-    question: 'Which days can you train?',
-    note: 'These are the days your program can use.',
+    question: 'Strength sessions and equipment access',
+    note: 'Choose your session target, then every day you can access your strength equipment. Running can use other available days.',
   },
   teamDays: { section: 'Program setup', question: 'When is team training?' },
   gameDay: { section: 'Program setup', question: 'Which day do you usually play?' },
@@ -298,12 +301,15 @@ export function ProfileFieldSheet(props: ProfileFieldSheetProps) {
          Same component, same geometry, same short names. */
       case 'lfaDays':
         return (
+          <>
+          <HorizontalNumberPicker testID="profile-strength-session-target" value={props.strengthSessions} onChange={props.onChangeStrengthSessions} min={1} max={7} />
           <DayChips
             days={props.weekDays}
             isSelected={(day) => props.lfaDays.includes(day)}
             onPress={props.onToggleLfaDay}
             idPrefix="profile-field-lfa"
           />
+          </>
         );
       case 'teamDays':
         return (

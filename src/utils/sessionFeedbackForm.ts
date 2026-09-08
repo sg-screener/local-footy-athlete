@@ -61,7 +61,6 @@ export const FEEDBACK_FORM_SECTION_LABELS = {
   expectationReason: 'What made the difference?',
   feeling: 'How did the session feel?',
   partialFeeling: 'How did the completed part feel?',
-  soreness: 'How sore are you?',
   partialReason: 'Why did you only complete part of it?',
   skipReason: 'Why did you skip it?',
   conditioning: 'Conditioning performance',
@@ -73,7 +72,6 @@ export const PARTIAL_REASON_OPTIONS: {
   label: string;
 }[] = [
   { key: 'ran_out_of_time', label: 'Ran out of time' },
-  { key: 'felt_sore_tight', label: 'Felt sore/tight' },
   { key: 'too_hard_today', label: 'Too hard today' },
   { key: 'equipment_unavailable', label: 'Equipment unavailable' },
   { key: 'other', label: 'Other' },
@@ -84,7 +82,6 @@ export const SKIP_REASON_OPTIONS: {
   label: string;
 }[] = [
   { key: 'busy_no_time', label: 'Busy / no time' },
-  { key: 'sore_tight', label: 'Sore or tight' },
   { key: 'injured_niggle', label: 'Injured / niggle' },
   { key: 'sick_low_energy', label: 'Sick / low energy' },
   { key: 'didnt_feel_like_it', label: "Didn't feel like it" },
@@ -115,7 +112,6 @@ export const EXPECTATION_REASON_OPTIONS: {
   key: FeedbackExpectationReason;
   label: string;
 }[] = [
-  { key: 'soreness', label: 'Soreness' },
   { key: 'energy', label: 'Energy' },
   { key: 'sleep', label: 'Sleep' },
   { key: 'time', label: 'Time' },
@@ -137,7 +133,8 @@ export interface FeedbackFormDraft {
   componentCompletions?: Record<string, FeedbackCompletion | null>;
   componentReasons?: Record<string, ComponentFeedbackReasonState>;
   feeling: FeedbackFeeling | null;
-  soreness: FeedbackSoreness | null;
+  /** Historical input only; never required or written. */
+  soreness?: FeedbackSoreness | null;
   partialReason: FeedbackPartialReason | null;
   skipReason: FeedbackSkipReason | null;
 }
@@ -290,11 +287,6 @@ export function getVisibleFeedbackSections(
         label: FEEDBACK_FORM_SECTION_LABELS.feeling,
         required: true,
       },
-      {
-        id: 'soreness',
-        label: FEEDBACK_FORM_SECTION_LABELS.soreness,
-        required: true,
-      },
     );
     if (includeConditioningPerformance) {
       sections.push({
@@ -320,11 +312,6 @@ export function getVisibleFeedbackSections(
       {
         id: 'feeling',
         label: FEEDBACK_FORM_SECTION_LABELS.partialFeeling,
-        required: true,
-      },
-      {
-        id: 'soreness',
-        label: FEEDBACK_FORM_SECTION_LABELS.soreness,
         required: true,
       },
     );
@@ -523,7 +510,7 @@ export function sanitizeFeedbackDraftForCompletion(
       completion: 'full',
       teamNightSize: draft.teamNightSize ?? null,
       feeling: draft.feeling ?? null,
-      soreness: draft.soreness ?? null,
+
       partialReason: null,
       skipReason: null,
     };
@@ -534,7 +521,7 @@ export function sanitizeFeedbackDraftForCompletion(
       completion: 'partial',
       teamNightSize: draft.teamNightSize ?? null,
       feeling: draft.feeling ?? null,
-      soreness: draft.soreness ?? null,
+
       partialReason: draft.partialReason ?? null,
       skipReason: null,
     };
@@ -545,7 +532,7 @@ export function sanitizeFeedbackDraftForCompletion(
       completion: 'skipped',
       teamNightSize: null,
       feeling: null,
-      soreness: null,
+
       partialReason: null,
       skipReason: draft.skipReason ?? null,
     };
@@ -555,7 +542,7 @@ export function sanitizeFeedbackDraftForCompletion(
     completion: null,
     teamNightSize: null,
     feeling: null,
-    soreness: null,
+
     partialReason: null,
     skipReason: null,
   };
@@ -589,7 +576,7 @@ export function canSaveFeedbackDraft(draft: FeedbackFormDraft): boolean {
     if (expectationAsksWhy(draft.expectation) && !draft.expectationReason) {
       return false;
     }
-    return !!(draft.feeling && draft.soreness);
+    return !!draft.feeling;
   }
 
   if (completion === 'skipped') {
@@ -716,7 +703,7 @@ export function buildSessionFeedbackPayload(
       ...shared,
       completion: 'partial',
       feeling: input.feeling!,
-      soreness: input.soreness!,
+
       ...(componentEntries.length === 0 && input.partialReason
         ? { partialReason: input.partialReason }
         : {}),
@@ -728,7 +715,7 @@ export function buildSessionFeedbackPayload(
     ...shared,
     completion: 'full',
     feeling: input.feeling!,
-    soreness: input.soreness!,
+
     ...performedSessionExtras,
   };
 }

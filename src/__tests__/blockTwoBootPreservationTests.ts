@@ -277,6 +277,7 @@ function snapshot(): WorldSnapshot {
     }
   }
   const prompts = deriveBlockBoundaryPrompts({
+    weekStartISO: BLOCK_2_START,
     currentProgram: program,
     blockNumber: state.blockState?.blockNumber ?? null,
     ledgerEntries: useDecisionLedgerStore.getState().entries,

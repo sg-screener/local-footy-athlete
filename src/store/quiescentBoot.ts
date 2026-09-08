@@ -62,6 +62,9 @@ import {
 import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
 import { storedGameAnchor } from '../rules/gameAnchor';
 import { logger } from '../utils/logger';
+import type { CanonicalWeeklyExerciseEdit } from '../rules/canonicalWeeklyExerciseEditState';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { activeInjuryFactsOn } from '../rules/injuryWithheldRows';
 
 // The parking key + old-shape detector live at the boundary that enforces
 // them (programStore), because zustand's post-migration write-back can fire
@@ -138,6 +141,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
         .filter((value): value is string => typeof value === 'string');
     }
     case 'reversal':
+    case 'legacy_exercise_target_upgrade':
     case 'legacy_plan_change_effect_upgrade':
     case 'legacy_fixture_effect_upgrade':
     case 'legacy_day_placement_effect_upgrade':
@@ -200,8 +204,12 @@ function replayEntry(entry: DecisionLedgerEntry,
  * week, then publish only the material Swap/Add dates. Remove remains the
  * exclusion projection so Restore can reveal the original authored row.
  */
-function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): void {
-  if (entries.length === 0) return;
+function compileExerciseDecisionGroup(
+  entries: readonly DecisionLedgerEntry[],
+  sourceFacts: readonly TemporarySourceFact[],
+): CanonicalWeeklyExerciseEdit[] {
+  if (entries.length === 0) return [];
+  const deferredEdits: CanonicalWeeklyExerciseEdit[] = [];
   // Lazy imports keep the store/rules boundary from closing the generation
   // cycle while still making this one explicit compiler handoff.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -219,13 +227,23 @@ function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): 
 
   const weeks = [...new Set(entries.flatMap(replayDates).map(mondayOf))];
   for (const weekStartISO of weeks) {
-    const state = canonicalWeeklyExerciseEditStateFrom({ weekStartISO, entries });
+    const state = canonicalWeeklyExerciseEditStateFrom({ weekStartISO, entries,
+      targetUpgrades: decisionLedgerEntries() });
     if (state.edits.length === 0) continue;
     const authoredState = { ...buildScheduleStateImperative(), athleteExclusions: [] };
     const days = resolveWeekWithConditioning(weekStartISO, authoredState);
     const workouts = days.flatMap((day: { workout?: unknown }) =>
       day.workout ? [day.workout] : []);
-    const compiled = compileCanonicalWeeklyExerciseEdits({ workouts, state });
+    // A tap on an injury-adjusted row belongs after injury composition. Writing
+    // the healthy day as an override would also reclaim unrelated conditioning.
+    // Edits accepted before the injury retain their original base-layer order.
+    const injuryEdits = state.edits.filter((edit: CanonicalWeeklyExerciseEdit) =>
+      edit.kind === 'swap' && activeInjuryFactsOn(sourceFacts, edit.dateISO)
+        .some(episode => episode.createdAt <= edit.occurredAt));
+    const compiled = compileCanonicalWeeklyExerciseEdits({ workouts,
+      state: { ...state, edits: state.edits.filter((edit: CanonicalWeeklyExerciseEdit) => !injuryEdits.includes(edit)) } });
+    deferredEdits.push(...state.edits.filter((edit: CanonicalWeeklyExerciseEdit) =>
+      injuryEdits.includes(edit) || compiled.deferredEdits.includes(edit)));
     for (const date of compiled.materialDates) {
       const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
       const workout = compiled.workouts.find((candidate: { dayOfWeek: number }) =>
@@ -239,6 +257,7 @@ function compileExerciseDecisionGroup(entries: readonly DecisionLedgerEntry[]): 
       });
     }
   }
+  return deferredEdits;
 }
 
 /** Fold accepted whole-session edit effects without asking the live door again. */
@@ -286,6 +305,7 @@ function compileSessionDecisionGroup(
 function compileFixtureDecisionGroup(
   entries: readonly DecisionLedgerEntry[],
   completeLedger: readonly DecisionLedgerEntry[],
+  sourceFacts: readonly import('../rules/temporarySourceFact').TemporarySourceFact[],
 ): Array<{ sourceEntryId: string; acceptedEffect: CanonicalAcceptedFixtureEditEffect }> {
   if (entries.length === 0) return [];
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -309,7 +329,17 @@ function compileFixtureDecisionGroup(
   // (`compiler-year` restart check, 2026-09-03). The ledger record the commit
   // writes carries the displaced days; "before" is derived from it.
   const landWithNote = (effect: CanonicalAcceptedFixtureEditEffect): void => {
-    const result = commitCanonicalAcceptedFixtureEditEffect(effect);
+    const { sourceFactsForHistoricalCompilation, composeTemporarySourceFactCompatibility } = require('../rules/temporarySourceFact');
+    const { factHorizonCoversDate } = require('../rules/durableFactHorizon');
+    // Replay the facts that were true when this fixture edit was accepted.
+    // A later report must not travel backwards into an earlier fixture edit.
+    const acceptedOnISO = effect.acceptedAt.slice(0, 10);
+    const fixtureConstraints = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: sourceFactsForHistoricalCompilation(sourceFacts)
+        .filter((fact: import('../rules/temporarySourceFact').TemporarySourceFact) =>
+          factHorizonCoversDate(fact, acceptedOnISO)),
+    }).activeConstraints;
+    const result = commitCanonicalAcceptedFixtureEditEffect(effect, fixtureConstraints);
     if (!profile) return;
     try {
       const after = acceptedVisibleRowsForWeeks(profile, [getMondayForDate(effect.targetDate)]);
@@ -481,7 +511,7 @@ function deriveBootFixtureMarks(
   // `gameDay: 'Varies'`. This function wiped every game mark on the line above
   // and then re-seeded NOTHING, so their fixtures disappeared on relaunch. The
   // narrowing is gone and both fields are read through the one owner.
-  profile: { gameDay?: string; usualGameDay?: string } | null,
+  profile: { gameDay?: string; usualGameDay?: string; seasonPhase?: string } | null,
   program: { startDate?: string; endDate?: string },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -497,7 +527,8 @@ function deriveBootFixtureMarks(
   for (const [date, mark] of Object.entries(current)) {
     if (mark !== 'game' && mark !== 'noGame') next[date] = mark;
   }
-  const gameDay = storedGameAnchor(profile);
+  const { phaseHasRecurringFixtures } = require('../rules/gameAnchor');
+  const gameDay = phaseHasRecurringFixtures(profile?.seasonPhase) ? storedGameAnchor(profile) : null;
   if (gameDay && program.startDate && program.endDate) {
     for (const date of computeGameDatesForBlock(
       gameDay, program.startDate, program.endDate,
@@ -670,6 +701,7 @@ export function rebuildDerivedWorldNow(): void {
     };
   })();
   const sourceFacts = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts;
+  const deferredExerciseEdits: CanonicalWeeklyExerciseEdit[] = [];
   const { sourceFactRequiresCompilation } = require('../rules/canonicalWeeklySourceFactCompiler');
   const { composeTemporarySourceFactCompatibility } = require('../rules/temporarySourceFact');
   const baseFacts = sourceFacts.filter(fact => !sourceFactRequiresCompilation(fact));
@@ -805,7 +837,7 @@ export function rebuildDerivedWorldNow(): void {
         const group = exerciseGroup;
         exerciseGroup = [];
         try {
-          compileExerciseDecisionGroup(group);
+          deferredExerciseEdits.push(...compileExerciseDecisionGroup(group, sourceFacts));
         } catch (error) {
           logger.warn('[quiescentBoot] exercise-edit compiler fold failed', {
             entryIds: group.map((candidate) => candidate.id), error,
@@ -829,7 +861,7 @@ export function rebuildDerivedWorldNow(): void {
         const group = fixtureGroup;
         fixtureGroup = [];
         try {
-          legacyFixtureEffectUpgrades.push(...compileFixtureDecisionGroup(group, entries));
+          legacyFixtureEffectUpgrades.push(...compileFixtureDecisionGroup(group, entries, sourceFacts));
         } catch (error) {
           logger.warn('[quiescentBoot] fixture-edit compiler fold failed', {
             entryIds: group.map((candidate) => candidate.id), error,
@@ -894,7 +926,7 @@ export function rebuildDerivedWorldNow(): void {
     // A fact cannot silently disappear on error: live transactions roll back;
     // boot reports failure and retains the persisted inputs for retry.
     const { compileAcceptedSourceFacts } = require('./sourceFactCompilation');
-    compileAcceptedSourceFacts(sourceFacts);
+    compileAcceptedSourceFacts(sourceFacts, deferredExerciseEdits);
   } finally {
     endLedgerReplay();
     if (legacySessionEffectUpgrades.length > 0) {

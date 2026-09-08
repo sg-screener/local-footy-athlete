@@ -87,24 +87,24 @@
       "reason": "Session stopwatch registration persists only current and lastEnded timing facts. Start/pause/resume/end callbacks call pure stopwatch transforms and never read or write weekly content."
     },
     "src/rules/composeWeek.ts#composeWeek": {
-      "fingerprint": "dbe6c0b68338935e2c6278dfaf60e910c491094e596cdb08572943f3e6cd3fb8",
+      "fingerprint": "b359cbd057358f46355c52e1c8b3f070647426b32697d172a2507f15b948b47f",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift anchors, recorded/family-seeded loads, seat budget, freshness ranking): the composer — selects and doses the week's rows against injuries, kit, seats and history; records selections and traces into its outputs. Pure. RE-SIGNED 2026-09-04 (seat variety, R-373/R-374): a pre-pass decides which of the six core seats may spend a rotation this block, the main-lift bench is ordered by authored grade, and the tracked anchor is a pin rather than a bypass. All three change WHICH identity a seat takes; none adds a row, a field or a write. Classification unchanged."
+      "reason": "R-391 yearbook review: Preserve an accepted block alternative when the tracked lift has reached its tenure ceiling. The existing composer and selector remain the only owners. Yearbook: same composer additionally attributes RDL day collisions and a support lift reserved for another main seat; reservation predicate is unchanged, no new persistence or independent author."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "a93a6731709a1c0d95d3fda6e80f93e6d28064db1fb540c030fa2a30d4b03f5d",
+      "fingerprint": "b6879ab7d7edab17a64bccc4dbda4addedd39b27099e0d4b9e3303c08fc36d2f",
       "classification": "canonical_compiler",
-      "reason": "variety 2026-09-05 re-review (R-379, on top of R-378): now also STATES which days it deliberately emptied and why, as a typed reason per weekday. It states a reason and never a sentence; the words are signed copy. Filtered to days that actually ship empty, so a day a later pass fills carries nothing. Still a pure weekly scheduling stage."
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
-      "fingerprint": "bd1fec4ff4800de548c3f29d4a46fa11e0b822e923a9498ba507a381134f0355",
+      "fingerprint": "fadde87552d0b5378d5a879bd08812c53f2ff1311ab4f8c771b1f87b974895c4",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: composed strength days, canonical dose policies, weekly selector, fixture proximity): the adapter that turns plan entries and coach inputs into workouts under the canonical compiler's ownership. Pure over its inputs; the equipment resolver is a read."
+      "reason": "yearcheck 2026-09-07 R-384 review: Existing canonical adapter passes actual same-day rows into power selection and no longer builds power on composer-owned strength days. The composer materializer already owns those power rows; the duplicate adapter selection was discarded after consuming weekly identity capacity. No new state or writer."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#buildDevE2ESeed": {
-      "fingerprint": "814ddd1df9724996744f90a6be45e6c6e5f2875e0c7b968f266057e3ca2b1674",
+      "fingerprint": "901c1e5d2d2b2a25aed7e3b043553a9ed59b659b199d769e1faf51df9a08beb5",
       "classification": "canonical_input_writer",
-      "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
+      "reason": "yearscan release capability review, 2026-09-08: Dev seed returns an unchanged canonically generated program plus real user-action inputs. The showcase now supplies the stable Add id its witness expects; missing-action, accepted/restart and Undo guards remain live."
     },
     "src/dev/e2e/defaultDevE2ESeedCoordinator.ts#applyAuxiliaryState": {
       "fingerprint": "af10b8b080ac496d475e445afc18561da0ff7115e22dda8b296fa007476fab73",
@@ -112,9 +112,9 @@
       "reason": "variety 2026-09-05 re-review (R-379 showcase seed): the dev E2E seed gained an `empty-day-reason-showcase` world and its injury item widened from one hard-coded lower-body episode to an optional region/band/triggers, defaulting to exactly the values that were hard-coded before. Dev harness only; it never ships and it authors no production programming."
     },
     "src/store/quiescentBoot.ts#rebuildDerivedWorldNow": {
-      "fingerprint": "8ad0defe83ce1c3ebcfbd405c2a07eabf66121b20570391b56924146ca64c859",
+      "fingerprint": "95ab84c59b12abb896f87640e41c3a5be2c8d1daf92862244adfb383fc7b7cd2",
       "classification": "persistence_boundary",
-      "reason": "Boot/settlement rebuild clears derived in-memory caches, runs canonical generation and grouped ledger compiler transforms, then compiles accepted source facts. Current fixture/session effects never call live mutation resolvers; legacy upgrades are isolated input metadata."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing boot persistence boundary supplies sourceFacts to its fixture-group compiler. All regeneration, replay and publication paths are unchanged; full diff contains no new store-write site."
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#witnessesForDevE2ESeed": {
       "fingerprint": "382cd9c9b6fa800bbbd744f2680a61057d828228b0d615cce4cf6e51e648a2ea",
@@ -137,9 +137,9 @@
       "reason": "Read-only seed witness evaluator compares canonical program, accepted actions, source facts, projections and IDs; its only writes accumulate failure strings and local observation DTOs. Optional target eligibility now explicitly permits optional-tier material; it never changes day content."
     },
     "src/rules/weekStructureValidator.ts#validateProgramWeek": {
-      "fingerprint": "bcc25f5c0f0bd5e9be65327f4c60dce1ab328c27eb4fffff9b3db151fe636a52",
+      "fingerprint": "be64ccd4a4662ecc892193094128ed81e2dd016d2e1cf5bf7486a58a9acf9dac",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03 re-review: classifies existing workouts into observer DTOs and returns findings and counts; nothing is rewritten."
+      "reason": "R-381: reads shared preparation window for the running-floor exemption; still validates and does not author a program."
     },
     "src/utils/workoutCanonicalisation.ts#finaliseWorkoutAfterMutation": {
       "fingerprint": "001e72491af6947378883869b78c31a23524ca37937431419486396fac0c1245",
@@ -147,14 +147,14 @@
       "reason": "hingecod 2026-09-03 re-review: checked wrapper — runs the unchecked normaliser and asserts template/modality compatibility."
     },
     "src/utils/programControlActions.ts#executeProgramControlActionDurablyWithinTrace": {
-      "fingerprint": "091e22a2d36c00816d6b98f554737f6a38a5ba13b2345af916cb6c8dd9dc5e9f",
+      "fingerprint": "8bad486cabb0d27170692987ba718cb515df8aa57843cd8476ea1fa79bdc0fb6",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: canonical effective fixtures in the chooser context; visible-change reporting after an injury): the durable input transaction — clears, injury episodes, fatigue/recovery, edits — each through its owning transaction inside runCoachMutationTransaction. No independent publication."
+      "reason": "yearscan release capability review, 2026-09-08: Durable action boundary records Add identity/fact versions, validates the request, delegates existing accepted transactions, settles reconstruction and emits receipts. Its getState sites read snapshots/revisions; no new derived publisher."
     },
     "src/screens/home/HomeScreenV2.tsx#DayRow": {
-      "fingerprint": "13a3e4c44095b8d496fbe222bfddd2fdd5e5743c4fd50f8fd6b41dbba6137485",
+      "fingerprint": "1ffa8b70ea39fccf59d4ac02312b2f9d6f541e958cd2cfb29dc349c0f404e968",
       "classification": "projection_display",
-      "reason": "variety 2026-09-05 re-review (R-379): the rest card renders ONE line, either the day's reason or the standing rest line, both through signedCopy. Replaces the bare literal that stood there. Projection/display only."
+      "reason": "scopebridge 2026-09-06 re-review: Projection-only day card delegates signed rest-line rendering to HomeRestDayReason in the existing expanded empty-day branch. No change to state ownership or placement."
     },
     "src/screens/home/useDayWorkout.ts#useDayWorkout": {
       "fingerprint": "7f1aee6fe67398f628f88abe103e5d2a4333797df57dbaa70d9e33a88981a2b4",
@@ -172,9 +172,9 @@
       "reason": "Explorer dispatch supplies typed action inputs to the same fixture, session, injury, fact, readiness and feedback owners; direct sites are state reads and outcome arguments, not program writes."
     },
     "src/screens/onboarding/CompleteScreen.tsx#CompleteScreen": {
-      "fingerprint": "be35ceed2cdf11a2242001d3be24b7e2ec74d6390011d9617683cd8de65e5e95",
+      "fingerprint": "7f8abc4e49908f02c3ae787ee2d071706abd98897f66edf89efd2d284741728e",
       "classification": "canonical_input_writer",
-      "reason": "Onboarding screen passes generated output to seedOnboardingProgram; selected store methods are adapter dependencies, not a separate session-building path."
+      "reason": "R-380: removed the retired soreness promise from onboarding copy. Reviewed unchanged completion, profile and program-generation callbacks; this remains the existing canonical onboarding input door."
     },
     "src/screens/home/HomeScreen.tsx#HomeScreenClassic": {
       "fingerprint": "e50f2a291b5257d605bb7a31bc3c34e971764029a8379050ac5d7d2fde8f2668",
@@ -182,24 +182,24 @@
       "reason": "hingecod 2026-09-03 re-review (drift: the dead add-fixture CTA removed, accent tokens, text floor): classic home (never rendered under design v2) reads useHomeScreen and chooses a displayed date; mutation affordances are delegated components. No direct output writes."
     },
     "src/screens/profile/ProfileScreen.tsx#ProfileScreen": {
-      "fingerprint": "14ddc3c621407367a1ed777a812486f7858f9b658a87fe68d170ee5dc0c06bb4",
-      "classification": "canonical_input_writer",
-      "reason": "Profile screen reads owned phase and submits profile edits/reset actions through dedicated owners; no direct session construction in this component."
+      "fingerprint": "290d1a7fed1539a1b2ea7a2e9ff635b0b6549dba3c7de93b398b52a16dc73b89",
+      "classification": "projection_display",
+      "reason": "R-391 yearbook review: Routes the profile editor or submits independent equipment access and strength frequency through the existing profile transaction; no independent program construction."
     },
     "src/components/SessionFeedbackPanel.tsx#TrainingSessionFeedbackPanel": {
-      "fingerprint": "47a74225367f2818dcffbe3b78c2f60d53a2ebcad5227755421df3ac147be75a",
+      "fingerprint": "85c7760910d7f7b144bb47006fd5e76efeced07f652507a0984baab3ea6f6ec9",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: last-set RIR inputs for the estimated 1RM charts, accent tokens): reads logged sets, chart choices and existing feedback, builds the draft and submits through the existing outcome transaction. No direct output writes."
+      "reason": "R-380: renders component completion and effort; removed soreness state and JSX. The save callback still calls the canonical outcome transaction, with no new program writer."
     },
     "src/screens/home/useHomeScreen.ts#useHomeScreen": {
-      "fingerprint": "cfee82cc3bc35ff4ef222c27ceb1a9d68728d410ae65ac5030192b562705a719",
+      "fingerprint": "8a6f321e885c7bf8e67dd22d43a484f33fed155101b2a082cdbb7509baff35fa",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: dated fatigue policy and missed-session moves, Christmas break ask, physical-phone action transactions, modifier visibility): home hook reads canonical program/projections, records missed-session outcomes through the outcome owner and invokes the existing fact, fixture, rollover and lighter-day transactions. No direct output writes."
+      "reason": "R-380: supplies visibleWeekStart to the existing notice hook. All action callbacks continue to delegate to their existing accepted input owners; no new prescription writing."
     },
     "src/screens/home/DayWorkoutScreenV2.tsx#DayWorkoutScreenV2": {
-      "fingerprint": "64cb1c0e3f03c31ab5419db3eccc66893adfdfa5a8aae4ba87fc30f325a8d4cc",
+      "fingerprint": "6c739ddb395591004ab629798b5a810f0b324573b3c7a19f45afede3e7d396dd",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift since intake 2026-08-29: accent tokens, conditioning card redesign, speed section order, read-only session context, canonical exercise names): the session screen still reads the resolved day and delegates every change — swaps/adds/removes, injury, equipment, feedback — to the program control doors and the outcome transaction. Local editing/sheet state only; no direct output writes."
+      "reason": "yearscan release capability review, 2026-09-08: Screen reads accepted projection and builds user action payloads through the durable Add/Swap owners. Weight objects are view/logging inputs; quickSwapState.current caches alternatives only. Add warnings do not author or publish program rows."
     },
     "src/screens/home/HomeScreenV2.tsx#HomeScreenV2": {
       "fingerprint": "b149a548e5556d7302fc50699d697421228ce11feed9d5a826e91fbb943de478",
@@ -212,19 +212,19 @@
       "reason": "Accepted plan-change door submits the typed mutation, captures exact compiler constraint/calendar effects in the decision ledger, and reports refusal without a ledger row. Athlete UI calls it through the durable program-control owner."
     },
     "src/store/sessionOutcomeTransaction.ts#commitSessionOutcomeTransaction": {
-      "fingerprint": "dabec1083e15a7875af8c14d62e5ce8e461975c0e472092dac18a10820073756",
+      "fingerprint": "1a4a55003f7e049a8783b7f15c052c87f156c315a129a9d366a0129846623903",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (drift: last-set estimate inputs in the receipt): validates the typed outcome and durably saves only sessionFeedback plus its receipt inside the coach mutation transaction."
+      "reason": "yearscan release capability review, 2026-09-08: Session outcome is normalized and passed through the accepted-state transaction. The changed getState call reads the published revision for a trace; it does not publish derived rows."
     },
     "src/utils/planChangeProducer.ts#resolveAthleteMutation": {
-      "fingerprint": "aeb379436adbe19eb6057e36b994d33a5c50851c98cb93127a1ee4abc185505d",
+      "fingerprint": "6d816fffeadde7878a1916cb22b944f273fa22c4f6f3b6d3aea2e4363f2c54f3",
       "classification": "canonical_input_writer",
-      "reason": "Resolves explicit Add/Move/Swap/Remove intent and safety choices against the visible week; material comes from canonical template/component helpers and is returned as an accepted transaction input."
+      "reason": "yearscan release capability review, 2026-09-08: Resolves source identity and component scope from the accepted visible snapshot; returns unchanged source content or delegates component splitting. It prepares an accepted action, not an independent generation pass."
     },
     "src/store/profileProgramTransaction.ts#commitProfileProgramTransaction": {
-      "fingerprint": "895e093ca16d9ef41bba6e5567541059ce128de07ccf15749f7364afa73c723f",
+      "fingerprint": "ed6867da2d698aa51f7922d2af4caa2bb05f8e2ad1ec85956252308f38329667",
       "classification": "persistence_boundary",
-      "reason": "Profile transaction builds a fact-free base via the canonical generator, commits profile/input changes atomically, verifies readback and invokes the same reconstruction used by boot."
+      "reason": "yearcheck R-385: Captures currently visible accepted choices, builds through existing generation, and now includes final reconstruction in the rollback boundary; no unverified post-transaction rebuild."
     },
     "src/rules/scheduleToCoachingPlan.ts#scheduleToCoachingPlan": {
       "fingerprint": "14b442dbc2810798bee5f6e9fe1d68ad012b411d2935043eb15c547ea6712419",
@@ -237,9 +237,9 @@
       "reason": "Phase UI only collects answers and submits a profile_setup change through commitProfileProgramTransaction. Build/progress state is local UI, not a program author."
     },
     "src/utils/weekRebuild.ts#rebuildLocalWeekWithinTrace": {
-      "fingerprint": "d41aa4a94cec69fd2e55bb9e11a1ff618f0985d858e2a4313f5db248b8dd0fe2",
+      "fingerprint": "850f2999fa79e1da01ff8295066bebbaf418be5452316001d53d443abead1d44",
       "classification": "persistence_boundary",
-      "reason": "hingecod 2026-09-03 re-review: rebuild adapter requires a typed fixture effect, delegates fixture material to the canonical fixture stages or whole-block material to the generator, and publishes through commitAcceptedStateTransaction. Change: the reversible adjustment id is minted from the accepted effect (acceptedAt + a nonce over the effect fields) so live and boot replay mint the same id."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing fixture rebuild adapter forwards caller-supplied dated constraints into both canonical fixture projection paths, otherwise retaining canonical current constraints. Publication stays in accepted-state transactions."
     },
     "src/rules/derivedSessionProvenance.ts#buildDerivedSessionExpiryCandidates.candidateFor": {
       "fingerprint": "b3c6b69796ac5873f458b17fc8e50a8fd1fb7510211472d0536409ae7483d78e",
@@ -282,9 +282,9 @@
       "reason": "Publishes a staged canonical move then validates conservation; failure restores the exact prior snapshot. The durable program-control owner encloses athlete-facing calls."
     },
     "src/utils/coachActions.ts#addExerciseAtDate": {
-      "fingerprint": "c9593c51f4b82f4cda243f54eb889f6d1124fda7c37b0bd49de5624a5d4eec13",
+      "fingerprint": "1198222f71d99ffb19b7846aab9beaa9bb18375544346dc86aa27b26ac92527e",
       "classification": "canonical_input_writer",
-      "reason": "Explicit Add exercise input compiles through compileCanonicalExerciseEditOnWorkout, validates and submits the result via writeCoachOverride inside the program-control transaction."
+      "reason": "yearscan release capability review, 2026-09-08: Captures the athlete Add decision and forwards its stable identity/fact versions through the canonical accepted exercise-edit path. No independent row publisher."
     },
     "src/utils/weekRebuild.ts#commitWeekScopedOverlay": {
       "fingerprint": "2d2598526e44039b37474112c2a587475ca4857b26924cece6536af6b3b83f82",
@@ -367,14 +367,14 @@
       "reason": "Club feedback UI validates local answers and submits a typed outcome intent through commitSessionOutcomeTransaction; never edits programmed sessions."
     },
     "src/store/sessionOutcomeTransaction.ts#normalizeIntent": {
-      "fingerprint": "ea27f39767df64d6a06e9fd21be5d8cb97f7aff69bba0db14cf908ab033112c4",
+      "fingerprint": "542119294bd108a7bd59f2ed71c70965d2622e53d9c0b63e0bd0c2131bb69531",
       "classification": "canonical_input_writer",
-      "reason": "Outcome normalization validates current session/component identities and constructs feedback input; read-only prescribed-load lookup, no session writes."
+      "reason": "R-380: validates current completion/effort/log data and does not copy historical soreness to new writes; uses the same component and strength-log owners."
     },
     "src/rules/blockBoundaryProgression.ts#readBlockHistory": {
-      "fingerprint": "617712feeb2598ecd65b6e66a367ba487c64464731127df282b28decc1772caf",
+      "fingerprint": "0688ffbd0e47e490b346c4cd7ee1d489dbed34fa939de9335687458bb8187b38",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03 re-review: pure aggregation of dated outcome facts into block signals and recorded-load/set maps (strength and conditioning read independently per Sam 2026-08-18). Mutates only its own local accumulators; no workout or outcome writes."
+      "reason": "yearscan, R-388 review, 2026-09-08: Reads recorded feedback and derives completion, recovery, own-load and displayed-rep eligibility. Does not publish or mutate a program; R-388 changes only the rep predicate."
     },
     "src/utils/planChangeProducer.ts#athleteMoveInput": {
       "fingerprint": "7761516bc4744c09e8977dc5015676809ea1e4877b4424762ab8c78674c8ffde",
@@ -402,9 +402,9 @@
       "reason": "Traced block-rollover wrapper delegates to the canonical rollover implementation and reports success/refusal; no independent selection or repair logic."
     },
     "src/utils/sessionResolver.ts#_resolveDateRaw": {
-      "fingerprint": "5e94fc4d7ae14b6a557d6f9eb5373b4f275e284ab39c6faaf42bab38bc0db1d8",
+      "fingerprint": "f284cc5b7c5e2803dca8cdb1151d99962a705fc2d41a49301c1272bdb90dd647",
       "classification": "projection_display",
-      "reason": "Raw-date adapter selects accepted base/overlay/override surfaces, renders canonical calendar anchors and annotates withheld/optional visibility; never persists or re-prescribes rows, final constraints use the canonical public boundary."
+      "reason": "yearscan release capability review, 2026-09-08: Composes accepted override/overlay/base references and applies visible fixture/removal precedence. Clearing a local composed.workout for a declared bye is view selection; no store or accepted content is written."
     },
     "src/services/api/generateProgram.ts#buildProgramGenerationRequestDiagnostics": {
       "fingerprint": "baa26bb707211e673a984456a12f542703ed1f0cd09dd25aeea96a86f77ceac4",
@@ -426,15 +426,10 @@
       "classification": "projection_display",
       "reason": "Explorer target resolver verifies real seed/live identities and returns action-target receipts; no program mutation."
     },
-    "src/utils/strengthProgressionIntegration.ts#applyStrengthProgression": {
-      "fingerprint": "9ba53cf20ff4c79fdd7175b71622759c0c873ed942ab4fdd392c27856800882d",
-      "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: progression specialist over history/phase policy; returns a new workout with results. No publication."
-    },
     "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalTravelDates.rest": {
-      "fingerprint": "b109e68eff192fc76962ba52956c2684b886c1b8772ad9d0747c3d14773e6356",
+      "fingerprint": "a36dbcca0c84b459c132a9e2eeb87740fb60ed1a04eb17cf37293c5018f171de",
       "classification": "canonical_compiler",
-      "reason": "Private canonical travel-stage constructor returns a rest projection for a fact-suppressed game/club anchor; no resolver-side author or store write."
+      "reason": "scopebridge 2026-09-06 re-review: Existing pure rest-day constructor carries typed away cause. Called only when travel removes game or team-only content."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalStrengthTemplate": {
       "fingerprint": "65220050c7805a4c425bcaf933d716b14b3168532524516bd7e9de9323cfcac6",
@@ -442,9 +437,9 @@
       "reason": "Accepted strength-template entry invokes the same composeWeek and materialiseComposedWeek as generated weeks with explicit typed athlete/date/intent inputs; real add/restart/Undo and mutation witness cover this path."
     },
     "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalTravelDates": {
-      "fingerprint": "1413236a5d3aaa849dd942ec1b9397c83c857119c6e119d3b1fc297dd3d07b61",
+      "fingerprint": "b04ab725ef50220059913e194ed740ccb022aa666bee924e9265785b8a0f2daa",
       "classification": "canonical_compiler",
-      "reason": "Final canonical constraint stage folds typed travel spans, preserving non-club rows and clearing removed club metadata; real travel/restart/clear and bypass mutation cover both pure and combined days."
+      "reason": "scopebridge 2026-09-06 re-review: Existing pure travel projection now labels a game or team-only day it actually removes as away; keeps mixed-day solo work."
     },
     "src/rules/teamNightContentAsk.ts#applyTeamNightSafeSwaps": {
       "fingerprint": "8fd38f7f443897aeb3df49e5627a3577f8d35000a552fe4ee255a86b4033cdd5",
@@ -457,14 +452,14 @@
       "reason": "hingecod 2026-09-03 re-review (drift: magnetic snap targets, settle nonce, haptics): animates drag coordinates on the UI thread and delegates drop/remove/add to the board's callbacks. No program edits."
     },
     "src/rules/liveAthleteSnapshot.ts#deriveCoachSnapshot": {
-      "fingerprint": "69809e76b1322fd701a8758590870dc8dce508818b8958d5244bee7ca64df15c",
+      "fingerprint": "62e48f3d4c1a8a2d669f05ca55c4c525cc1420529b2356aa3185c6ed07156ab3",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03 re-review (drift: tracked-lift chart choices, deload flag): derives journal week, load model, strength trend/series and main-lift estimates from recorded outcomes and the visible week, then buildCoachSnapshot. Workouts are passed as existing references."
+      "reason": "R-380: projects current coach inputs without reviving historical soreness; no input or program writes."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryStage": {
-      "fingerprint": "fcbb7e92828e05e061e6fbfb6aa03820c5aaedef5356f486a719ceb6e5f8e117",
+      "fingerprint": "41e522fc5a01b3f9ae09fe0eecc3de1977efbdf6a07a94e309ac9731627d61d4",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recorded loads reach the replacement load and the added block): one injury stage — ladder substitutions through the exercise-edit compiler, then the paused-row adjustment and conditioning policy, then evidence/name refresh. Pure over its inputs."
+      "reason": "yearscan, R-388 review, 2026-09-08: Pure injury stage over an explicitly supplied accepted workout and constraints. R-388 removes the pause-only exception and delegates both kinds of addition to the ordinary injury policy."
     },
     "src/utils/workoutCanonicalisation.ts#buildCanonicalConditioningBlock": {
       "fingerprint": "4cad58e1a13576b080bbae1770ea0b677c0b61b955dda35fc4326d7c1dea160c",
@@ -477,9 +472,9 @@
       "reason": "Acceptance gateway resolves the shared canonical visible projection and evaluates it; returns the original candidate plus findings and never repairs workout contents."
     },
     "src/utils/workoutCanonicalisation.ts#updatePowerForPhase": {
-      "fingerprint": "76695f8375e1b6fc7b7f8526b7493e52d657e5339fc6a1124afb10ce452f6074",
+      "fingerprint": "c8a45cd0f16ec57c2f19b1baf74ad97303bda598e9bb6e6aacb5c863063b58b5",
       "classification": "canonical_compiler",
-      "reason": "Shared workout canonicalisation power-policy stage removes/downgrades prohibited power and invokes the single row-alignment helper; no persistence path."
+      "reason": "R-381: shared preparation veto removes power; retired mid-phase contrast-to-primer branch cannot author a forbidden primer."
     },
     "src/store/acceptedStateColdStart.ts#normalizeAcceptedMaterialContext": {
       "fingerprint": "81ac961d8f41a6fc3a668874ee30ac85959e6a4a8729342f7b78274bff06a6d5",
@@ -512,9 +507,9 @@
       "reason": "Compares compiled current/candidate programs and produces a commitment-change preview DTO; no program mutations."
     },
     "src/rules/materialiseComposedWeek.ts#materialiseComposedWeek": {
-      "fingerprint": "cf0e8c3dce87dc79873df65f658808061dbb14fb7768f144e35c21e160bf2e3b",
+      "fingerprint": "4d98e74e5091527d24569ce7fbb65ea5c71da2cdb99c8208b289fb0a61366253",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: maps composed rows and the deload/power policy into workouts, placing the primer within the weekly allowance. Pure over its context."
+      "reason": "yearcheck 2026-09-07 R-384 review: Existing canonical materializer passes actual same-day strength identities into the power builder so the weekly exhausted-candidate exception cannot create a same-day duplicate."
     },
     "src/utils/staleOverrideDetector.ts#detectStaleOverrides": {
       "fingerprint": "5f0ba9a84573e4537c3476abb39c99d2a9786b8bf1eedff2e97b3d530ddee6d8",
@@ -522,9 +517,9 @@
       "reason": "Reports stale override warnings from read-only context/calendar comparisons; neither repairs nor deletes the supplied sessions."
     },
     "src/store/sessionOutcomeTransaction.ts#createRecordSessionOutcomeIntentFromFeedback": {
-      "fingerprint": "5531bd469b2100100686f179fe75d65380d60466f129b3a44eb545df090fbe69",
+      "fingerprint": "d4c9b17724be8eccec04bbf205f96a108f6e7d3eb81d385690c8040fca70d2b0",
       "classification": "canonical_input_writer",
-      "reason": "Converts actual session feedback and semantic component identities into the canonical record-outcome intent; writes no future program rows."
+      "reason": "R-380: typed logging ingress omits retired soreness from new intents. Session target resolution and transaction authority unchanged."
     },
     "src/dev/e2e/devE2EScenarioRuntime.ts#claimDevE2EScenarioAction": {
       "fingerprint": "a589125b280af105bdecbf5259a108ac363de6236b1f22b9a5adc4c9156dda86",
@@ -552,9 +547,9 @@
       "reason": "Renders supplied day/timeline components and delegates taps to existing action handlers; local UI selection state does not change program contents."
     },
     "src/utils/sessionBuilder.ts#buildDerivedSession": {
-      "fingerprint": "7b54edf00588a7d701b21e8ce7c852be5d1fe2d3dea56aa1c57e8ae638deeabe",
+      "fingerprint": "ddb4564a733d9fb050a7a6dc56b30289f93e939752726a3e8a4c9b34ed1b6022",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: weekly selector and traces): derived session builder selects within slots under typed eligibility and returns a workout; traces out through the supplied sink."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing derived-session constructor filters its copied athlete equipment tags through the shared dated availability owner. Authored slot selection and finalisation remain the same canonical builder."
     },
     "src/store/profileProgramTransaction.ts#applyProfileChange": {
       "fingerprint": "e07ec26164e0cf6465c6a80cd412dd3a50ec1a99fc5058cf104505fd9b5a52ce",
@@ -687,9 +682,9 @@
       "reason": "Guarded coach-update/constraint input patch with reset-action provenance; compatibilityPersistence filters source-fact-derived constraints from durable writes."
     },
     "src/rules/canonicalInjuryConditioning.ts#compileInjuryConditioning": {
-      "fingerprint": "81e18d056395e1c62a061454694c23258dcda2a6a870e12e68e750b83493e0e1",
+      "fingerprint": "1c6ed1a6bc3a1fc42d485870612a9f60779599b80184bc85ed917d5f853a5083",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: injury conditioning policy — filters typed components by the active constraints, checks the selected machines are still owned, resolves feasibility and applies the shared modality/substitution materialisers or collapses an honestly emptied shell to rest. No persistence or ambient reads beyond the equipment resolver."
+      "reason": "R-382 scopebridge review: existing injury compiler filters owned equipment through conditioningEquipmentOnDate before feasibility/substitution. Same dated owner as fresh generation; no saved-answer mutation."
     },
     "src/utils/programControlActions.ts#compileSessionInjuryPreview": {
       "fingerprint": "01901d75442892444d9c7c5dda4f423696bc00e916f0f1408d4b16e7e0f44de2",
@@ -762,9 +757,9 @@
       "reason": "Diagnostic session recorder builds feedback from real visible components and submits the same session outcome transaction as the app."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryWeek": {
-      "fingerprint": "451e4fe038bbf95807b87c2f8659d04a44399233fc58e4f464422aaa7ddc203f",
+      "fingerprint": "dc0e0be0e7afb62a815a2df2a9372fde759b374e4fcfa645f67e24e889930718",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-354/R-357 drift): folds dated injury stages over the week in order, then the weekly frontal completion (never before historyBeforeISO) and the useful-strength contract with typed reduction reasons. Works on a local copy of the map; no publication. | integrate 2026-09-03 re-review: after the frontal completion it now also runs the week-level core completion (one core row per week, Sam 2026-09-03), same placeable boundary. Pure over its inputs. RE-SIGNED 2026-09-04 (seat variety, R-377): the week fold now drops MAIN-STRENGTH rows whose pattern is prohibited by the active injuries, after every author has run. It only ever REMOVES rows — nothing is added, renamed or re-dosed — and it reads the same section18Evidence the week evaluator judges by. No new write and no new persistence; classification unchanged."
+      "reason": "yearscan, R-388 review, 2026-09-08: Folds explicit dated injury stages and returns workouts/stages. Reserved exercise names prevent replacement collisions; no live store publication."
     },
     "src/utils/coachRevisionTemplates.ts#buildEngineTemplateWorkout": {
       "fingerprint": "0ebb7ebf8d49acbdad64c38332298b0afc5015e629f0a1e13d7f1f6ea72c198c",
@@ -861,15 +856,10 @@
       "classification": "projection_display",
       "reason": "Diagnostic stored-state export reads program/profile/fact summaries without mutating them."
     },
-    "src/utils/strengthProgressionIntegration.ts#applyDelta": {
-      "fingerprint": "4a0fadf5843feb0b762c745fa69d4e1164343256d6f44f34ca73a92b72bf18ae",
-      "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: applies an explicit prescription delta within authored bounds and snapped loads. Pure."
-    },
     "src/utils/planChangeProducer.ts#g1LandingAskForChange": {
-      "fingerprint": "8d1c8d029f0d0e2894b7ae64bdec1173183469c0cf3201327129b9451207d722",
+      "fingerprint": "969d3978e2a2e7938e92cad3b6f4b0d24cee37dd79e982081df24b8614d59e7a",
       "classification": "projection_display",
-      "reason": "Read-only G-1 ask context derives fixture proximity and returns available routes, without committing a candidate."
+      "reason": "yearscan release capability review, 2026-09-08: Reads accepted fixture/profile context to derive the route-choice prompt. Add bypasses the prompt under Sam's current instruction; it does not apply any change."
     },
     "src/dev/e2e/coachSnapshotPopulatedJourney.ts#runCoachSnapshotPopulatedJourney": {
       "fingerprint": "99f5b4115c10f35d6460b851d9d8cb7c81307a2caefb771d894fea61920d26fb",
@@ -897,9 +887,9 @@
       "reason": "Routes modifier clearing by exact accepted identity; canonical temporary facts must use their durable fact action and cannot be cleared through a compatibility copy."
     },
     "src/data/defaultProgram.ts#buildPowerRow": {
-      "fingerprint": "51cee94707e71416d1ee6f3f63ca17265dae25d68ea1a22cd200b7c1fb71a5a5",
+      "fingerprint": "dc51ad64e0ddd91c864d9db0c70ef7173b97a4a51de1d59e2aa33d4f1e51e78e",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (drift: weekly selector and traces): builds the primer power row from the traced selector and the authored prescription. Pure constructor. RE-SIGNED 2026-09-04 (seat variety, R-369): the review went 'changed' because this row's `perSide` line now calls the one per-side owner `resolvePerSide(name, authored)` instead of reading its own authored field alone. An authored answer still wins; the tag only fills silence. No new write, no new field, no persistence — classification unchanged."
+      "reason": "yearcheck 2026-09-07 R-384 review: Existing canonical power builder selects from a complete eligible set, removes same-day identities and delegates unused-first/exhaustion admission to the shared weekly selector. No persistent write."
     },
     "src/data/defaultProgram.ts#completeCoachWorkoutsFromPlan": {
       "fingerprint": "968d0eeedfe402566fd4781cfdb7bc65358c1eed61d66f095898e4fa8d702bb7",
@@ -927,9 +917,9 @@
       "reason": "Shared workout evidence materialiser preserves composer-declared roles and derives compatibility evidence for remaining rows; no placement or exercise selection."
     },
     "src/utils/injurySessionAdjustment.ts#injuryAdjustmentRows": {
-      "fingerprint": "8d2c5dc7695ebd5f975b4a4795dbf7fd6f5b5c9275c4a94691710fc15f3a9a37",
+      "fingerprint": "f7ddb34bb7344c9402067051dbce173fb5389aa10ee2dd39d6f69cb55a7f58d1",
       "classification": "canonical_compiler",
-      "reason": "Injury compiler row materialiser binds supplied approved additions to row IDs and typed role; main-strength credit depends on the original session."
+      "reason": "yearscan release capability review, 2026-09-08: Materializes injury replacement decisions with stable ids and the candidate's own dose/load/role. Used by the canonical injury compiler; no live store write."
     },
     "src/rules/g1LandingAsk.ts#accessoriesOnlySession": {
       "fingerprint": "fc2a26437da5de042e2641621de73fd32b829036a1431b3207fa2222111b30b8",
@@ -947,9 +937,9 @@
       "reason": "Guarded athlete modality-preference input writer; not a generated-session writer."
     },
     "src/store/quiescentBoot.ts#compileExerciseDecisionGroup": {
-      "fingerprint": "48fcbb9643aa466ef9e0d21e876abedd45241edc1afe40b37254ad74e9ad8398",
+      "fingerprint": "2a05f0bdff7cfeb85a1766dda5f933451a112e9d6f4111b5eb5319ff8428b16d",
       "classification": "canonical_compiler",
-      "reason": "Boot parses typed exercise effects, folds them through compileCanonicalWeeklyExerciseEdits and publishes that exact result via the accepted override boundary under replay suppression."
+      "reason": "yearcheck R-385: Passes complete ledger target-upgrade metadata into the pure exercise state translator; existing compiler/override writer remain the material owners."
     },
     "src/store/acceptedStateColdStart.ts#acceptedStatePresenceSummary": {
       "fingerprint": "4c63ddabd53147f1ad439346b5bece273566ca39022a24d84b1e3c82a3fb3552",
@@ -967,9 +957,9 @@
       "reason": "Shared G-1 route candidate materialiser executes the explicit accepted route via authored deload/accessory/optional builders; exact result becomes session-edit input."
     },
     "src/store/sourceFactCompilation.ts#captureSourceFactCompilerInput": {
-      "fingerprint": "212c6412190a64180874f18cf8585652aab82e2edc88e834f4dc33473a3cf637",
+      "fingerprint": "c4be40c21dcfd5bd03cbfe9fb06d375779aeac9a0ce3126575cfad939a903610",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: unchanged role — captures the deterministic source-fact compiler inputs (accepted profile, generation anchor, selection replay, earned progression) and now also the athlete's recorded loads by name (R-358). Constructs input only; no publication."
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Captures accepted source facts plus deferred ledger row edits for the pure compiler and previews. This derived continuation remains excluded from persisted program inputs."
     },
     "src/utils/fixtureMinimalReplan.ts#withoutPlannerOffers": {
       "fingerprint": "8a307e8b02e950558b873acbff995d117fac5574cf99ae6f7a8fecb31ec2bc8c",
@@ -1057,9 +1047,9 @@
       "reason": "Read-only semantic exposure counter across supplied weeks; writes only an observation result."
     },
     "src/store/quiescentBoot.ts#compileFixtureDecisionGroup": {
-      "fingerprint": "2804b7a59ac01d5f50e27a9e67257c31577bf943c06beb64a9ef556ce7984f92",
+      "fingerprint": "18625b73b7814b4fd34c9048b99a407a024484b4219fd3a492ed746566de8454",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: boot folds each accepted fixture effect in ledger order through commitCanonicalAcceptedFixtureEditEffect (the canonical fixture stage), then derives the fixture's coach note through the coach-updates constraint door from the ledger record it just wrote plus one post-commit read (never a read before the commit — compiler-year restart check). Legacy entries still cross the migration boundary and emit upgrade metadata. Authors no rows itself."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing boot fixture compiler passes accepted source facts into its landing adapter. Still folds typed ledger effects through commitCanonicalAcceptedFixtureEditEffect."
     },
     "src/components/dev/ScheduleDebugPanel.tsx#useScheduleState": {
       "fingerprint": "97b5deece89686d998914798b6c027fd04c04e1f544771ae466d686bb60f8a1b",
@@ -1097,9 +1087,9 @@
       "reason": "Shape-normalises accepted snapshot fields and historical adjustment metadata at the load boundary; does not author training."
     },
     "src/utils/canonicalPlanChangeCandidateMaterializer.ts#rawCandidate": {
-      "fingerprint": "78167b7865f2b3be4308679b1c330ea3d1f66bd54fd7216ee10cc5c466c038d8",
+      "fingerprint": "324d6c6fa568d0e669ea94281c8aa985c65be96c82e39e40ace1ac56fce88067",
       "classification": "canonical_compiler",
-      "reason": "Session-edit candidate adapter uses the shared template registry and explicit stack/replace intent; games remain protected."
+      "reason": "yearscan, R-388 review, 2026-09-08: Materializes an explicitly requested plan candidate. R-388 removes only the old session-kind marker from owned additions; accepted-input compiler ownership is unchanged."
     },
     "src/utils/optionalTopUpPlacement.ts#applyOptionalTopUps": {
       "fingerprint": "286e43c38d9234fc5449b2bdc9578e80b449bdbd150c4499fb07a180abd05f9f",
@@ -1112,9 +1102,9 @@
       "reason": "Builds injury/game filtering context from supplied dates and facts; no exercise or session changes."
     },
     "src/utils/injurySessionRecomposition.ts#planInjuryRecomposition": {
-      "fingerprint": "6e4508cb7b2e1c45332c3a925c56105ce580693c52ca77825dde208fa5f48bf7",
+      "fingerprint": "29870deebe8687e3809dd9183cec1c405667af39de5097e1a7b987cc33f825d9",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: injury replacement planner over the shared safe-replacement hierarchy and the weekly selector; returns substitutions/paused/untouched names. Pure."
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Pure shared ladder planner consumes existing weekly main-pattern restrictions before choosing same-slot candidates; prohibited slots become explicit pauses. No new coaching thresholds."
     },
     "src/dev/e2e/explorerNativeLaunchDiagnostic.ts#hydrate": {
       "fingerprint": "e8099763c2500d6647cc955a0cecac3955ae937f199a51289ffebbdf2ed64fcf",
@@ -1152,9 +1142,9 @@
       "reason": "Shared optional-session finalisation applies the common load estimator and session metadata to explicitly supplied rows."
     },
     "src/utils/injurySessionAdjustment.ts#applyInjurySessionAdjustment": {
-      "fingerprint": "1c26884a74663274cd58a09d9e4e4e9af4d98945161d8bfbdd745257389b2d83",
+      "fingerprint": "8338742ac1cd7e4c9d0654503c952dbe719548c9a1e092d5df12490b8628c630",
       "classification": "canonical_compiler",
-      "reason": "Injury substitution materialiser now has exactly one runtime caller, canonicalWeeklyInjuryCompiler; rendering no longer invokes it."
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Existing injury materialiser now publishes the current fully-paused summary while retaining original rows for the shared unavailable projection. Sole runtime caller remains canonicalWeeklyInjuryCompiler."
     },
     "src/data/defaultProgram.ts#applySubphaseMainLiftLoadMultiplier": {
       "fingerprint": "a76f9fc15cae8c59cd7746d1d2d73bcbd8d27683774a4099e54bd92abe1b3713",
@@ -1177,9 +1167,9 @@
       "reason": "hingecod 2026-09-03 re-review: deload conditioning applier keeps row identity, halves work per the single law and appends the signed note. Pure map."
     },
     "src/utils/canonicalPlanChangeCandidateMaterializer.ts#materializeCanonicalPlanChangeCandidate": {
-      "fingerprint": "486784cfb88ea9f17cb3e2b35525c6eb3678eedb855148a3aede6f5a7558a645",
+      "fingerprint": "536b041c39f0d363bf947eb93fd5f5729dd7032ef4edbf312f6b2fac245f6f10",
       "classification": "canonical_compiler",
-      "reason": "Pure accepted-session candidate composition binds date, shared canonicalisation and display preview; it does not publish accepted state."
+      "reason": "yearscan release capability review, 2026-09-08: Compiles the explicit requested candidate through rawCandidate and the supplied canonicalization boundary, then returns it for acceptance. Manual addition identity and fixture-side training remain accepted inputs."
     },
     "src/store/quiescentBoot.ts#compileSessionDecisionGroup": {
       "fingerprint": "fff0f59e92f3d05057e85b106a4879bcbe83d481f0c43f5efe33847a65e68d1d",
@@ -1217,9 +1207,9 @@
       "reason": "Athlete deletion transaction stages the accepted removal, commits through accepted-state owner and derives its acknowledgement from the actual published week."
     },
     "src/rules/injuryWithheldRows.ts#markInjuryWithheldRows": {
-      "fingerprint": "41f08bf800ea2f6734ecd91f961f50d1e0c2703ddcbcfedbbfbbc6830ac74ce6",
+      "fingerprint": "c2ccaee7ab3029920c7543ab7ab4fc84256c3d8ba409cc9c840622483daf727e",
       "classification": "projection_display",
-      "reason": "Marks existing unavailable injury rows with explanation metadata without changing exercise selection, dose or placement."
+      "reason": "yearscan, R-388 review, 2026-09-08: Reads accepted injury facts and Add authority to annotate existing rows. R-388 prevents an overridden injury from leaving a skip marker; does not author exercises, loads, or schedules."
     },
     "src/utils/coachRevisionTemplates.ts#buildMobilityTemplateWorkout": {
       "fingerprint": "a181fd6347298ad2fb0680a0ecb6748fe80852ae516c00deb62dd26a5c8681e1",
@@ -1282,9 +1272,9 @@
       "reason": "Builds preview ResolvedDay DTOs by rebasing the staged accepted surfaces, not by writing generated sessions."
     },
     "src/store/quiescentBoot.ts#deriveBootFixtureMarks": {
-      "fingerprint": "10ee30903fbdabd313a20c846f4a67fabcca703300e89d7fc2116bf21df324de",
+      "fingerprint": "f684f5f99036225106a229343c84d3cc0753701493f54fa7a1836373307efcaf",
       "classification": "canonical_compiler",
-      "reason": "Boot derives transient fixture mirrors from profile/ledger reconstruction. calendarPersistedInputs excludes game/noGame, so these are not persisted derived outputs."
+      "reason": "yearscan release capability review, 2026-09-08: Derives next fixture marks from accepted calendar/profile facts with the shared phase predicate. Local next-map assignment is canonical reconstruction, not an independent store publisher."
     },
     "src/rules/section18AcceptedWeekGateway.ts#fixtureAwareMarkedDaysForWeek": {
       "fingerprint": "d604e07801ac1728cf8452e2aa5301e956329bf1b29e9b8c657464d903325ca3",
@@ -1307,9 +1297,9 @@
       "reason": "Normalises existing team-training rows for the home detail display and summary adapter; no accepted-state publication."
     },
     "src/store/profileProgramTransaction.ts#commitProfileProgramTransaction.verifyAfterPersistence": {
-      "fingerprint": "2030dd7bd037496af5bcabea63289a57f673ac2f783befca5ccb0d2a1ef76b62",
+      "fingerprint": "821e5c6c9011fdab0a4a3c10b4ac90e188b5dba818e1291f93721c7f301a933f",
       "classification": "projection_display",
-      "reason": "Post-persistence profile transaction check compares accepted and mirrored input fingerprints; no writes."
+      "reason": "yearcheck R-385: Read-only verification repeats choice identity, own load, sets, reps, units and side checks after durable persistence."
     },
     "src/utils/canonicalPlanChangeCandidateMaterializer.ts#teamTrainingAnchorContainer": {
       "fingerprint": "14e1df71c5055038b1815a6f009562c9ab943788d487f62e4ef35fcf85272183",
@@ -1452,9 +1442,9 @@
       "reason": "Reads live accepted surfaces into the shared evaluation adapter; the empty fallback is only an evaluation DTO, never installed."
     },
     "src/store/profileProgramTransaction.ts#commitProfileProgramTransaction.verifyCandidate": {
-      "fingerprint": "0afa010ad9b192b2f274e3328cf4f3f2af56916858e4e410cd584dd55adab038",
+      "fingerprint": "228540973e94c2e2799fbcf53bdf69877f4041c98bf5f01a09b17fb8e0399a7d",
       "classification": "projection_display",
-      "reason": "Profile transaction verifier compares accepted profile/base/fact fingerprints; returns a refusal or approval only."
+      "reason": "yearcheck R-385: Read-only comparison of applicable choices and accepted profile/base/fact fingerprints after final reconstruction. Missing legal choices refuse the transaction."
     },
     "src/utils/liveEvaluationSurfaces.ts#storedWorldSurfaces": {
       "fingerprint": "881b7465588f192dc0dab5281fd34350d3accf7ced0ca830b511aa51a0497d36",
@@ -1697,9 +1687,9 @@
       "reason": "Unreadable-storage recovery removes only the rejected envelope key and records the reset fact; it never invents program contents."
     },
     "src/store/profileProgramTransaction.ts#commitProfileProgramTransaction.mutate": {
-      "fingerprint": "9fc83fb5c52f9253b1011fc0327b218474f105c7eb41c35045edc22a3b0a39c9",
+      "fingerprint": "368fe44420d7f7750c9c260586789f83d6c14f643e8c1c240af943fc6df7ab12",
       "classification": "canonical_input_writer",
-      "reason": "Profile change transaction commits accepted profile/input base through the accepted-state owner; compiler reconstruction owns visible output."
+      "reason": "yearcheck R-385: Appends unambiguous legacy target metadata through the existing ledger owner, commits the profile, rebuilds through quiescentBoot, then freezes the final accepted base for readback comparison."
     },
     "src/dev/e2e/defaultDevE2ESeedCoordinator.ts#installAcceptedCalendarGame": {
       "fingerprint": "e0b8b7dd3498c192c43a183a5110ccc9ffb0ec43d35e807fce435b4143d6ef12",
@@ -1730,11 +1720,6 @@
       "fingerprint": "2e7a2b9e52218bc23159efabe2755d28d842b38e07985b9909389c36ea4aab41",
       "classification": "projection_display",
       "reason": "Private counter adapter consumed only by countAnchorSprintCodExposures; empty commitment stubs are never published or returned as a program."
-    },
-    "src/utils/sessionBuilder.ts#primaryConditioningRow": {
-      "fingerprint": "5f817c650b99815a3d13e8b3ac20b0026d7eb5ac97a278f70344708a928ba9db",
-      "classification": "projection_display",
-      "reason": "Filters into a new local array, ranks existing conditioning rows and returns a reference; does not change rows or source order."
     },
     "src/store/refusedPayloadQuarantine.ts#guardedDurableWrite": {
       "fingerprint": "2491988e4702a538bcbd7c114d3838b0ec41e67c975faba213f359e3d843dcea",
@@ -1882,9 +1867,9 @@
       "reason": "Reads accepted fixture facts through targetWeekFixtures for the requested weeks."
     },
     "src/rules/decisionLedgerReplay.ts#bootReplayableEntries": {
+      "fingerprint": "1ea9c1d6b14f4d1a7fb83b99f8897e918e58f6affdd10d041203525cfc86c434",
       "classification": "legacy_ingress",
-      "fingerprint": "c4f48bf813de44583baaf241991eb29fdc7d8c2531b50b2d40cfacfce44210d9",
-      "reason": "Filters readable ledger entries by reversal and non-replayable upgrade metadata; no workout transformation or history rewrite."
+      "reason": "yearcheck R-385: Read ingress excludes append-only target-upgrade metadata from action replay, just as the existing three effect upgrades; reversal still filters the original choice."
     },
     "src/store/index.ts#clearAllStores": {
       "classification": "persistence_boundary",
@@ -2013,8 +1998,8 @@
     },
     "src/store/quiescentBoot.ts#rebuildDerivedWorldNow.flushFixtureGroup": {
       "classification": "persistence_boundary",
-      "fingerprint": "011cdf4093a3f48721d653097f4dac4fccb0c94165a0c9e8e682df7883a6cba9",
-      "reason": "Flushes accepted fixture effects through the shared compiler group and collects legacy ingress metadata."
+      "fingerprint": "0089e3fc78e25c90dbe86b09629f9442521e9105eb20f500f5f2b2c1a5bdbb10",
+      "reason": "yearlens 2026-09-07 R-383 re-review: Clears its local pending group and delegates accepted effects plus source facts to the existing fixture-group compiler. No independent program author."
     },
     "src/store/quiescentBoot.ts#rebuildDerivedWorldNow.flushSessionGroup": {
       "classification": "persistence_boundary",
@@ -2163,8 +2148,8 @@
     },
     "src/store/quiescentBoot.ts#rebuildDerivedWorldNow.flushExerciseGroup": {
       "classification": "canonical_compiler",
-      "reason": "Boot groups accepted exercise effects and delegates their fold to the shared compiler; failure is reported, not repaired locally.",
-      "fingerprint": "2192d52492a7dac74e8463b4629cf5841483ab688dfbd10362e79987111d8873"
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Delegates each accepted ledger group to the existing compiler boundary and collects its input continuation; no independent workout authoring.",
+      "fingerprint": "d88457fa149162b8089f28bd207cfc28a359b4a96ea8b106bddfcde3a3262d08"
     },
     "src/dev/e2e/devE2ESeedRegistry.ts#visibleWorkoutForDate": {
       "classification": "projection_display",
@@ -2343,8 +2328,8 @@
     },
     "src/screens/home/useBlockBoundaryPrompts.ts#useBlockBoundaryPrompts": {
       "classification": "projection_display",
-      "reason": "Memoizes block-boundary prompts from explicit inputs; no program writes.",
-      "fingerprint": "e6911d1c8d2e58b57ceeaeb52a4dd2b8177b0326b5b4ae145d9bee7d9896290e"
+      "reason": "R-380: memoized read of accepted explanation, acknowledgement ledger and visible-week date. Shared reduction horizon controls expiry; no writer.",
+      "fingerprint": "eb4c12bbc766c1fa6c8d6a2f163f7116c23e2a2f3128b7e3aa6fba2c8dd50403"
     },
     "src/rules/canonicalWeekOverlay.ts#cloneWorkoutForOverlay": {
       "classification": "canonical_compiler",
@@ -2353,23 +2338,23 @@
     },
     "src/rules/canonicalWeekOverlay.ts#compileWeekOverlay": {
       "classification": "canonical_compiler",
-      "reason": "Pure complete dated-overlay assembly using explicit authoredAtISO. Caller supplies the compiled program; output includes explicit rest entries and carried contract.",
-      "fingerprint": "f8587cf37e9160e08d4907aec97240c5f074b1bc5f15bffc0501f79443a54780"
+      "reason": "scopebridge 2026-09-06 re-review: Pure compiler projection now carries the source microcycle typed empty-day causes with its workouts. No new persisted authority. Real injury/reopen journey and dropped-carrier mutation hold delivery.",
+      "fingerprint": "510be729c3e38418133c7a9ec0a38f9bf0d7fedfc5aff8cd477c2d26b67f9d8b"
     },
     "src/rules/canonicalWeeklySourceFactCompiler.ts#compileCanonicalSourceFactWeeks": {
-      "fingerprint": "4197343341472e0b866f6ab1a3be7d8dcd6f5da133f3c367533c445dd2c6d3a5",
+      "fingerprint": "64ea616ae96027518a290d29fcc7e22b076ed0640ac303f1ca0df0d689949b1a",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: recordedLoads carried into each week's compile): source-fact fold — for each deriving fact and horizon week, rebases the accepted week, recompiles with the fact's compatibility, preserves fixture-relative offers and the athlete's own loads, then runs the injury week compiler. Returns overlays/overrides; no publication."
+      "reason": "yearscan, R-388 review, 2026-09-08: Compiles explicit source facts into dated outputs. Add authority is evaluated against relevant injury/kit facts, and accepted addition size remains separate from automatic work. Returns outputs without publishing stores."
     },
     "src/services/api/generateProgram.ts#canonicalProgramInputFromProfile": {
-      "fingerprint": "06bc8e75e90227fea38ad574561afed351f7f20917f724a4062953546034c22b",
+      "fingerprint": "9d9b752a21d5c0a06ca24949cd93867458221aa5ba66489e9490d74d851212eb",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift: optional recordedLoads forwarded): input capture boundary — profile, history, clocks, equipment, facts, selection histories and tracked lifts into the compiler input. Reads stores when the caller states nothing."
+      "reason": "yearscan release capability review, 2026-09-08: Captures profile, equipment, accepted block requirements and recorded history into explicit canonical compiler inputs. Empty override/calendar objects isolate progression inputs; this function does not publish a generated program."
     },
     "src/store/sourceFactCompilation.ts#compileAcceptedSourceFacts": {
-      "fingerprint": "42ea9a261bcb170a49d865ad75ac27e746b17fded38470ac46c7b76cdcd81e2e",
+      "fingerprint": "070d9a79cf7cf00085663efcd932d6bd106a7595969f6f47470d55f37128005d",
       "classification": "persistence_boundary",
-      "reason": "hingecod 2026-09-03 re-review: invokes the pure source-fact compiler and publishes its exact overlays and fact mirrors through commitAcceptedStateTransaction. Change: the accepted constraints it writes are the fact-derived ones PLUS the non-fact constraints already accepted (fixture notes), carried forward untouched — it replaced the whole list before and swept them."
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Existing publication boundary captures deferred row edits and commits the exact pure source-fact result. Retains independent constraints; persistence format unchanged."
     },
     "src/store/temporarySourceFactTransaction.ts#commitTemporarySourceFactSet": {
       "fingerprint": "4ae3eda1602c7c51306386dd644ccce8ea768ea27576aaaeb2db73871286ed82",
@@ -2407,9 +2392,9 @@
       "fingerprint": "d31ea01428345204d90b2849a2ab83384d5aadc95c23377fa56c103da83915c7"
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek": {
-      "fingerprint": "dcff12600c84192c257c184a0adf5c92b3a20186b973d5dd92f1e9d569f0ac11",
+      "fingerprint": "3ed65523449e44ddf548a0986aae12d7a8472f4b4d0e73425417744feaf3630e",
       "classification": "canonical_compiler",
-      "reason": "variety 2026-09-04 re-review (R-378): derives prohibitedPatterns for the scheduler from the injury state it already receives, beside the existing appSprintPermitted/appRunningPermitted siblings. One reading of the injury, two consumers; still a pure input-to-output stage."
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: existing strength-contract findings on resolved candidate rows rank before convenience; same compiler and evaluator owners, no new writer."
     },
     "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeeklyDosePolicies": {
       "classification": "canonical_compiler",
@@ -2422,14 +2407,14 @@
       "fingerprint": "cbc0db7dd448325f638c943a849303a475822c05dbd584b7d807167b0d6e9752"
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalExerciseEditOnWorkout": {
-      "fingerprint": "29977926281abf5bde15fcde05d9c377fc3c96c0e76bb421e113774165e2e0e1",
+      "fingerprint": "6bb81ae44a936eb129c1c89c5f657e6f3273f76fa1907e6f1044649a5d69dd5f",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: typed Add/Swap compiler constructs the replacement or added row from the supplied prescription, section and role, stamping its placement id. Returns a new Workout; no publication."
+      "reason": "yearscan, R-388 review, 2026-09-08: Compiles an accepted exercise edit into a revised workout. R-388 removes the individual/session addition-kind marker; the accepted addition identity and prescription remain canonical."
     },
     "src/rules/canonicalWeeklyExerciseEditCompiler.ts#compileCanonicalWeeklyExerciseEdits": {
-      "fingerprint": "fbfc45c0caf57093619dc2a0b0ee8cbd2372aa677e0ee98a055bcd2b91529874",
+      "fingerprint": "48faa99416d5e766f0713393769c6fcdea9b34f919a434132d2ceb947fd17608",
       "classification": "canonical_compiler",
-      "reason": "Pure canonical exercise-edit fold applies exact accepted add/swap effects to private copies and derives contexts; removals/derived rows have separate typed effect consumers."
+      "reason": "scopebridge 2026-09-07 approved injury integration review: Pure accepted-edit fold; returns unresolved exact targets as input continuation instead of silently dropping them. Existing row mutation owner unchanged."
     },
     "src/rules/canonicalWeeklySessionEditCompiler.ts#compileCanonicalSessionConstraintEffects": {
       "fingerprint": "59244e28796c245e95859a58887287d379a8f53440414e121cfff1c926b1b0c7",
@@ -2547,44 +2532,29 @@
       "reason": "hingecod 2026-09-03 re-review: the progression compiler's conditioning stage still applies explicit block-boundary decisions through the shared template selector and row composer. Change: the day's conditioning option now follows the replacement rows (title, description, exerciseIds) so the screen keeps the machine (cohort F003). No publication."
     },
     "src/rules/blockBoundaryProgression.ts#applyBlockBoundaryConditioningAdvance": {
-      "fingerprint": "d7e8a038a88a3f16eca69f6f8135674eb0a2bb28120b1fabac086900b7343c52",
+      "fingerprint": "8f895da6abf6c707a2102cfa8c3b0e5c222a17455ccf9cbfc812267ad9a38a19",
       "classification": "canonical_compiler",
-      "reason": "Pure conditioning progression applies recorded per-workout advances to the exact typed headline row."
+      "reason": "yearscan release capability review, 2026-09-08: Applies explicit canonical conditioning-step decisions to the matching headline row and its card description; no publishing. All count/time/rest unit variants have live and fault guards."
     },
     "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalProgramProgression": {
-      "fingerprint": "abac03fc3587c55da016dd782821b21a912deb913137dc11c2be585aca64c9d9",
+      "fingerprint": "629666fd71d520e4fe675ef83891be770aa56a3e72932cb8c977f18315cd71ac",
       "classification": "canonical_compiler",
-      "reason": "Pure canonical program progression stage receives history, block dates and program; composes shared strength and block-boundary policies and returns derived material."
-    },
-    "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalResolvedStrengthWeek": {
-      "fingerprint": "cf69c7df4817b2023f56cd95b45576a8ffcffea135d41d16575a7634ba242ef3",
-      "classification": "canonical_compiler",
-      "reason": "Resolved strength progression is one pure compiler stage using dated history and evidence; skips already-governed dose-policy rows and does not publish."
-    },
-    "src/rules/canonicalWeeklyProgressionCompiler.ts#compileCanonicalStrengthWeek": {
-      "classification": "canonical_compiler",
-      "reason": "Compiler progression family: explicit recorded state in, private-copy transformed program out. Preserves the complete load/set/conditioning order. The old resolver implementations and generator mutation loop were deleted. This is one completed family, not proof that final row composition or lighter-day ownership is complete.",
-      "fingerprint": "877e2ec59948453985997949375087bd2b11d9bdda2fd79822b27da273060971"
-    },
-    "src/rules/canonicalWeeklyProgressionCompiler.ts#materialiseBlockStrength": {
-      "fingerprint": "2467ce16ea7b0b4ab634f395b6ff79c53389ce0cfe12a1cdab3ac142d940ffdd",
-      "classification": "canonical_compiler",
-      "reason": "Private canonical progression stage applies compileCanonicalStrengthWeek to its owned program clone; does not reach store state."
+      "reason": "R-389 yearbook review: existing pure progression owner accepts an explicit week-index offset for a one-week preview. Full builds retain offset zero. All prescriptions still come from the same block load/set/volume/conditioning owners and no store is accessed."
     },
     "src/rules/canonicalProgramCompiler.ts#compileCanonicalProgram": {
-      "fingerprint": "775a41b878c3b827de92f97dd3177e3bc97e40c59974273d3f153126369fa0b4",
+      "fingerprint": "3f42913ad7dab7bf1cadf20207b542936f1bd8ad7b23ba1b7a9e0b2e8a08cc43",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review (R-358 drift): top-level pure program compiler now derives the athlete's recorded loads from feedback dated before asOfISO (unless supplied), compiles the weeks, applies exclusions and canonical progression. Publishes selection traces (diagnostics) only."
+      "reason": "R-389 yearbook review: canonical generation now supplies the existing progression and exclusion owners as a pure strength-dose preview before final energy placement. Final full-program progression and publication keep their existing boundary; the preview is not saved."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "98387b9b3620166566ed5571649e8878b3685d3b33ec279a7e34d7e07d0b6b07",
+      "fingerprint": "0bae3edceaacdd27ab9d037cf719a5b795b16330cb9261a0c7d892f5c9100d0c",
       "classification": "canonical_compiler",
-      "reason": "variety 2026-09-05 re-review (R-379): carries the scheduler's per-day rest reason onto the stored week beside dosePolicyByDay. Copied off the schedule, never re-derived, same rule as its neighbour: compiler output stored once."
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: resolved strength rows are assessed by the existing Section18 evaluator; only main-strength/pattern blockers join candidate cost before placement preferences. Pure trial, same canonical owner, no persistence."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
-      "fingerprint": "14adcabb3f5b4ca2edfc14d1712253ef6d2844600f54f757f177621ec70d4f68",
+      "fingerprint": "2855e4c733535f82f600115c78b198ac0e20411fe9fd78487f81116a165aef59",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: nested candidate builder — materialises the composed week with deload/power policy, builds adapter workouts, assembles them and pins history days. Pure."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Passes dated equipment tags alongside dated conditioning modalities from canonical availability into the canonical workout builder. Local candidate construction only."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.pinHistoryDays": {
       "classification": "canonical_compiler",
@@ -2652,14 +2622,14 @@
       "fingerprint": "7067f8e0d2ca98fbba013f124290a57ef6fd48e6ef65828783e7a8703e4b6be9"
     },
     "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalDayConstraints": {
-      "fingerprint": "ba4904aab565ce6a1863d2120c57b9b9a5c050f651d638a9283f09a199deac37",
+      "fingerprint": "a01b8479d415cdc73f79677450659bdc4f2c0f32ad03cd558c1254b30fa14cb4",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 re-review: final-day stage applies the modality preference, aligns power to final content, normalises the visible identity and applies typed constraints; returns the visible day and diagnostics. Local variable reassignments only; no persistence."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Applies explicitly dated historical constraints to reopened days through the existing final-day compiler. Undated preferences remain forward-only. Returns projection and diagnostics, never saves rows."
     },
     "src/rules/canonicalWeeklyConstraintCompiler.ts#compileCanonicalResolvedWeek": {
-      "fingerprint": "8d50d735ba4280fd90c4a5cc3a992567627c12aeb0e9a6421ee2ca18ca787532",
+      "fingerprint": "3f164137f5d1ba635bb2d6f1aac5dbaf87c31447e5d66d469fecc5b0db0f05d3",
       "classification": "canonical_compiler",
-      "reason": "Explicit resolved-week compilation stage: compiles travel inputs once, selects the accepted declaration, filters dated source constraints, and delegates each date to compileCanonicalDayConstraints. No direct write sites or persistence; reviewed new travel call and accepted-state precedence."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Builds bounded historical fact views, deduplicates by constraint id, selects constraints per date, and delegates final-day application. Saved facts remain inactive; no store writes."
     },
     "src/utils/sessionResolver.ts#resolveWeekWithConditioning": {
       "classification": "canonical_compiler",
@@ -2667,9 +2637,9 @@
       "fingerprint": "1a74a2b47dfab9039b22c2c6ee83b687ed9d785778df92437f6b19a318980a3a"
     },
     "src/utils/visibleProgramReadModel.ts#buildProgramTabProjectedWeek": {
-      "fingerprint": "bebb1e8b27210f7a88622ff1f58709e26cd5c83964304ec815bb15666b1a8ccd",
+      "fingerprint": "9777afdc54f1982393c2bcff8e9b298af99aa01813cc44be7cd19b604a073c28",
       "classification": "projection_display",
-      "reason": "variety 2026-09-05 re-review (R-379): attaches the stored rest reason to the resolved day at the ONE place the Program tab builds its days, so the week and day views cannot disagree. Attaches only to a day with no workout, so a day filled after generation cannot explain itself as empty. Reads; decides nothing."
+      "reason": "scopebridge 2026-09-06 re-review: Thin return of shared final resolved week. Removed duplicate screen-only rest-reason attachment; public date and week readers share canonical ownership."
     },
     "src/utils/visibleProgramReadModel.ts#buildDayWorkoutProjectedDay": {
       "classification": "projection_display",
@@ -2692,9 +2662,9 @@
       "fingerprint": "29a32a1115636d2456c2690e0aece85a4669e2c3b7a0f65b349fcdf7636f0736"
     },
     "src/store/programStore.ts#<module>": {
-      "fingerprint": "574d830656ec99ed152c842a99f679557a9057a9e101a730a43047814892b5ad",
+      "fingerprint": "d331bafff8d874e9dc944c037fd77db7701fe945b4a807299fa00d4d1dfa195e",
       "classification": "persistence_boundary",
-      "reason": "Program-store registration initializes null program pointers and empty derived views; persistence partialize emits current-format canonical inputs and accepted selections, not generated material. Reviewed all ten module operation sites plus named setters/merge/partialize dependencies."
+      "reason": "yearscan release capability review, 2026-09-08: programStore initialization remains the canonical persistence adapter: empty initial material/derived surfaces, registered store methods and serialization. Added accepted-block input metadata does not introduce an alternate program writer."
     },
     "src/store/programStore.ts#canonicaliseAcceptedBoundaryState": {
       "classification": "persistence_boundary",
@@ -2757,9 +2727,9 @@
       "fingerprint": "9e53be986e7a61600428ffb09b689f2ba891a7e253a516bd521e8741a533d8fd"
     },
     "src/store/programStore.ts#recordAcceptedBlock": {
+      "fingerprint": "a0de771cabf60640f323139492a5d31050305f740dce0374e58c8568d9053df1",
       "classification": "canonical_input_writer",
-      "reason": "Records accepted block requirements as compiler contract input; never changes session rows.",
-      "fingerprint": "32d975e698b4126642143f836fc40572b941e4c3bc3188b947510e66dbde7480"
+      "reason": "yearscan release capability review, 2026-09-08: Writes only the accepted block requirement and date denominator derived from the accepted program; setState does not write workouts/microcycles/prescriptions. This factual input is used by the common progression owner."
     },
     "src/store/programStore.ts#removeSessionFeedback": {
       "classification": "canonical_input_writer",
@@ -3222,9 +3192,9 @@
       "reason": "hingecod 2026-09-03 re-review (drift: last-set RIR estimates and legacy basis handling): pure chart projection building local per-lift series from recorded sessions; the detected Map.set is on its own local series."
     },
     "src/store/quiescentBoot.ts#compileFixtureDecisionGroup.landWithNote": {
-      "fingerprint": "9a64c0916ef68260a3d6e0de89a420780be5615b8edc512a035e2909c9dfc46f",
+      "fingerprint": "6a26b77965360d847553b4414df5fe235da79f2ff72aa782680f07fc94a3d7b2",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: lands one accepted fixture effect via the canonical commit, reads the resulting ledger record and the accepted visible week, and records the game-change note as an accepted constraint through upsertGameChangeCoachNoteForAcceptedEffect (coach-updates constraint transaction). No row authoring; a failed note is logged, never a veto."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Filters historical fact views to the explicit athlete date in effect.acceptedAt, then supplies constraints to the existing accepted fixture transaction. Writes only through that canonical transaction; subsequent note work is unchanged."
     },
     "src/utils/gameChangeCoachNotes.ts#acceptedVisibleRowsForWeeks": {
       "fingerprint": "23f48db38d0819522ce3b1b2ab1659ce0c74926ed6062c07cff0b4b2112fc97c",
@@ -3242,14 +3212,14 @@
       "reason": "hingecod 2026-09-03: after the fixture change has committed, derives the game-change note from the before/after visible weeks and records it through upsertGameChangeCoachNoteFromDiff (coach-updates constraint transaction). A note that cannot derive is disclosed on the trace, never a veto. The per-run trace id no longer rides on the note."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyLowerBodyFrontal": {
-      "fingerprint": "d560f2f873d90029f601121790faf0e83b00a239f03951f01f8be1e349c2925a",
+      "fingerprint": "c4dd5d9260e923762311f97aad1f0940acc664a23cf4ef3be9bd431fff1cbb09",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03 (R-357): weekly lower-body frontal completion, run inside the canonical row compiler after the candidate is authored and before it is judged (and by the injury/fixture stages). Adds at most one safe, selector-legal support row to one not-yet-done strength day, or stamps a typed exception on the week. Pure input→output over the workouts map; no publication. | integrate 2026-09-03 re-review: exception stripping moved to the shared stripExceptionKind so two completion kinds can coexist on one week; behaviour unchanged."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical weekly frontal-plane completion now requests automatic eligibility. Existing completion placement and weekly selection are unchanged."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore": {
-      "fingerprint": "4805f414a6f3e2686c2fec926156bc95782626d3988e617f29e06bc7b2839a9d",
+      "fingerprint": "7b794b285d25d6398d757da1d161bfd0dc1e0bfe0090e37b0c150f5a32b71616",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03 (Sam: one core row per week): mirrors the frontal completion — if no strength day carries a core-slot row, one selector-approved trunk-pool row lands on the first strength day under the seven-movement ceiling, else the honest weekly_core_unavailable exception. Pure over its arguments; the only domain construct is the support row. | integrate 2026-09-03 re-review (order): the row is inserted before the first conditioning row and exerciseOrder renumbered, so generation and fixture repair agree on the session order (Bible: midline after accessories, before the finisher). Still pure over its arguments."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical weekly core completion now requests automatic eligibility instead of manual eligibility. Existing weekly selector still owns the choice and trace."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#automaticRows": {
       "fingerprint": "971f2deabd80f3e5495c50e27d57cff1062fbf5e2dbb6ac19b0b86280525efc9",
@@ -3417,9 +3387,9 @@
       "reason": "hingecod 2026-09-03: design-version switch rendering HomeScreenV2 or the classic screen. No state."
     },
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet": {
-      "fingerprint": "faa6e0b8cb2696e491d20b8c07fc8d969206a7e15197e5c4f05c4fc1c30b93fa",
+      "fingerprint": "dae4fd9d3d0ffc6094cc6a9bec9246c071e8754b991a5241b0fe9a189470e540",
       "classification": "canonical_input_writer",
-      "reason": "hingecod 2026-09-03: plan-change sheet — lists options (listPlanChangeOptionsForDay), previews risk, and commits only through commitPlanChange (program control door / applyPlanChange with applyProgramOverrideWrite). Sheet steps are local state; renders the observation of a landed result."
+      "reason": "yearscan release capability review, 2026-09-08: Renders plan-change options and dispatches explicit accepted actions. Removing duplicate/count blocks changes what the user may request, not the owner that compiles or accepts the request."
     },
     "src/screens/home/PlanChangeSheet.tsx#PlanChangeSheet.apply": {
       "fingerprint": "236da9640d49974c635236aca002b105ef886ceea84bdabd8c087598d0a3a75c",
@@ -3497,14 +3467,14 @@
       "reason": "hingecod 2026-09-03: stamps the useful-strength contract (delivered vs minimum, typed reduction reasons) on a copied workout. Pure."
     },
     "src/rules/powerExercisePool.ts#selectPowerExerciseWithTrace": {
-      "fingerprint": "1a7f4b49f03947c8b59fd2e60b4c24abefb5ec36cfd369520ba7af5ee78c3175",
+      "fingerprint": "81582917817fabf8986b2bcc51f61a118425e03ffcfce36b1308cb13703de73e",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: power exercise decision plus its candidate trace over the pool, kit, phase, training age and block history. Pure; the trace's dayOfWeek is the only domain construct."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical power selector uses normalized equipment identities for rejection reasons, matching its eligibility filter. Publishes diagnostics only, not accepted program data."
     },
     "src/rules/projectVisibleWeek.ts#project": {
-      "fingerprint": "a87c8b679ccff3e53e44b87368a6b7b708c5bc184e55b3b50d4b860851ba8ba9",
+      "fingerprint": "e34178c8c73191a34201d0642cd891a01883445acae1e3b15487bd14e5ac7d9d",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: the visible-week projection — parts, rows, headlines, buckets and capabilities from resolved days. Read-only."
+      "reason": "R-380: passes the visible week date to the shared explanation reader, so expired reductions cannot be described as current. Projection only."
     },
     "src/rules/validateGeneratedWeek.ts#validateGeneratedWeek": {
       "fingerprint": "c4f19ef9cc54575e87ef9799128311491291dd24dcfedf172c4e46dcb715e2b9",
@@ -3517,14 +3487,14 @@
       "reason": "hingecod 2026-09-03: runs validateProgramWeek and logs a summary; returns the report or null. No writes."
     },
     "src/rules/weeklyCommitmentConversation.ts#deriveWeeklyCommitmentConversation": {
-      "fingerprint": "5e8385eaa0fc0d42a09f4eb7c5091c2e6dae5e047bce4e5eecdb50ec554486a6",
+      "fingerprint": "060b6fb0348432230460221b496f8cf577de51bdf8bc4a031157e46ba20133cc",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: derives the coach's weekly-commitment question/offer from attendance, block history, the ledger and a candidate preview supplied by the caller. No writes."
+      "reason": "yearscan release capability review, 2026-09-08: Derives a prompt from the accepted block requirements, feedback and candidate legality. The changed fields scope denominator dates; no exercise or schedule publication."
     },
     "src/rules/weeklyCommitmentLegality.ts#commitmentLegalityProbe": {
-      "fingerprint": "3893aae8c69b386f76b5f04370e66739798b9b35536c0fda3b1bcee1002f74de",
-      "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: legality probe — generates a throwaway program for a patched profile with empty history and answers whether a week exists. Never installs it."
+      "fingerprint": "df513007dbe6f78986ba0a0df0e2a212646f850e22c6146f25ed944ecaf0812e",
+      "classification": "canonical_compiler",
+      "reason": "R-391 yearbook review: Read-only generation probe rejects frequency beyond actual equipment access before evaluating a throwaway program."
     },
     "src/utils/activeCoachNotes.ts#buildActiveCoachNotes": {
       "fingerprint": "d69498d75514cb376faf069a6bfdebca05dc6358f7289202b15f808c7a191274",
@@ -3567,9 +3537,9 @@
       "reason": "hingecod 2026-09-03: classifies a plan entry's body region from intent/focus. Pure."
     },
     "src/utils/mobilityPrehabFlow.ts#selectMobilityPrehabFlow": {
-      "fingerprint": "a8adeaff8c05c732bfd508dc842712d52b1a074092a66c739e6901540d0c48cc",
+      "fingerprint": "744cc8f36ab7a56147082eea837494780819f4067fb3d58c221414e0d34ebac3",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: derives the day's mobility/prehab flow from the authored menus, retaining performed movements; publishes selection traces (diagnostics) only."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing mobility/prehab selector filters an input copy of equipment tags through the shared dated availability rule before selection. No persistence, only returned flow and diagnostics."
     },
     "src/utils/planChangeProducer.ts#applyPlanChangeWithinTrace": {
       "fingerprint": "14cd47cc174bb8d1b96f05816ee6329596cab878e7d86e28e5cc67b7811590c5",
@@ -3577,9 +3547,9 @@
       "reason": "hingecod 2026-09-03: athlete plan-change door — resolves the typed change, commits moves/removals through the athlete session move/deletion transactions verified against the visible week, or applies coach-template changes through the supplied override door. Every write goes through a transaction."
     },
     "src/utils/planChangeProducer.ts#listPlanChangeOptionsForDay": {
-      "fingerprint": "ef9ff7938785d4156301628d917fcdb744242520e33bd43c94395e89689f1ad8",
+      "fingerprint": "664b6ddf87df2e830a299a2b676029b4adf3735ddae06a57e4fbef1a21578153",
       "classification": "projection_display",
-      "reason": "hingecod 2026-09-03: lists what a day can do (swap/add/remove/move/bin scopes) from the visible week and horizon. Read-only."
+      "reason": "yearscan release capability review, 2026-09-08: Reads the visible day and builds available action options. Manual Add options remain available; no program is authored or persisted here."
     },
     "src/utils/programControlActions.ts#executeProgramControlActionDurably": {
       "fingerprint": "e2f4ce3fb4e7a25bc39a604796319f4a510dc88d9348e892a4ff14040c7e52e4",
@@ -3612,14 +3582,14 @@
       "reason": "hingecod 2026-09-03 (R-357): builds one automatically selected support row from a pool exercise with composer-declared evidence. Pure constructor. | integrate 2026-09-03 re-review: the seat may now be the core seat as well as football_robustness; same pool prescription and typed authorship."
     },
     "src/utils/sessionBuilder.ts#pickPowerEntries": {
-      "fingerprint": "db2e61c96642d8b5577e39393bb8d9e02c35ba36a13cb075db92cc4ce047acd7",
+      "fingerprint": "e8b337eae838a426c97673b7c72561972b3935f75a2c2a1c10c079ead57292ac",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: primer power picks through the traced power selector, the weekly selector and safety filters; records selections/traces into the caller's arrays. No publication."
+      "reason": "yearcheck 2026-09-07 R-384 review: Existing canonical optional-power selector delegates complete safe candidates to weekly unused-first/exhaustion admission and excludes identities already selected in this session. Existing dose materialization and selection outputs remain owned here."
     },
     "src/utils/workoutCanonicalisation.ts#finaliseWorkoutAfterMutationUnchecked": {
-      "fingerprint": "3fff3f19094c19ca698c934c031c6abe48f622d5a08485236af59fe634d71272",
+      "fingerprint": "1168b24a925aa87e8be07e8747f683cb2418bf7fb5ed69c7cd2a20380fb4a4b0",
       "classification": "canonical_compiler",
-      "reason": "hingecod 2026-09-03: the final-row semantic/material normaliser (classification, conditioning block, speed, rest identity, names) over a copied workout. Called only by canonical generation and accepted-template materialisation; no store writes."
+      "reason": "R-381: existing canonicalisation applies shared preparation window through week four; preserves existing row mutation ownership."
     },
     "src/services/api/generateProgram.ts#buildInitialGeneratedCoachingPlan": {
       "fingerprint": "14151988a34d47665e0c4a7b46e6da796c046b9c0b9ad1983617079f37009aad",
@@ -3642,14 +3612,129 @@
       "reason": "integrate 2026-09-03: pure ranking of compiler-target strength days by the accepted week's uncovered patterns (R-087), Sam's pairs (R-089) and repeats. Reads typed plannedPatterns only."
     },
     "src/rules/fixtureStrengthPurposeSelection.ts#reselectRepeatedStrengthIdentities": {
-      "fingerprint": "af7000a43c30847f190b5c0c349296cb19d9fad5985ce4eeac3d6c47d75dfa62",
+      "fingerprint": "f63bfe4cf1605ffbdd7cb6ac33b0278cdb22f72e6d732584077108885d9486f5",
       "classification": "canonical_compiler",
-      "reason": "integrate 2026-09-03: re-selects a copied day's main/accessory identities the kept days already spend, through the weekly selector and the tap-swap safety gate from the seat's own pool; replacement load from loadForReplacementExercise. Pure over its arguments; no store. | 2026-09-03 (integrate): replacement requested as typed support (R-317), a replaced main row becomes strength_accessory."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical fixture fallback asks the shared safety owner for automatic eligibility. Weekly selector and accepted workout ownership remain unchanged."
     },
     "src/utils/coachRevisionProposal.ts#buildCoachRevisionWeekSnapshotFromProgramTabProjection": {
       "fingerprint": "bd44e40ea233fcbb716d459debaa8f01ad5d2d5aab1f4bef4cf0ea9b1b76bfbc",
       "classification": "projection_display",
       "reason": "variety 2026-09-05 review: reads the Program tab projection into a coach revision snapshot. Unchanged by R-379 in behaviour; its fingerprint moved because the projection it reads gained an optional per-day reason field it neither reads nor writes. Projection/display."
+    },
+    "src/hooks/useSeasonPhaseControl.ts#useSeasonPhaseControl.advance": {
+      "fingerprint": "725233108aed9f511a71d546b2fac3782d8b7dc0a592cb656d0a7011e3d3b6d4",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: delegates the accepted phase flow to execute; transitive capability now visible through the profile owner’s new verification reader."
+    },
+    "src/hooks/useSeasonPhaseControl.ts#useSeasonPhaseControl.execute": {
+      "fingerprint": "09f6f44f85e095e5aefa809d1e092ce03209fde4451ca2be83c80de48293174b",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: forms the selected phase/profile patch and calls the existing profile transaction; only UI progress/error state outside it."
+    },
+    "src/screens/home/useHomeScreen.ts#useHomeScreen.handleRepairSeasonPhaseSkew": {
+      "fingerprint": "d00a8adefe536f30da0d2c3fd885403836ef7e50b4cb23b9fa7775ad5e903ff6",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: delegates the athlete’s chosen phase to the existing profile transaction and handles its result."
+    },
+    "src/screens/profile/ProfileScreen.tsx#ProfileScreen.executeSetupUpdate": {
+      "fingerprint": "1fbc5e4a871705cbf3706b6d9fc21509b5725b0036d1237ccdab05ffd8585fab",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: commits the existing reviewed setup patch through the profile owner; no second programming author."
+    },
+    "src/screens/progress/ProgressTabScreen.tsx#ProgressTabScreen.saveMeasurements": {
+      "fingerprint": "bf5564616ea50320263185a8f10eacdf256ad93dfe70ece9060c90c879a96966",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: validates height/weight and commits the profile patch through the same transaction."
+    },
+    "src/screens/progress/ProgressTabScreen.tsx#ProgressTabScreen.savePerformanceResult": {
+      "fingerprint": "3675df4de82f9017227cf02bc79dd8a9c1a204135e8bdcf6956ed58661b56125",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: validates and records the athlete’s test result in the profile through the same transaction."
+    },
+    "src/store/acceptedExerciseChoice.ts#acceptedExerciseChoicesSurvive": {
+      "fingerprint": "4f81c0ac45c7e5da0e42cf2271d2d737edd15a49a4938abd1043715baaa3b5c9",
+      "classification": "projection_display",
+      "reason": "yearcheck R-385: Read-only dated resolver and safety check. Does not reselect a row or mutate workout; verifies eligible captured choice prescriptions in the visible result."
+    },
+    "src/store/acceptedExerciseChoice.ts#captureAcceptedExerciseChoices": {
+      "fingerprint": "ef382c531e671b2cf10587f5a55dba7247a5ebd69fdd4abc4723f81af568f646",
+      "classification": "projection_display",
+      "reason": "yearcheck R-385: Reads replayable current/future choices and actual unique visible replacement rows; captures an optional target metadata upgrade without writing it."
+    },
+    "src/store/acceptedExerciseChoice.ts#workoutOn": {
+      "fingerprint": "7f6db114680c09712010701a17669c54fd93ee480315aab7c19d0615c883ec2d",
+      "classification": "projection_display",
+      "reason": "yearcheck R-385: Read-only projection through the existing dated session resolver. No authoring or persistence."
+    },
+    "src/store/weeklyCommitmentAnswer.ts#confirmWeeklyCommitment": {
+      "fingerprint": "7806349130274ce1c65217a002a52f0b5c6d337745dc3c2a4c48a78a25f14bf3",
+      "classification": "canonical_input_writer",
+      "reason": "yearcheck R-385: Unchanged source: derives the accepted weekday patch, delegates profile rebuilding, and uses the existing decision appender for the commitment answer."
+    },
+    "src/rules/goalProgramming.ts#applyGoalProgramming": {
+      "fingerprint": "cf0ff24daa667e5d14804c1752634db5b45608a74e29d53c3859de3eb1536487",
+      "classification": "canonical_compiler",
+      "reason": "yearscan, R-388 review, 2026-09-08: Pure specialist called by canonicalWeeklyRowCompiler. Reads typed goals and existing rows; returns bounded sets/reps changes, preserving chosen additions, explicit loads, identities, recovery dates, and phase/game limits. Guarded by real generation/settings/reopen and source mutations in test:yearscan-repairs."
+    },
+    "src/utils/injurySessionAdjustment.ts#deriveInjurySessionAdjustment": {
+      "fingerprint": "93ddfc66becfc9da18e162b62a22b2b30ba7d510dfcab3f42639e7f6cd56abf8",
+      "classification": "canonical_compiler",
+      "reason": "yearscan, R-388 review, 2026-09-08: Derives kept/paused/replacement work from the explicit workout, restrictions and programming context. Ordinary injury replacement is shared by individual and whole-session additions; no store write or independent publication."
+    },
+    "src/rules/conditioningDisplay.ts#applyConditioningDoseStep": {
+      "fingerprint": "9cea472d6d93035319994aab44b1f37bfde97b43f758345e4b69af9d14712913",
+      "classification": "canonical_compiler",
+      "reason": "yearscan release capability review, 2026-09-08: Pure dose specialist uses the authored step kind and actual dose to update count OR time OR recovery and corresponding card text. Despite the historical filename, this exported helper authors only inside canonical progression."
+    },
+    "src/rules/section18EffectiveWeekEvaluator.ts#evaluateSection18EffectiveWeek": {
+      "fingerprint": "9d44a2ff51853f6c28b2ecc8e61207c864df77f0d49e122688d0e1fbdbe2dd16",
+      "classification": "projection_display",
+      "reason": "yearscan release capability review, 2026-09-08: Derives validation findings and exposure counts. The automatic-only workout copy is local assessment input; the returned ledger still includes athlete additions. Does not change or publish any accepted workout."
+    },
+    "src/utils/injurySessionAdjustment.ts#contextualInjuryAddition": {
+      "fingerprint": "6546cb5fb198a956fd1371b3af42aec24ea9e2e86ebc5e13976b9ff43ad692e9",
+      "classification": "canonical_compiler",
+      "reason": "yearscan release capability review, 2026-09-08: Pure injury-dose specialist delegates to composed dose/load and the existing deload owner using explicit context. The temporary one-row workout is an internal dose adapter, never persisted."
+    },
+    "src/utils/planChangeProducer.ts#materializeAthleteCandidate": {
+      "fingerprint": "a11fe7e94f42f807300aec4951e4b7c8d245625e7cda0d5c525a77d45216eca1",
+      "classification": "canonical_input_writer",
+      "reason": "yearscan release capability review, 2026-09-08: Boundary captures current source-fact versions and passes explicit inputs to materializeCanonicalPlanChangeCandidate. All candidate prescription rules stay in that compiler."
+    },
+    "src/utils/sessionResolver.ts#_resolveDateRaw.fixtureWorkout": {
+      "fingerprint": "c8e0cf24eb25f5990fc9aa6d4e51d3e2c2706c78ed3ef4a42ad291fc03014a6b",
+      "classification": "projection_display",
+      "reason": "yearscan release capability review, 2026-09-08: Returns the accepted training beside the fixture with fixture display metadata, or the existing fixture stub. Does not generate or persist athlete training."
+    },
+    "src/rules/canonicalProgramCompiler.ts#compileCanonicalProgram.strengthDoseForPlacement": {
+      "fingerprint": "972bff4f251f7d427b4b4fd960c46de68564bee3cab3263a7d744a44e70b4602",
+      "classification": "canonical_compiler",
+      "reason": "R-389 yearbook review: local callback applies the existing exclusion and block-progression compiler to one authored strength week at its original block index. It returns that preview for workload assessment only, without store access or publication."
+    },
+    "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.resolveStrengthWorkload": {
+      "fingerprint": "1282273154cb74e31beca1e200addba6d948b4881f5b4169380993eeb61900d6",
+      "classification": "canonical_compiler",
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: resolved strength rows are assessed by the existing Section18 evaluator; only main-strength/pattern blockers join candidate cost before placement preferences. Pure trial, same canonical owner, no persistence."
+    },
+    "src/navigation/AppNavigator.tsx#ProfileStackNavigator": {
+      "fingerprint": "8c8861eef256378315bd19cfb1aaf0a90b58a490d0f374e4cf7e44d26f2997d7",
+      "classification": "projection_display",
+      "reason": "R-391 yearbook review: Routes the profile editor or submits independent equipment access and strength frequency through the existing profile transaction; no independent program construction."
+    },
+    "src/rules/canonicalWeeklyCompiler.ts#compileCanonicalWeek.evaluate": {
+      "fingerprint": "50724e9466fae282cddae28cf6e9580ee14450c552d6d68bc71b038d5551b91d",
+      "classification": "canonical_compiler",
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: resolved strength rows are assessed by the existing Section18 evaluator; only main-strength/pattern blockers join candidate cost before placement preferences. Pure trial, same canonical owner, no persistence."
+    },
+    "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.composeStrength": {
+      "fingerprint": "74f2aba2ee183f0104599667e342e389c157cb4fd1dfb21f3df33fab672c3ee5",
+      "classification": "canonical_compiler",
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally."
+    },
+    "src/rules/weeklyScheduler.ts#scheduleWeek.walkLadder": {
+      "fingerprint": "f96ef615ff97e3ad38ed61518794ab2b00cf7d92ba860422dbb4ec2ba83314a1",
+      "classification": "canonical_compiler",
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally."
     }
   }
 }

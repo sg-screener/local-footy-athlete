@@ -2463,6 +2463,7 @@ export function stageRollingHorizonFixtureRepair(args: {
  */
 export function commitCanonicalAcceptedFixtureEditEffect(
   effect: import('../rules/canonicalWeeklyFixtureEditState').CanonicalAcceptedFixtureEditEffect,
+  fixtureConstraints?: readonly ActiveConstraint[],
 ): import('../utils/weekRebuild').WeekRebuildResult {
   const profile = useProfileStore.getState().onboardingData;
   if (!profile) throw new Error('Cannot compile a fixture effect without an accepted profile');
@@ -2481,6 +2482,7 @@ export function commitCanonicalAcceptedFixtureEditEffect(
       ? effect.sourceDate ?? undefined
       : undefined,
     acceptedFixtureEffect: effect,
+    fixtureConstraints,
     todayISO: effect.acceptedAt.slice(0, 10),
     diagnosticSource: effect.source.producer,
     diagnosticActionType: effect.fixtureKind === 'practice_match'

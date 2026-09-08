@@ -1,3 +1,6 @@
+import { displayReps } from './prescriptionDisplay';
+import { currentConditioningDose, applyConditioningDoseStep } from './conditioningDisplay';
+import { requiresStrengthComponent } from '../utils/sessionComponents';
 /**
  * BLOCK-BOUNDARY PROGRESSION — the one owner of what a lift weighs in the next
  * block, decided WHILE THE BLOCK IS BUILT and stored with it.
@@ -7,29 +10,9 @@
  * and reloaded prescriptions must be identical. Do not preserve the existing
  * projection-time rewrite as the new authority."*
  *
- * ## ⚠ THE AUTHORING-TIME FREEZE ALREADY EXISTS. THIS IS NOT A SECOND OWNER.
- *
- * `generateProgram.ts:1460` already calls `bakeMicrocycleStrengthProgression`,
- * whose own comment says *"materialise strength progression into the stored
- * microcycles once. Resolution then merely projects these loads — it no longer
- * recomputes progression on read."* **The architecture Sam asked for is built.**
- *
- * **What is broken is what it is FED.** That call site passes, verbatim:
- *
- *     sessionFeedback: {},
- *     weightOverrides: {},
- *     workoutHistory: [],
- *     blockState: null,
- *
- * So the freeze runs against an athlete with no history and no block identity —
- * it bakes a history-free number — and then the resolver, drawing the screen
- * from the LIVE store, re-derives with the real history and shows a different
- * one. **That is the stored ≠ visible split, and its cause is four empty
- * arguments, not a missing layer.**
- *
- * This module therefore owns the DECISION ONLY — retain, rotate, and how much —
- * and is fed INTO that existing freeze. Adding a parallel apply-and-stamp pass
- * beside it would be the second-owner defect this repo names outright.
+ * The canonical weekly progression compiler applies these decisions once,
+ * before accepting each week's stored dose. R-380 removed the competing
+ * per-session writer. Readiness reductions use the shared seven-day horizon.
  *
  * ## WHAT IT MAY READ — the contract's "evidence the app may use"
  *
@@ -37,8 +20,9 @@
  * progression to information the app genuinely records. This module reads
  * exactly three things, all of them recorded facts:
  *
- *   1. whether a session was COMPLETED   — `SessionFeedback.completion`
- *   2. how recovery went                 — `SessionFeedback.soreness` / `feeling`
+ *   1. whether strength was COMPLETED    — the recorded strength component
+ *      (legacy records fall back to `SessionFeedback.completion`)
+ *   2. how recovery went                 — recorded effort (`difficulty`, with legacy `feeling` fallback)
  *   3. the load that was on the bar      — `SessionFeedback.strength[].weightKg`
  *
  * ⚠ **IT NEVER INFERS REPS OR SETS FROM A COMPLETED MARKER.** The contract:
@@ -92,9 +76,11 @@
  * Both are removed from the code, the guards and the registry row.
  */
 
+import { horizonCoversWeek } from './durableFactHorizon';
+import { resolveReadinessDeload } from './readinessIllnessLaw';
 import type { OnboardingData, SeasonPhase, Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
-import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
+import type { FeedbackFeeling } from '../types/sessionOutcome';
 import {
   normaliseAutomaticExerciseLoadChange,
   resolveLoadAuthority,
@@ -118,7 +104,7 @@ import {
   type ConditioningNoStepReason,
   type ConditioningStep,
 } from './conditioningDoseStep';
-import { isEffortRating } from './effortScale';
+import { isEffortRating, sessionEffortFromFeedback } from './effortScale';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
 import { SET_CEILING } from './weeklyLegality';
 import type { WeekKind } from '../types/domain';
@@ -233,7 +219,10 @@ export interface BlockBoundaryLiftDecision {
 export interface BlockHistorySignal {
   completedStrengthSessions: number;
   recordedStrengthSessions: number;
-  /** Every session that reported soreness/effort came back inside the good band. */
+  /** Explicit units: required attempts and completed extras are separate. */
+  recordedRequiredStrengthSessions?: number;
+  completedOptionalStrengthSessions?: number;
+  /** Every session that reported effort came back inside the good band. */
   recoveryGood: boolean;
   /**
    * THE THREE-WAY ANSWER. `recoveryGood` alone could not tell "the athlete said
@@ -259,12 +248,12 @@ export interface BlockHistorySignal {
   lastRecordedPrescribedSetsByExercise: Readonly<Record<string, number>>;
   /**
    * R-343 (Sam, 2026-09-02): the exact exercises the athlete completed IN THIS
-   * BLOCK at the top of their prescribed rep range, proven by real logged sets
-   * (`actualReps >= prescribedRepsMax`, non-skipped, full completion). A
+   * BLOCK at the rep target shown on their card, proven by real logged sets
+   * (`actualReps >= displayReps(min, max)`, non-skipped, full completion). A
    * session merely marked complete says nothing about reps and is not here —
    * the same line the load-moved sentence already holds.
    */
-  topOfRangeCompletedByExercise: Readonly<Record<string, true>>;
+  prescribedTargetCompletedByExercise: Readonly<Record<string, true>>;
   /**
    * THE SAME QUESTION, ASKED SEPARATELY OF EACH QUALITY.
    *
@@ -306,7 +295,7 @@ export interface BlockHistorySignal {
 export type BlockRecoveryVerdict =
   /** Every recovery answer came back inside the good band. */
   | 'good'
-  /** At least one answer was `very_hard` effort or `high` soreness. */
+  /** At least one answer was `very_hard` effort . */
   | 'very_hard'
   /** No recovery answer at all, or answers outside the good band but not the hard band. */
   | 'unknown';
@@ -332,7 +321,7 @@ export type BlockRecoveryVerdict =
  * `getConditioningLoggingConfig → level 'trackable'` with `rpe` among its
  * fields, so the input is on the screen for the work the athlete is given.
  *
- * **STRENGTH → `feeling` / `soreness`, on a date carrying strength logs and NO
+ * **STRENGTH → recorded effort, on a date carrying strength logs and NO
  * conditioning log.** That is the only date whose session answer is
  * unambiguously about lifting, and there are plenty of them.
  *
@@ -399,19 +388,6 @@ export const HARD_EFFORT_RATING = 8;
  */
 export const EASY_EFFORT_RATING = 6;
 
-/**
- * The feelings and soreness levels that mean *"consistently easy"*.
- *
- * ⚠ **A STRICT SUBSET OF THE GOOD BAND, AND THAT IS THE POINT.** `good` and
- * `hard` are legal, well-recovered answers that buy load and a set; they do NOT
- * buy a fourth training day. Typed, so a new level added to the vocabulary is a
- * compile error here rather than a silent "not easy".
- */
-const EASY_BLOCK_FEELINGS: ReadonlySet<FeedbackFeeling> =
-  new Set<FeedbackFeeling>(['very_easy', 'easy']);
-const EASY_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
-  new Set<FeedbackSoreness>(['none', 'mild']);
-
 export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
   completedStrengthSessions: 0,
   recordedStrengthSessions: 0,
@@ -427,46 +403,10 @@ export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
   },
   lastRecordedLoadByExercise: {},
   lastRecordedPrescribedSetsByExercise: {},
-  topOfRangeCompletedByExercise: {},
+  prescribedTargetCompletedByExercise: {},
   qualifies: false,
   reduces: false,
 };
-
-/**
- * Soreness/effort answers that still count as "recovery is good".
- *
- * The contract progresses only when *"training is being completed and recovery
- * is good"*, and separately reduces work on *"low readiness or high soreness"*.
- * `hard` is a legal, well-recovered session; `very_hard` is the contract's
- * "completed but very hard", which reduces VOLUME and must never buy load.
- */
-/**
- * TYPED, so that adding a feeling or a soreness level to the vocabulary is a
- * COMPILE error here rather than a silent "not in the good set" — which would
- * quietly stop an athlete progressing and look like a rule working.
- */
-const GOOD_RECOVERY_FEELINGS: ReadonlySet<FeedbackFeeling> =
-  new Set<FeedbackFeeling>(['very_easy', 'easy', 'good', 'hard']);
-const GOOD_RECOVERY_SORENESS: ReadonlySet<FeedbackSoreness> =
-  new Set<FeedbackSoreness>(['none', 'mild', 'moderate']);
-
-/**
- * The answers that mean *"completed, but very hard"* — the contract's own state.
- *
- * TYPED FOR THE SAME REASON THE GOOD SETS ARE: a new effort or soreness level
- * must be a COMPILE error here rather than silently landing outside the hard
- * band, which would look like a working rule while an athlete reporting the new
- * worst answer got no reduction at all.
- *
- * ⚠ **`high` IS THE TOP OF THE SORENESS SCALE.** The vocabulary is
- * `none | mild | moderate | high` — there is no `severe`, and a fixture written
- * with one type-errors but still RUNS under sucrase, where it reads as "not in
- * the good set" and looks like a passing guard.
- */
-const HARD_BLOCK_FEELINGS: ReadonlySet<FeedbackFeeling> =
-  new Set<FeedbackFeeling>(['very_hard']);
-const HARD_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
-  new Set<FeedbackSoreness>(['high']);
 
 /**
  * THE STRENGTH SESSIONS AN ACCEPTED BLOCK ACTUALLY REQUIRED OF THE ATHLETE.
@@ -519,12 +459,9 @@ const HARD_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
  *
  * ## WHAT IS COUNTED
  *
- * Sessions that could have PRODUCED a strength log, because that is what
- * `readBlockHistory` counts on the other side of the ratio: it increments
- * `recordedStrengthSessions` only for a feedback day carrying non-empty
- * `strength` logs. A workout with no counted strength row can never be a
- * completed strength session, so including it would deflate the athlete's rate
- * against work that was never loggable.
+ * Count sessions with a real strength component, including accessory-only
+ * sessions. The recorded side reads that component's completion, not whether
+ * a main lift happened to produce a per-lift performance log.
  *
  * ⚠ **A `Workout` HAS `dayOfWeek`, NOT A DATE** — the date lives on the
  * microcycle. The window is applied to `microcycle.startDate`, and a reader that
@@ -554,16 +491,36 @@ export function deriveAcceptedBlockStrengthRequirement(args: {
       //
       // This used to gate on `workoutType`, which files a gym session that
       // shares a date with club training as `Team Training` and skipped it. The
-      // NUMERATOR is `readBlockHistory`'s count of days carrying strength logs,
-      // and `buildStrengthPerformanceLogs` carried the identical `workoutType`
+      // NUMERATOR now reads recorded strength-component completion. Historically
+      // `buildStrengthPerformanceLogs` carried the identical `workoutType`
       // gate — so both sides were wrong together, agreed with each other, and
       // credited a twice-a-week athlete once. `carriesStrengthComponent` is the
       // shared answer both now ask.
-      if (!carriesStrengthComponent(workout)) continue;
+      if (!requiresStrengthComponent(workout)) continue;
       count += 1;
     }
   }
   return count;
+}
+
+export function deriveAcceptedBlockStrengthDates(args: Parameters<typeof deriveAcceptedBlockStrengthRequirement>[0]): string[] {
+  return (args.program?.microcycles ?? []).flatMap(week => {
+    const start = String(week.startDate).slice(0,10);
+    if (start < args.blockStartISO || start > args.blockEndISO) return [];
+    return (week.workouts ?? []).filter(requiresStrengthComponent).map(workout => {
+      const date = new Date(`${start}T12:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + ((workout.dayOfWeek + 6) % 7));
+      return date.toISOString().slice(0,10);
+    });
+  }).sort();
+}
+
+/** Component answers are authoritative; old records fall back to lift logs. */
+function recordedStrengthCompletion(feedback: SessionFeedback): SessionFeedback['completion'] | null {
+  if (feedback.components) {
+    return feedback.components.find(component => component.kind === 'strength')?.completion ?? null;
+  }
+  return (feedback.strength?.length ?? 0) > 0 ? feedback.completion : null;
 }
 
 /**
@@ -588,6 +545,7 @@ export function readBlockHistory(args: {
   blockEndISO: string;
   /** Strength sessions the block asked for. Drives the 75% gate. */
   requiredStrengthSessions: number;
+  requiredStrengthDates?: readonly string[];
 }): BlockHistorySignal {
   const { feedbackByDate, blockStartISO, blockEndISO, requiredStrengthSessions } = args;
 
@@ -598,12 +556,14 @@ export function readBlockHistory(args: {
 
   let completedStrengthSessions = 0;
   let recordedStrengthSessions = 0;
+  let recordedRequiredStrengthSessions = 0;
+  let completedOptionalStrengthSessions = 0;
   let recoveryGood = true;
   let sawRecoveryAnswer = false;
   let sawHardAnswer = false;
   const lastRecordedLoadByExercise: Record<string, number> = {};
   const lastRecordedPrescribedSetsByExercise: Record<string, number> = {};
-  const topOfRangeCompletedByExercise: Record<string, true> = {};
+  const prescribedTargetCompletedByExercise: Record<string, true> = {};
 
   // ── THE PER-QUALITY READ, RUN OVER THE SAME WINDOW ──
   // Separate accumulators, on purpose: the block-level verdict below counts a
@@ -644,7 +604,7 @@ export function readBlockHistory(args: {
      * evidence. Do not require a strength-only day."*
      *
      * This read used to require `!carriesConditioning`, and the reason was real:
-     * `feeling` and `soreness` are SESSION-level answers, so on a combined day
+     * Effort answers are SESSION-level answers, so on a combined day
      * there was no telling whether "hard" meant the lifting or the running. The
      * guard resolved that ambiguity by discarding the day.
      *
@@ -663,22 +623,15 @@ export function readBlockHistory(args: {
      * offer requires both, so it could not fire for any athlete of that shape no
      * matter how easy they found their training.
      */
-    const carriesStrength = (feedback.strength ?? []).length > 0;
+    const carriesStrength = recordedStrengthCompletion(feedback) !== null;
     const carriesConditioning = feedback.conditioning !== undefined;
     const conditioningAccountedFor = isEffortRating(feedback.conditioning?.rpe);
     if (carriesStrength && (!carriesConditioning || conditioningAccountedFor)) {
-      let answered = false;
-      if (feedback.feeling !== undefined) {
-        answered = true;
-        if (!GOOD_RECOVERY_FEELINGS.has(feedback.feeling)) strengthQualityGood = false;
-        if (HARD_BLOCK_FEELINGS.has(feedback.feeling)) sawStrengthQualityHard = true;
-        if (!EASY_BLOCK_FEELINGS.has(feedback.feeling)) strengthAllEasy = false;
-      }
-      if (feedback.soreness !== undefined) {
-        answered = true;
-        if (!GOOD_RECOVERY_SORENESS.has(feedback.soreness)) strengthQualityGood = false;
-        if (HARD_BLOCK_SORENESS.has(feedback.soreness)) sawStrengthQualityHard = true;
-        if (!EASY_BLOCK_SORENESS.has(feedback.soreness)) strengthAllEasy = false;
+      const effort = sessionEffortFromFeedback(feedback);
+      const answered = effort !== null;
+      if (effort !== null) {
+        if (effort >= HARD_EFFORT_RATING) { strengthQualityGood = false; sawStrengthQualityHard = true; }
+        if (effort > EASY_EFFORT_RATING) strengthAllEasy = false;
       }
       if (answered) {
         strengthAnswerDays++;
@@ -687,24 +640,23 @@ export function readBlockHistory(args: {
     }
   }
 
-  for (const [, feedback] of inBlock) {
+  for (const [date, feedback] of inBlock) {
     const strengthLogs = feedback.strength ?? [];
-    if (strengthLogs.length === 0) continue;
+    const strengthCompletion = recordedStrengthCompletion(feedback);
+    if (strengthCompletion === null) continue;
     recordedStrengthSessions++;
     // 'full' is the only completion that counts. 'partial' is real work but the
     // app does not know WHICH work was done — see the header's no-inference
     // rule — and 'skipped' is not work at all.
-    if (feedback.completion === 'full') completedStrengthSessions++;
+    const required = feedback.strengthRequired ?? (args.requiredStrengthDates ? args.requiredStrengthDates.includes(date) : true);
+    if (required) recordedRequiredStrengthSessions++;
+    if (strengthCompletion === 'full' && required) completedStrengthSessions++;
+    if (strengthCompletion === 'full' && !required) completedOptionalStrengthSessions++;
 
-    if (feedback.feeling !== undefined) {
+    const effort = sessionEffortFromFeedback(feedback);
+    if (effort !== null) {
       sawRecoveryAnswer = true;
-      if (!GOOD_RECOVERY_FEELINGS.has(feedback.feeling)) recoveryGood = false;
-      if (HARD_BLOCK_FEELINGS.has(feedback.feeling)) sawHardAnswer = true;
-    }
-    if (feedback.soreness !== undefined) {
-      sawRecoveryAnswer = true;
-      if (!GOOD_RECOVERY_SORENESS.has(feedback.soreness)) recoveryGood = false;
-      if (HARD_BLOCK_SORENESS.has(feedback.soreness)) sawHardAnswer = true;
+      if (effort >= HARD_EFFORT_RATING) { recoveryGood = false; sawHardAnswer = true; }
     }
   }
 
@@ -714,7 +666,7 @@ export function readBlockHistory(args: {
   // exposure is not a completed one and cannot seed anything.
   for (const [, feedback] of allSorted) {
     for (const log of feedback.strength ?? []) {
-      if (log.completion === 'skipped') continue;
+      if (log.completion !== 'full') continue;
       const load = log.weightKg;
       if (typeof load === 'number' && Number.isFinite(load) && load > 0) {
         lastRecordedLoadByExercise[resolveExerciseName(log.exerciseName)] = load;
@@ -740,17 +692,17 @@ export function readBlockHistory(args: {
     }
   }
 
-  // ── R-343: TOP OF THE RANGE, PROVEN BY LOGGED SETS ──
+  // ── R-343: DISPLAYED TARGET, PROVEN BY LOGGED SETS ──
   // `actualReps` is the builder's conservative minimum across the logged
-  // working sets, so "every set reached the top" is what this records. No
+  // working sets, so "every set reached the displayed target" is what this records. No
   // per-set detail, no claim.
   for (const [, feedback] of inBlock) {
     for (const log of feedback.strength ?? []) {
       if (log.completion !== 'full') continue;
-      const top = log.prescribedRepsMax;
-      if (typeof log.actualReps !== 'number' || !Number.isFinite(top) || top <= 0) continue;
+      const top = displayReps(log.prescribedRepsMin, log.prescribedRepsMax);
+      if (typeof log.actualReps !== 'number' || top === null || !Number.isFinite(top) || top <= 0) continue;
       if (log.actualReps >= top) {
-        topOfRangeCompletedByExercise[resolveExerciseName(log.exerciseName)] = true;
+        prescribedTargetCompletedByExercise[resolveExerciseName(log.exerciseName)] = true;
       }
     }
   }
@@ -782,6 +734,7 @@ export function readBlockHistory(args: {
   return {
     completedStrengthSessions,
     recordedStrengthSessions,
+    recordedRequiredStrengthSessions, completedOptionalStrengthSessions,
     recoveryGood: resolvedRecoveryGood,
     recoveryVerdict,
     byQuality: {
@@ -799,7 +752,7 @@ export function readBlockHistory(args: {
     },
     lastRecordedLoadByExercise,
     lastRecordedPrescribedSetsByExercise,
-    topOfRangeCompletedByExercise,
+    prescribedTargetCompletedByExercise,
     qualifies: enoughCompleted && recoveryVerdict === 'good',
     // ⚠ NO COMPLETION GATE ON THE REDUCTION, AND THAT IS THE CONTRACT'S SHAPE.
     // Its "Low readiness or high soreness" section states the reduction order
@@ -905,7 +858,7 @@ function mayAutomaticallyIncrease(exerciseName: string): boolean {
  * Three typed facts, all recorded: the athlete can add load to it at all
  * (`bodyweight_plus` — a Pull-Up, a Dip; never a Nordic), the block qualified
  * on completion and recovery exactly as a loaded rise does, and real logged
- * sets reached the top of the prescribed range for this exact exercise inside
+ * sets reached the displayed rep target for this exact exercise inside
  * the block. The lattice must also name a rung above zero. One owner; read by
  * the load decision and by rotation's "earned a rise" retention.
  */
@@ -917,7 +870,7 @@ export function bodyweightAddedLoadEarned(args: {
   if (typeof args.history.lastRecordedLoadByExercise[canonical] === 'number') return false;
   if (resolveLoadControlMode(args.exerciseName) !== 'bodyweight_plus') return false;
   if (!args.history.qualifies) return false;
-  if (args.history.topOfRangeCompletedByExercise[canonical] !== true) return false;
+  if (args.history.prescribedTargetCompletedByExercise[canonical] !== true) return false;
   if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
   return smallestPracticalIncrementKg(args.exerciseName, 0) !== null;
 }
@@ -1084,7 +1037,7 @@ export function decideBlockBoundaryLoads(args: {
       // Sam, on the generated year's Pull-Ups sitting at BW for 52 weeks: the
       // athlete *"would add weight"*. The earning condition is the same shape
       // as PRIORITY 1's rise — a qualifying block — plus the one fact BW has
-      // no load number to carry: real logged sets at the top of the range.
+      // no load number to carry: real logged sets at the displayed target.
       const routeAllowsIncrease = row.section18Evidence?.slot !== 'shoulder_prehab';
       const firstIncrement = routeAllowsIncrease
         && bodyweightAddedLoadEarned({ exerciseName, history })
@@ -1304,6 +1257,17 @@ export interface BlockBoundaryVolumeDecision {
  * the decision can be asserted without a workout tree and the application
  * without re-deriving history.
  */
+export function progressionRoleForRow(row: WorkoutExercise): ExerciseRole | null {
+  if (!participatesInCounting(row)) return null;
+  const evidence = row.section18Evidence;
+  if (evidence?.role === 'main_strength') return 'primary_strength';
+  if (evidence && evidence.role !== 'legacy_unknown') {
+    return evidence.role === 'strength_accessory' && slotCountsTowardSetBudget(evidence.slot)
+      ? 'secondary_strength' : null;
+  }
+  return classifyProgressionEligibility(row.exercise?.name ?? '');
+}
+
 export function decideBlockBoundaryVolume(args: {
   history: BlockHistorySignal;
   nextBlockWorkouts: readonly Workout[];
@@ -1322,7 +1286,7 @@ export function decideBlockBoundaryVolume(args: {
 
   for (const row of seedableStrengthRows(nextBlockWorkouts)) {
     const exerciseName = row.exercise?.name ?? '';
-    const role = classifyProgressionEligibility(exerciseName);
+    const role = progressionRoleForRow(row);
     // Accessories and isolation work are not on the contract's reduction list.
     if (role === null) continue;
 
@@ -1519,6 +1483,11 @@ export function countMainSecondarySets(workout: Workout): number {
  * main lift is eligible does a secondary take it: the same priority the rest of
  * this module already gives `primary_strength` over `secondary_strength`.
  */
+/** Every earned load rise, including the first load above bodyweight. */
+export function isEarnedLoadIncrease(decision: BlockBoundaryLiftDecision): boolean {
+  return decision.kind === 'history_progressed' || decision.kind === 'bodyweight_progressed';
+}
+
 export function decideBlockBoundarySetAdditions(args: {
   history: BlockHistorySignal;
   nextBlockWorkouts: readonly Workout[];
@@ -1587,7 +1556,7 @@ export function decideBlockBoundarySetAdditions(args: {
   // Friday's takes the set, which is both rungs on one lift in one rollover.
   const loadRaisedNames = new Set(
     loadDecisions
-      .filter((decision) => decision.kind === 'history_progressed')
+      .filter(isEarnedLoadIncrease)
       .map((decision) => decision.exerciseName),
   );
 
@@ -1609,7 +1578,7 @@ export function decideBlockBoundarySetAdditions(args: {
       if (!slotCountsTowardSetBudget(row.section18Evidence?.slot)) continue;
       const exerciseName = row.exercise?.name ?? '';
       if (!exerciseName) continue;
-      const role = classifyProgressionEligibility(exerciseName);
+      const role = progressionRoleForRow(row);
       if (role === null) continue;
       if (loadRaisedNames.has(exerciseName)) continue;
       eligible.push({ row, role });
@@ -1926,7 +1895,7 @@ export type BlockBoundaryConditioningAdvance =
  *    qualities off one block of evidence.
  * 3. `!history.reduces` — an athlete who reported the block very hard or their
  *    recovery low is the REDUCE case, and reduce outranks advance. Belt and
- *    braces with gate 1, deliberately: `reduces` reads soreness and recovery,
+ *    braces with gate 1, deliberately: `reduces` reads recorded effort,
  *    `conditioningEasy` reads the conditioning RPE, and a block can carry both.
  * 4. **`phase !== 'In-season'` — Sam's rule 1, *"check the phase; in-season may
  *    hold for freshness."*** In-season conditioning exists to keep the athlete
@@ -1943,12 +1912,13 @@ export function decideBlockBoundaryConditioningAdvance(args: {
   nextBlockWorkouts: readonly Workout[];
   weekIndex: number;
   phase: SeasonPhase | null | undefined;
+  weekKind?: 'build' | 'deload';
 }): BlockBoundaryConditioningAdvance[] {
   const { history, nextBlockWorkouts, weekIndex, phase } = args;
   if (!history.byQuality.conditioningEasy) return [];
   if (history.byQuality.strengthEasy) return [];
   if (history.reduces) return [];
-  if (phase === 'In-season') return [];
+  if (phase === 'In-season' || args.weekKind === 'deload') return [];
 
   const advances: BlockBoundaryConditioningAdvance[] = [];
   for (const workout of nextBlockWorkouts) {
@@ -1967,7 +1937,7 @@ export function decideBlockBoundaryConditioningAdvance(args: {
     // is worth the two extra lines rather than a cast: `in` narrows on the
     // property that actually differs, so a third member added to the union
     // would be a compile error rather than a silently dropped branch.
-    const outcome = nextAuthoredDose(template);
+    const outcome = nextAuthoredDose(template, currentConditioningDose(rows.find(row => row.exercise.name === templateName)!));
     const step = 'step' in outcome ? outcome.step : null;
     const reason = 'reason' in outcome ? outcome.reason : null;
     if (step !== null) {
@@ -1994,11 +1964,8 @@ function conditioningTemplateNameFromRows(
 /**
  * Apply the authored step to the session's prescribed dose.
  *
- * ⚠ **ONLY `prescribedSets` MOVES, AND ONLY TO THE AUTHORED NUMBER.** The
- * template, the category, the flavour, the block intent and every athlete-facing
- * string are untouched — the athlete is doing the SAME authored session, one
- * authored rung up. Rewriting the name or the cue would make the sheet's own
- * words describe a dose the sheet did not author.
+ * The typed step selects its field: count, work duration or recovery. Stored
+ * quantities and visible instructions change together; identity and cue stay.
  *
  * A `stepped: false` decision changes nothing, which is rule 5's "hold the
  * session" in code rather than in a comment.
@@ -2020,11 +1987,14 @@ export function applyBlockBoundaryConditioningAdvance(args: {
       && (row as unknown as { exercise?: { name?: string } }).exercise?.name
         === advance.templateName);
     if (headlineIndex < 0) return workout;
+    const advanced = applyConditioningDoseStep(rows[headlineIndex], advance.step);
     return {
       ...workout,
-      exercises: rows.map((row, index) => (index === headlineIndex
-        ? { ...row, prescribedSets: advance.step.to }
-        : row)),
+      exercises: rows.map((row, index) => index === headlineIndex ? advanced : row),
+      ...(workout.conditioningBlock ? { conditioningBlock: { ...workout.conditioningBlock,
+        options: workout.conditioningBlock.options.map(option => option.exerciseIds.includes(advanced.id)
+          ? { ...option, description: advanced.notes ?? option.description } : option),
+      } } : {}),
     };
   });
 }
@@ -2060,6 +2030,9 @@ export interface BlockBoundaryLoadExplanationRow {
  */
 export interface BlockBoundaryReductionExplanationRow {
   kind: 'hard_block_reduced';
+  /** Accepted reduction window; absent only on historical stored explanations. */
+  effectiveFrom?: string;
+  effectiveUntil?: string;
   /** Completed sessions in the block that ended — a counted fact. */
   sessionsCompleted: number;
   /** Sessions that recorded any strength work at all. */
@@ -2111,6 +2084,20 @@ export function isReductionExplanationRow(
   row: BlockBoundaryExplanationRow,
 ): row is BlockBoundaryReductionExplanationRow {
   return row.kind === 'hard_block_reduced';
+}
+
+/** Both the visible week and its home notice use the same stored effect window. */
+export function reductionExplanationCoversWeek(
+  row: BlockBoundaryReductionExplanationRow,
+  weekStartISO: string,
+  historicalBlockStartISO?: string,
+): boolean {
+  const start = row.effectiveFrom ?? historicalBlockStartISO?.slice(0, 10);
+  if (!start) return false; // No dated evidence for a current notice.
+  const end = row.effectiveUntil ?? resolveReadinessDeload({
+    declaredOnISO: start, lowReadiness: true,
+  })!.endISO;
+  return horizonCoversWeek({ startsFrom: start, endsAfter: end }, weekStartISO);
 }
 
 export function buildBlockBoundaryExplanation(
@@ -2190,7 +2177,7 @@ export function buildBlockBoundaryReductionExplanation(args: {
     // READ OFF THE DECISIONS, NOT ASSUMED FROM THE VERDICT. The sentence claims
     // the weights were kept; the only honest source for that claim is the load
     // decisions this same boundary stored.
-    loadsHeld: loadDecisions.every((decision) => decision.kind !== 'history_progressed'),
+    loadsHeld: loadDecisions.every((decision) => !isEarnedLoadIncrease(decision)),
     setsReduced,
     hardConditioningReplaced,
   };

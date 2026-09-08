@@ -52,6 +52,7 @@ export function commitmentLegalityProbe(args: {
 }): CommitmentLegalityProbe {
   const { profile, blockStartISO, blockNumber, weekOrder = DAYS_OF_WEEK } = args;
   return (sessionsPerWeek: number): boolean => {
+    if (sessionsPerWeek > (profile.preferredTrainingDays ?? []).length) return false;
     const patch = commitmentPatchFor({
       profile,
       sessionsPerWeek,

@@ -8,6 +8,7 @@ import { resolveTemplateByName } from '../../rules/conditioningSelection';
 
 const rowsModule = require('../../rules/materialiseComposedWeek') as typeof import('../../rules/materialiseComposedWeek');
 const adapterModule = require('../../data/defaultProgram') as typeof import('../../data/defaultProgram');
+import { observeStrengthPlacementScope } from './placementObservation';
 type Output = ReturnType<typeof compileCanonicalProgram>;
 interface AuthoredRows { weekStart: string; producer: 'strength' | 'conditioning'; workouts: Workout[]; }
 
@@ -82,9 +83,12 @@ export function observeFinalRows(input: CanonicalProgramCompilerInput, compile: 
   const sources: AuthoredRows[] = [];
   const originalRows = rowsModule.materialiseComposedWeek;
   const originalAdapter = adapterModule.buildWorkoutsFromCoach;
+  const placement = observeStrengthPlacementScope();
+  let placementPreviewObserved = false;
   rowsModule.materialiseComposedWeek = (week, context) => {
     const workouts = originalRows(week, context);
-    sources.push({ weekStart: context.weekStartISO, producer: 'strength', workouts: JSON.parse(JSON.stringify(workouts)) });
+    if (placement.isPreview()) placementPreviewObserved = true;
+    else sources.push({ weekStart: context.weekStartISO, producer: 'strength', workouts: JSON.parse(JSON.stringify(workouts)) });
     return workouts;
   };
   adapterModule.buildWorkoutsFromCoach = (...args) => {
@@ -97,12 +101,13 @@ export function observeFinalRows(input: CanonicalProgramCompilerInput, compile: 
   const before = semanticFingerprint(input);
   try {
     const output = compile(input);
-    return { output, sources, checks: [
+    return { output, sources, placementPreviewObserved, checks: [
       { id: 'final_input_immutable', ok: before === semanticFingerprint(input) },
       ...finalRowChecks(input, output, sources),
     ] };
   } finally {
     rowsModule.materialiseComposedWeek = originalRows;
     adapterModule.buildWorkoutsFromCoach = originalAdapter;
+    placement.restore();
   }
 }

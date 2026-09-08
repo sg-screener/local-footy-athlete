@@ -15,7 +15,7 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { getEffectiveGameDates } from '../utils/sessionResolver';
 import { useProfileStore } from '../store/profileStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { resolveTapSwapEnvironment, assessTapSwapCandidateSafety } from '../utils/tapSwapHierarchy';
+import { resolveTapSwapEnvironment } from '../utils/tapSwapHierarchy';
 import { legalAddFamilies, legalAddCandidates, addExerciseSectionContext, type AddFamilyId, type AddLeafId } from '../utils/addExerciseCandidates';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
@@ -87,7 +87,7 @@ async function main() {
       check(`${label}: real legal leaf exists`, !!leaf);
       if (!leaf) continue;
       const candidates = legalAddCandidates({ ...args, leaf });
-      check(`${label}: actual candidate list obeys safety owner`, candidates.length > 0 && candidates.every(candidate => assessTapSwapCandidateSafety(candidate.name, environment).safe));
+      check(`${label}: actual section catalogue remains available to athlete Add`, candidates.length > 0);
       if (category === 'primer') check(`${label}: Primer route is enforced`, candidates.every(candidate => exerciseProgrammingAllows(candidate.name, { ...environment, route: 'primer' })));
       const candidate = candidates[0];
       if (!candidate) continue;
@@ -99,7 +99,7 @@ async function main() {
         requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: date }));
       check(`${label}: actual Add accepted`, result.ok, result);
       workout = read().find(day => day.date === date)!.workout!;
-      const added = workout.exercises.find(row => row.exercise.name === candidate.name)!;
+      const added = workout.exercises.find(row => row.exercise.name === candidate.name && !existing.some(before => before.id === row.id))!;
       check(`${label}: all existing prescriptions survive`, existing.every(before => workout.exercises.some(row => row.id === before.id
         && row.exercise.name === before.name && row.prescribedSets === before.sets && row.prescribedRepsMin === before.reps && row.prescribedWeightKg === before.kg)));
       const template = buildSessionTemplate(workout);
@@ -190,8 +190,7 @@ async function main() {
           existingExerciseNames: combined.exercises.map(row => row.exercise.name) };
         const leaf = base === 'primer' ? 'power' : 'upper_accessories';
         const candidates = legalAddCandidates({ ...args, leaf });
-        check(`${label}: section-specific Add has safe candidates`, candidates.length > 0
-          && candidates.every(candidate => assessTapSwapCandidateSafety(candidate.name, env).safe));
+        check(`${label}: section-specific Add has available candidates`, candidates.length > 0);
         if (base === 'primer') check(`${label}: combined Primer cannot widen to general manual eligibility`,
           candidates.every(candidate => exerciseProgrammingAllows(candidate.name, { ...env, route: 'primer' })));
         const candidate = candidates[0];
@@ -213,15 +212,16 @@ async function main() {
           && JSON.stringify(buildSessionExecutionPlan({ workout: combined, template: buildSessionTemplate(combined), mobilityFlow: null })) === signature);
       }
     }
-    // A section context cannot widen canonical safety. Test the actual canonical
-    // equipment, injury severity and fixture inputs rather than a parallel filter.
+    // R-387: equipment, injury and game proximity cannot remove athlete Add choices.
+    // Compare actual catalogue identities across each context; warnings stay advisory.
     for (const section of ['strength', 'conditioning', 'mobility', 'accessories', 'recovery', 'optional'] as AddFamilyId[]) {
       for (const patch of [{ availableEquipmentTags: ['bodyweight'] as any, availableEquipment: ['bodyweight'] as any },
         { injurySeverities: { shoulder: 7 } }, { daysToGame: 1, experienceLevel: 'Complete beginner' as const }]) {
         const environment = { ...env, ...patch };
         const candidates = legalAddFamilies({ environment, profile, section }).flatMap(family => family.groups.flatMap(group => group.leaves.flatMap(leaf => legalAddCandidates({ environment, profile, section, leaf: leaf.id }))));
-        check(`${gender}/${section}/${JSON.stringify(patch)}: context cannot bypass safety`, candidates.every(candidate => assessTapSwapCandidateSafety(candidate.name, environment).safe));
-        if (candidates.length === 0) check(`${gender}/${section}: empty safety result has no pretend choices`, legalAddFamilies({ environment, profile, section }).length === 0);
+        const unrestricted = legalAddFamilies({ environment: env, profile, section }).flatMap(family => family.groups.flatMap(group => group.leaves.flatMap(leaf => legalAddCandidates({ environment: env, profile, section, leaf: leaf.id }))));
+        check(`${gender}/${section}/${JSON.stringify(patch)}: context preserves athlete Add choices`, candidates.length > 0
+          && JSON.stringify(candidates.map(candidate => candidate.name).sort()) === JSON.stringify(unrestricted.map(candidate => candidate.name).sort()));
       }
     }
   }

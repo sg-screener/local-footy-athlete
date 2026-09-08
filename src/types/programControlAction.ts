@@ -220,6 +220,7 @@ export type ProgramControlAction =
       date: string;
       fromExercise: string;
       fromExerciseId?: string;
+      acceptedTarget?: import('../rules/acceptedExerciseTarget').AcceptedExerciseTarget;
       toExercise?: ExercisePrescriptionPayload;
       futureWeeksToo?: boolean;
       /**
@@ -248,6 +249,8 @@ export type ProgramControlAction =
     }>
   | ProgramControlActionBase<'add_exercise', {
       date: string;
+      additionId?: string;
+      additionFactVersions?: readonly string[];
       exercise?: ExercisePrescriptionPayload;
       futureWeeksToo?: boolean;
     }>

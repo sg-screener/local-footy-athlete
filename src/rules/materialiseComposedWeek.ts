@@ -249,6 +249,7 @@ export function materialiseComposedWeek(
         const powerSeat = powerSeats.get(dosed.family) ?? 0;
         powerSeats.set(dosed.family, powerSeat + 1);
         const built = buildPowerRow(dosed, workoutId, {
+          sessionExerciseNames: day.rows.map(row => row.identity),
           phase: context.power?.phase,
           experienceLevel: context.power?.experienceLevel as never,
           availableEquipment: (context.power?.availableEquipmentByDay?.[day.dayOfWeek]

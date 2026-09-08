@@ -88,14 +88,14 @@ export const BIBLE_WEEKLY_CAPS = {
 
 /**
  * The two cases where the 2-day running floor does not apply (amended §17.B):
- * "The 2-day floor does not apply in early off-season (weeks 1-2), where
+ * "The 2-day floor does not apply in off-season preparation (weeks 1-4), where
  * running is not required at all, or in bye recovery, where the reduced
  * structure governs."
  *
  * A TYPED reason rather than a boolean, so a caller has to say WHICH authored
  * case it is claiming and the build can check the reason still exists.
  */
-export type RunningFloorExemption = 'early_off_season_weeks_1_2' | 'bye_recovery';
+export type RunningFloorExemption = 'off_season_preparation_weeks_1_4' | 'bye_recovery';
 
 /**
  * The authored cases where the sprint floor is lifted. Off-season weeks 1-4
@@ -109,7 +109,7 @@ export const SPRINT_FLOOR_EXEMPTIONS: readonly SprintFloorExemption[] = [
 ];
 
 export const RUNNING_FLOOR_EXEMPTIONS: readonly RunningFloorExemption[] = [
-  'early_off_season_weeks_1_2',
+  'off_season_preparation_weeks_1_4',
   'bye_recovery',
 ];
 
@@ -358,7 +358,7 @@ export function auditWeekAgainstCaps(
     findings.push({
       cap: 'maxRunningExposures', kind: 'under',
       observed: counts.runningExposures, limit: caps.minRunningExposures,
-      detail: `${counts.runningExposures} running days (Bible floor ${caps.minRunningExposures}; lifted in early off-season weeks 1-2 and bye recovery, otherwise needs an authorised typed reduction reason)`,
+      detail: `${counts.runningExposures} running days (Bible floor ${caps.minRunningExposures}; lifted in off-season preparation weeks 1-4 and bye recovery, otherwise needs an authorised typed reduction reason)`,
     });
   }
   if (counts.hardDays > caps.maxHardDays) {

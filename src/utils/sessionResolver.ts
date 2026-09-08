@@ -28,7 +28,7 @@ import type { Workout, Microcycle, TrainingProgram, SeasonPhase, CapacityBand, D
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
-import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
+import { phaseHasRecurringFixtures, storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { markInjuryWithheldRows } from '../rules/injuryWithheldRows';
 import { sessionsOptionalOnDate } from '../rules/illnessRecoveryWeekMode';
@@ -751,6 +751,32 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const today = todayISOLocal();
   const inBlock = isInBlock(date, currentProgram);
 
+  const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
+
+  // ── Priority 2: composed content — override > overlay > base ──
+  //
+  // ONE statement of the ordering (`rules/dayPrecedence.ts`), the same call the
+  // accepted stack makes. Overlay SELECTION stays here because this site
+  // range-checks the overlay's own `weekStart`/`weekEnd` and the others key
+  // straight off the Monday; only the ordering is shared.
+  const composed = composeDaySurfaces({
+    date,
+    dayOfWeek: dow,
+    dateOverrides: manualOverrides,
+    overlay: overlayTemplate.hasOverlay
+      ? { workoutsByDate: { [date]: overlayTemplate.workout } }
+      : null,
+    base: currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null,
+  });
+  // A fixture stays on its date while the athlete's added training stays beside it.
+  const fixtureWorkout = () => {
+    const fixture = createGameStub(date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase));
+    const accepted = removalConstraintForComposedDay({ composed, constraints: state.userRemovalConstraints }) ?? composed;
+    return accepted.workout?.exercises.some(row => row.athleteAdditionId)
+      ? { ...accepted.workout, fixtureVariant: fixture.fixtureVariant }
+      : fixture;
+  };
+
   // ── Priority 1: Calendar marks (game / rest / noGame) ──
   const mark = markedDays ? markedDays[date] : undefined;
   if (mark === 'rest') {
@@ -763,7 +789,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     // with the engine's week mode.
     return buildDay(
       date, dow, today,
-      createGameStub(date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase)),
+      fixtureWorkout(),
       'game',
     );
   }
@@ -798,8 +824,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // it (`day.headline.practice_match`) — only this gate had not been told.
   // Off-season stays out: it has no fixtures, so a stale `gameDay` on an
   // off-season profile must not mint one.
-  const phaseHasFixtures = state.seasonPhase === 'In-season'
-    || state.seasonPhase === 'Pre-season';
+  const phaseHasFixtures = phaseHasRecurringFixtures(state.seasonPhase);
   const virtualEnabled = phaseHasFixtures && effectiveGameDay !== undefined;
   if (
     virtualEnabled &&
@@ -809,28 +834,10 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   ) {
     // A recurring and explicitly materialised fixture are the same session.
     // Hydration must not change its identity merely by projecting a mark.
-    return buildDay(date, dow, today, createGameStub(
-      date, dow, canonicalFixtureKindForResolvedPhase(state.seasonPhase!),
-    ), 'game');
+    return buildDay(date, dow, today, fixtureWorkout(), 'game');
   }
 
-  const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
 
-  // ── Priority 2: composed content — override > overlay > base ──
-  //
-  // ONE statement of the ordering (`rules/dayPrecedence.ts`), the same call the
-  // accepted stack makes. Overlay SELECTION stays here because this site
-  // range-checks the overlay's own `weekStart`/`weekEnd` and the others key
-  // straight off the Monday; only the ordering is shared.
-  const composed = composeDaySurfaces({
-    date,
-    dayOfWeek: dow,
-    dateOverrides: manualOverrides,
-    overlay: overlayTemplate.hasOverlay
-      ? { workoutsByDate: { [date]: overlayTemplate.workout } }
-      : null,
-    base: currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null,
-  });
 
   // ── A STORED GAME NEVER RENDERS ON A DAY THE ATHLETE BYED OUT ────────────
   //
@@ -1313,7 +1320,7 @@ function resolveWeekBeforeConstraints(
         if (day.dayOfWeek !== virtualDow) continue;
         const dayMark = (state.markedDays || {})[day.date];
         if (dayMark === 'rest' || dayMark === 'noGame') continue; // user bye-out respected
-        if (day.workout?.workoutType === 'Game') continue; // already a game
+        if (day.source === 'game' || day.workout?.workoutType === 'Game') continue; // fixture may also carry athlete additions
         if (IS_DEV) {
           logger.warn(
             `[resolver] Game-day LOCK overriding ${day.date} ` +

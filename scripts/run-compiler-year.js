@@ -25,10 +25,12 @@ const { scanSources } = require('./weekly-writer-census');
 async function main() {
   const args = process.argv.slice(2);
   let only;
+  let output;
   let weeks = 52;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--only') only = args[++i];
     else if (args[i] === '--weeks') weeks = Number(args[++i]);
+    else if (args[i] === '--output') output = args[++i];
     else throw new Error(`Unknown argument ${args[i]}`);
   }
   if (only !== undefined && !ARCHETYPES.some((a) => a.id === only)) throw new Error(`Unknown archetype ${only}`);
@@ -48,7 +50,7 @@ async function main() {
       'Numeric receipts cover compiler-authored main-lift deload sets and exact-exercise held/earned loads. Accessory, power and conditioning arithmetic is additionally held by the promoted deload-law diagnostic, not exhaustively enumerated in annual numeric receipts.',
       'Injury, illness, travel, all equipment subsets and every action permutation are not a full cross-product in these eight archetypes.',
     ] };
-  const destination = path.join(root, 'outputs/compiler-year-acceptance');
+  const destination = path.resolve(root, output ?? 'outputs/compiler-year-acceptance');
   fs.mkdirSync(destination, { recursive: true });
   const present = () => {
     fs.writeFileSync(path.join(destination, 'result.json'), JSON.stringify(result, null, 2) + '\n');

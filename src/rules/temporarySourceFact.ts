@@ -25,6 +25,7 @@ import {
 // what they mean. `durableFactHorizon` imports only types from here, so there
 // is no cycle.
 import {
+  factHorizon,
   factHorizonCoversDate,
   factHorizonHasElapsed,
 } from './durableFactHorizon';
@@ -97,6 +98,8 @@ interface TemporarySourceFactBase<TKind extends string> {
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+  /** Athlete-local Clear date; timestamps alone cannot identify that day. */
+  resolvedOnISO?: string;
   sourceActor: TemporarySourceFactActor;
   sourceSurface: TemporarySourceFactSurface;
   legacyMigrationStatus: 'native_v1' | 'legacy_after_state_only';
@@ -423,6 +426,7 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
     observedDate,
     effectiveFrom,
     effectiveUntil,
+    ...(isoDate(value.resolvedOnISO) ? { resolvedOnISO: isoDate(value.resolvedOnISO)! } : {}),
     scope: normalizeScope(value.scope, effectiveFrom, effectiveUntil),
     athleteReportedLevel: clampReportedLevel(value.athleteReportedLevel),
     createdAt,
@@ -620,20 +624,45 @@ export function normalizeTemporarySourceFacts(args: {
   return Array.from(byId.values());
 }
 
+/** Compiler-only dated views of accepted facts. Clearing a report ends its
+ * horizon; it does not mean the report was never true. These views are never
+ * written back as active reports. */
+export function sourceFactsForHistoricalCompilation(facts: readonly TemporarySourceFact[]): TemporarySourceFact[] {
+  return facts.flatMap((fact): TemporarySourceFact[] => {
+    if (isInjurySourceFact(fact)) {
+      if (fact.status === 'active' || fact.status === 'improving') return [fact];
+      if (!fact.resolvedOnISO || !fact.restrictionBeforeResolution) return [];
+      if (factHorizon(fact).endsAfter! < factHorizon(fact).startsFrom) return [];
+      const prior = fact.transitionHistory.filter(t => t.toStatus === 'active' || t.toStatus === 'improving').at(-1);
+      return [{ ...fact, status: 'active', severity: fact.restrictionBeforeResolution.severity,
+        currentRestrictionPolicy: fact.restrictionBeforeResolution.policy,
+        updatedAt: prior?.timestamp ?? fact.createdAt }];
+    }
+    if (fact.status === 'active') return [fact];
+    if (fact.status !== 'expired' && !fact.resolvedOnISO) return [];
+    const horizon = factHorizon(fact);
+    if (!horizon.endsAfter || horizon.endsAfter < horizon.startsFrom) return [];
+    const prior = fact.transitionHistory.filter(t => t.to === 'active').at(-1);
+    return [{ ...fact, status: 'active', effectiveUntil: horizon.endsAfter,
+      scope: { kind: 'window', from: horizon.startsFrom, until: horizon.endsAfter },
+      updatedAt: prior?.at ?? fact.createdAt }];
+  });
+}
+
 export function activeTemporarySourceFacts(
   facts: readonly TemporarySourceFact[],
   onDate?: string,
 ): TemporarySourceFact[] {
   return facts.filter((fact) => {
     if (isInjurySourceFact(fact)) return fact.status === 'active' || fact.status === 'improving';
-    if (fact.status !== 'active') return false;
+    if (fact.status !== 'active' || fact.factKind === 'soreness') return false;
     return !onDate || factHorizonCoversDate(fact, onDate);
   });
 }
 
 /** The readiness family: the kinds the "Not 100% today" sheet can author. */
 export const READINESS_FACT_KINDS: ReadonlySet<string> =
-  new Set(['fatigue', 'soreness', 'poor_sleep', 'illness']);
+  new Set(['fatigue', 'poor_sleep', 'illness']);
 
 /**
  * WHICH READINESS FACT IS *THE* FACT FOR THIS DAY — the one owner.
@@ -834,14 +863,14 @@ function factConstraintMetadata(facts: readonly TemporaryHealthFact[]) {
   const updated = facts.map((fact) => fact.updatedAt).sort();
   // One open fact makes the composed constraint open: it cannot expire on a
   // calendar date while the athlete still has the condition.
-  const anyOpen = facts.some((fact) => fact.effectiveUntil === null);
+  const anyOpen = facts.some((fact) => factHorizon(fact).endsAfter === null);
   const expires = facts
-    .map((fact) => fact.effectiveUntil)
+    .map((fact) => factHorizon(fact).endsAfter)
     .filter((value): value is string => value !== null)
     .sort();
   return {
     temporarySourceFactIds: facts.map((fact) => fact.factId).sort(),
-    startDate: facts.map((fact) => fact.effectiveFrom).sort()[0],
+    startDate: facts.map((fact) => factHorizon(fact).startsFrom).sort()[0],
     lastUpdatedAt: updated[updated.length - 1],
     ...(anyOpen || expires.length === 0
       ? {}
@@ -878,8 +907,7 @@ function globalConstraint(
     ...factConstraintMetadata(facts),
     reasonLabel: poorSleep
       ? poorSleep.pattern === 'repeated' ? 'Repeated poor sleep' : 'Poor sleep'
-      : strongest.factKind === 'soreness' ? 'General soreness'
-        : strongest.factKind === 'illness' ? 'Illness' : 'Fatigue',
+      : strongest.factKind === 'illness' ? 'Illness' : 'Fatigue',
     source: poorSleep ? 'readiness' : 'coach',
     ...(poorSleep ? { readinessKind: 'poor_sleep' as const, readinessPattern: poorSleep.pattern } : {}),
     // Typed discriminator so coach-note attribution never mislabels an illness as
@@ -917,53 +945,6 @@ function globalConstraints(
     .sort((left, right) => left.startDate.localeCompare(right.startDate) || left.id.localeCompare(right.id));
 }
 
-function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): ActiveSorenessConstraint[] {
-  const byBucketAndWindow = new Map<string, {
-    bucket: NonNullable<InjuryState['bucket']>;
-    facts: TemporarySorenessFact[];
-  }>();
-  for (const fact of facts) {
-    if (fact.distribution !== 'localized' || !fact.canonicalBodyPartBucket) continue;
-    const key = `${fact.canonicalBodyPartBucket}:${factWindowKey(fact)}`;
-    const group = byBucketAndWindow.get(key) ?? {
-      bucket: fact.canonicalBodyPartBucket,
-      facts: [],
-    };
-    group.facts.push(fact);
-    byBucketAndWindow.set(key, group);
-  }
-  return Array.from(byBucketAndWindow.values()).map(({
-    bucket,
-    facts: bucketFacts,
-  }): ActiveSorenessConstraint => {
-    const strongest = [...bucketFacts].sort((left, right) =>
-      levelScore(right.athleteReportedLevel) - levelScore(left.athleteReportedLevel) ||
-      right.updatedAt.localeCompare(left.updatedAt))[0];
-    const severity = levelScore(strongest.athleteReportedLevel);
-    const bodyPart = strongest.reportedBodyPartLanguage?.trim() || bucket;
-    const dateScoped = bucketFacts.every((fact) => fact.scope.kind === 'date') &&
-      new Set(bucketFacts.map((fact) => fact.effectiveFrom)).size === 1;
-    return {
-      id: `source-fact:soreness:${bucket}:${factWindowKey(strongest)}`,
-      type: 'soreness',
-      bodyPart,
-      bucket,
-      severity,
-      status: 'active',
-      ...factConstraintMetadata(bucketFacts),
-      reasonLabel: `${bodyPart} soreness`,
-      source: 'coach',
-      ...(dateScoped ? { appliesToDate: strongest.effectiveFrom } : {}),
-      ...(strongest.scope.kind === 'week' ? { weekStartISO: strongest.scope.weekStart } : {}),
-      modifierAffects: [dateScoped ? 'current_day' : 'current_week'],
-      rules: severityIsLimiting(severity) ? [`avoid hard ${bodyPart} loading`] : [`keep ${bodyPart} work pain-free`],
-      safeFocus: ['Pain-free strength', 'Easy aerobic conditioning', 'Mobility / recovery'],
-      advice: [],
-    };
-  }).sort((left, right) => left.bucket.localeCompare(right.bucket) ||
-    left.startDate.localeCompare(right.startDate) || left.id.localeCompare(right.id));
-}
-
 function readinessProjection(
   facts: readonly TemporaryHealthFact[],
 ): Record<string, ReadinessSignal> {
@@ -987,11 +968,6 @@ function readinessProjection(
       signal.flatToday = levelScore(fact.athleteReportedLevel) >= 7;
     } else if (fact.factKind === 'poor_sleep') {
       signal.poorSleepPattern = fact.pattern;
-    } else {
-      signal.soreness = levelScore(fact.athleteReportedLevel) >= 7 ? 'high' : 'moderate';
-      if (fact.factKind === 'soreness' && fact.distribution === 'localized' && fact.reportedBodyPartLanguage) {
-        signal.bodyPart = fact.reportedBodyPartLanguage;
-      }
     }
     byDate[date] = signal;
   }
@@ -1202,14 +1178,12 @@ export function composeTemporarySourceFactCompatibility(args: {
       constraint.type !== 'soreness'),
     injuryEpisodes,
   });
-  const localized = localizedSorenessConstraints(activeHealth.filter((fact): fact is TemporarySorenessFact =>
-    fact.factKind === 'soreness' && fact.distribution === 'localized'));
   const global = globalConstraints(activeHealth.filter((fact) =>
     // Current fatigue producers are date-only and derive through the dated
     // policy below. Preserve old saved week/window fatigue facts through their
     // compatibility projection until their original horizon ends or is cleared.
     (fact.factKind !== 'fatigue' || fact.scope.kind !== 'date') &&
-    (fact.factKind !== 'soreness' || fact.distribution === 'general')));
+    fact.factKind !== 'soreness'));
   const fatigueSequence = fatigueSequenceConstraints(facts, args.onDate);
   const retainedSignals = Object.fromEntries(Object.entries(args.readinessSignalsByDate ?? {})
     .filter(([, signal]) =>
@@ -1226,7 +1200,6 @@ export function composeTemporarySourceFactCompatibility(args: {
     injuryEpisodes,
     activeConstraints: [
       ...injury.activeConstraints,
-      ...localized,
       ...global,
       ...fatigueSequence,
       ...equipmentProjection(activeEquipment),
@@ -1372,59 +1345,6 @@ export function createTemporaryIllnessFact(args: {
     effectiveUntil: args.scope.until,
     scope: args.scope,
     athleteReportedLevel,
-    createdAt: now,
-    updatedAt: now,
-    resolvedAt: null,
-    sourceActor: args.sourceActor ?? 'athlete',
-    sourceSurface: args.sourceSurface,
-    legacyMigrationStatus: 'native_v1',
-    transitionHistory: [{
-      at: now,
-      from: null,
-      to: 'active',
-      actor: args.sourceActor ?? 'athlete',
-      surface: args.sourceSurface,
-      reason: 'created',
-    }],
-  };
-}
-
-export function createTemporarySorenessFact(args: {
-  observedDate: string;
-  scope: TemporarySourceFactScope;
-  athleteReportedLevel: TemporaryAthleteReportedLevel;
-  distribution: 'localized' | 'general';
-  reportedBodyPartLanguage?: string | null;
-  canonicalBodyPartBucket?: InjuryState['bucket'] | null;
-  sourceActor?: TemporarySourceFactActor;
-  sourceSurface: TemporarySourceFactSurface;
-  now?: string;
-  factId?: string;
-}): TemporarySorenessFact {
-  const now = args.now ?? new Date().toISOString();
-  const canonicalBodyPartBucket = args.distribution === 'localized'
-    ? args.canonicalBodyPartBucket ?? null
-    : null;
-  return {
-    protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
-    factId: args.factId ?? stableTemporarySourceFactId({
-      factKind: 'soreness',
-      observedDate: args.observedDate,
-      scope: args.scope,
-      canonicalBodyPartBucket,
-    }),
-    factKind: 'soreness',
-    status: 'active',
-    observedDate: args.observedDate.slice(0, 10),
-    effectiveFrom: args.scope.from,
-    effectiveUntil: args.scope.until,
-    scope: args.scope,
-    athleteReportedLevel: args.athleteReportedLevel,
-    distribution: args.distribution,
-    reportedBodyPartLanguage: args.distribution === 'localized'
-      ? args.reportedBodyPartLanguage?.trim() || null
-      : null,
-    canonicalBodyPartBucket,
     createdAt: now,
     updatedAt: now,
     resolvedAt: null,

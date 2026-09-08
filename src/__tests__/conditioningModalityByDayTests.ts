@@ -28,7 +28,7 @@ function profile(phase: SeasonPhase, club: boolean, phaseEntryISO: string): Onbo
     motivation: 'Build strength and football fitness', goals: ['stronger_and_fitter'],
     seasonPhase: phase,
     // The off-season subphase is dated from the season's end; enter the phase where the week says.
-    seasonFinishedOn: phase === 'Off-season' ? phaseEntryISO : undefined,
+    seasonFinishedOn: phase === 'Off-season' ? new Date(Date.parse(phaseEntryISO + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10) : undefined,
     trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as never,
     teamTrainingDays: club ? (phase === 'Pre-season' ? ['Monday', 'Wednesday'] : ['Tuesday', 'Thursday']) : [],

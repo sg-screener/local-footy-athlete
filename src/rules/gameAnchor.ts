@@ -91,6 +91,11 @@ export interface GameAnchorFields {
   readonly gameDay?: unknown;
 }
 
+/** A saved weekday is a recurring fixture only in a phase that has fixtures. */
+export function phaseHasRecurringFixtures(phase: unknown): boolean {
+  return phase === 'Pre-season' || phase === 'In-season';
+}
+
 /**
  * The athlete's recurring game day, or `null` if they have not got one.
  *

@@ -419,7 +419,7 @@ export const MOBILITY_POOL: PoolExercise[] = [
   ex('toe-stretch',       'Toe Stretch',                  2, 30, 45, 15, 'Toes tucked, sit back onto heels. Builds foot resilience.', ['bodyweight'], ['ankle'], 'low', { prescriptionType: 'duration' }),
   ex('calf-stretch',      'Calf Stretch',                 2, 30, 45, 15, 'Wall or step. Straight-leg then bent-knee variation.', ['bodyweight'], ['ankle', 'calf'], 'low', { prescriptionType: 'duration', perSide: true }),
   // Sam's locked-list additions (2026-07-24).
-  ex('ql-back-extension', 'QL Back Extension',            2, 8,  10, 15, 'Pinned in a 45° hyper. Bend sideways slowly.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('ql-back-extension', 'QL Back Extension',            2, 8,  10, 15, 'Pinned in a 45° hyper. Bend sideways slowly.', ['back_extension_bench'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('atg-split-squat',   'ATG Split Squat',              2, 6,  8,  30, 'Front foot elevated. Slow, pause at the bottom.', ['bodyweight'], ['knee', 'hip'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('elephant-walks',    'Elephant Walks',               2, 8,  10, 15, 'Fold forward over blocks. Alternate legs slowly.', ['bodyweight'], ['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   // Sam's authored additions (2026-07-28). `notes` carries his coaching

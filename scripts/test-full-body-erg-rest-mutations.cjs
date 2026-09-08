@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');const root=path.resolve(__dirname,'..');
+const mutations={
+ 'day-machine-collapse':['src/rules/projectionCopy.ts',"modality === 'row' || modality === 'ski' ? '.' + modality : '.machine'","'.machine'"],
+ 'support-steals-main':['src/rules/composeWeek.ts','return choices.length === 1 && choices[0] === id;','return false;','deep'],
+ 'old-weekday-split':['src/rules/weeklyProgrammingContract.ts',"clauseId: 'WC-111', phase: 'Pre-season', gymDays: [3], weekendAvailable: false,\n    purposes: ['full_body', 'full_body', 'full_body']","clauseId: 'WC-111', phase: 'Pre-season', gymDays: [3], weekendAvailable: false,\n    purposes: ['lower', 'upper', 'full_body']"],
+ 'unreserved-third-day':['src/rules/weeklyStrengthBudget.ts',"if (days.length === 3 && days.every((day) => day.strengthIntent.archetype === 'full_body'))",'if (false)'],
+ 'concentrated-first-day':['src/rules/composeWeek.ts',"const authoredShapeSlots = sharesThreeFullBodySeats ? sharedFullBodySlots",'const authoredShapeSlots = false ? sharedFullBodySlots'],
+ 'active-erg-recovery':['src/rules/conditioningDisplay.ts',"if (!erg || quality !== 'aerobic_capacity' || !seconds", "if (true || !erg || quality !== 'aerobic_capacity' || !seconds"],
+ 'row-projection-disconnected':['src/utils/conditioningVisibleIdentity.ts',"template?.quality,\n          option.modality, option.modalitySequence)","undefined,\n          option.modality, option.modalitySequence)"],
+ 'short-interval-overreach':['src/rules/conditioningDisplay.ts','seconds.min < LONG_AEROBIC_INTERVAL_MIN_SECONDS','seconds.min < 0'],
+};
+function installMutation(name){const m=mutations[name];if(!m)throw Error('Unknown mutation');const prev=require.extensions['.ts'];let reached=false;require.extensions['.ts']=function(mod,file){if(file!==path.join(root,m[0]))return prev(mod,file);let source=fs.readFileSync(file,'utf8');if(!source.includes(m[1]))throw Error('Missing mutation anchor '+name);source=source.replace(m[1],m[2]);reached=true;console.log('MUTATION REACHED '+name);mod._compile(require('sucrase').transform(source,{transforms:['typescript','imports'],filePath:file}).code,file);};process.on('exit',()=>{if(!reached)process.exitCode=2;});}
+module.exports={installMutation};
+if(require.main===module){let failed=0;for(const name of Object.keys(mutations)){const r=spawnSync(process.execPath,[mutations[name][3]==='deep'?'src/__tests__/fullBodyFixtureJourneyTests.cjs':'src/__tests__/fullBodyErgRestTests.cjs'],{cwd:root,encoding:'utf8',env:{...process.env,FULL_BODY_ERG_MUTATION:name}});const out=r.stdout+r.stderr;const caught=r.status===1&&out.includes('MUTATION REACHED '+name)&&out.includes('FAIL ')&&!out.includes('Missing mutation anchor');console.log((caught?'PASS':'FAIL')+' fault '+name);if(!caught){failed++;console.error(out);}}if(failed)process.exitCode=1;}

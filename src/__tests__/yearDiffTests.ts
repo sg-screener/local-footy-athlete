@@ -14,6 +14,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 
 armTotalsOrRed();
@@ -125,6 +127,49 @@ run('the committed baseline exists and covers both athletes', () => {
     assert(baseline[gender].totalRows > 500, `${gender} baseline holds only ${baseline[gender].totalRows} rows`);
   }
 });
+
+// Execute every consumer of the shared lived-year driver with reads from old
+// generated-output directories forbidden. Existing local output cannot hide a
+// missing source dependency. One real week exercises onboarding, logs and boot;
+// the separate full year run measures annual programming.
+const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lfa-year-driver-'));
+try {
+  const guard = path.join(scratch, 'forbid-old-output.cjs');
+  fs.writeFileSync(guard, `const fs = require('node:fs');
+const path = require('node:path');
+const read = fs.readFileSync;
+fs.readFileSync = function(file, ...args) {
+  if (typeof file === 'string' && /[/\\\\]outputs?[/\\\\]/.test(path.resolve(file))) {
+    throw Error('Generated output is not a source dependency');
+  }
+  return read.call(this, file, ...args);
+};\n`);
+  run('liveness: the isolated driver run rejects an old generated source dependency', () => {
+    const result = spawnSync(process.execPath, ['-r', guard, '-e',
+      "require('fs').readFileSync('outputs/missing-driver.cjs')"], { cwd: repoRoot, encoding: 'utf8' });
+    assert.notEqual(result.status, 0);
+    assert(result.stderr.includes('Generated output is not a source dependency'));
+  });
+  for (const [script, extra] of [
+    ['run-programming-selection-trace-year.cjs', []],
+    ['run-programming-catalogue-order-year.cjs', ['--reverse-catalogues']],
+    ['programming-remediation-year.cjs', []],
+    ['athlete-cohort-year.cjs', ['--preset=two-day']],
+  ] as const) {
+    run(`${script} runs a real week without any old output directory`, () => {
+      const output = path.join(scratch, script);
+      const result = spawnSync(process.execPath, ['-r', guard, path.join(repoRoot, 'scripts', script),
+        '--weeks=1', '--gender=male', `--output=${output}`, ...extra],
+      { cwd: repoRoot, encoding: 'utf8', timeout: 120_000, maxBuffer: 2 * 1024 * 1024 });
+      assert.equal(result.status, 0, result.stderr || result.error?.message);
+      const year = JSON.parse(fs.readFileSync(path.join(output, 'male-year.json'), 'utf8'));
+      assert.equal(year.weeks.length, 1);
+      assert(year.loggedDays > 0);
+      assert.equal(year.restarts.length, 1);
+      assert(year.restarts[0].ok);
+    });
+  }
+} finally { fs.rmSync(scratch, { recursive: true, force: true }); }
 
 console.log(`\nYear diff: ${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {

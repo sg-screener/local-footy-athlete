@@ -8,9 +8,21 @@
  * cannot drift independently.
  */
 const ACCEPTED_CHRISTMAS_BREAK = Object.freeze({
-  from: '2026-12-19',
-  until: '2027-01-11',
+  from: '2026-12-18',
+  until: '2027-01-30',
 });
+// Both annual runners submit this same action to the app's existing owner.
+function auditChristmasBreakAction(todayISO) {
+  return {
+    type: 'set_schedule_modifier',
+    source: { screen: 'program_tab', surface: 'christmas_break', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: { date: ACCEPTED_CHRISTMAS_BREAK.from, todayISO,
+      noTeamTrainingSpan: { ...ACCEPTED_CHRISTMAS_BREAK } },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  };
+}
+
 const ACCEPTED_AWAY_SPAN = Object.freeze({
   from: '2026-12-28',
   until: '2027-01-01',
@@ -162,6 +174,7 @@ function genderedOptionalFixtureFindings(weeks, gender) {
 module.exports = {
   ACCEPTED_AWAY_SPAN,
   ACCEPTED_CHRISTMAS_BREAK,
+  auditChristmasBreakAction,
   RESTRICTED_AWAY_TAGS,
   acceptedProgrammingInputFindings,
   expectedTeamTrainingWeekdays,

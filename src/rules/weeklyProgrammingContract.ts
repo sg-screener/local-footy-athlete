@@ -1,3 +1,4 @@
+import { OFFSEASON_PREPARATION } from './offseasonSubphasePolicy';
 /**
  * THE WEEKLY PROGRAMMING CONTRACT — Sam's approved scheduling law, typed once.
  *
@@ -363,8 +364,8 @@ export const BASE_LAYOUTS: readonly BaseLayout[] = [
   },
   {
     clauseId: 'WC-111', phase: 'Pre-season', gymDays: [3], weekendAvailable: false,
-    purposes: ['lower', 'upper', 'full_body'], setBudget: DEFAULT_SET_BUDGET,
-    statement: 'Weekend unavailable: Lower + Upper + Full Body.',
+    purposes: ['full_body', 'full_body', 'full_body'], setBudget: DEFAULT_SET_BUDGET,
+    statement: 'Weekend unavailable: Full Body x3 on the best-separated gym days.',
   },
   {
     clauseId: 'WC-112', phase: 'Pre-season', gymDays: [3], weekendAvailable: true,
@@ -508,8 +509,8 @@ export interface PhaseOverlay {
 export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> = {
   early_optional: {
     clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.75,
-    runningRequired: false, sprintExposureRequired: false, maxRestDays: 3,
-    conditioningTarget: { min: 0, max: 3 },
+    runningRequired: OFFSEASON_PREPARATION.running.enabledByDefault, sprintExposureRequired: false, maxRestDays: 3,
+    conditioningTarget: OFFSEASON_PREPARATION.conditioningTarget,
     // §8: *"No running is required. Conditioning is light aerobic/off-leg work
     // only."* The one overlay where a hard session is forbidden outright.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
@@ -520,15 +521,14 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
   },
   transition: {
     clauseId: 'WC-131', sessionsRequired: true, loadAdjustment: 0.90,
-    runningRequired: true, sprintExposureRequired: false, maxRestDays: 2,
-    conditioningTarget: { min: 3, max: 4 },
-    // §8: *"Conditioning returns progressively through aerobic-base and
-    // controlled capacity work."* Capacity, named as capacity — not yet hard.
+    runningRequired: OFFSEASON_PREPARATION.running.enabledByDefault, sprintExposureRequired: false, maxRestDays: 2,
+    conditioningTarget: OFFSEASON_PREPARATION.conditioningTarget,
+    // R-381: lifting resumes, but aerobic work remains optional and off-feet.
     hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     speedInsideConditioningTarget: false,
     statement: 'Off-season weeks 3-4: the normal strength skeleton becomes '
-      + 'required again, 90% load and conditioning returns progressively, while '
-      + 'Speed remains at zero. Week 4 is not automatically a deload.',
+      + 'required again, 90% load, body-armour lifting and optional light off-feet aerobic work. '
+      + 'Power and running remain at zero. Week 4 is not automatically a deload.',
   },
   normal_build: {
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,

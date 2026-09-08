@@ -458,9 +458,8 @@ ok('[early off-season] weeks 1-2 author NO hard conditioning at all',
   earlyOff.exposures.every((e) => !e.hard), JSON.stringify(earlyOff.exposures));
 ok('[early off-season] ...and no app-authored running exposure is required of them',
   earlyOff.exposures.length === 0, JSON.stringify(earlyOff.exposures));
-ok('[early off-season] ...and one short running acceleration is retained',
-  earlyOff.speedTemplates.length === 1
-  && /^(10|20) m Acceleration Reps$/.test(earlyOff.speedTemplates[0]),
+ok('[early off-season] R-381 preparation contains no automatic speed template',
+  earlyOff.speedTemplates.length === 0,
   JSON.stringify(earlyOff.speedTemplates));
 
 const lateOff = build({

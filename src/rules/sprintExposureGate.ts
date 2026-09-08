@@ -1,3 +1,4 @@
+import { isOffseasonPreparation } from './offseasonSubphasePolicy';
 import type { SprintExposure, WeekKind, Workout } from '../types/domain';
 import {
   BIBLE_WEEKLY_CAPS,
@@ -112,7 +113,7 @@ export function evaluateSprintExposureGate(
       })
     : null;
   const target = context.phase === 'Off-season'
-    ? context.offseasonSubphase === 'early_offseason' || context.offseasonSubphase === null ||
+    ? isOffseasonPreparation(context.offseasonSubphase) || context.offseasonSubphase === null ||
       context.offseasonSubphase === undefined
       ? 0
       : SPRINT_COD_TARGET

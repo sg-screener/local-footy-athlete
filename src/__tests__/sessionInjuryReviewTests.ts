@@ -73,6 +73,7 @@ import { completeAcceptedStateFingerprint } from '../store/coachMutationTransact
 import { unsafeRowsForInjury } from '../utils/injurySessionRecomposition';
 import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
 import { resolveExerciseName } from '../utils/loadEstimation';
+import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
 
 const INSTALL_DAY = '2026-07-13';
 
@@ -102,9 +103,9 @@ function theAthlete(): OnboardingData {
   } as unknown as OnboardingData;
 }
 
-async function install(): Promise<string> {
+async function install(seasonFinishedOn = '2026-06-28'): Promise<string> {
   await quietAsync(() => coldStartThroughOnboarding({
-    profile: { ...theAthlete(), seasonFinishedOn: '2026-06-28' }, installDayISO: INSTALL_DAY,
+    profile: { ...theAthlete(), seasonFinishedOn }, installDayISO: INSTALL_DAY,
   }));
   return INSTALL_DAY;
 }
@@ -807,6 +808,49 @@ async function main(): Promise<void> {
       + 'and the session name the same ones',
       JSON.stringify(withheldPromised) === JSON.stringify(withheldActual),
       { promised: withheldPromised, actual: withheldActual });
+  }
+
+  // A second injury can pause every row left by the first. The partial-day
+  // pairing above no longer reaches this branch after main-pattern filtering.
+  // Reach week one through onboarding: week three now offers optional aerobic
+  // work which the existing injury rules can retain, so it is not fully paused.
+  {
+    const start = await install('2026-07-12');
+    const date = start;
+    setJourneyClock(date);
+    const first = constraintFor('Knee', 7, date);
+    const initial = await quietAsync<{ ok: boolean }>(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint: first },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: date }));
+    const visible = rowsOf(date, start);
+    const second = constraintFor('Lower back', 7, date);
+    const review = quiet(() => buildSessionInjuryReview({ date, constraint: second }));
+    ok('[fully paused] reaches an actual fully paused second injury', initial.ok && visible.length > 0 &&
+      review.paused.length === visible.length && review.added.length === 0 &&
+      visible.every(name => review.paused.some(change => change.from === name)),
+      { visible, paused: review.paused, added: review.added });
+    const applied = await quietAsync<{ ok: boolean }>(() => executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint: second },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    }, { todayISO: date }));
+    const expected = JSON.stringify({ summary: review.adjustmentSummary,
+      paused: review.paused.map(change => change.from).sort(), added: [] });
+    const current = () => { const adjustment = adjustmentOf(date, start); return JSON.stringify({
+      summary: adjustment?.summary, paused: [...(adjustment?.paused ?? [])].sort(), added: adjustment?.added }); };
+    ok('[fully paused] current summary replaces the previous injury summary', applied.ok && current() === expected,
+      { expected, actual: current() });
+    const screen = quiet(() => buildDayWorkoutProjectedDay({ date, todayISO: date, state: buildScheduleStateImperative() }));
+    ok('[fully paused] the actual session reader carries the current summary and skip rows',
+      screen.workout?.injuryAdjustment?.summary === review.adjustmentSummary &&
+      (screen.workout?.exercises.length ?? 0) > 0 &&
+      screen.workout!.exercises.every(row => !!row.unavailableForInjury));
+    const boot = await relaunchApp({ storage: localStorageData, todayISO: date });
+    ok('[fully paused] current summary survives reopening', boot.ok && current() === expected);
   }
 
   /* ══ [10] THE BADGE OWNER ITSELF — ONE SENTENCE, ONE NAME ════════════════

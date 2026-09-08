@@ -55,12 +55,21 @@ def widths(ws, spec):
 # current-state prefills. Q1 collapsed the three identical pre-season rows into
 # ONE: subphase distinctions do dose and content work, not count work, so
 # `early_preseason` / `mid_preseason` / `late_preseason` all reference this row.
+# R-381: both preparation modes read the same product policy.
+import json, subprocess
+from pathlib import Path
+_preparation = json.loads(subprocess.check_output([
+    'node', '-r', 'sucrase/register', '-e',
+    "console.log(JSON.stringify(require('./src/rules/offseasonSubphasePolicy').OFFSEASON_PREPARATION.exposureConditioning))"
+], cwd=Path(__file__).resolve().parent.parent, text=True))
+PREPARATION_CONDITIONING = tuple(str(v) for v in (
+    _preparation['required'], _preparation['preferred']['min'], _preparation['preferred']['max']))
 MODES = [
     ('in_season_game_week',    'In-season',  ('2', '2', '3'), ('max(3,anchors)',) * 3, ('1', '1', '1'), ('1', '1', '2'), ('4', '5')),
     ('in_season_bye_build',    'In-season',  ('2', '3', '4'), ('3', '3', '4'),         ('1', '1', '1'), ('1', '1', '2'), ('4', '5')),
     ('in_season_bye_recovery', 'In-season',  ('2', '2', '2'), ('0', '0', 'teams'),     ('1', '1', '1'), ('2', '2', '3'), ('2', '4')),
-    ('early_offseason',        'Off-season', ('0', '3', '3'), ('0', '1', '2'),         ('0', '0', '0'), ('2', '2', '3'), ('2', '4')),
-    ('mid_offseason',          'Off-season', ('3', '3', '4'), ('3', '3', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
+    ('early_offseason',        'Off-season', ('0', '3', '3'), PREPARATION_CONDITIONING,         ('0', '0', '0'), ('2', '2', '3'), ('2', '4')),
+    ('mid_offseason',          'Off-season', ('3', '3', '4'), PREPARATION_CONDITIONING, ('0', '0', '0'), ('2', '2', '2'), ('4', '5')),
     ('late_offseason',         'Off-season', ('3', '3', '4'), ('3', '3', '4'),         ('1', '1', '2'), ('1', '1', '2'), ('4', '5')),
     ('preseason',              'Pre-season', ('3', '4', '4'), ('3', '4', '4'),         ('1', '1', '1'), ('2', '2', '2'), ('4', '5')),
 ]

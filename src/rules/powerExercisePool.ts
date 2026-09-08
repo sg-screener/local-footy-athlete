@@ -133,12 +133,12 @@ export const POWER_EXERCISE_POOL: readonly PowerPoolEntry[] = [
   },
   {
     name: 'Broad Jumps', family: 'lower', equipmentRequired: [],
-    minTrainingAge: null, phaseGate: 'all_phases', inSeasonSafe: true,
+    minTrainingAge: 'developing', phaseGate: 'all_phases', inSeasonSafe: true,
     reducedTakeoverOnly: false, authoredCueIntent: 'Drive forward, land balanced.',
   },
   {
     name: 'Jump Squats', family: 'lower', equipmentRequired: [],
-    minTrainingAge: null, phaseGate: 'all_phases', inSeasonSafe: true,
+    minTrainingAge: 'developing', phaseGate: 'all_phases', inSeasonSafe: true,
     reducedTakeoverOnly: false, authoredCueIntent: 'Quarter squat, jump with intent.',
   },
   {
@@ -329,8 +329,14 @@ export function eligiblePowerExercises(
       return false;
     }
     return hasEquipment(entry, context.availableEquipment)
-      && (!getExerciseTags(entry.name)?.programming || exerciseIsAvailableWith(entry.name, context.availableEquipment));
+      && (!getExerciseTags(entry.name)?.programming || powerApparatusAvailable(entry.name, context.availableEquipment));
   });
+}
+
+function powerApparatusAvailable(name: string, available: readonly string[]): boolean {
+  const { equipmentTagsForRequirement } = require('../utils/equipmentAvailability');
+  const tags = available.flatMap(item => equipmentTagsForRequirement(item) ?? [item]);
+  return exerciseIsAvailableWith(name, tags);
 }
 
 /**
@@ -458,7 +464,7 @@ export function selectPowerExerciseWithTrace(
       && !meetsTrainingAgeMinimum(context.trainingAge, candidate.minTrainingAge)) rejectedBy.push('experience');
     if (!hasEquipment(candidate, context.availableEquipment)
       || (getExerciseTags(candidate.name)?.programming
-        && !exerciseIsAvailableWith(candidate.name, context.availableEquipment))) rejectedBy.push('equipment');
+        && !powerApparatusAvailable(candidate.name, context.availableEquipment))) rejectedBy.push('equipment');
     const uses = history.filter((row) => row.exerciseName === candidate.name);
     const lastBlock = uses.map((row) => row.blockStartISO).sort().at(-1) ?? null;
     const blocksSince = lastBlock === null ? null : relevantBlocks.indexOf(lastBlock);

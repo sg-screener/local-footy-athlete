@@ -2,6 +2,7 @@
 import type { Workout, OnboardingData } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { conditioningEquipmentOnDate } from './canonicalWeeklyAvailabilityState';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import { canonicalWeeklyInjuryStateFrom } from './canonicalWeeklyInjuryState';
 import { resolveConditioningFeasibility, applyResolvedConditioningSubstitution } from './conditioningFeasibility';
@@ -25,7 +26,8 @@ export function compileInjuryConditioning(args: {
   // A full stop is not permission to find another workout.
   if (constraints.some(constraint => constraint.trainingPaused)) return filtered;
   const injury = canonicalWeeklyInjuryStateFrom({ profile: args.profile, generationConstraints });
-  const equipment = resolveEquipmentCapabilities(args.profile, args.constraints, args.dateISO);
+  const equipment = conditioningEquipmentOnDate(args.profile, args.dateISO,
+    resolveEquipmentCapabilities(args.profile, args.constraints, args.dateISO));
   const actualModesAvailable = filtered.conditioningBlock?.options.every(option => {
     const modes = option.modalitySequence?.length ? option.modalitySequence : [option.modality];
     return modes.every(mode => mode === 'running' || (mode !== undefined

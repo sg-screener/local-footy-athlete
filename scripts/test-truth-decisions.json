@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "measuredCheckpoint": "aa2167e2",
   "decisions": {
+    "test:yearscan-repairs": {
+      "kind": "current_contract",
+      "reason": "R-387/R-388 real onboarding and durable Add/injury/restart, displayed-rep logging and eligibility, bounded goal prescriptions including settings/reopen, typed conditioning, dumbbell and phase-game repairs; chained source fault injection.",
+      "productionPaths": [
+        "src/utils/addExerciseCandidates.ts",
+        "src/rules/canonicalWeeklyExerciseEditCompiler.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
+        "src/utils/planChangeProducer.ts",
+        "src/utils/sessionResolver.ts",
+        "src/rules/conditioningDisplay.ts",
+        "src/data/equipmentLattice.ts",
+        "src/store/quiescentBoot.ts",
+        "src/rules/goalProgramming.ts",
+        "src/rules/athleteAdditionAuthority.ts",
+        "src/rules/blockBoundaryProgression.ts"
+      ],
+      "contractRefs": [
+        "R-387",
+        "R-388",
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
+      "witnessScript": "test:yearscan-repairs",
+      "evidenceKind": "green_now"
+    },
     "test:exercise-intake": {
       "kind": "current_contract",
       "reason": "User-authorized ten-movement intake, exact submitted ratings, canonical equipment answers, automatic reachability, manual Add, session logging and accumulated restart; preserves annual programming contracts.",
@@ -1065,9 +1089,20 @@
       "evidenceKind": "assertion_or_late_runtime_failure"
     },
     "test:settings-persistence": {
-      "kind": "rewrite_test",
-      "reason": "The stable run reached red assertions, but this suite is not yet rebound to the current compiler contract. Preserve its subject and rewrite fixtures or expectations before changing product code.",
-      "evidenceKind": "assertion_or_late_runtime_failure"
+      "kind": "current_contract",
+      "reason": "Real fresh and worn settings journeys check dated kit, every unaffected week, accepted selection records, component completion and returning own-history loads through the offered Swap, settings rebuild and reopening. Retired the hard-coded Leg Press return coordinate: R-374 does not promise that equipment restoration selects a particular lift. The surviving return witness distinguishes its own history from both the outgoing load and starting estimate.",
+      "productionPaths": [
+        "src/services/api/generateProgram.ts",
+        "src/rules/blockBoundaryProgression.ts",
+        "src/store/quiescentBoot.ts"
+      ],
+      "contractRefs": [
+        "LAW-a-replay-never-reauthors",
+        "LAW-a-recorded-load-outranks-any-estimate",
+        "docs/RULINGS_REGISTRY.md"
+      ],
+      "witnessScript": "test:settings-persistence",
+      "evidenceKind": "green_now"
     },
     "test:slot-coverage": {
       "kind": "current_contract",
@@ -1358,6 +1393,192 @@
         "docs/INJURY_MATRIX_RULINGS_2026-07-28.json"
       ],
       "witnessScript": "test:injury-matrix-sheet",
+      "evidenceKind": "green_now"
+    },
+    "test:rest-day-reason": {
+      "kind": "current_contract",
+      "reason": "Real injury, travel and male/female dated-fatigue doors reach actually empty days. Shared week/date readers and the actual Home Text component retain the approved explanation through reopening and remove it after recovery; completed and unaffected days remain unchanged. Removed-carrier mutations fail the journeys. Exact 2026-09-06 approved injury, game and fatigue copy is checked through the rendered component.",
+      "productionPaths": [
+        "src/rules/canonicalWeekOverlay.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
+        "src/rules/canonicalWeeklyConstraintCompiler.ts",
+        "src/screens/home/HomeRestDayReason.tsx",
+        "src/rules/restDayReason.ts",
+        "src/rules/projectionCopy.ts"
+      ],
+      "contractRefs": [
+        "R-378",
+        "R-379"
+      ],
+      "witnessScript": "test:rest-day-reason",
+      "evidenceKind": "green_now"
+    },
+    "test:coach-chat-integration": {
+      "kind": "current_contract",
+      "reason": "Offline endpoint/client contract checks plus exact ordered parity of every bundled knowledge source against the shared manifest. Negative controls alter each source, authority, membership and duplicate count; stale knowledge fails the release run without making a provider call.",
+      "productionPaths": [
+        "src/rules/coachKnowledgeManifest.ts",
+        "src/services/api/coachChat.ts"
+      ],
+      "contractRefs": [
+        "R-140",
+        "R-379"
+      ],
+      "witnessScript": "test:coach-chat-integration",
+      "evidenceKind": "green_now"
+    },
+    "test:progression-dose-ownership": {
+      "kind": "current_contract",
+      "reason": "Sam 2026-09-07 approved retirement of soreness, a one-week reduction boundary and one accepted progression owner. Born red on the actual seven-week three-day journey, form/save path and first bodyweight load; verifies exact visible sets and repeated restart.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyProgressionCompiler.ts",
+        "src/rules/blockBoundaryProgression.ts",
+        "src/rules/durableFactHorizon.ts",
+        "src/utils/sessionFeedbackForm.ts",
+        "src/store/sessionOutcomeTransaction.ts",
+        "src/components/SessionFeedbackPanel.tsx"
+      ],
+      "contractRefs": [
+        "R-380"
+      ],
+      "witnessScript": "test:progression-dose-ownership",
+      "evidenceKind": "green_now"
+    },
+    "test:offseason-preparation": {
+      "kind": "current_contract",
+      "reason": "R-381 approved four-week preparation. Real onboarding, logging and rollover reproduced power and compulsory conditioning in weeks 3-4 before the correction; exact visible program is checked through restart. Nonempty optional base offers in weeks 3-4, selected gym dates, rendered checklist and full lifting completion when offers are skipped are held by real journey assertions and mutations.",
+      "productionPaths": [
+        "src/rules/offseasonSubphasePolicy.ts",
+        "src/rules/weeklyProgrammingContract.ts",
+        "src/rules/weeklyScheduler.ts",
+        "src/rules/powerPrimerPolicy.ts",
+        "src/rules/weeklyExposureContractV2.ts",
+        "src/utils/sessionTemplate.ts",
+        "src/utils/sessionExecutionChecklist.ts"
+      ],
+      "contractRefs": [
+        "R-381"
+      ],
+      "witnessScript": "test:offseason-preparation",
+      "evidenceKind": "green_now"
+    },
+    "test:conditioning-gym-access": {
+      "kind": "current_contract",
+      "reason": "R-382: actual two- and three-day eight-week onboarding/logging/rollover/reopen journeys prohibit machines outside selected gym dates. Dated access matrix and live mutations hold capability scope and aerobic-base preservation when COD is due.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklyAvailabilityState.ts",
+        "src/rules/canonicalWeeklyRowCompiler.ts",
+        "src/rules/canonicalInjuryConditioning.ts",
+        "src/data/defaultProgram.ts",
+        "src/rules/weeklyScheduler.ts"
+      ],
+      "contractRefs": [
+        "R-381",
+        "R-382"
+      ],
+      "witnessScript": "test:conditioning-gym-access",
+      "evidenceKind": "green_now"
+    },
+    "test:annual-audit-repairs": {
+      "kind": "current_contract",
+      "reason": "Independent full-year audit reproduced history rewrites after Clear, off-gym lifting after fixture changes, automatic experience bypasses and exported rest absent from the screen. Real annual controlled-frequency journeys compare past dates around every report and Clear, final rows, and weekly reopens.",
+      "productionPaths": [
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
+        "src/rules/canonicalWeeklyInjuryCompiler.ts",
+        "src/rules/temporarySourceFact.ts",
+        "src/store/injuryEpisodeTransaction.ts",
+        "src/store/temporarySourceFactTransaction.ts",
+        "src/store/quiescentBoot.ts",
+        "src/rules/canonicalWeeklyFixtureState.ts",
+        "src/rules/canonicalWeeklyAvailabilityState.ts",
+        "src/rules/canonicalWeeklyPlaneCompletion.ts",
+        "src/utils/exerciseFilter.ts",
+        "src/rules/powerExercisePool.ts",
+        "src/rules/canonicalWeeklyConstraintCompiler.ts",
+        "src/utils/sessionBuilder.ts",
+        "src/utils/mobilityPrehabFlow.ts"
+      ],
+      "contractRefs": [
+        "R-383",
+        "R-382",
+        "R-365",
+        "docs/NORTH_STAR.md"
+      ],
+      "witnessScript": "test:annual-audit-repairs",
+      "evidenceKind": "green_now"
+    },
+    "test:annual-audit-second-repairs": {
+      "kind": "current_contract",
+      "reason": "Independently specified regression checks for Sam-approved second annual audit: total dumbbell lattice, completed-exercise history, dated pool apparatus, replacement units, across-seat calendar tenure and explicit R-384 decisions. Red-first receipts retained; full annual population verification separately retained.",
+      "productionPaths": [
+        "src/utils/loadEstimation.ts",
+        "src/rules/blockBoundaryProgression.ts",
+        "src/data/exerciseEquipmentRequirement.ts",
+        "src/rules/canonicalWeeklyInjuryCompiler.ts",
+        "src/rules/blockExerciseSelection.ts",
+        "src/rules/composeWeek.ts",
+        "src/rules/automaticWeeklyExerciseSelection.ts"
+      ],
+      "contractRefs": [
+        "R-384",
+        "R-313",
+        "R-375",
+        "R-374"
+      ],
+      "witnessScript": "test:annual-audit-second-repairs",
+      "evidenceKind": "green_now"
+    },
+    "test:saturday-speed": {
+      "kind": "current_contract",
+      "reason": "Sam approved next-day Speed after normal full-body work and Saturday Speed for the annual three-day athlete. Real dose, complete weekly placements, real onboarding/restart and fault controls.",
+      "productionPaths": [
+        "src/rules/weeklyScheduler.ts",
+        "src/rules/lowerBodyWorkload.ts",
+        "src/rules/canonicalWeeklyCompiler.ts",
+        "src/rules/canonicalWeeklyRowCompiler.ts",
+        "src/rules/canonicalProgramCompiler.ts",
+        "src/rules/canonicalWeeklyProgressionCompiler.ts"
+      ],
+      "contractRefs": [
+        "R-389"
+      ],
+      "witnessScript": "test:saturday-speed",
+      "evidenceKind": "green_now"
+    },
+    "test:full-body-erg-rest": {
+      "kind": "current_contract",
+      "reason": "R-390: three-day pre-season full-body distribution and complete rest on long aerobic RowErg/SkiErg blocks; retained bike progression.",
+      "productionPaths": [
+        "src/rules/weeklyProgrammingContract.ts",
+        "src/rules/weeklyStrengthBudget.ts",
+        "src/rules/composeWeek.ts",
+        "src/rules/conditioningDisplay.ts",
+        "src/utils/conditioningVisibleIdentity.ts"
+      ],
+      "contractRefs": [
+        "R-390"
+      ],
+      "witnessScript": "test:full-body-erg-rest",
+      "evidenceKind": "green_now"
+    },
+    "test:whole-week-planning": {
+      "kind": "current_contract",
+      "reason": "R-391 independent strength frequency and equipment access, whole-week dose-aware arrangement search, actual bye fixture removal and profile change with restart; live source fault controls.",
+      "productionPaths": [
+        "src/rules/weeklyScheduler.ts",
+        "src/rules/canonicalWeeklyCompiler.ts",
+        "src/rules/canonicalWeeklyRowCompiler.ts",
+        "src/rules/weeklySchedulerInputs.ts",
+        "src/rules/weeklyCommitmentQuestion.ts",
+        "src/rules/profileSetupChange.ts",
+        "src/screens/onboarding/PreferredTrainingDaysScreen.tsx",
+        "src/screens/profile/ProfileScreen.tsx"
+      ],
+      "contractRefs": [
+        "R-391",
+        "docs/LFA_PROGRAMMING_BIBLE.md"
+      ],
+      "witnessScript": "test:whole-week-planning",
       "evidenceKind": "green_now"
     }
   }

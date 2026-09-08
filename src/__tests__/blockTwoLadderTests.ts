@@ -443,44 +443,13 @@ ok(
   }).length === 0,
 );
 
-/**
- * ⚠ **THE CEILING, ON A WORLD GENERATION ACTUALLY BUILDS.**
- *
- * Off-season, two gym days, no club night. Every session is authored at the
- * WC-030 ceiling exactly, the athlete completes the block and reports it easy —
- * and the ladder must still add nothing, because there is no room.
- */
-/**
- * ⚠ **THIS WORLD MOVED OFF-SEASON → PRE-SEASON WHEN THE ROTATION OWNER LANDED,
- * AND THE REASON IS THE LADDER WORKING FOR THE FIRST TIME.**
- *
- * The cells below need a REAL generated session sitting EXACTLY on 16 sets, or
- * every guard that consumes `atCeiling` goes vacuous. The off-season world used
- * to supply one. Measured, base `dda2747d` vs the rotation owner, same athlete:
- *
- *   base:  Leg Press:4  Single-Leg RDL:4  Incline DB Bench:4  Single-Arm Pulldown:4  = 16
- *   after: Goblet Squat:4 Single-Leg RDL:4 Bench Press:3      Chin-Ups:3             = 14
- *
- * **Nothing lost a set. Two lifts stopped being GIVEN one** — and that is rung 1
- * of this very suite: *"LOAD is the first rung and a set is the second — never
- * both on one lift in one rollover"*. Under the week-keyed selector a main lift
- * could not survive into block 2, so it never had its own history, so the load
- * rung could never fire and the set rung always did. With main lifts stable
- * across the block, Bench Press and Chin-Ups now progress by LOAD and correctly
- * decline the set.
- *
- * So the world is re-aimed rather than the assertion weakened. Swept all 24
- * phase × days × experience combinations under the new owner: off-season peaks
- * at 14 (2 days) and 15 (3 days); **every pre-season and in-season world reaches
- * 16.** The ceiling is still real, still reached, and still guarded.
- */
+/** R-380 removed the extra per-session set writer. A 24-coordinate probe
+ * found a three-day male pre-season athlete still reaches the real 16-set cap.
+ * Keep the exact ceiling assertions; change only the athlete answering onboarding. */
 const ceilingAthlete = {
-  ...athlete(),
-  gender: 'male', seasonPhase: 'Pre-season',
-  trainingDaysPerWeek: 2,
-  preferredTrainingDays: ['Monday', 'Thursday'],
-  teamTrainingDaysPerWeek: 0,
-  teamTrainingDays: [],
+  ...athlete(), gender: 'male', seasonPhase: 'Pre-season', experienceLevel: '2-5 years',
+  trainingDaysPerWeek: 3, preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+  teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
 } as unknown as OnboardingData;
 const ceilingBlock1 = acceptBlock(ceilingAthlete, {
   todayISO: BLOCK_1_START, blockNumber: 1,
@@ -545,7 +514,7 @@ ok(
     feedbackByDate: CEILING_HISTORY,
     blockStartISO: BLOCK_1_START,
     blockEndISO: '2026-08-02',
-    requiredStrengthSessions: 8,
+    requiredStrengthSessions: 12,
   }).qualifies,
   'the cell below would pass because the block does not qualify, not because of the ceiling',
 );
@@ -568,7 +537,7 @@ const ceilingHistory = readBlockHistory({
   feedbackByDate: CEILING_HISTORY,
   blockStartISO: BLOCK_1_START,
   blockEndISO: '2026-08-02',
-  requiredStrengthSessions: 8,
+  requiredStrengthSessions: 12,
 });
 ok(
   'AND THE LADDER ADDS NOTHING TO A REAL SESSION ON THE CEILING',
@@ -756,7 +725,7 @@ const strengthHardRows = rowsOf(build(STRENGTH_HARD));
 let strengthHardSetGain = 0;
 for (const [key, row] of strengthHardRows) {
   const control = silentRows.get(key);
-  if (control && row.sets > control.sets) strengthHardSetGain++;
+  if (row.counts && control && row.sets > control.sets) strengthHardSetGain++;
 }
 ok(
   'NO STRENGTH SET IS ADDED when strength was the difficult quality',

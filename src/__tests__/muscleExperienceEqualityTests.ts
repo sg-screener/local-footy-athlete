@@ -352,9 +352,9 @@ for (const entry of EXERCISE_MUSCLE_METADATA) {
 const AUTHORED_GATE_COUNTS: Readonly<Record<ExperienceGate, number>> = {
   everyone: 147,
   everyone_regression: 13,
-  one_plus_years: 37,
-  two_plus_years: 18,
-  advanced_only: 2,
+  one_plus_years: 40,
+  two_plus_years: 16,
+  advanced_only: 1,
 };
 
 for (const [gate, expected] of Object.entries(AUTHORED_GATE_COUNTS)) {

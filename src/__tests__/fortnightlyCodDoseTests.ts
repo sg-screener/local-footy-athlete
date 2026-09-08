@@ -74,9 +74,9 @@ ok('early and mid off-season never receive the automatic COD dose',
     && codDays(built({ offseasonBlock: 'transition', phaseWeekNumber: 3 })).length === 0);
 
 const christmasOne = built({ phase: 'Pre-season', offseasonBlock: null,
-  phaseWeekNumber: 4, christmasBreakWeekNumber: 1 });
+  phaseWeekNumber: 5, christmasBreakWeekNumber: 1 });
 const christmasTwo = built({ phase: 'Pre-season', offseasonBlock: null,
-  phaseWeekNumber: 5, christmasBreakWeekNumber: 2 });
+  phaseWeekNumber: 6, christmasBreakWeekNumber: 2 });
 const ordinaryClublessPreseason = built({ phase: 'Pre-season', offseasonBlock: null,
   phaseWeekNumber: 4, christmasBreakWeekNumber: null });
 ok('Christmas shutdown week 1 receives one COD dose', codDays(christmasOne).length === 1,
@@ -179,5 +179,22 @@ ok('the canonical availability handover carries the Christmas week number',
   projected.clubNights.length === 0 && projected.christmasBreakWeekNumber === 1,
   projected);
 
+for (const gymAccessDays of [[1,4],[1,3,5],[1,2,4,5]]) {
+  const week = built({ gymAccessDays, phaseWeekNumber: 5 });
+  ok(`${gymAccessDays.length} gym days: COD preserves an aerobic-base receiver`,
+    week.days.some(day=>day.conditioningCategory==='aerobic_base'), week.days);
+}
+
+for (const gymAccessDays of [[1,4],[1,3,5],[1,2,4,5],[1,2,3,4,5]]) {
+  const args={phase:'Pre-season' as const,offseasonBlock:null,phaseWeekNumber:9,gymAccessDays};
+  const recovered=built({...args,christmasBreakWeekNumber:4});
+  const control=built({...args,christmasBreakWeekNumber:null});
+  ok(`${gymAccessDays.length} days: post-deload Christmas COD lands in the next healthy week`,codDays(recovered).length===1);
+  ok(`${gymAccessDays.length} days: catch-up adds no day or conditioning component`,
+    authoredWorkDays(recovered)===authoredWorkDays(control)
+    && recovered.days.filter(d=>d.conditioningCategory).length===control.days.filter(d=>d.conditioningCategory).length);
+  ok(`${gymAccessDays.length} days: catch-up preserves existing aerobic base`,
+    recovered.days.filter(d=>d.conditioningCategory==='aerobic_base').length>=control.days.filter(d=>d.conditioningCategory==='aerobic_base').length);
+}
 console.log(`\n${passed}/${passed + failures.length} fortnightly COD cells passed`);
 if (failures.length > 0) process.exitCode = 1;

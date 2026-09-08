@@ -1,0 +1,82 @@
+appId: com.localfootyathlete.app
+name: G-1 harder Add respects easier route, Undo and reopening
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: action-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: day-timeline-part-strength
+    commands:
+      - tapOn:
+          id: home-plan-options
+      - tapOn: Remove session
+      - tapOn: Yes, remove it
+      - extendedWaitUntil:
+          visible:
+            id: plan-change-done
+          timeout: 30000
+      - tapOn:
+          id: plan-change-done
+- tapOn:
+    id: home-add-session
+- tapOn:
+    id: plan-change-type-gunshow
+- extendedWaitUntil:
+    visible:
+      id: g1-route-take_the_gunshow
+    timeout: 30000
+- tapOn:
+    id: g1-route-take_the_gunshow
+- extendedWaitUntil:
+    visible:
+      id: day-timeline-part-strength
+    timeout: 30000
+- tapOn:
+    id: home-plan-options
+- tapOn:
+    id: plan-change-add
+- tapOn:
+    id: plan-change-type-conditioning
+- tapOn: Hard session
+- extendedWaitUntil:
+    visible:
+      id: g1-route-deloaded
+    timeout: 15000
+- takeScreenshot: artifacts/gap/gminus1-hard-warning
+- tapOn:
+    id: g1-route-deloaded
+- extendedWaitUntil:
+    visible:
+      id: undo-toast-action
+    timeout: 30000
+- tapOn:
+    id: undo-toast-action
+- assertVisible:
+    id: day-timeline-part-strength
+- assertNotVisible:
+    id: day-timeline-part-conditioning
+- takeScreenshot: artifacts/gap/gminus1-add-undone
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: '${E2E_METRO_URL}'
+      e2eLaunchPurpose: final-step-reload
+- extendedWaitUntil:
+    visible:
+      id: program-screen
+    timeout: 30000
+- assertVisible:
+    id: day-timeline-part-strength
+- assertNotVisible:
+    id: day-timeline-part-conditioning
+- takeScreenshot: artifacts/gap/gminus1-undo-after-reopen

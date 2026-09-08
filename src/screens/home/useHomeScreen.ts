@@ -676,6 +676,7 @@ export function useHomeScreen() {
   // structural rather than a render that was switched off.
   const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
   const blockBoundaryPrompts = useBlockBoundaryPrompts({
+    weekStartISO: visibleWeekStart,
     currentProgram,
     blockNumber: blockState?.blockNumber ?? null,
     ledgerEntries,

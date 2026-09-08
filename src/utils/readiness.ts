@@ -98,14 +98,13 @@ export function deriveScheduleReadiness(args: {
   const signal = args.signal;
   if (!signal) return base;
 
-  if (signal.painFlag || signal.soreness === 'high') return lowerOf(base, 'low');
+  if (signal.painFlag) return lowerOf(base, 'low');
   if (signal.energy === 'low' && signal.flatToday) return lowerOf(base, 'low');
   if ((signal.timeAvailableMinutes ?? 999) < 20) return lowerOf(base, 'low');
 
   if (
     signal.energy === 'low' ||
     signal.flatToday ||
-    signal.soreness === 'moderate' ||
     (signal.timeAvailableMinutes ?? 999) < 35
   ) {
     return lowerOf(base, 'medium');
@@ -122,7 +121,6 @@ export function buildReadinessSignalPatch(
     case 'good':
       return {
         energy: 'good',
-        soreness: 'none',
         flatToday: false,
         painFlag: false,
         timeAvailableMinutes: undefined,
@@ -130,19 +128,12 @@ export function buildReadinessSignalPatch(
     case 'flat':
       return {
         energy: 'low',
-        soreness: undefined,
         flatToday: true,
         painFlag: false,
         timeAvailableMinutes: undefined,
       };
-    case 'sore':
-      return {
-        energy: 'okay',
-        soreness: 'moderate',
-        flatToday: false,
-        painFlag: false,
-        timeAvailableMinutes: undefined,
-      };
+    case 'sore': return {}; // Retired persisted choice: never reinterpret it.
+
   }
 }
 
@@ -150,8 +141,7 @@ export function getReadinessQuickOption(
   signal: ReadinessSignal | null | undefined,
 ): ReadinessQuickOption | null {
   if (!signal) return null;
-  if (signal.energy === 'good' && signal.soreness === 'none' && !signal.flatToday) return 'good';
+  if (signal.energy === 'good' && !signal.flatToday) return 'good';
   if (signal.flatToday || signal.energy === 'low') return 'flat';
-  if (signal.soreness === 'moderate' || signal.soreness === 'high') return 'sore';
   return null;
 }

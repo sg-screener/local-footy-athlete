@@ -54,7 +54,7 @@ import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { buildReadinessSignalPatch, type ReadinessSignal } from '../utils/readiness';
-import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
+import { buildReadinessActiveConstraints, buildPoorSleepReadinessConstraint } from '../utils/readinessConstraints';
 import {
   assertAcceptedVisibleLedgerEquivalence,
   commitAcceptedStateTransaction,
@@ -64,7 +64,6 @@ import {
 } from '../store/acceptedStateTransaction';
 import {
   createTemporaryFatigueFact,
-  createTemporarySorenessFact,
   temporaryFactScope,
 } from '../rules/temporarySourceFact';
 import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
@@ -276,27 +275,15 @@ function projectedDay(date: string) {
 }
 
 async function createCanonicalReadinessFact(
-  kind: 'fatigue' | 'soreness',
+  kind: 'fatigue',
   date: string,
   expectAccepted = true,
 ): Promise<Awaited<ReturnType<typeof transactTemporarySourceFact>>> {
   const scope = temporaryFactScope({ kind: 'date', date });
-  const fact = kind === 'fatigue'
-    ? createTemporaryFatigueFact({
-        observedDate: date,
-        scope,
-        athleteReportedLevel: 'cooked',
-        sourceSurface: 'test',
-        now: NOW,
-      })
-    : createTemporarySorenessFact({
-        observedDate: date,
-        scope,
-        athleteReportedLevel: 'moderate',
-        distribution: 'general',
-        sourceSurface: 'test',
-        now: NOW,
-      });
+  const fact = createTemporaryFatigueFact({
+    observedDate: date, scope, athleteReportedLevel: 'cooked',
+    sourceSurface: 'test', now: NOW,
+  });
   const result = await transactTemporarySourceFact({
     operation: 'create',
     fact,
@@ -737,17 +724,9 @@ run('regression', '21 an invalid restored overlay is regenerated inside one roll
 
 run('regression', '22 constraint/program transaction has no observable intermediate state', () => {
   seed(profile('Pre-season'));
-  const signal: ReadinessSignal = {
-    date: WEDNESDAY,
-    source: 'quick_check',
-    updatedAt: NOW,
-    // WAS `short_time`, which is deleted (Sam, 2026-08-21 — no athlete route).
-    // The option is incidental here: this regression is about the transaction
-    // having no observable intermediate state, and any option that yields a
-    // constraint exercises it. `sore` does.
-    ...buildReadinessSignalPatch('sore'),
-  };
-  const constraint = buildReadinessActiveConstraints(signal)[0];
+  // Surviving input; the assertion remains about atomic publication.
+  const constraint = buildPoorSleepReadinessConstraint({date:WEDNESDAY,pattern:'repeated',nowISO:NOW});
+  assert(!!constraint, 'the transaction witness must reach a real constraint');
   let badObservation = false;
   let programPublishes = 0;
   const stopProgram = useProgramStore.subscribe((state) => {
@@ -762,9 +741,12 @@ run('regression', '22 constraint/program transaction has no observable intermedi
       badObservation = true;
     }
   });
-  useCoachUpdatesStore.getState().setActiveConstraints([constraint]);
-  stopProgram();
-  stopCoach();
+  try {
+    useCoachUpdatesStore.getState().setActiveConstraints([constraint]);
+  } finally {
+    stopProgram();
+    stopCoach();
+  }
   assert(programPublishes === 1, `constraint transaction published ProgramStore ${programPublishes} times`);
   assert(!badObservation, 'subscriber observed new constraint with old accepted program context');
 });
@@ -871,12 +853,10 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
 
 run('property', 'no structural readiness change can bypass the gateway', async () => {
   const value = profile('Pre-season');
-  for (const option of ['flat', 'sore', 'good'] as const) {
+  for (const option of ['flat', 'good'] as const) {
     seed(value);
     if (option === 'flat') {
       await createCanonicalReadinessFact('fatigue', WEDNESDAY);
-    } else if (option === 'sore') {
-      await createCanonicalReadinessFact('soreness', WEDNESDAY);
     } else {
       commitReadinessSignalTransaction({
         date: WEDNESDAY,
@@ -1145,7 +1125,7 @@ run('mutation', 'only canonical source facts may compose over an accepted base',
   assert(visibleSource.includes("if (c.type === 'injury')") &&
     visibleSource.includes('buildInjuryConstraint({') &&
     visibleSource.includes("else if (c.type === 'fatigue')") &&
-    visibleSource.includes("else if (c.type === 'soreness'"),
+    !visibleSource.includes("else if (c.type === 'soreness'"),
   'canonical health fact constraints are not composed visibly');
   assert(visibleSource.includes(
     "args.state.injuryProjectionOwner === 'accepted_episode'") &&

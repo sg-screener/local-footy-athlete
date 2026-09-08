@@ -39,14 +39,39 @@
  * template selection, safety caps or the stored execution recovery.
  */
 
+import type { WorkoutExercise } from '../types/domain';
+import type { ConditioningStep, CurrentConditioningDose } from './conditioningDoseStep';
 import type { ConditioningQuality, ConditioningTemplate } from '../data/conditioningTemplates';
-import { doseMidpoint, parseConditioningDose } from './conditioningDose';
+import { doseSeconds, doseMidpoint, parseConditioningDose } from './conditioningDose';
 import type { ConditioningOption } from '../types/domain';
 import {
   CONDITIONING_ATHLETE_COPY,
   resolveConditioningAthleteCopy,
   type ConditioningDoseContext,
 } from './conditioningAthleteCopy';
+
+/** Shared with the visible interval classification; no second long-work cutoff. */
+export const LONG_AEROBIC_INTERVAL_MIN_SECONDS = 3 * 60;
+
+/** R-390: long aerobic RowErg/SkiErg blocks use passive recovery.
+ * Duration stays exactly as prescribed; short intervals and other modes retain
+ * their authored recovery. Mixed sessions containing either erg use the same rule.
+ */
+export function conditioningRecoveryForModality(
+  recovery: string,
+  work: string,
+  quality: ConditioningQuality | undefined,
+  modality?: ConditioningOption['modality'],
+  sequence?: ConditioningOption['modalitySequence'],
+): string {
+  const erg = modality === 'row' || modality === 'ski'
+    || (modality === 'mixed' && sequence?.some((mode) => mode === 'row' || mode === 'ski'));
+  const parsed = parseConditioningDose(work);
+  const seconds = parsed.ok ? doseSeconds(parsed.quantity) : null;
+  if (!erg || quality !== 'aerobic_capacity' || !seconds
+    || seconds.min < LONG_AEROBIC_INTERVAL_MIN_SECONDS) return recovery;
+  return recovery.replace(/\b(?:easy(?: active recovery| spin\/paddle| spin| paddle| jog)?|active recovery)\b/gi, 'complete rest');
+}
 
 /** Wording only: the selected mode owns movement instructions, never dose.
  * Walking/spinning remain ACTIVE recovery; complete rest is never rewritten.
@@ -185,13 +210,16 @@ export function conditioningCardPresentationFromText(
   copy: string,
   modality?: string | null,
 ): ConditioningCardPresentation {
-  const lines: ConditioningDisplayLine[] = copy.split('\n').map((raw) => {
+  return conditioningCardPresentation(conditioningDisplayLinesFromText(copy), modality);
+}
+
+export function conditioningDisplayLinesFromText(copy: string): ConditioningDisplayLine[] {
+  return copy.split('\n').map((raw) => {
     const match = /^(Work|Recovery|Sets|Rounds|Reps|Blocks|Intensity|Effort|Total):\s*(.*)$/.exec(raw.trim());
     return match
       ? { label: match[1], text: match[2] }
       : { label: null, text: raw.trim() };
   }).filter((line) => line.text.length > 0);
-  return conditioningCardPresentation(lines, modality);
 }
 
 export interface ConditioningDisplayInput {
@@ -317,7 +345,9 @@ export function conditioningAthletePrescription(
   return {
     title: conditioningDisplayTitleForName(template.name),
     work: conditioningWordingForModality(approved?.work ?? stripAuthoringNotes(template.workPeriod ?? ''), modality),
-    recovery: conditioningWordingForModality(approved?.recovery ?? stripAuthoringNotes(template.restPeriod ?? ''), modality),
+    recovery: conditioningRecoveryForModality(
+      conditioningWordingForModality(approved?.recovery ?? stripAuthoringNotes(template.restPeriod ?? ''), modality),
+      approved?.work ?? template.workPeriod, template.quality, modality),
     setsRounds,
     totalSessionTime: approved?.totalSessionTime ?? stripAuthoringNotes(template.totalSessionTime ?? ''),
   };
@@ -559,4 +589,47 @@ export function conditioningDisplayText(input: ConditioningDisplayInput): string
   return conditioningDisplayLines(input)
     .map((line) => (line.label ? `${line.label}: ${line.text}` : line.text))
     .join('\n');
+}
+
+
+/** Read the accepted concrete dose from the same text the cards read. */
+export function currentConditioningDose(row: WorkoutExercise): CurrentConditioningDose {
+  const lines = conditioningDisplayLinesFromText(row.notes ?? '');
+  const count = lines.find(line => ['Sets', 'Rounds', 'Reps', 'Blocks'].includes(line.label ?? ''));
+  const simpleCount = count && /^\d+(?:\.\d+)?$/.test(count.text.trim()) ? Number(count.text) : null;
+  return { sets: simpleCount,
+    work: lines.find(line => line.label === 'Work')?.text ?? null,
+    rest: lines.find(line => line.label === 'Recovery')?.text ?? null };
+}
+
+/** Change one dose field and its visible instruction as one operation. */
+export function applyConditioningDoseStep(row: WorkoutExercise, step: ConditioningStep): WorkoutExercise {
+  const countStep = step.kind === 'authored_sets_increase';
+  const workStep = step.kind === 'authored_duration_increase';
+  const lines = conditioningDisplayLinesFromText(row.notes ?? '');
+  const index = lines.findIndex(line => countStep
+    ? ['Sets', 'Rounds', 'Reps', 'Blocks'].includes(line.label ?? '')
+    : line.label === (workStep ? 'Work' : 'Recovery'));
+  if (index < 0) return row;
+  const line = lines[index];
+  const authored = parseConditioningDose(step.authoredFrom);
+  if (!authored.ok) return row;
+  const actual = countStep ? Number(line.text) : parseConditioningDose(line.text);
+  if (typeof actual === 'number') {
+    if (!Number.isFinite(actual) || actual !== step.from) return row;
+  } else if (!actual.ok || actual.quantity.min !== actual.quantity.max) return row;
+  const authoredSeconds = doseSeconds(authored.quantity);
+  const factor = authored.quantity.unit === 'minutes' ? 60 : 1;
+  const actualSeconds = typeof actual === 'number' || !actual.ok ? null : doseSeconds(actual.quantity);
+  if (!countStep && (!authoredSeconds || !actualSeconds || actualSeconds.min !== step.from * factor)) return row;
+  const displayedTo = typeof actual !== 'number' && actual.ok && actual.quantity.unit === 'minutes'
+    ? step.to * factor / 60 : countStep ? step.to : step.to * factor;
+  lines[index] = { ...line, text: line.text.replace(/^[≈~]?\s*\d+(?:\.\d+)?/, String(displayedTo)) };
+  return { ...row,
+    ...(countStep ? { prescribedSets: step.to } : workStep ? {
+      prescriptionType: authored.quantity.unit === 'minutes' ? 'duration_minutes' as const : 'duration' as const,
+      prescribedRepsMin: step.to, prescribedRepsMax: step.to,
+    } : { restSeconds: step.to * factor }),
+    notes: lines.map(item => item.label ? `${item.label}: ${item.text}` : item.text).join('\n'),
+  };
 }

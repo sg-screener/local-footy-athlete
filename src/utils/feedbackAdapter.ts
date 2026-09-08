@@ -3,7 +3,7 @@
  *
  * Pure functions. No React. No Zustand. No side effects.
  *
- * Reads recent feedback (including difficulty RPE and soreness) and
+ * Reads recent feedback (including recorded effort and completion) and
  * produces:
  *   1. Context adjustments for the existing progression pipeline
  *   2. Human-readable adaptation explanations for UI display
@@ -23,7 +23,8 @@
  * - All adjustments are bounded and reversible
  */
 
-import type { SessionFeedback, FeedbackSoreness } from '../store/programStore';
+import { sessionEffortFromFeedback } from '../rules/effortScale';
+import type { SessionFeedback } from '../store/programStore';
 import type { Workout, WorkoutType, SessionFeeling, CapacityBand } from '../types/domain';
 import { feedbackComponentKindForWorkoutType } from './sessionComponents';
 import { normalizeStrengthIntent } from '../rules/strengthPatternContributions';
@@ -165,21 +166,9 @@ function projectFeedbackForWorkoutType(
  *
  * Rules are simple, deterministic, and conservative:
  *
- * HIGH FATIGUE (difficulty >= 9 OR soreness = "high"):
- *   → volumeAdjustment: -1, blockProgression, feeling → Sore
- *   → "Volume reduced based on previous session fatigue"
- *
- * HIGH DIFFICULTY (difficulty >= 8, soreness != "high"):
- *   → volumeAdjustment: 0, blockProgression
- *   → "Maintaining load — recovery still in progress"
- *
- * MODERATE SORENESS (soreness = "moderate"):
- *   → volumeAdjustment: 0, readiness down one step
- *   → "Slightly reduced intensity — managing soreness"
- *
- * LOW DIFFICULTY + NO SORENESS (difficulty <= 5 AND soreness = "none"):
- *   → volumeAdjustment: +1, feeling → Strong
- *   → "Load increased due to strong performance last session"
+ * Numeric effort is read through sessionEffortFromFeedback. Historical soreness
+ * is not an input. This compatibility adapter does not write accepted doses;
+ * the canonical progression compiler owns those decisions.
  *
  * SKIPPED SESSION (completion = "skipped"):
  *   → volumeAdjustment: -1, blockProgression
@@ -218,13 +207,13 @@ export function deriveAdaptation(
     };
   }
 
-  const difficulty = feedback.difficulty ?? difficultyFromFeeling(feedback.feeling);
-  const soreness: FeedbackSoreness = feedback.soreness ?? 'none';
+  const difficulty = sessionEffortFromFeedback(feedback);
+  if (difficulty === null) return NO_ADAPTATION;
 
-  // ── Rule 3: High fatigue (difficulty >= 9 OR soreness = high) ──
-  if (difficulty >= 9 || soreness === 'high') {
+  // ── Rule 3: High fatigue (difficulty >= 9) ──
+  if (difficulty >= 9) {
     return {
-      feelingOverride: 'Sore',
+      feelingOverride: 'Cooked',
       readinessBias: 'down',
       volumeAdjustment: -1,
       blockProgression: true,
@@ -232,7 +221,7 @@ export function deriveAdaptation(
     };
   }
 
-  // ── Rule 4: High difficulty (8+), soreness not high ──
+  // ── Rule 4: High difficulty (8+) ──
   if (difficulty >= 8) {
     return {
       feelingOverride: null,
@@ -243,19 +232,8 @@ export function deriveAdaptation(
     };
   }
 
-  // ── Rule 5: Moderate soreness ──
-  if (soreness === 'moderate') {
-    return {
-      feelingOverride: null,
-      readinessBias: 'down',
-      volumeAdjustment: 0,
-      blockProgression: false,
-      explanation: 'Slightly reduced intensity - managing soreness.',
-    };
-  }
-
-  // ── Rule 6: Easy + no soreness → allow progression ──
-  if (difficulty <= 5 && soreness === 'none') {
+  // ── Rule 6: Easy effort → allow progression ──
+  if (difficulty <= 5) {
     return {
       feelingOverride: 'Strong',
       readinessBias: null,
@@ -270,18 +248,6 @@ export function deriveAdaptation(
 }
 
 // ─── Helpers ───
-
-/** Map the 5-level feeling to approximate RPE difficulty (1-10). */
-function difficultyFromFeeling(feeling?: string | null): number {
-  switch (feeling) {
-    case 'very_easy': return 3;
-    case 'easy': return 4;
-    case 'good': return 6;
-    case 'hard': return 8;
-    case 'very_hard': return 9;
-    default: return 6;
-  }
-}
 
 // ─── Readiness Adjustment ───
 

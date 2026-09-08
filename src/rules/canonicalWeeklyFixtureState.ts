@@ -74,7 +74,7 @@ export function canonicalFixtureStateFrom(args: {
   const gymAccessDayNumbers = args.availability
     ? args.availability.days
         .filter((day) =>
-          (offSeason ? day.provenance.includes('explicit_available') : day.provenance.length > 0)
+          day.provenance.includes('explicit_available')
           && day.blockedBy.every((reason) => reason === 'fixture_occupied'))
         .map((day) => day.dayNumber)
     : undefined;

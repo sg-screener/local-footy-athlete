@@ -17,6 +17,7 @@
  * Called at read time — nothing is persisted.
  */
 
+import { sessionEffortFromFeedback } from '../rules/effortScale';
 import type { SessionFeedback, FeedbackFeeling, FeedbackCompletion } from '../store/programStore';
 import type { StrengthProgressionContext } from './strengthProgressionIntegration';
 import type { CapacityBand, SessionFeeling } from '../types/domain';
@@ -76,11 +77,11 @@ const READINESS_DOWN: Record<CapacityBand, CapacityBand> = {
 /**
  * One-step feeling escalation for fatigue bias.
  * Moves feeling one notch toward more fatigued.
- * Good → Sore (not Good → Cooked). Enforces the one-step constraint.
+ * Historical qualitative bias only; never manufactures a soreness report.
  */
 const FEELING_UP_ONE: Record<SessionFeeling, SessionFeeling> = {
   Average: 'Good',
-  Good: 'Sore',
+  Good: 'Average',
   Strong: 'Good',  // Strong is a positive signal — one step toward neutral
   Sore: 'Cooked',
   Cooked: 'Cooked', // ceiling — already max fatigue
@@ -88,9 +89,7 @@ const FEELING_UP_ONE: Record<SessionFeeling, SessionFeeling> = {
 
 // ─── Detection ───
 
-function isHardFeeling(f?: FeedbackFeeling): boolean {
-  return f === 'hard' || f === 'very_hard';
-}
+
 
 function isEasyFeeling(f?: FeedbackFeeling): boolean {
   return f === 'very_easy' || f === 'easy';
@@ -105,7 +104,7 @@ function detectFlags(entries: SessionFeedback[]): PatternFlag[] {
   const n = entries.length;
 
   // FATIGUE_STREAK: 3+ of last 4 hard/very_hard
-  const hardCount = entries.slice(0, WINDOW_SIZE).filter(e => isHardFeeling(e.feeling)).length;
+  const hardCount = entries.slice(0, WINDOW_SIZE).filter(e => (sessionEffortFromFeedback(e) ?? 0) >= 8).length;
   if (hardCount >= 3) {
     flags.push('FATIGUE_STREAK');
   }
@@ -138,7 +137,7 @@ function detectFlags(entries: SessionFeedback[]): PatternFlag[] {
 
   // MIXED_SIGNALS: 2+ of last 4 have hard/very_hard feeling + full completion
   const mixedCount = entries.slice(0, WINDOW_SIZE).filter(
-    e => isHardFeeling(e.feeling) && e.completion === 'full'
+    e => (sessionEffortFromFeedback(e) ?? 0) >= 8 && e.completion === 'full'
   ).length;
   if (mixedCount >= 2) {
     flags.push('MIXED_SIGNALS');

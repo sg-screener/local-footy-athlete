@@ -1144,6 +1144,16 @@ export function deriveAchievedCounts(input: Section18EffectiveWeekInput): Weekly
 export function evaluateSection18EffectiveWeek(
   input: Section18EffectiveWeekInput,
 ): Section18EffectiveWeekEvaluation {
+  const hasAdditions = input.workouts.some(workout => workout.exercises.some(row => row.athleteAdditionId));
+  if (hasAdditions) {
+    const automaticWorkouts = input.workouts.flatMap(workout => {
+      const exercises = workout.exercises.filter(row => !row.athleteAdditionId);
+      return exercises.length === 0 && workout.exercises.length > 0 ? [] : [{ ...workout, exercises }];
+    });
+    const automatic = evaluateSection18EffectiveWeek({ ...input, workouts: automaticWorkouts });
+    const actualLedger = buildLedger(input);
+    return { ...automatic, ledger: actualLedger, contract: assessContract(input.contract, actualLedger) };
+  }
   const ledger = buildLedger(input);
   const contract = assessContract(input.contract, ledger);
   const findings: Section18Finding[] = [];

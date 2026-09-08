@@ -1255,10 +1255,14 @@ console.log('\n[registry] EVERY typed clause is represented and guarded');
 
 for (const offseasonBlock of ['transition', 'normal_build'] as const) {
   const week = built({ phase: 'Off-season', offseasonBlock, gymAccessDays: [MON, TUE, WED, THU, FRI, SAT],
+    offLegAvailableDays: [MON, TUE, WED, THU, FRI, SAT],
     miniCycleNumber: 1, gameDay: null, clubNights: [] });
   const receivers = week.days.filter(d => d.conditioning !== null).map(d => d.dayOfWeek);
   ok(`P21/${offseasonBlock}: full-week receivers do not exhaust the budget Mon/Tue/Wed`, [],
-    receivers.length >= 3 && receivers.some(day => [THU, FRI, SAT, SUN].includes(day)), JSON.stringify(receivers));
+    (offseasonBlock === 'transition'
+      ? receivers.length === 2 && week.days.filter(d => d.conditioning !== null).every(d => d.conditioningRole === 'finisher' && d.conditioningCategory === 'recovery_flush' && d.owner === 'strength')
+      : receivers.length >= 3)
+    && receivers.some(day => [THU, FRI, SAT, SUN].includes(day)), JSON.stringify(receivers));
   const ordered = receivers.map(day => [MON, TUE, WED, THU, FRI, SAT, SUN].indexOf(day)).sort((a, b) => a - b);
   const gaps = ordered.map((day, i) => (ordered[(i + 1) % ordered.length] - day + 7) % 7);
   ok(`P21/${offseasonBlock}: unconstrained three-exposure week has no adjacent conditioning pair`, [],

@@ -7164,6 +7164,8 @@ Guard: `LAW-progress-shows-four-fixed-predicted-one-rep-max-graphs`,
 `LAW-progress-performance-tests-and-measurements` and `test:coach-snapshot`.
 Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.
 
+REVISED by Sam, 2026-09-08; follow-up owner: progresspreview. The heading now reads “Main lifts (Estimated 1 rep max)”. Each lift shows its weight alone, such as “34kg”, below its name in place of the repeated “Last-set estimate” caption. The Pull-Up label continues to identify added weight. Existing estimate calculations and separate historical series remain. Guard: the main-lift context and recorded-series value cells in `progressTabOwnershipTests.ts`, in `test:coach-snapshot` and `test:estimated-1rm`. Verification: `docs/STATUS_PROGRESSPREVIEW.md`.
+
 **R-281** · Sweet-spot load hero and weekly AU history, 2026-08-31.
 
 Owner: progressmetrics. The top Progress card keeps the existing signed
@@ -7187,6 +7189,8 @@ change future programming.
 Guard: `LAW-progress-load-owns-the-dashboard-hero`,
 `LAW-accepted-lived-history-integrity` and `test:coach-snapshot`.
 Verification status and NOT COVERED: `docs/STATUS_PROGRESSMETRICS.md`.
+
+REVISED by Sam, 2026-09-08; follow-up owner: progresspreview. The explanation is “The sweet spot helps you build fitness without overdoing it or undertraining.” Below/above status wording, deload exception and calculations remain as ruled. Guard: the Load hero plain-language cell in `progressTabOwnershipTests.ts`, in `test:coach-snapshot` and `test:estimated-1rm`. Verification: `docs/STATUS_PROGRESSPREVIEW.md`.
 
 **R-282** · Conditioning template identity survives equipment delivery, 2026-08-31.
 
@@ -8701,6 +8705,8 @@ pinned in `test:slot-coverage` and the budget in `test:weekly-scheduler`.
 Receipt: `docs/STATUS_HINGECOD.md`.
 
 **R-343** · A loadable bodyweight lift completed at the top of its rep range
+
+**Rep-threshold clause superseded by R-388 (Sam, 2026-09-08): use the displayed prescribed target.**
 earns its first suggested added load, and the audit robot logs bodyweight
 lifts, 2026-09-02.
 
@@ -9742,6 +9748,8 @@ one Sam authored, listed so he can correct them in one pass: `Overhead Carry`
 (marked 2), and `Weighted Dead Bug`, `Tricep Circuit (Dirty 30)`,
 `Back Extension` and `Bear Carry` (all left at 1).
 
+Resolved by Sam on 7 September 2026 in R-385: all five counts above are confirmed and guarded.
+
 ⚠ **AND IT SURFACED TWO GAPS IN TODAY'S EARLIER WORK.** `LOAD_RATIO_REVIEW` is a
 THIRD signed workbook, and neither R-368 nor R-372 had touched it: `Barbell Row`
 was still named there, and `B-Stance RDL` had a ratio in code that no authored
@@ -9893,3 +9901,172 @@ substitute-before-dropping and not a defect.
 
 Guard: `test:rest-day-reason` (19 cells) and `test:injury-authority` G9, which
 proves the reason survives the real generator into the stored week.
+
+
+**R-380** · Sam, 2026-09-07: retire soreness; one-week fatigue/deload; accepted progression ownership.
+
+Owner: scopebridge. Sam approved removal of soreness prompts, submission requirements, new writes and hidden effort-to-soreness conversions. Historical athlete records remain readable without becoming current fatigue evidence. Fatigue/deload reductions cannot persist across a three-week block from one old answer: the existing seven-day owner bounds the reduction, and expired explanations disappear. Normal block progression has one author; the old per-session writer is retired from block construction. Both ordinary and first bodyweight load increases exclude an extra set on that exercise. This supersedes older soreness-input and block-long recovery expectations within this scope; injury/illness duration and athlete-recorded history remain their own contracts.
+
+Guard: `test:progression-dose-ownership`, registered in the current release gate. Original seven-week/form reproduction failed before implementation. Full acceptance, including application surfaces, is pending the implementation report; this row does not claim device completion.
+
+---
+
+**R-381** · Off-season preparation through week four (Sam, 2026-09-07)
+
+Sam approved the diagnosed correction: weeks 1–4 are body-armour lifting,
+mobility and optional light off-feet aerobic work, with no automatic power,
+running, hard conditioning or forced conditioning top-ups. Weeks 1–2 stay
+optional; weeks 3–4 resume planned lifting. Retain the finish-date clock and
+deload timing. Existing logs remain intact. One preparation policy governs
+scheduling, selection, rep schemes and validation; persistence and regeneration
+must deliver the same result. Supersedes mid-phase primer/running/conditioning
+floors and the 6–10-rep bridge during this period, not late-phase programming.
+Guard: `LAW-offseason-preparation` / `test:offseason-preparation`.
+
+
+R-381 clarification (Sam approved 2026-09-07): weeks 3–4 must actually offer
+light off-feet aerobic work on existing gym days, using the shared preferred
+range and existing optional finisher dose. Lifting remains planned; skipping
+these aerobic add-ons carries no completion penalty. Zero compulsory minimum
+must not silently become zero offers. Guard: `test:offseason-preparation`.
+
+---
+
+**R-382** · Gym-day access and preserving the aerobic base (Sam, 2026-09-07)
+
+Owner: scopebridge. Sam approved the conditioning-return correction. Selected
+training days bound gym equipment, including bikes and ergs. Owning a machine
+does not grant access on every date. Extra equipment-free running may remain
+outside gym days. One dated capability owner must feed generation, composition
+and injury replacement; stored equipment answers and history stay intact.
+When the existing fortnightly COD session is due, exchange tempo first and
+never remove the last aerobic-base receiver. Keep the existing speed/COD
+cadence and authored doses; no later entry week or new progression was approved.
+This narrows R-329/R-331's receiver selection without changing their cadence.
+Guard: `LAW-conditioning-gym-access` / `test:conditioning-gym-access`.
+
+---
+
+**R-383** · Annual audit corrections and jump experience (Sam, 2026-09-07)
+
+Owner: yearlens. Sam: "just make them both not availble only for beginners - so both 1+ years" and "okay do all the fixes now please". Broad Jumps, Jump Squats and Depth Jumps are unavailable to Complete beginners and available from 1+ years, subject to existing injury, equipment and phase restrictions. This supersedes the workbook's older Broad Jumps and Depth Jumps gates. The workbook and its typed projection change together. Other power-spec gates retain their existing meaning; the older workbook's Lateral Bounds 2+ entry still conflicts with the power spec's 1+ entry and is disclosed, not silently rewritten.
+
+Sam keeps Strength before Speed in the display; athletes choose execution order. Use the latest Christmas dates, 18 December–30 January inclusive. Keep optional pre-game Primer; no scheduled In-season deload is introduced. These clarify the earlier audit conflicts without adding programming volume.
+
+Sam approved the five corrections in the independent annual audit plan: preserve dated history when restrictions clear, close automatic experience bypasses, respect actual gym access including optional work and fixture changes, prevent automatic repeats after rebuild by retaining the history the selector needs, and make exports use the athlete-facing presentation. These are repairs to existing rules, not permission to invent new doses or exercise choices.
+
+Guard: `LAW-annual-audit-repairs` / `test:annual-audit-repairs`, with workbook equality in `test:muscle-experience`, power boundaries in `test:power-pool`, and dated equipment in `test:conditioning-gym-access`. Release and device acceptance are reported separately.
+
+
+---
+
+**R-384** · Second annual audit repairs and resolved exercise conflicts (Sam, 2026-09-07)
+
+Owner: yearcheck. Sam approved the five new findings and their fixes: automatic dumbbell totals use each implement's real weight increments; incomplete exercise feedback cannot seed full-load progression; every automatic selection/replacement uses authored apparatus and actual dated access; injury replacements own their prescription units and cues; rotation tenure follows exercise identity across seats and phase boundaries. Original findings and unchanged before-change evidence: output/yearcheck-2026-09-07/technical-evidence.md. Implementation evidence: output/yearcheck-fixes-2026-09-07/.
+
+Sam's answers to the three conflicts, verbatim: (1) "1. 1 year"; (2) "2. no - unless there is nothing else to swap to or use instead"; (3) "3. its just shoulder prehab not horizontal pulling wtf". Lateral Bounds requires 1+ years, retaining injury/equipment restrictions. Automatic power identities do not repeat during a week while a suitable unused alternative exists; a repeated safe choice is permitted only when that candidate set is exhausted. This supersedes the conflicting power-repeat scope in R-318/R-345. Band Pull-Apart is shoulder prehab and does not count as horizontal pulling; its genuine prehab category may repeat. This supersedes its older workbook category and movement tag.
+
+Guard: LAW-annual-audit-second-repairs / test:annual-audit-second-repairs, plus workbook equality. Red-first failures and full journey receipts are kept separately from later green runs. The physical iPhone remains the acceptance boundary.
+
+
+---
+
+**R-385** · Annual audit follow-up decisions (Sam, 2026-09-07)
+
+Owner: yearcheck. Sam keeps No equipment for 90/90 Breathing, ATG Split Squat, Butterfly Stretch, Calf Stretch, Chest / Pec Stretch (Doorway), Couch Stretch, Elephant Walks, Lat Stretch and Pissing Dog Against Wall, and adds Pigeon Stretch: athletes can find a suitable household support, so a gym bench is not required. This supersedes R-384's inferred bench requirement for Pigeon, not its general authored-equipment check. Existing exercise cues are retained; Pigeon's bench example no longer suppresses its cue without gym equipment.
+
+Sam confirms R-375's five counts: Overhead Carry uses two implements; Weighted Dead Bug, Tricep Circuit (Dirty 30), Back Extension and Bear Carry use one. These are now approved, not unresolved guesses.
+
+Sam answers yes: when a Christmas deload skips COD, place the existing COD session in the next healthy week by exchanging existing conditioning. No extra training day, conditioning count or new dose. The fortnightly spacing follows the placed dose; existing injury, readiness, running and game safety still apply.
+
+Sam approves preserving accepted exercise choices through settings rebuilds. The accepted date and uniquely identified authored seat own the choice; regenerated row IDs do not. Old choices receive append-only target metadata from the actually accepted visible row when unambiguous. An ambiguous/missing seat is not guessed. The settings transaction must include and verify its final rebuild before reporting success.
+
+Guard: LAW-annual-audit-followup / test:annual-audit-second-repairs; LAW-accepted-choice-settings-rebuild / test:settings-persistence, and COD through the chained test:weekly-scheduler. Red-first receipts, source mutations, actual offered swaps and saved/reopened years: output/yearcheck-followup-2026-09-07/. Native annual tapping and the broader future combination audit are explicitly deferred by Sam.
+
+
+**R-386** · Independent annual-audit repairs (Sam, 2026-09-08)
+
+Owner: yearproof. Sam approved the complete repair plan with “okay fix that and the other issues found in the audit”, and instructed that the entire audit must not be rerun at the end.
+
+Injury session additions search suitable unused exercises in the required movement family, apply the established experience/grade, preference, phase, history and deterministic selection process, then consider repeating only after suitable unused choices are exhausted. Same-day duplicate/variation restrictions and whole-week exact-identity restrictions are separate. The authorised temporary injury position admits both unused and repeated compounds on the same terms; the old R-355 empty-day exception must not give repeats priority over unused choices. Safety, exclusions, same-day pattern limits, original session size and set ceilings remain binding. Temporary choices never become permanent rotation history.
+
+Injury-added work uses the normal contextual prescription and load owners, including phase/subphase, authored units/sides/cues and exactly-once recovery. Required strength completion excludes optional work from both sides of the qualification ratio; completed optional work keeps its own load and recovery evidence. Accepted counts are corrected from the actual reconstructed block where available, without rewriting feedback. Christmas COD scheduling sees the same dated feedback-recovery window that removes hard conditioning, and catches up in the next healthy week by replacing conditioning on an existing training date.
+
+Guard: `test:yearproof-repairs` in `test:bible`: recorded failing inputs, phase/recovery and kit/experience matrices, normal-selector preference/history controls, candidate-order controls, required/optional counts, and nine in-memory fault mutations. Fresh bounded real-onboarding/reload reproductions and review/Apply/Clear journeys are retained separately in `output/yearproof-fixes-2026-09-08`; no whole-year rerun, fresh PDF or native screen acceptance is claimed for this repair pass.
+
+
+**R-387** · Athlete Add freedom and audit repairs (Sam, 2026-09-08)
+
+Owner: yearscan. Sam: “athletes should be able to add whatever they want whenever they want. if they want to add power in off season go for it - the onlky time they should get a warning but be allowed anyway is close to a game or repeating a heavy lift multiple times a week”.
+
+Athlete Add exposes the exercise catalogue and allows repeat exercises and repeat session types without a session-count ceiling, including Off-season power and extra training beside an actual game. Automatic selection restrictions remain automatic restrictions; they cannot veto or silently substitute an accepted addition. Each addition has its own identity and exact accepted prescription. Add overrides restrictions already present at that choice; a later explicit injury or equipment report can adjust earlier additions, and Clear restores the accepted choice. The initial repair introduced a pause-only exception for individual additions. That was an agent interpretation, not Sam’s instruction, and R-388 removes it. Both kinds of addition use the ordinary injury rules for a later relevant report. The game remains a fixture. The existing game-proximity window (game day and the preceding two days) supplies one warning; a repeated main lift within the same Monday–Sunday week supplies the other. Both let the athlete continue. This supersedes older manual-Add kit/injury/experience/phase gates, duplicate/session-count blocks and the Add part of the game-day lock; it does not author new automatic programming or permit removing a game through Add. Warning wording is implemented from this instruction, not a verbatim quote from Sam.
+
+Sam also directs fixing the dumbbell ceiling and stale game-day answers. The existing dumbbell steps continue beyond 60 kg per implement; a retained weekday cannot create recurring Off-season games. The conditioning defect is corrected under existing WC-137: actual contextual dose supplies the starting value, count/work/rest steps update the corresponding stored quantity and visible instruction together, and scheduled deloads hold. Goals were left inactive in this first repair. R-388 explicitly authorizes connecting the existing Bible goal rules; the earlier claim that the docs supplied no actionable dose direction was incorrect.
+
+Guard: LAW-yearscan-approved-repairs / `test:yearscan-repairs` in `test:bible`, including real onboarding, accepted Add/Undo/reopen, game-day and injury cases, four-week feedback/rollover, typed dose cases and in-memory source mutations. Raw red-first and subsequent receipts: `output/yearscan-fixes-2026-09-08/`. No physical-iPhone acceptance is claimed.
+
+
+**R-388** · Prescribed reps, connected goals and authoritative athlete additions (Sam, 2026-09-08)
+
+Owner: yearscan. Sam explicitly directed fixing the review findings. His rep clarification: “if they do 8 reps and thats what was prescribed then they can potentially add weights if they want to next time”. His direction on inactive goals: “CONNECT THEM”. His injury example: “IF THE USER SAYS THEY ARE INJURED AND WE REMOVE PULL UPS BUT THE USER THEN ADDS PULL UPS BACK THEN PULL UPS SHOULD ... STAY”, and “THEY CAN ADD WHATEVER THEY WANT”. Movement Prep is accepted as it is.
+
+The displayed rep target is the target used by logged performance and first added-load eligibility. There is no hidden upper-bound or twelve-rep requirement. Completing the target establishes eligibility; existing completion, recovery, load increments and athlete load controls still apply. This supersedes R-343’s upper-bound predicate, not its requirement for actual logged sets.
+
+An Add overrides the injury versions already present when it was chosen. A report that does not restrict that exercise cannot reactivate an older injury restriction. The compiler and the visible skip marker share that authority. A later relevant injury or equipment report uses the ordinary adjustment policy; adding the exercise again is allowed. The previous individual-versus-whole-session pause exception is withdrawn. Accepted additions and automatic work keep separate size budgets when a later injury is applied, so restoring an automatic lift does not reallocate the accepted addition’s replacement.
+
+Goal implementation of existing Bible §5/§12, not a quotation or new coaching requirement from Sam: one weekly allowance of up to ten percent of eligible displayed lifting reps OR sets, never stacked across selected goals. Build muscle uses selected ten-rep prescriptions within the written six-to-ten range in Off-season. Dominate your level can add a set to existing main lifts; stay injury-free can add a set to existing robustness work, within the existing four-set and session ceilings. Freshness reduces existing lifting sets, prioritising lower-body work; consistency reduces existing sets, prioritising support/accessory work. Make the senior team and get stronger and fitter retain balanced programming. Recovery dates and history stay unchanged; injuries, beginner rules, game proximity and In-season prevent increases. Loads, exercises, days, conditioning, power and Movement Prep keep their existing owners. These are small initial expressions of each goal, not a claim that every illustrative bullet in §12 has a separate implementation.
+
+Guard: `LAW-yearscan-approved-repairs` and `LAW-bodyweight-lift-earns-added-load`, both bound to `test:yearscan-repairs` in the current release chain. Real onboarding, profile-setting changes, actual Add and injury actions, fatigue, restart, real set logging and block rollover are exercised; in-memory faults prove the guards can fail. Evidence: `output/yearscan-followup-fixes-2026-09-08/`. Physical-iPhone acceptance is outstanding.
+
+
+## R-389 — Next-day Speed uses lower working dose; separate a crowded strength day
+
+**Sam approved, 2026-09-08. Owner: yearbook.** “they can ABSOLUTELY TRAIN SPEED THE DAY AFTER DOING A FULL BODY STRENGTH SESSION”; after the dose/whole-week proposal: “yes that's what i'd prefer too ... but def the speed on saturday”. Standalone size remains the existing app dose owner's choice; no extra repetition multiplier is authorised here.
+
+This refines R-330/R-337/R-338: a lower/full-body title is not proof of next-day fatigue. Fewer than ten lower working sets adds no automatic next-day leg-volume penalty; ten or more is a soft preference for a fresher date, never a prohibition. This is an explicit planning heuristic, not a research-established recovery cutoff. Upper work, preparation, mobility and power are not lower working sets; unilateral sets count once per leg. Current strength rows, goal/deload/exclusion/progression owners and recorded completed sets supply the assessment. Missing completion remains unknown. Fixture, injury, readiness, club and hard-conditioning constraints still apply.
+
+The canonical compiler composes strength once, resolves its dose, then finalises Speed/conditioning placement through the same scheduler before publication. The strength assignment is checked unchanged. Among equally fresh legal arrangements, avoid strength + Speed + metabolic triples before preferring fewer training days. Moving Speed must not promote the retained metabolic prescription or duplicate its hard dose; COD/flush keep their own authored overlay. Preserve the weekly stimulus budget and equipment access. For the annual Week 25: Friday strength and bike, Saturday Speed, Sunday rest. Same-day combinations remain valid when actual constraints require them.
+
+Guard: `LAW-next-day-speed-dose`, `test:saturday-speed` in `test:bible` and the current release contract map. Red-first title-penalty check, real onboarding across two/three/four/five gym days in three phases, real completed-set logging, restart, and eight live fault controls. Annual evidence and physical-iPhone acceptance status: `output/saturday-speed-fix-2026-09-08/README.md`.
+
+**R-390 — Three-day pre-season full body and complete erg rest (Sam, 2026-09-08).** Owner: yearbook. Sam approved redistributing the concentrated lower session around club training and prefers three full-body sessions; he explicitly retains the existing conditioning progression and confirms complete rest for longer erg aerobic blocks. Three available pre-season gym days therefore prefer Full Body x3 whether or not one is on a weekend. This supersedes WC-111's weekday-only Lower/Upper/Full Body split. The existing fixture, spacing, injury, equipment and reduced-availability rules still govern whether three sessions are feasible. The six weekly main seats are shared before selecting rows: squat/horizontal push, hinge/horizontal pull, then vertical push/vertical pull. The first two sessions use complementary single-leg support and upper isolation; the third carries both single-leg directions. Existing dose, selection, uniqueness, compound ceilings, robustness and core owners remain in force. This avoids exhausting the week's main work before the third session and keeps Saturday Speed for the annual three-day case. Longer aerobic-capacity blocks (the existing three-minute long-interval boundary) on RowErg/SkiErg, including mixed blocks containing them, use complete rest for the already prescribed recovery duration. Short intervals, other modalities and the approved bike progression retain their existing prescriptions. Guard: LAW-three-day-full-body-erg-rest / `test:full-body-erg-rest`.
+
+## R-391 — Whole-week placement and independent equipment access (Sam, 2026-09-08)
+
+Owner: yearbook. Sam approved comparing complete weekly arrangements rather than fixing strength before placing Speed. Requested strength frequency and equipment-access weekdays are separate answers. Running and hill Speed can use other available days; machines and strength equipment still require actual access. Existing profiles retain their actual days: Tuesday access must never be invented. The existing compiler evaluates legal strength candidates with their actual composed lower working dose, then chooses the complete week. Only the chosen trial supplies exercise selections. In-season byes do not automatically attach Speed to conditioning. Where Tuesday access permits it, the three-session Tue/Thu-club bye can use Monday lower, Tuesday upper pull with club, Friday upper push and off-feet conditioning, Saturday Speed; Wednesday and Sunday have no required training. The phase’s existing work targets, protected fixtures, delivered work, athlete edits and explicit unavailable dates outrank the preference. Normal-volume full body the day before is allowed; ten lower working sets remains a soft preference, not a ban. Off-feet conditioning is distinguished from hard running by its existing modality policy. This supersedes R-389’s fixed-strength-assignment restriction for uncompleted automatic arrangement trials; its displayed-dose, pre-season Saturday and progression protections remain. Guards: LAW-whole-week-planning / `test:whole-week-planning`, `test:saturday-speed`, and annual repair journeys. Verification receipts: output/whole-week-planner-2026-09-08/.
+
+## R-392 — Progress period selection (Sam, 2026-09-08)
+
+Owner: progresspreview. Sam approves the preceding Progress wording/card changes and asks to start the supplied visual redesign with a top toggle for “4 weeks”, “12 weeks” and “Year”, with each selection changing the displayed period. The rest of the reference image is not part of this first slice.
+
+Implementation choices, stated to Sam: default to four weeks; four/twelve calendar-week buckets including the current week through today; Year covers the trailing calendar year through today. One shared range filters the existing weekly load and main-lift histories, updates the visible dates and sets each chart's horizontal axis. Weekly values stay weekly. Missing history stays absent rather than becoming zero or filling the full width. Performance results/comparisons use the same displayed period; saves retain the full history, and a lone in-period result is labelled accordingly instead of claiming a first-ever baseline. Current height/weight remain current. The live sweet-spot status, its four-week comparison and deload exception retain their existing calculation and are not recalculated from the selected chart window. The selector is view state, not a training decision or a history writer.
+
+Guard: `LAW-progress-period-selection`, `test:estimated-1rm` and `test:coach-snapshot` (both invoke `progressTabOwnershipTests.ts` in `test:bible`). Verification and exclusions: `docs/STATUS_PROGRESSPREVIEW.md`. No claim of physical-iPhone acceptance.
+
+R-392 REVISED by Sam, 2026-09-08 (owner progresspreview): the full selected-window axis was an unwanted implementation assumption and is superseded. Available in-period records must span the usable graph width, with first/last recorded dates as the axis endpoints; gaps between records retain their elapsed-time proportions. As more records arrive, the axis fits the new recorded extent. Each chart caption names its plotted dates. Keep the selected period dates separate at the top. The selector stays full width in every mode and its date text always has its own row, preventing controls/cards from shifting when Year is selected. Guard: the sparse/growing-history and stable-layout cells in the existing Progress guard; receipt in `docs/STATUS_PROGRESSPREVIEW.md`.
+
+R-392 REVISED by Sam, 2026-09-08 (owner progresspreview), top-section reference follow-up: Sam asks to match the selector/date and split training-load card above Main lifts, excluding the top-right Training history button, then explicitly says to keep the LFA logo as-is. This supersedes the dedicated date row above. Keep the logo; add the reference Progress title/subtitle; allocate a fixed inline selector/date row; use the first available in-period history date through today, so a new athlete never sees months before their available history. The existing load status/guidance/continuum and measured-session coverage sit on the left; completed weekly AU value/graph and a working read-only history sheet sit on the right. Weekly graph dates are represented by the top history period; main-lift cards retain their own plotted-date captions. No new percentage-comparison calculation is included in this layout change. Existing load classification/calculation remains authoritative. Guard: `LAW-progress-period-selection` / `test:estimated-1rm` / `test:coach-snapshot`; native and mutation receipts in `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-392 selector styling refinement, Sam 2026-09-08 (owner progresspreview): Sam says the selector is too narrow and the date too small, and explicitly requests the Program Day/Week selected style. Increase the selector's share by reserving 112 points for a 13-point date and giving the selector the remaining width; use 13-point labels, Program's yellow active text and translucent yellow active fill. Keep one selected tab and a fixed inline date location. Long cross-year dates use compact day/month/two-digit-year text instead of shrinking the date, while accessibility retains the expanded date label. Guard: the existing Progress fixed-row/selection cells, with a mutation proving a grey active fill is rejected. Receipt: `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-392 main-lift explanation, Sam 2026-09-08 (owner progresspreview): add a small “How it’s calculated” info control next to Main lifts. It opens a popup explaining the calculation very simply from the current implementation. The approved scope is explanation, not a calculation change. Copy follows `estimateLastSetOneRepMaxKg` and `buildProgressMainLiftHistories`: last-set weight/reps/spare reps, effective rep capacity and the reps-to-weight table, weekly best and latest plotted weekly value. Pull-ups display added weight; split-squat and older-record notes appear when applicable. Reuse the existing Sheet and Got it dismissal. Guard: `LAW-progress-lift-calculation-explanation` / `test:estimated-1rm` and `test:coach-snapshot`. Native and mutation receipts: `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-392 load comparison, Sam 2026-09-08 (owner progresspreview): remove the measured-session count from the Progress load card and add the reference arrow/percentage against previous weeks. Show it in the live simulator, not as a chat screenshot. The weekly value compares to the arithmetic mean of earlier measured weekly AU values, excluding itself and future data. Updated by Sam’s selected-period correction on 2026-09-08: the selected 4-week/12-week/Year view requires 4/12/52 complete prior weekly values and labels that selected period. Short or gapped history shows “More history needed” without substituting a shorter comparison. With no prior history or a zero baseline, show no fabricated percentage. Direction follows the rounded signed change; equal rounded values show a flat arrow. Existing sweet-spot calculations remain separate and unchanged. Guard: `LAW-progress-period-selection`, Progress comparison cells in `test:estimated-1rm` and `test:coach-snapshot`; receipts in `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-392 layout revision, Sam 2026-09-08 (owner progresspreview): Sam changes the training load card back to two vertical levels. The status/guidance/continuum uses the full card width, with the weekly value/comparison and graph using the full width underneath. This supersedes the side-by-side layout. Preserve the period selector, calculated percentage, history button and removed coverage-count treatment. Existing Progress layout cell revised red-first and mutation-proven against a return to side-by-side. Guard: `LAW-progress-period-selection`, `test:estimated-1rm` / `test:coach-snapshot`.
+
+
+R-392 main-lift card reference revision, Sam 2026-09-08 (owner progresspreview): larger white weight values, green positive change from first to latest available estimate in the selected period, chart weight grid sharing the line’s scale, separate first/last date labels, and a barbell/recording prompt for empty cards. Retain separate estimate series and the existing tracked-lift selector. Sam’s follow-up shortens the title to Pull-Up, removing “(added weight)”; the explanation popup still explains the weight basis. Guard: existing Progress ownership cells and the lift change/scale/empty-model cells in `test:estimated-1rm` / `test:coach-snapshot`, under the existing Progress period and lift-context registry entries. Receipts: `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-279 presentation revision, Sam 2026-09-08 (owner progresspreview): replace the inline Performance tests section with the reference Personal bests trophy button. It opens a full-screen page containing the three existing performance categories and their existing test choices/result entry. Show all-time bests through today independently of the dashboard period, with latest results identified separately. Timed bests are lowest; calorie bests are highest. Keep measurements on Progress and provide a back control. Guard: `LAW-progress-performance-tests-and-measurements`, the Personal bests arithmetic and page wiring cells in `test:estimated-1rm` / `test:coach-snapshot`, plus the updated native performance entry flow. Receipt: `docs/STATUS_PROGRESSPREVIEW.md`.
+
+
+R-279 reverted by Sam, 2026-09-08 (owner progresspreview): Sam rejects the new Personal bests button and asks to return to the previous layout. Restore the inline three Performance tests rows between Main lifts and Measurements, the selected-period results, and original latest/previous comparisons. Remove the Personal bests page/button and its best-result helper. Retain the approved two-line 20m sprint label and the existing entry form. This supersedes the Personal bests presentation revision above. Existing Progress ownership/period/category/transaction guards apply under `LAW-progress-performance-tests-and-measurements`.
+
+
+R-392 Load history page, Sam 2026-09-08 (owner progresspreview): replace the View load history popup with a full routed page resembling the supplied weekly-bar reference. Keep the app back-chevron and Progress tab bar; provide 4 weeks/12 weeks/Year, available-history dates, tappable weeks, selected weekly AU and the complete previous-four-week average/comparison. Tapping a recorded day opens its read-only session summary and measured component breakdown. Use `deriveSessionLoad` for the same AU as the dashboard; combined strength/conditioning/team/game contributions count once, missing ratings remain unknown, and future records do not enter history. Do not restore the earlier rejected measured-session count. No program/session mutation. Guard: `LAW-progress-period-selection`, the load-page route/aggregation/missing/future/baseline cells in `test:estimated-1rm` / `test:coach-snapshot`, with native navigation and mutation receipts in `docs/STATUS_PROGRESSPREVIEW.md`.

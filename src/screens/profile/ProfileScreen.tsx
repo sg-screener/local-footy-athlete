@@ -257,6 +257,8 @@ export default function ProfileScreen() {
   const [draftSeasonPhase, setDraftSeasonPhase] = useState<SeasonPhase>(
     (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase,
   );
+  const [pendingStrengthSessions, setPendingStrengthSessions] = useState(3);
+  const [draftStrengthSessions, setDraftStrengthSessions] = useState(3);
   const [draftPreferredDays, setDraftPreferredDays] = useState<DayOfWeek[]>([]);
   const [draftTeamDays, setDraftTeamDays] = useState<DayOfWeek[]>([]);
   const [draftGameDay, setDraftGameDay] = useState<DayOfWeek | null>(null);
@@ -348,6 +350,7 @@ export default function ProfileScreen() {
     setSetupFieldEdit(false);
     setDraftSeasonPhase(pendingSeasonPhase);
     setDraftPreferredDays(pendingPreferredDays);
+    setDraftStrengthSessions(pendingStrengthSessions);
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
     setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
@@ -377,6 +380,8 @@ export default function ProfileScreen() {
     seedTwoKmDrafts(currentTwoKm);
     setPendingSeasonPhase(currentSeasonPhase);
     setPendingPreferredDays(currentPreferredDays);
+    setPendingStrengthSessions(onboardingData.trainingDaysPerWeek || currentPreferredDays.length || 3);
+    setDraftStrengthSessions(onboardingData.trainingDaysPerWeek || currentPreferredDays.length || 3);
     setPendingTeamDays(currentTeamDays);
     setPendingGameDay(currentGameDay);
     setPendingSeasonFinishedOn(onboardingData.seasonFinishedOn);
@@ -457,12 +462,7 @@ export default function ProfileScreen() {
     || onboardingData.biggestLimitation
     || '';
   const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
-  const lfaDayCountNeedsSync =
-    programDetailsSaved &&
-    (
-      onboardingData.trainingDaysUnsure === true ||
-      (onboardingData.trainingDaysPerWeek ?? 0) !== pendingPreferredDays.length
-    );
+  const lfaDayCountNeedsSync = false;
   // ONE decision behind Save. `setupHasChanges` and `buildSetupPatch` used to
   // be two separate comparisons over the same fields; when they disagreed the
   // athlete got a live-looking button that committed nothing. The patch IS
@@ -481,6 +481,7 @@ export default function ProfileScreen() {
       seasonPhase: pendingSeasonPhase,
       seasonFinishedOn: pendingSeasonFinishedOn,
       preferredDays: pendingPreferredDays,
+      strengthSessions: pendingStrengthSessions,
       teamDays: pendingTeamDays,
       gameDay: pendingGameDay,
       goals: pendingGoals,
@@ -510,6 +511,7 @@ export default function ProfileScreen() {
     setSetupFieldEdit(false);
     setDraftSeasonPhase(pendingSeasonPhase);
     setDraftPreferredDays(pendingPreferredDays);
+    setDraftStrengthSessions(pendingStrengthSessions);
     setDraftTeamDays(pendingTeamDays);
     setDraftGameDay(pendingGameDay);
     setDraftSeasonFinishDate(seasonFinishDateDraft(pendingSeasonFinishedOn));
@@ -604,6 +606,7 @@ export default function ProfileScreen() {
 
     setPendingSeasonPhase(draftSeasonPhase);
     setPendingPreferredDays(sortDays(draftPreferredDays));
+    setPendingStrengthSessions(draftStrengthSessions);
     setPendingTeamDays(
       draftSeasonPhase === 'Off-season' ? [] : sortDays(draftTeamDays),
     );
@@ -836,11 +839,9 @@ export default function ProfileScreen() {
             <ProfileRow
               onEdit={() => openProfileFieldEditor('lfaDays')}
               editTestID="profile-edit-lfa-days"
-              label="LFA Days"
+              label="Gym days"
               value={
-                daysPerWeek
-                  ? `${daysPerWeek} ${daysPerWeek === 1 ? 'day' : 'days'} per week`
-                  : 'Not set'
+                (onboardingData.preferredTrainingDays ?? []).join(', ') || 'Not set'
               }
             />
             {teamDays.length > 0 ? (
@@ -1047,6 +1048,8 @@ export default function ProfileScreen() {
           goals={draftGoals}
           onToggleGoal={toggleDraftGoal}
           weekDays={WEEK_DAYS}
+          strengthSessions={draftStrengthSessions}
+          onChangeStrengthSessions={setDraftStrengthSessions}
           lfaDays={draftPreferredDays}
           onToggleLfaDay={toggleDraftPreferredDay}
           teamDays={draftTeamDays}

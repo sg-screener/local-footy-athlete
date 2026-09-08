@@ -156,24 +156,7 @@ function allPrescribed(program: TrainingProgram | null): string[] {
 }
 
 
-/**
- * WHAT THE ATHLETE SEES ON A DAY — the coordinate this suite had to move to.
- *
- * ⚠ **THE FOUR CELLS BELOW USED TO ASK THE STORED PROGRAM, AND SAM'S CORRECTED
- * REMOVE SEMANTICS MOVED THE ANSWER (2026-08-19).**
- *
- * *"Remove means simply remove ... Nothing replaces it ... Undo restores the
- * exact removed item."* The exact item can only come back if it was never
- * destroyed, so the authored row STAYS in the stored program and the decision
- * hides it at READ. A boot replay therefore re-authors `RDLs` into
- * `currentProgram` — correctly — and the athlete still does not see it.
- *
- * `countOf(currentProgram)` cannot express that, and a cell that keeps asking
- * it is asking whether a mechanism that has been deliberately retired still
- * runs. So the product claim — *the athlete does not see it* — is asked HERE,
- * of the projection the screen reads, and the stored program is asserted to
- * KEEP the row, because that is the property Restore depends on.
- */
+/** Read the athlete-visible week through the same final resolver as the screen. */
 function visibleCountOf(weekStartISO: string, exercise: string): number {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
@@ -203,6 +186,7 @@ function installWorld(): TrainingProgram {
     const program = generateProgramLocally(profile, {
       todayISO: BLOCK_2_START,
       blockNumber: 2,
+      recordSelections: 'author',
     }) as TrainingProgram;
     useProgramStore.setState({
       currentProgram: program,
@@ -214,36 +198,15 @@ function installWorld(): TrainingProgram {
   });
 }
 
-/**
- * Re-author a block with whatever exclusions the store now holds.
- *
- * ⚠ **THE PREVIOUS PROGRAM IS CLEARED FIRST, AND THAT IS A PRE-EXISTING DEFECT
- * BEING WORKED AROUND — NOT A CONVENIENCE.**
- *
- * Measured on this branch and on `main`, with NO exclusion anywhere in the
- * world: generating block 3 (or 4) while `programStore.currentProgram` still
- * holds block 2 refuses with
- * `GeneratedWeekRefusedError: sprint_high_speed_required_minimum:0`. Clearing
- * `currentProgram`/`currentMicrocycle` — and only that; clearing
- * `generationAnchorISO` does not help — makes the same call succeed:
- *
- *     block3 as-is        REFUSED  sprint_high_speed_required_minimum:0
- *     block3 null-program OK       microcycles=4
- *     block3 null-anchor  REFUSED  sprint_high_speed_required_minimum:0
- *     block3 null-both    OK       microcycles=4
- *
- * A stale stored program poisoning the NEXT block's authoring is a real
- * generation defect and it is OUTSIDE this unit's flow, so it gets one ledger
- * line in `docs/STATUS_EXCLUSIONS.md` and is left alone. Clearing the program is
- * also what a real rollover does — it replaces the program — so the flow this
- * suite drives is still the athlete's, not a fabricated one.
- */
+/** Replay an accepted block; a different block explicitly authors new selections. */
 function regenerate(todayISO: string, blockNumber: number): TrainingProgram {
   return quiet(() => {
+    const sameBlock = useProgramStore.getState().blockState?.blockNumber === blockNumber;
     useProgramStore.setState({ currentProgram: null, currentMicrocycle: null } as never);
     const program = generateProgramLocally(useProfileStore.getState().onboardingData, {
       todayISO,
       blockNumber,
+      recordSelections: sameBlock ? 'replay' : 'author',
     }) as TrainingProgram;
     useProgramStore.setState({
       currentProgram: program,
@@ -387,7 +350,12 @@ async function main(): Promise<void> {
   /* ═══════════════════════════════════════════════════════════════════════ */
   console.log('\n[3] UNTIL I CHANGE IT — survives relaunch, rebuild, two boundaries');
 
-  installWorld();
+  const beforeStanding = installWorld();
+  const { blockSelectionHistory } = require('../store/blockSelectionHistoryStore') as typeof import('../store/blockSelectionHistoryStore');
+  const recordedBeforeStanding = blockSelectionHistory();
+  const namesBeforeStanding = new Set(allPrescribed(beforeStanding));
+  ok('the replay subject has an authored block and an exercise that is really present',
+    recordedBeforeStanding.length > 0 && namesBeforeStanding.has(SUBJECT));
   applyExerciseExclusionDecision({
     exercise: SUBJECT, scope: 'until_changed', decidedOnISO: BLOCK_2_START,
   });
@@ -400,43 +368,17 @@ async function main(): Promise<void> {
   ok('and boot did not put it back on the athlete\u2019s screen',
     visibleCountOf(BLOCK_2_START, SUBJECT) === 0,
     `the visible week still shows it ${visibleCountOf(BLOCK_2_START, SUBJECT)}x`);
-  /* THE OTHER HALF OF THE SAME PROPERTY, AND IT IS NOT A WEAKER CLAIM.
-   * A boot REPLAY must not let the composer put something ELSE in the emptied
-   * slot, which is the one thing Sam's Remove forbids. Measured before this cell
-   * existed: with the exclusion reaching the block selector on a replay,
-   * `Deadlift@77.5` walked into the hinge.
-   *
-   * ⚠ **THIS CELL USED TO ASSERT THE MECHANISM AND NOW ASSERTS THE PROPERTY,
-   * BECAUSE SAM CHANGED THE MECHANISM (2026-08-20).** It read *"the stored
-   * program KEPT the row, so Restore has something to give back"* — and his
-   * ruling is now *"a settings change must not re-add an excluded lift to the
-   * stored accepted program and rely on projection to hide it. Stored truth and
-   * visible truth must agree."*
-   *
-   * **THE OLD CELL'S PREMISE WAS ALSO REFUTED BY MEASUREMENT, SEPARATELY FROM
-   * THE RULING.** Restore does NOT need the row hoarded in the stored week: it
-   * returns `rebuildRequired: true`, the rebuild replays, and what gives the
-   * lift back is `blockSelectionHistoryStore` — the store built to remember
-   * which exercise a block chose. Walked end to end on a worn athlete:
-   * `STORED 4 -> 4 -> 0 (relaunch) -> 0 (restore) -> 4 (the rebuild restore
-   * asks for) -> 4 (next relaunch)`, with the visible week agreeing at every
-   * step. `activeProgramModifiers`' Restore control sets `rebuildRequired` for
-   * exactly this reason.
-   *
-   * So the two claims are asserted directly: storage and screen AGREE, and the
-   * composer did not re-decide the slot. */
+  // Fixed accessories are not necessarily recorded rotation seats. Compare
+  // the whole accepted selection record and actual exercise set, rather than
+  // pretending every visible row must have its own selection-history entry.
   ok('stored and visible AGREE — the row is not kept in storage and hidden on read',
     countOf(useProgramStore.getState().currentProgram, SUBJECT)
       === visibleCountOf(BLOCK_2_START, SUBJECT),
     `stored ${countOf(useProgramStore.getState().currentProgram, SUBJECT)} `
     + `vs visible ${visibleCountOf(BLOCK_2_START, SUBJECT)}`);
-  ok('and the composer did not put something ELSE in the emptied slot',
-    (require('../store/blockSelectionHistoryStore').blockSelectionHistory() as {
-      blockStartISO?: string; identity?: string;
-    }[]).some((entry) => canonicalExerciseName(String(entry.identity)) === canonicalExerciseName(SUBJECT)),
-    'the block\u2019s recorded selection no longer names the excluded exercise, so a '
-    + 'replay re-decided the slot instead of restoring what the block chose — the '
-    + '`Deadlift@77.5` defect');
+  ok('a replay keeps the complete accepted selection record and introduces no replacement',
+    JSON.stringify(blockSelectionHistory()) === JSON.stringify(recordedBeforeStanding)
+      && allPrescribed(useProgramStore.getState().currentProgram).every(name => namesBeforeStanding.has(name)));
 
   ok('IT SURVIVES BLOCK BOUNDARY 1',
     countOf(regenerate(BLOCK_3_START, 3), SUBJECT) === 0);
@@ -697,54 +639,15 @@ async function main(): Promise<void> {
     getAthletePrefs(BLOCK_2_START).excluded.includes(SUBJECT),
     JSON.stringify(getAthletePrefs(BLOCK_2_START).excluded));
 
-  /* ── THE BOOT'S OWN CLAIM LIVES IN CASE [3], AND IT IS NOT REPEATED HERE ──
-   *
-   * The first cut of this case asserted the projection ALSO survived a boot run
-   * at the end of nine accumulated cases, and it went red with `exclusions=[]`.
-   * That looked like "boot wipes the athlete's exclusions", which would be a
-   * serious defect in this very unit — so it was MEASURED before it was
-   * believed, with a standalone probe doing install → exclude → boot three
-   * times in a fresh process:
-   *
-   *     PROBE boot#1: before=1 after=1
-   *     PROBE boot#2: before=1 after=1
-   *     PROBE boot#3: before=1 after=1
-   *
-   * **Boot does not wipe them.** `rebuildDerivedWorld`'s clean slate touches
-   * `programStore` alone; `athletePreferencesStore` is not in it. The red was
-   * accumulated in-process store state across nine cases, i.e. an artefact of
-   * this file, and asserting it here would have been a cell reporting its own
-   * harness as a product defect.
-   *
-   * So the relaunch claim is made ONCE, in case [3], where the world is a fresh
-   * install and the assertion is about the thing it names. */
-  /* ⚠ **THE BOOT ASSERTION IS DELETED FROM THIS CASE, NOT MOVED — AND THE
-   * PARAGRAPH ABOVE HAD ALREADY DECIDED THAT.**
-   *
-   * It said *"the relaunch claim is made ONCE, in case [3]"* and then made it
-   * again here anyway. Re-stating the world at this line did not rescue it: by
-   * the tenth case the in-process stores are far enough gone that a freshly
-   * applied decision reads back as `exclusions=[]`, measured on the line where
-   * the assertion stood. A cell that green-lights on an empty decision list is
-   * a cell asserting nothing, and one that reds on it is reporting this file's
-   * own accumulation as a product defect. It did the second.
-   *
-   * NOTHING IS LOST. Case [3] holds the relaunch claim in a fresh world, and it
-   * now holds BOTH halves of it — the athlete's screen has lost the row, and the
-   * stored program still has it, which is what makes Restore exact. */
-  /* ═══════════════════════════════════════════════════════════════════════ */
-  console.log('\n[10] THE LEGACY FOLD — a pre-Block-Two envelope keeps its bans');
+  console.log('\n[10] ONLY SCOPED EXCLUSIONS SURVIVE HYDRATION');
 
   const migrated = normaliseHydratedPrefs(
     { excluded: ['Back Squat'], pinned: [] } as never,
     BLOCK_2_START,
   );
-  ok('a bare legacy name becomes an `until_changed` decision',
-    migrated.exclusions?.length === 1
-      && migrated.exclusions[0].scope === 'until_changed'
-      && migrated.exclusions[0].activeThroughISO === null,
-    JSON.stringify(migrated.exclusions));
-  ok('and the bare array is cleared, so only ONE copy of the decision survives',
+  ok('the retired bare-name shape cannot invent a new standing decision',
+    migrated.exclusions?.length === 0, JSON.stringify(migrated.exclusions));
+  ok('the retired bare array is cleared at ingress',
     migrated.excluded.length === 0);
 
   const bothHeld = normaliseHydratedPrefs({

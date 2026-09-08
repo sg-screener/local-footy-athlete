@@ -225,7 +225,7 @@ async function main(): Promise<void> {
   // ── ADD, seeing what the first two left ────────────────────────────────
   const onTheDay = afterSwap.map((r) => r.split('@')[0]!);
   // SAM'S HIERARCHY (2026-08-20). The menu is walked the way the athlete walks
-  // it, and the "does not offer the replacement" check is asked of every LEAF,
+  // it, and the "allows another copy" check is asked of every LEAF,
   // not of one flat list — a hierarchy could hide the collision in a branch
   // nobody opened. Walking leaves also survives the depth being uneven.
   const addArgs = {
@@ -239,8 +239,8 @@ async function main(): Promise<void> {
       (leaf) => (legalAddCandidates({ ...addArgs, leaf: leaf.id }) as { name: string }[])
         .map((candidate) => candidate.name))));
   ok('CONTROL — the add menu is not empty after two changes', everyOffered.length > 0);
-  ok('and it does not offer the replacement the swap just put on the day',
-    !everyOffered.includes(replacement), replacement);
+  ok('R-387: Add still offers the exercise just swapped onto the day',
+    everyOffered.includes(replacement), replacement);
   const added = everyOffered[0]!;
   const addResult = await quietAsync(() => executeProgramControlActionDurably({
     type: 'add_exercise',

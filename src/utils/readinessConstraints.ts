@@ -111,46 +111,6 @@ export function buildReadinessActiveConstraints(
     constraints.push(fatigue);
   }
 
-  if (signal.soreness === 'moderate' || signal.soreness === 'high') {
-    const bodyPart = signal.bodyPart?.trim().toLowerCase();
-    const bucket = bodyPart ? resolveInjuryBucket(bodyPart) : null;
-    if (bodyPart && bucket) {
-      const soreness: ActiveSorenessConstraint = {
-        ...baseFields(signal, `soreness-${bucket}`, `${capitalise(bodyPart)} soreness`),
-        type: 'soreness',
-        bodyPart,
-        bucket,
-        severity: signal.soreness === 'high' ? 7 : 6,
-        rules:
-          signal.soreness === 'high'
-            ? [`avoid hard ${bodyPart} loading today`]
-            : [`keep ${bodyPart} work pain-free today`],
-        safeFocus: ['Pain-free strength', 'Easy aerobic conditioning', 'Mobility / recovery'],
-        advice:
-          signal.soreness === 'high'
-            ? ["If it feels like pain or doesn't settle, tell coach a pain score."]
-            : [],
-      };
-      constraints.push(soreness);
-    } else {
-      const sorenessLoad: ActiveFatigueConstraint = {
-        ...baseFields(signal, 'general-soreness', 'General soreness'),
-        type: 'fatigue',
-        severity: signal.soreness === 'high' ? 7 : 5,
-        rules:
-          signal.soreness === 'high'
-            ? ['max-effort lifts', 'sprinting / plyos']
-            : ['max-effort lifts', 'extra hard conditioning'],
-        safeFocus: ['Easy aerobic conditioning', 'Mobility / recovery', 'Light technique work'],
-        advice:
-          signal.soreness === 'high'
-            ? ["If it feels like pain or doesn't settle, update coach with the body area."]
-            : [],
-      };
-      constraints.push(sorenessLoad);
-    }
-  }
-
   /* THE "SHORT ON TIME" READINESS CONSTRAINT IS DELETED (Sam, 2026-08-21).
    *
    * It only ever fired on `signal.timeAvailableMinutes`, and NOTHING WRITES

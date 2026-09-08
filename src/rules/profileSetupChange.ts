@@ -59,6 +59,7 @@ export interface ProfileSetupSelection {
   /** Exact answer collected when entering Off-season; null means not sure. */
   seasonFinishedOn?: string | null;
   preferredDays: readonly DayOfWeek[];
+  strengthSessions?: number;
   teamDays: readonly DayOfWeek[];
   gameDay: DayOfWeek | null;
   /**
@@ -159,7 +160,12 @@ export function decideProfileSetupChange(
     !sameSetupDays(preferredDays, stored.preferredTrainingDays as DayOfWeek[] | undefined)
   ) {
     patch.preferredTrainingDays = preferredDays;
-    patch.trainingDaysPerWeek = preferredDays.length;
+    patch.trainingDaysPerWeek = selection.strengthSessions ?? stored.trainingDaysPerWeek ?? preferredDays.length;
+    patch.trainingDaysUnsure = false;
+  }
+
+  if (selection.strengthSessions !== undefined && selection.strengthSessions !== stored.trainingDaysPerWeek) {
+    patch.trainingDaysPerWeek = selection.strengthSessions;
     patch.trainingDaysUnsure = false;
   }
 

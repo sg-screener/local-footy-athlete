@@ -304,7 +304,7 @@ function partCapabilities(
   kind: VisiblePartKind,
   onDay: VisibleDayKind,
 ): PartCapabilities {
-  if (onDay === 'game' || kind === 'game') return NOTHING_MAY_BE_DONE;
+  if (kind === 'game') return NOTHING_MAY_BE_DONE;
   if (ATTACHED_COMPONENTS.has(componentId)) return NOTHING_MAY_BE_DONE;
   if (kind === 'team_training') {
     // TEAM-NIGHT MOVABILITY (Sam's 2026-08-01 ruling, signed 2026-08-02): the
@@ -754,11 +754,11 @@ function partsForWorkout(
   onDay: VisibleDayKind,
 ): ProjectedDayParts['parts'] {
   if (!workout) return [];
-  return projectSessionComponentsForDay({
-    date,
-    components: getSessionComponents(workout),
-    onDay,
-  });
+  const components = getSessionComponents(workout);
+  if (onDay === 'game' && !components.some(component => component.kind === 'session')) {
+    components.unshift({ id: 'session', kind: 'session', label: 'Game Day', completionPolicy: 'required' });
+  }
+  return projectSessionComponentsForDay({ date, components, onDay });
 }
 
 /**
@@ -844,7 +844,7 @@ export function projectParts(args: {
         capabilities: {
           // A day with room for more work can take more, whatever is on it
           // already. No recovery exception: ruling 3.
-          canAdd: !isFixture,
+          canAdd: true,
           // THE MOVE DOOR IS OPEN IFF SOMETHING CAN LEAVE THIS DAY. Not "the
           // whole day travels intact" — a combined day offers a SCOPED move and
           // the anchor stays put, which is a move by any name the athlete uses.
@@ -890,6 +890,7 @@ export function project(args: {
   return {
     explanations: distinctExplanations(blockBoundaryExplanationSentences(
       (args.program ?? {}) as Parameters<typeof blockBoundaryExplanationSentences>[0],
+      structural.weekStart,
     )),
     weekStart: structural.weekStart,
     days: structural.days.map((day, index): VisibleDay => {

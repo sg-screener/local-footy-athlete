@@ -1,5 +1,7 @@
+import { athleteAdditionWarnings, athleteAdditionWarningText, ATHLETE_ADD_ANYWAY } from '../../rules/athleteAdditionWarnings';
+import { deriveVisibleWeekLive } from '../../utils/deriveVisibleWeek';
 import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
-import { getEffectiveGameDates } from '../../utils/sessionResolver';
+import { getEffectiveGameDates, getMondayStrForDate } from '../../utils/sessionResolver';
 import React from 'react';
 import {
   View,
@@ -1218,7 +1220,7 @@ export default function DayWorkoutScreenV2() {
     const offer = legalAddFamilies({ ...addCandidateArgs(), section: family, sessionKind: addSessionKind(family) }).find((entry) => entry.id === family);
     if (!offer) {
       setExerciseEditStep({ kind: 'result', ok: false, title: 'Nothing suitable to add',
-        message: 'No additional exercises fit this section with your equipment, injury restrictions and today’s safety limits. Your session is unchanged.' });
+        message: 'There are no exercises in this section.' });
       return;
     }
     setExerciseEditStep({
@@ -2388,6 +2390,13 @@ export default function DayWorkoutScreenV2() {
         onSwapPick={prepareSwap}
         onApplyInjuryReview={applySessionInjuryReview}
         onApplySwapToday={applySwapToday}
+        addWarningsFor={(name) => {
+          const chosenDate = date ?? todayISOLocal();
+          return athleteAdditionWarnings({ dateISO: chosenDate, exerciseName: name,
+            gameDates: [...getEffectiveGameDates(buildScheduleStateImperative(), chosenDate)],
+            week: deriveVisibleWeekLive(getMondayStrForDate(chosenDate), chosenDate),
+          }).map(athleteAdditionWarningText);
+        }}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
         onOfferRemovedReplacement={offerRemovedReplacement}
@@ -4351,6 +4360,7 @@ function FinishMoment({ onPress }: FinishMomentProps) {
 }
 
 interface ExerciseEditSheetProps {
+  addWarningsFor: (name: string) => string[];
   visible: boolean;
   sessionId: string;
   step: ExerciseEditStep;
@@ -4438,6 +4448,7 @@ function ExerciseEditSheet(props: ExerciseEditSheetProps) {
 }
 
 function ExerciseEditBody({
+  addWarningsFor,
   sessionId,
   step,
   editableExercises,
@@ -4959,7 +4970,8 @@ function ExerciseEditBody({
           </>
         );
       }
-      case 'confirm_add':
+      case 'confirm_add': {
+        const warnings = addWarningsFor(step.suggestion.name);
         return (
           <>
             <Text style={styles.exerciseEditBody}>
@@ -4971,14 +4983,18 @@ function ExerciseEditBody({
                 {suggestionPrescription(step.suggestion)}
               </Text>
             </View>
+            {warnings.map(warning => (
+              <Text key={warning} style={styles.exerciseEditBody} testID="athlete-add-warning">{warning}</Text>
+            ))}
             <Button
-              label="Add exercise"
+              label={warnings.length ? ATHLETE_ADD_ANYWAY : 'Add exercise'}
               variant="primary"
               size="md"
               onPress={() => onApplyAddToday(step)}
             />
           </>
         );
+      }
       case 'future_scope':
         return (
           <>

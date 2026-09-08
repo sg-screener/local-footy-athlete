@@ -42,6 +42,7 @@ export interface AcceptedBlockRecord {
   blockNumber: number;
   /** Strength sessions that accepted block actually required. */
   requiredStrengthSessions: number;
+  requiredStrengthDates?: string[];
 }
 import type {
   FeedbackCompletion,
@@ -910,6 +911,8 @@ export interface SessionFeedbackComponent {
 }
 
 export interface SessionFeedback {
+  /** Saved from the accepted session: extras earn credit without paying required debt. */
+  strengthRequired?: boolean;
   dateStr: string;
   completion: FeedbackCompletion;
   /**
@@ -1532,7 +1535,7 @@ export function recordAcceptedBlock(args: {
   const blockStartISO = args.blockState.blockStartDate.slice(0, 10);
   const blockNumber = Math.max(1, Math.floor(args.blockState.blockNumber ?? 1));
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { deriveAcceptedBlockStrengthRequirement } = require('../rules/blockBoundaryProgression');
+  const { deriveAcceptedBlockStrengthRequirement, deriveAcceptedBlockStrengthDates } = require('../rules/blockBoundaryProgression');
   const requiredStrengthSessions = deriveAcceptedBlockStrengthRequirement({
     program: args.program,
     blockStartISO,
@@ -1540,15 +1543,17 @@ export function recordAcceptedBlock(args: {
     // dates, so the last Monday is what has to fall inside it.
     blockEndISO: addDaysISO(blockStartISO, WEEKS_PER_BLOCK * 7 - 1),
   }) as number;
-  if (requiredStrengthSessions <= 0) return;
+  const requiredStrengthDates = deriveAcceptedBlockStrengthDates({ program: args.program, blockStartISO,
+    blockEndISO: addDaysISO(blockStartISO, WEEKS_PER_BLOCK * 7 - 1) }) as string[];
   const existing = useProgramStore.getState().acceptedBlocks ?? {};
   const previous = existing[blockStartISO];
   if (previous?.blockNumber === blockNumber
-    && previous?.requiredStrengthSessions === requiredStrengthSessions) return;
+    && previous?.requiredStrengthSessions === requiredStrengthSessions
+    && JSON.stringify(previous?.requiredStrengthDates) === JSON.stringify(requiredStrengthDates)) return;
   useProgramStore.setState({
     acceptedBlocks: {
       ...existing,
-      [blockStartISO]: { blockNumber, requiredStrengthSessions },
+      [blockStartISO]: { blockNumber, requiredStrengthSessions, requiredStrengthDates },
     },
   } as never);
 }

@@ -629,7 +629,7 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
 
 // 7. Equipment-constrained conditioning deleted before substitution.
 {
-  const c = contract('mid_offseason', {
+  const c = contract('late_offseason', {
     equipment: { appConditioningFeasible: false, substitutionStatus: 'not_attempted', consideredSubstitutions: [] },
     plannerSelected: { mainStrength: 4, coreConditioning: 0, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
   });

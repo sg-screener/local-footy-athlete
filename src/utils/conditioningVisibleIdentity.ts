@@ -4,6 +4,8 @@ import { getSessionComponentRows } from './sessionComponents';
 import {
   conditioningAthletePrescription,
   conditioningWordingForModality,
+  conditioningRecoveryForModality,
+  LONG_AEROBIC_INTERVAL_MIN_SECONDS,
 } from '../rules/conditioningDisplay';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 
@@ -71,7 +73,13 @@ export function conditioningModeLabelForRow(workout: Partial<Workout>, id: strin
 export function conditioningRowForDisplay<T extends { id?: string; notes?: string | null }>(workout: Partial<Workout>, row: T): T {
   const option = workout.conditioningBlock?.options.find(option => option.exerciseIds.includes(String(row.id)));
   if (option?.modality && row.notes) {
-    const notes = conditioningWordingForModality(row.notes, option.modality);
+    const template = CONDITIONING_TEMPLATES.find((candidate) =>
+      candidate.name === (row as Partial<WorkoutExercise>).exercise?.name);
+    const work = /^Work:\s*(.+)$/m.exec(row.notes)?.[1] ?? '';
+    const notes = conditioningWordingForModality(row.notes, option.modality)
+      .replace(/^Recovery:\s*(.+)$/m, (_line, recovery: string) =>
+        `Recovery: ${conditioningRecoveryForModality(recovery, work, template?.quality,
+          option.modality, option.modalitySequence)}`);
     return notes === row.notes ? row : { ...row, notes };
   }
   const speedMode = workout.speedBlock?.exerciseIds?.includes(String(row.id))
@@ -83,7 +91,7 @@ export function conditioningRowForDisplay<T extends { id?: string; notes?: strin
 }
 
 /** One threshold owns the long/short aerobic interval boundary. */
-export const LONG_AEROBIC_INTERVAL_MIN_SECONDS = 3 * 60;
+export { LONG_AEROBIC_INTERVAL_MIN_SECONDS } from '../rules/conditioningDisplay';
 
 type ConditioningIdentityWorkout = Partial<Workout> & {
   exercises?: WorkoutExercise[] | null;

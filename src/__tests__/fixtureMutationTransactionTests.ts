@@ -923,7 +923,7 @@ async function main(): Promise<void> {
   // after a Sunday game read the onboarding estimate (Back Squat 95 / Bench 80
   // against the athlete's 100 / 85) and a weighted Pull-Up read "BW", because
   // the one-week fixture stub is generated without the block's progression.
-  await run('R-344 / item 1: a bye week, the week after a Sunday game, and a relaunch keep the athlete\'s own loads, sets and reps, with no weekly repeat', async () => {
+  const fixtureLoadJourney = async (): Promise<void> => {
     const { buildWornWorld } = require('./support/settingsJourney') as typeof import('./support/settingsJourney');
     const { relaunchApp, quietAsync } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
     const { addDaysISO } = require('../utils/programBlockState') as typeof import('../utils/programBlockState');
@@ -935,6 +935,7 @@ async function main(): Promise<void> {
     assert(world.blockTwoStart !== null && !world.rolloverRefusal,
       `the worn world must roll into block 2: ${JSON.stringify(world)}`);
     const blockTwoStart = world.blockTwoStart as string;
+    let historySensitiveComparisons = 0;
     // THE ACCEPTED LOADS, snapshotted before any fixture decision: name+role → kg.
     const acceptedDetail = new Map<string, string[]>();
     const ownDose = new Map<string, Map<string, [number, number, number]>>();
@@ -1000,9 +1001,14 @@ async function main(): Promise<void> {
             + (acceptedDetail.get(weekStart) ?? []).filter((entry) => entry.startsWith(`${name}@`)).join(', '));
         }
       }
-      assert(compared >= 3, `${label}: only ${compared} lifts comparable — the cell would be vacuous`);
-      assert(differsFromEstimate >= 1,
-        `${label}: every accepted load equals the onboarding estimate — the cell could not see the defect`);
+      // Rotation changes how many identities survive a fixture rebuild. The
+      // subject is every surviving same-role lift, with an actual earned load
+      // distinct from the estimate; a broken-carry run below must fail too.
+      assert(compared > 0, `${label}: no accepted lift survives for comparison`);
+      // A newly rotated lift may legitimately use its starting estimate. Keep
+      // comparing every surviving row; liveness needs an earned load somewhere
+      // in this journey, not an earned load in every rotated calendar week.
+      historySensitiveComparisons += differsFromEstimate;
       assert(wrong.length === 0, `${label}: ${wrong.join('; ')}`);
     };
     const decide = (args: { action: FixtureMutationAction; sourceDate?: string; targetDate?: string; todayISO: string }) => ({
@@ -1031,6 +1037,26 @@ async function main(): Promise<void> {
     assert(restart.ok, `relaunch failed: ${restart.error}`);
     expectOwnLoads(blockTwoStart, 'bye week after relaunch');
     expectOwnLoads(addDaysISO(weekTwo, 7), 'the week after the Sunday game, after relaunch');
+    assert(historySensitiveComparisons > 0,
+      'the fixture journey never reached an accepted load different from its estimate');
+  };
+  await run("R-344 / item 1: a bye week, the week after a Sunday game, and a relaunch keep the athlete's own loads, sets and reps, with no weekly repeat", fixtureLoadJourney);
+  await run('R-344 liveness: disabling accepted-load carry fails the real fixture journey', async () => {
+    const carry = require('../rules/acceptedLoadCarry') as typeof import('../rules/acceptedLoadCarry');
+    const originalDay = carry.carryOwnAcceptedLoadsIntoWorkout;
+    const originalWeek = carry.carryOwnAcceptedLoads;
+    let calls = 0;
+    let failure = '';
+    try {
+      carry.carryOwnAcceptedLoadsIntoWorkout = args => { calls++; return args.rebuilt; };
+      carry.carryOwnAcceptedLoads = args => { calls++; return [...args.rebuilt]; };
+      try { await fixtureLoadJourney(); } catch (error) { failure = String(error); }
+    } finally {
+      carry.carryOwnAcceptedLoadsIntoWorkout = originalDay;
+      carry.carryOwnAcceptedLoads = originalWeek;
+    }
+    assert(calls > 0, 'the mutation never reached accepted-load carry');
+    assert(/visible .*vs accepted/.test(failure), `broken carry did not fail on an actual dose/load difference: ${failure}`);
   });
 }
 

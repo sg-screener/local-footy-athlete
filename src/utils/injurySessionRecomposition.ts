@@ -219,12 +219,19 @@ export function planInjuryRecomposition(args: {
   primaryInjury: TapSwapPrimaryInjury | null;
   /** Automatic rows already delivered elsewhere in this athlete-week. */
   existingAutomaticExerciseNames?: readonly string[];
+  /** The weekly injury owner also governs replacements of main-lift slots. */
+  prohibitedMainPatterns?: readonly string[];
 }): InjuryRecompositionPlan {
   const rows = sessionRowNames(args.workout);
-  const unsafeRows = unsafeRowsForInjury({
+  const rowRiskUnsafe = unsafeRowsForInjury({
     workout: args.workout,
     environment: args.environment,
   });
+  const prohibitedMainRows = new Set((args.workout?.exercises ?? []).filter(row =>
+    row.section18Evidence?.role === 'main_strength' &&
+    args.prohibitedMainPatterns?.includes(row.section18Evidence.mainStrengthPattern ?? ''))
+    .map(row => row.exercise?.name ?? ''));
+  const unsafeRows = rows.filter(name => rowRiskUnsafe.includes(name) || prohibitedMainRows.has(name));
   const substitutions: InjurySubstitution[] = [];
   const pausedRows: string[] = [];
   const automaticOnDay = (args.workout?.exercises ?? [])
@@ -246,6 +253,12 @@ export function planInjuryRecomposition(args: {
   // already has — and so an earlier substitution's choice cannot be chosen twice.
   const taken = rows.filter((name) => !unsafeRows.includes(name));
   for (const name of unsafeRows) {
+    // A same-slot replacement retains this slot's main-pattern credit. It
+    // cannot fulfil a pattern the weekly injury owner has prohibited.
+    if (prohibitedMainRows.has(name)) {
+      pausedRows.push(name);
+      continue;
+    }
     const originalRow = args.workout?.exercises.find((row) => row.exercise?.name === name);
     const realOriginalSlot = realMovementSlotsForAutomaticExercise(name)[0];
     const requestedSlot = (originalRow?.section18Evidence?.slot

@@ -130,7 +130,6 @@ export const CUE_REQUIRED_APPARATUS: Readonly<Record<string, readonly EquipmentT
   'Copenhagen Plank (Half)': ['bench'],
   'RFE Split Squat Jump': ['bench'],
   'Single-Leg Hip Thrust': ['bench'],
-  'Pigeon Stretch': ['bench'],
 };
 
 /**

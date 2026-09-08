@@ -1,3 +1,4 @@
+import { additionOverridesInjury } from './athleteAdditionAuthority';
 /**
  * ── AN INJURY WITHHOLDS A ROW. IT DOES NOT REMOVE IT. ──────────────────────
  *
@@ -179,7 +180,7 @@ export function injuryWithholdingsOn(args: {
     if (!name) continue;
     const canonical = resolveExerciseName(name);
     for (const episode of episodes) {
-      if (!episode.bucket) continue;
+      if (!episode.bucket || additionOverridesInjury(row, episode)) continue;
       if (!injuryWithholdsExistingRow(canonical, episode.bucket as InjuryKey, episode.severity, episode.triggers)) {
         continue;
       }
@@ -220,7 +221,9 @@ export function markInjuryWithheldRows<T extends Workout | null | undefined>(arg
     ...workout,
     exercises: (workout.exercises ?? []).map((row) => {
       const entry = withheld.get(rowName(row).toLowerCase());
-      if (!entry) return row;
+      if (!entry || activeInjuryFactsOn(args.facts, args.dateISO).every(episode =>
+        additionOverridesInjury(row, episode) || !episode.bucket || !injuryWithholdsExistingRow(
+          resolveExerciseName(rowName(row)), episode.bucket as InjuryKey, episode.severity, episode.triggers))) return row;
       return {
         ...row,
         unavailableForInjury: {

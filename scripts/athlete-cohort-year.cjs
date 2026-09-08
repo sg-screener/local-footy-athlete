@@ -13,7 +13,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { ACCEPTED_AWAY_SPAN, ACCEPTED_CHRISTMAS_BREAK } = require('./programming-final-year-audit-rules.cjs');
+const { ACCEPTED_AWAY_SPAN } = require('./programming-final-year-audit-rules.cjs');
 
 const repo = path.resolve(__dirname, '..');
 const presetId = process.argv.find(a => a.startsWith('--preset='))?.slice(9);
@@ -68,7 +68,7 @@ const preset = PRESETS[presetId];
 if (!preset) throw new Error(`Unknown preset ${presetId}; choose one of ${Object.keys(PRESETS).join(', ')}`);
 const weeks = Number(process.argv.find(a => a.startsWith('--weeks='))?.slice(8) ?? preset.weeks);
 
-const original = path.join(repo, 'outputs/release-candidate-0bcc3353-rcsteps/current-shoulder-review/generate-year.cjs');
+const original = path.join(repo, 'scripts/run-programming-selection-trace-year.cjs');
 let code = fs.readFileSync(original, 'utf8');
 const originalHash = createHash('sha256').update(code).digest('hex');
 const replace = (from, to) => {
@@ -77,7 +77,13 @@ const replace = (from, to) => {
 };
 
 // ── The same corrections the pair audit applies ─────────────────────────────
-replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
+replace("const repo = path.resolve(__dirname, '..');", `const repo = ${JSON.stringify(repo)};`);
+replace("const output = path.resolve(repo, outputArg?.slice(9) ?? 'output/programming-selection-trace-year');",
+  `const output = ${JSON.stringify(output)};`);
+replace('fs.readFileSync(__filename)', `fs.readFileSync(${JSON.stringify(original)})`);
+replace('sourceDriver: __filename, sourceDriverSha256,', `sourceDriver: ${JSON.stringify(original)}, sourceDriverSha256,`);
+// Keep this variant's receipt alongside the shared driver's receipt.
+replace("path.join(output, 'driver-receipt.json')", "path.join(output, 'base-driver-receipt.json')");
 replace("function phaseFor(i) {return i<12?'Off-season':i<28?'Pre-season':'In-season';}\nfunction phaseWeek(i) {return i<12?i+1:i<28?i-11:i-27;}",
   `const {annualFootballPhaseForIndex,annualFootballPhaseWeek}=app('src/rules/annualFootballPhaseCalendar');
 // A multi-year run repeats the canonical annual calendar each year.
@@ -158,8 +164,7 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];
           label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Totally cooked - rest today':'Sick';
         } else if(e.kind==='christmas_break') {
-          const span=${JSON.stringify(ACCEPTED_CHRISTMAS_BREAK)};
-          await act({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'christmas_break',initiatedBy:'tap'},scope:'current_week',payload:{date:span.from,teamTrainingBreak:{from:span.from,to:span.to}},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},date,'christmas_break');
+          await act(app('scripts/programming-final-year-audit-rules.cjs').auditChristmasBreakAction(date),date,'Christmas team-training break');
           label='Christmas team-training break accepted';`);
 replace("  for(const gender of ['male','female'].filter(x=>!genderOnly||genderOnly===x))data.athletes.push(await run(gender));",
   `  data.athletes.push(await run(${JSON.stringify(preset.gender)}));`);
@@ -232,10 +237,8 @@ replace("save('year-programs.json',data);", `save('year-programs.json',data);
 // Training + Lower Body Strength") but the session template carries no club
 // item, so the export showed no club row and the plane audit could not credit
 // the night. The row the athlete sees on a pure club day is added here too.
-replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
-  "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
-  'role:item.role,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||(conditioning&&app("src/utils/sessionComponents").getSessionComponents(workout).some(c=>c.kind==="finisher"&&c.completionPolicy==="optional_no_penalty"))||undefined,pair:item.superset?.groupId');
+  'role:item.role,domainRestSeconds:row.restSeconds,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||undefined,pair:item.superset?.groupId');
 replace('name:o.title,description:o.description,rows:o.rows.map',
   'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
 replace('return {name:formatExerciseDisplayName(row.exercise?.name??row.name),',

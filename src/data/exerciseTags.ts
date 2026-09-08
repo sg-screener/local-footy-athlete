@@ -2608,6 +2608,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Broad Jumps': {
+    programming: { automaticMinimum: 'developing', manualMinimum: 'developing', warmup: true, primer: true },
     movement: 'plyo', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'low', stability: 'low', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid', power: true,
@@ -2629,6 +2630,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Jump Squats': {
+    programming: { automaticMinimum: 'developing', manualMinimum: 'developing', warmup: true, primer: true },
     movement: 'plyo', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid', power: true,
@@ -2650,6 +2652,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Lateral Bounds': {
+    programming: { automaticMinimum: 'developing', manualMinimum: 'developing', warmup: true, primer: true },
     movement: 'plyo', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'avoid', power: true,
@@ -2723,6 +2726,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   'Depth Jumps': {
+    programming: { automaticMinimum: 'developing', manualMinimum: 'developing', warmup: true, primer: true },
     movement: 'plyo', region: 'lower', load: 'low', fatigue: 'high',
     doms: 'moderate', stability: 'low', unilateral: false,
     eccentric: 'high', lateWeek: 'avoid', power: true,
@@ -4079,7 +4083,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
 
   'Band Pull-Apart': {
     strengthClassification: 'isolation',
-    movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
+    movement: 'isolation_upper', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
     injury: {

@@ -8,7 +8,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import MyStatusScreen from '../screens/home/MyStatusScreen';
 import CoachTabScreen from '../screens/coach/CoachTabScreen';
-import ProgressTabScreen from '../screens/progress/ProgressTabScreen';
+import ProgressNavigator from './ProgressNavigator';
 import { useCoachWeeklyCommitment } from '../screens/coach/useCoachWeeklyCommitment';
 import { commitmentConversationNoticeSentence } from '../rules/projectionCopy';
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -232,7 +232,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="ProgressTab"
-          component={ProgressTabScreen}
+          component={ProgressNavigator}
           options={{
             title: 'Progress',
             tabBarIcon: ({ color }) => <ProgressIcon color={color} size={22} />,

@@ -313,7 +313,7 @@ function copyFor(
     case 'mid_offseason':
       return {
         title: 'Mid off-season focus',
-        body: 'Controlled conditioning stays mostly off-feet while running returns gradually.',
+        body: 'Keep building with controlled lifting, mobility and optional light off-feet aerobic work.',
       };
     case 'late_offseason':
       return {

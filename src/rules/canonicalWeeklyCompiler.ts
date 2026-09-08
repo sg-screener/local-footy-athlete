@@ -20,7 +20,7 @@ import {
   type CoachingPlan,
 } from '../utils/coachingEngine';
 import type { InjuryKey } from '../data/exerciseTags';
-import { scheduledGameProximity } from './weeklyScheduler';
+import { scheduledGameProximity, wholeWeekPlacementCost, type StrengthWeekAssignment } from './weeklyScheduler';
 import {
   materialiseAuthoredSessions,
   type MaterialisationFacts,
@@ -161,6 +161,13 @@ export function compileCanonicalWeeklyDosePolicies(input: {
 }
 
 export interface CanonicalWeeklyCompilerInput {
+  /** One strength composition, followed by final energy placement before publication. */
+  readonly resolveStrengthWorkload?: (draft: Extract<CanonicalWeeklyCompilerResult, {ok: true}>) =>
+    {
+      readonly lowerBodyWorkloadByDay: NonNullable<WeeklySchedulerInputs['lowerBodyWorkloadByDay']>;
+      /** Existing strength-contract failures outrank placement preferences. */
+      readonly strengthBlockers: number;
+    };
   /** WRITER: the generation boundary. READER: the weekly scheduler. */
   readonly scheduler: WeeklySchedulerInputs;
   /** WRITER: onboarding/profile translation. READERS: capacity + connector. */
@@ -206,6 +213,7 @@ export type CanonicalWeeklyCompilerResult =
 
 export function compileCanonicalWeek(
   input: CanonicalWeeklyCompilerInput,
+  assignment?: StrengthWeekAssignment,
 ): CanonicalWeeklyCompilerResult {
   const fixtureScheduler = schedulerInputsWithFixtureState(input.scheduler, input.fixture);
   const availabilityScheduler = schedulerInputsWithAvailabilityState(
@@ -226,7 +234,7 @@ export function compileCanonicalWeek(
     ? Object.entries(input.availability.equipmentByDayOfWeek).filter(([, equipment]) =>
       equipment.conditioningModalities.some(mode => mode !== 'treadmill')).map(([day]) => Number(day))
     : scheduler.offLegAvailableDays;
-  const schedule = scheduleWeek({
+  const searchInputs: WeeklySchedulerInputs = {
     ...scheduler,
     offLegAvailableDays,
     appSprintPermitted: input.injury?.blocksAppSprint !== true,
@@ -246,8 +254,40 @@ export function compileCanonicalWeek(
       // R-349: the deload halves the sets; it does not take a session away.
       deloadKeepsSessions: input.readiness?.deloaded === true,
     },
+  };
+  const candidates = new Map<string, Extract<CanonicalWeeklyCompilerResult, {ok: true}>>();
+  const candidateCosts = new Map<string, readonly number[]>();
+  const assignmentKey = (days: StrengthWeekAssignment) => JSON.stringify(days);
+  const schedule = scheduleWeek(searchInputs, {
+    assignment,
+    ...(!assignment && input.resolveStrengthWorkload ? {evaluate: (candidate: StrengthWeekAssignment) => {
+      const cachedCost = candidateCosts.get(assignmentKey(candidate));
+      if (cachedCost) return cachedCost;
+      let dose: WeeklySchedulerInputs['lowerBodyWorkloadByDay'];
+      let strengthBlockers = 0;
+      const trial = compileCanonicalWeek({...input, resolveStrengthWorkload: draft => {
+        const resolved = input.resolveStrengthWorkload!(draft);
+        dose = resolved.lowerBodyWorkloadByDay;
+        strengthBlockers = resolved.strengthBlockers;
+        return resolved;
+      }}, candidate);
+      if (!trial.ok) return null;
+      const key = assignmentKey(trial.schedule.days.filter(day => day.owner === 'strength')
+        .map(day => ({day: day.dayOfWeek, purpose: day.purpose!})));
+      candidates.set(key, trial);
+      const cost = [strengthBlockers,
+        ...wholeWeekPlacementCost(trial.schedule, {...searchInputs, lowerBodyWorkloadByDay: dose})];
+      candidateCosts.set(assignmentKey(candidate), cost);
+      return cost;
+    }} : {}),
   });
   if (scheduleRefused(schedule)) return { ok: false, refusal: schedule };
+  if (candidates.size > 0) {
+    const chosen = candidates.get(assignmentKey(schedule.days.filter(day => day.owner === 'strength')
+      .map(day => ({day: day.dayOfWeek, purpose: day.purpose!}))));
+    if (!chosen) throw new Error('Selected weekly arrangement has no evaluated composition');
+    return chosen;
+  }
 
   const coaching = coachingInputsWithAvailabilityState(input.coaching, scheduler);
   const { level: capacity, factors: capacityFactors } = calculateCapacity(coaching);
@@ -362,7 +402,7 @@ export function compileCanonicalWeek(
       }
     : feasibilityResolvedPlan;
 
-  return {
+  const draft: Extract<CanonicalWeeklyCompilerResult, {ok: true}> = {
     ok: true,
     schedule,
     materialised,
@@ -375,6 +415,29 @@ export function compileCanonicalWeek(
     daysToGameByDay: Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(day =>
       [day, scheduledGameProximity(day, scheduler).daysUntilNextGame])),
   };
+  if (!input.resolveStrengthWorkload) return draft;
+  const {lowerBodyWorkloadByDay} = input.resolveStrengthWorkload(draft);
+  const final = compileCanonicalWeek({
+    ...input,
+    resolveStrengthWorkload: undefined,
+    scheduler: {...input.scheduler, lowerBodyWorkloadByDay,
+      retainedMetabolicCategoriesByDay: assignment && input.scheduler.phase === 'In-season'
+        && !input.scheduler.gameDay && !(input.scheduler.gameDays ?? []).length
+        ? input.scheduler.retainedMetabolicCategoriesByDay : Object.fromEntries(draft.schedule.days
+        .filter(day => day.conditioning !== null && day.conditioning !== 'sprint_high_speed'
+          && day.conditioningCategory !== null && day.conditioningCategory !== 'cod_decel'
+          && day.conditioningCategory !== 'recovery_flush')
+        .map(day => [day.dayOfWeek, day.conditioningCategory!])),
+    },
+  }, assignment);
+  if (final.ok) {
+    const strength = (week: WeeklySchedule) => week.days.filter(day => day.owner === 'strength')
+      .map(day => [day.dayOfWeek, day.purpose, day.clubTraining]);
+    if (JSON.stringify(strength(draft.schedule)) !== JSON.stringify(strength(final.schedule))) {
+      throw new Error('Energy placement must preserve the composed strength schedule');
+    }
+  }
+  return final;
 }
 
 /**

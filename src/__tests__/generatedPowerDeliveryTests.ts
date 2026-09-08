@@ -42,7 +42,7 @@ import {
   buildStrengthWorkoutHistoryFromFeedback,
   classifyProgressionEligibility,
   DEFAULT_PROGRESSION_CONTEXT,
-} from '../utils/strengthProgressionIntegration';
+} from './support/legacyStrengthProgression';
 import { buildSessionExecutionPlan } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';

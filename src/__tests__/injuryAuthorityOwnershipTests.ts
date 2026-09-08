@@ -495,6 +495,18 @@ function registerScenarios(): void {
       `the week came up SHORT: achieved ${exposure?.achievedCount} main-strength `
       + `session(s) against a selected target of ${exposure?.plannerSelectedTarget}`);
 
+    const mainDates = rebased.visibleWorkouts.filter(workout =>
+      (workout.exercises ?? []).some(row => row.section18Evidence?.role === 'main_strength'))
+      .map(workout => {
+        const date = new Date(`${SPENT_WEEK_1}T12:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + (workout.dayOfWeek + 6) % 7);
+        return date.toISOString().slice(0, 10);
+      });
+    const pastMain = mainDates.filter(date => date < SPENT_TODAY).length;
+    const futureMain = mainDates.filter(date => date >= SPENT_TODAY).length;
+    assert(futureMain <= Math.max(0, (exposure?.plannerSelectedTarget ?? 0) - pastMain),
+      `remaining main sessions ${futureMain} exceed target after ${pastMain} completed-history dates`);
+
     // RULING 4a, DELIVERED — and this cell now asserts it BY NAME.
     //
     // Sam, 2026-08-06: "The authored 2x3 Vertical Jump half is EXEMPT from the
@@ -545,35 +557,15 @@ function registerScenarios(): void {
       `${husks.length} session(s) ship a strength component with zero rows: `
       + husks.map((workout) => `d${workout.dayOfWeek}`).join(', '));
 
-    // SAM'S SIGNED COACH NOTE reaches the athlete, and it says what he SIGNED.
-    // The sentence is composed (the day, the body part and the fixture day all
-    // vary by world), so this pins the RENDERED result byte-for-byte against
-    // the quote in the signing doc — composition that drifts by one character
-    // is a reworded signed sentence, which is not this seat's to do.
+    // The retired G-2 session must not return through its old explanatory copy.
     const noteDays = rebased.visibleWorkouts.map((workout) => {
       const date = new Date(`${SPENT_WEEK_1}T12:00:00`);
       date.setDate(date.getDate() + (workout.dayOfWeek - 1));
       return { date: date.toISOString().slice(0, 10), workout: workout as never };
     });
-    // ── THE DISCLOSURE HALF OF "OMIT AND DISCLOSE" IS OWED AND UNBUILT. ─────
-    //
-    // This asserted a signed Coach Note reading *"...so it is a short, sharp
-    // lower session instead of a full one."* That sentence DESCRIBES THE SESSION
-    // R-095 CANCELLED, so it can no longer be the right words, and its producer
-    // never existed anyway: `injury_game_proximity` appears in `types/domain`
-    // and in this assertion and NOWHERE ELSE in product code — a note kind with
-    // no writer, the same shape as the `quality_low_volume` variant it was
-    // written to announce.
-    //
-    // **THE REPLACEMENT SENTENCE IS SAM'S TO WRITE, NOT THIS SEAT'S.** R-095
-    // says omit AND DISCLOSE; the athlete is owed a reason their Thursday is
-    // empty. Composing that sentence here would be authoring signed copy, which
-    // this cell's own note above forbids. Sam has been asked for the wording.
-    //
-    // What IS pinned meanwhile, because it is true and it protects the athlete:
-    // the CANCELLED sentence must never ship. A note promising a "short, sharp
-    // lower session" on a day that now has nothing would be the app lying about
-    // its own week.
+    // R-379 disclosure now lives on the empty day, held through its screen
+    // component and reopening by test:rest-day-reason. This cell only forbids
+    // the old claim that the cancelled quality-lower session still exists.
     const notes = buildDeterministicCoachNoteDescriptors(noteDays);
     const CANCELLED = 'short, sharp lower session';
     const liar = notes.find((note) => String(note.body ?? '').includes(CANCELLED));
@@ -662,18 +654,9 @@ function registerScenarios(): void {
       `an upper-body injury prohibited lower-body patterns (got ${JSON.stringify(prohibited)})`);
   });
 
-  // ── I6 — MATERIALISATION. RED and quarantined by Sam's sequencing: the
-  // committed week must actually stop prescribing the affected work.
-  //
-  // Stage 2a makes the injury RECORDABLE, which is what the ruling asked for and
-  // is the difference between the app knowing the athlete is hurt and not. It
-  // does not make the injury VISIBLE: the injury path validates the existing
-  // base against a stricter contract and never re-authors content, so the
-  // shoulder-injured athlete's Monday pressing session is still on screen. That
-  // is rider 0's divergence 3, and it is the same missing owner as the
-  // partly-spent week in Stage 1's T4 — both are answered by the §18
-  // elapsed-week / materialisation reassessment, not by another line here.
-  scenario('i6', 'I6 [QUARANTINED] the committed week for an upper-body 8-10/10 stops prescribing push/pull', async () => {
+  // I6 holds the contract prohibition. Delivered row safety and cold
+  // reconstruction are exercised by test:injury-recomposition.
+  scenario('i6', 'I6 the committed severe-upper contract prohibits push and pull', async () => {
     seedSpentWeekFriday();
     await markSpentDaysDone();
     const result = await reportInjury('upper_body', 9);

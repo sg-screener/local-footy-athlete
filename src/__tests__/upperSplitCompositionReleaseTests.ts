@@ -299,10 +299,11 @@ const environment = {
 const addPull = legalAddCandidates({
   leaf: 'upper_pull', environment, existingExerciseNames: ['Lat Pulldown'],
 });
-check('athlete Add cannot offer a second pulldown-family row or the retired spelling',
-  addPull.every((candidate) =>
-    candidate.name !== LEGACY
-    && exerciseVariationFamily(candidate.name) !== exerciseVariationFamily('Lat Pulldown')));
+check('athlete Add offers repeats and related pulldowns while excluding retired spelling',
+  addPull.every(candidate => candidate.name !== LEGACY)
+  && addPull.some(candidate => candidate.name === 'Lat Pulldown')
+  && addPull.some(candidate => candidate.name !== 'Lat Pulldown'
+    && exerciseVariationFamily(candidate.name) === exerciseVariationFamily('Lat Pulldown')));
 const swapPush = rankedQuickSwapChoices({
   originalExercise: 'Bench Press', reason: 'preference', environment,
   existingExerciseNames: ['Bench Press', 'Overhead Press', 'Dips'],

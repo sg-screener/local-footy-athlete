@@ -22,7 +22,6 @@ export type OffseasonConditioningCategory =
 // to come back to; a subphase policy may only be blocked by its SUBPHASE.
 export type OffseasonRunningPolicy =
   | 'blocked_by_default'
-  | 'careful_reentry_if_healthy'
   | 'gradual_reentry';
 
 export type OffseasonSpeedSprintPolicy =
@@ -51,7 +50,7 @@ export interface OffseasonSubphasePolicy {
     policy: OffseasonSpeedSprintPolicy;
   }>;
   readonly strength: Readonly<{
-    repBias: 'body_armour_8_12' | 'bridge_6_10' | 'strength_6_8';
+    repBias: 'body_armour_8_12' | 'strength_6_8';
     repsMin: number;
     repsMax: number;
     targetRpeMin: number;
@@ -65,31 +64,35 @@ export interface OffseasonSubphasePolicy {
   readonly reasons: readonly string[];
 }
 
+/** R-381: one preparation prescription, independent of optional participation. */
+export const OFFSEASON_PREPARATION = {
+  conditioning: {
+    allowedCategories: ['aerobic_base'] as const,
+    defaultCategory: 'aerobic_base' as const,
+    hardSessionCap: 0,
+    modalityBias: 'off_feet' as const,
+  },
+  running: { allowedBySubphase: false, enabledByDefault: false, policy: 'blocked_by_default' as const },
+  speedSprint: { allowedBySubphase: false, policy: 'blocked_by_default' as const },
+  strength: { repBias: 'body_armour_8_12' as const, repsMin: 8, repsMax: 12, targetRpeMin: 6, targetRpeMax: 7 },
+  conditioningTarget: { min: 0, max: 3 },
+  exposureConditioning: { required: 0, defaultTarget: 0, preferred: { min: 1, max: 2 }, max: 3,
+    stress: ['light'] as const, optionalFlush: { min: 0, max: 2 },
+    requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
+  power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'early_offseason' as const },
+} as const;
+
+export function isOffseasonPreparation(subphase: string | null | undefined): boolean {
+  return subphase === 'early_offseason' || subphase === 'mid_offseason';
+}
+
 const BASE_POLICIES: Readonly<Record<OffseasonSubphase, OffseasonSubphasePolicy>> = {
   early_offseason: {
     subphase: 'early_offseason',
-    conditioning: {
-      allowedCategories: ['aerobic_base'],
-      defaultCategory: 'aerobic_base',
-      hardSessionCap: 0,
-      modalityBias: 'off_feet',
-    },
-    running: {
-      allowedBySubphase: false,
-      enabledByDefault: false,
-      policy: 'blocked_by_default',
-    },
-    speedSprint: {
-      allowedBySubphase: false,
-      policy: 'blocked_by_default',
-    },
-    strength: {
-      repBias: 'body_armour_8_12',
-      repsMin: 8,
-      repsMax: 12,
-      targetRpeMin: 6,
-      targetRpeMax: 7,
-    },
+    conditioning: OFFSEASON_PREPARATION.conditioning,
+    running: OFFSEASON_PREPARATION.running,
+    speedSprint: OFFSEASON_PREPARATION.speedSprint,
+    strength: OFFSEASON_PREPARATION.strength,
     sessions: {
       coreBias: 'reduced',
       optionalSupportBias: 'high',
@@ -97,43 +100,25 @@ const BASE_POLICIES: Readonly<Record<OffseasonSubphase, OffseasonSubphasePolicy>
     },
     reasons: [
       'Early off-season prioritises low-intensity movement, aerobic base and recovery.',
-      'Running, sprint/COD and hard conditioning stay out by default for the first 1-2 weeks.',
+      'Running, sprint/COD and hard conditioning stay out by default for the first four weeks.',
       'Strength uses 8-12 rep body-armour work around RPE 6-7.',
     ],
   },
   mid_offseason: {
     subphase: 'mid_offseason',
-    conditioning: {
-      allowedCategories: ['aerobic_base', 'tempo'],
-      defaultCategory: 'aerobic_base',
-      hardSessionCap: 0,
-      modalityBias: 'off_feet_preferred',
-    },
-    running: {
-      allowedBySubphase: true,
-      enabledByDefault: false,
-      policy: 'careful_reentry_if_healthy',
-    },
-    speedSprint: {
-      allowedBySubphase: false,
-      policy: 'blocked_by_default',
-    },
-    strength: {
-      repBias: 'bridge_6_10',
-      repsMin: 6,
-      repsMax: 10,
-      targetRpeMin: 6,
-      targetRpeMax: 8,
-    },
+    conditioning: OFFSEASON_PREPARATION.conditioning,
+    running: OFFSEASON_PREPARATION.running,
+    speedSprint: OFFSEASON_PREPARATION.speedSprint,
+    strength: OFFSEASON_PREPARATION.strength,
     sessions: {
       coreBias: 'balanced',
       optionalSupportBias: 'moderate',
       lowAvailabilityCombinedDays: 'cautious',
     },
     reasons: [
-      'Mid off-season bridges aerobic base toward controlled tempo without default hard intervals.',
-      'Running may re-enter carefully when health and readiness support it; sprint/COD remains blocked.',
-      'Strength bridges through 6-10 reps before late off-season loading.',
+      'Weeks 3-4 keep body-armour lifting, mobility and optional light off-feet aerobic work.',
+      'Power, running, sprint/COD and hard conditioning remain out through week four.',
+      'Planned lifting resumes while the preparation prescription stays at 8-12 reps.',
     ],
   },
   late_offseason: {

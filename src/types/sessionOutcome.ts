@@ -249,7 +249,8 @@ export interface RecordSessionOutcomeIntent {
   sessionIdentity: SessionOutcomeTargetIdentity;
   completion: FeedbackCompletion;
   feeling: FeedbackFeeling | null;
-  soreness: FeedbackSoreness | null;
+  /** Read compatibility for historical outcomes; new writers omit this. */
+  soreness?: FeedbackSoreness | null;
   reason: SessionOutcomeReason | null;
   componentOutcomes: RecordSessionOutcomeComponentIntent[];
   strength?: StrengthExercisePerformanceLog[];

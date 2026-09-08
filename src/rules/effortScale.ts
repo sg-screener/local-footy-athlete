@@ -107,3 +107,17 @@ export function effortReadout(rating: number | null): string {
   if (!isEffortRating(rating)) return effortWord(null);
   return `${rating} — ${effortWord(rating)}`;
 }
+
+/** Recorded numeric effort wins. Qualitative-only historical records enter here.
+ * Soreness is deliberately not an input and cannot manufacture fatigue. */
+export function sessionEffortFromFeedback(feedback: { difficulty?: number | null; feeling?: string | null }): number | null {
+  if (isEffortRating(feedback.difficulty)) return feedback.difficulty;
+  switch (feedback.feeling) {
+    case 'very_easy': return 2;
+    case 'easy': return 4;
+    case 'good': return 7; // Solid is not an explicit report that training was easy.
+    case 'hard': return 7;
+    case 'very_hard': return 9;
+    default: return null;
+  }
+}

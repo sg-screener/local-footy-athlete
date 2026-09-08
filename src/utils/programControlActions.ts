@@ -1,3 +1,4 @@
+import { semanticFingerprint } from './programSemanticSnapshot';
 import { getEffectiveGameDates } from './sessionResolver';
 import { athleteActionSourceForDoor, planChangeSourceForDoor } from '../rules/athleteActionSourceLabel';
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
@@ -94,7 +95,6 @@ import {
   createTemporaryEquipmentFact,
   createTemporaryPoorSleepFact,
   createTemporaryScheduleFact,
-  createTemporarySorenessFact,
   createTemporaryTimeCapFact,
   isTemporaryEquipmentFact,
   isInjurySourceFact,
@@ -729,6 +729,8 @@ function executeProgramControlActionWithinTrace(
     }
     case 'add_exercise': {
       const result = addExerciseAtDate({
+        additionId: action.payload.additionId,
+        additionFactVersions: action.payload.additionFactVersions,
         date: action.payload.date,
         exercise: action.payload.exercise!,
       });
@@ -2014,6 +2016,9 @@ async function executeProgramControlActionDurablyWithinTrace(
     };
   }
   if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status') {
+    if (action.type === 'set_fatigue_status' && action.payload.level === 'sore') {
+      return { ok: false, changedProgram: false, requiresRebuild: false, fallbackToCoach: false, message: 'This option is no longer available.', route: routeProgramControlAction(action).route };
+    }
     const date = action.payload.date.slice(0, 10);
     const sourceSurface = action.source.surface ?? action.source.screen;
     // Stage 1: the week-tier readiness reports ("cooked", repeated poor sleep)
@@ -2051,15 +2056,7 @@ async function executeProgramControlActionDurablyWithinTrace(
             ? existingPoorSleep.factId
             : undefined,
         })
-      : action.payload.level === 'sore'
-        ? createTemporarySorenessFact({
-            observedDate: date,
-            scope: temporaryFactScope({ kind: 'date', date }),
-            athleteReportedLevel: 'moderate',
-            distribution: 'general',
-            sourceSurface,
-          })
-        : createTemporaryFatigueFact({
+      : createTemporaryFatigueFact({
             observedDate: date,
             // Every tier records only what the athlete said about this date.
             // One-day effects and a consecutive-day deload are reconstructed
@@ -2145,7 +2142,7 @@ async function executeProgramControlActionDurablyWithinTrace(
    * it during boot made startup a second author and left a pure compiler with
    * no way to reproduce the accepted prescription.
    */
-  const acceptedAction: ProgramControlAction = action.type === 'swap_exercise' &&
+  let acceptedAction: ProgramControlAction = action.type === 'swap_exercise' &&
     action.payload.toExercise &&
     !Number.isFinite(Number(action.payload.toExercise.weight))
     ? (() => {
@@ -2162,6 +2159,22 @@ async function executeProgramControlActionDurablyWithinTrace(
         } as ProgramControlAction;
       })()
     : action;
+  if (acceptedAction.type === 'add_exercise' && !acceptedAction.payload.additionId) {
+    acceptedAction = { ...acceptedAction, payload: { ...acceptedAction.payload,
+      additionId: `athlete-add:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+      additionFactVersions: useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.map(semanticFingerprint) } };
+  }
+  if (acceptedAction.type === 'swap_exercise' && !acceptedAction.payload.derivedSource) {
+    const workout = resolveWorkoutOnDate(acceptedAction.payload.date);
+    const { resolveCanonicalExerciseEditTarget } = require('../rules/canonicalWeeklyExerciseEditCompiler');
+    const { captureAcceptedExerciseTarget } = require('../rules/acceptedExerciseTarget');
+    const target = workout && resolveCanonicalExerciseEditTarget(workout, {
+      targetName: acceptedAction.payload.fromExercise,
+      targetComponentId: acceptedAction.payload.fromExerciseId ?? null,
+    });
+    if (workout && target?.kind === 'found') acceptedAction = { ...acceptedAction,
+      payload: { ...acceptedAction.payload, acceptedTarget: captureAcceptedExerciseTarget(workout,target.row) } };
+  }
   // Derived warm-up/add-on edits change accepted ledger input, not a stored
   // workout row. They still use the same durable acknowledgement and rollback.
   const derivedExerciseAction =

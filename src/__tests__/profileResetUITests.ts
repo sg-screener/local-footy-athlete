@@ -710,7 +710,7 @@ section('[10] FAQ contains MVP product questions');
     'What does the AI coach actually change?',
     'What is a Coach Update?',
     'Why did my session change?',
-    'What happens if I’m injured or sore?',
+    'What happens if I’m injured?',
     'Why doesn’t the app give me rehab exercises?',
     'Why does the week change around game day?',
     'Why are there no obvious progressions every week?',

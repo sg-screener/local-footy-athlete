@@ -102,8 +102,8 @@ export async function lowLoadAdditionJourney(storage: Map<string, string>, ok: (
       ok(`${label}: completing the second session does not complete the first`,firstItems.length>0 && secondItems.length===added.length
         && completions.mobility==='skipped' && completions['mobility-session-2']==='full',JSON.stringify({completions,secondItems}));
       const options = listPlanChangeOptionsForDay({date:target!.date,visibleWeek:view(),todayISO:date});
-      ok(`${label}: two separate sessions still reach the existing daily Add limit`,options.visibleSessionCount===2
-        && options.addOnTopCategories.length===0,JSON.stringify(options));
+      ok(`${label}: two separate sessions still allow another deliberate Add`,options.visibleSessionCount===2
+        && options.addOnTopCategories.length>0,JSON.stringify(options));
     }
     const after = visibleSignature(view());
     const boot = await quietAsync(() => relaunchApp({storage, todayISO: date}));

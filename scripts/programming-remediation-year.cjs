@@ -13,14 +13,20 @@ const repo = path.resolve(__dirname, '..');
 const fullKit = process.argv.includes('--kit=full');
 const output = path.resolve(repo, process.argv.find(a => a.startsWith('--output='))?.slice(9)
   ?? `outputs/programming-remedy-2026-08-28/${fullKit ? 'corrected-commercial' : 'original-partial'}`);
-const original = path.join(repo, 'outputs/release-candidate-0bcc3353-rcsteps/current-shoulder-review/generate-year.cjs');
+const original = path.join(repo, 'scripts/run-programming-selection-trace-year.cjs');
 let code = fs.readFileSync(original, 'utf8');
 const originalHash = createHash('sha256').update(code).digest('hex');
 const replace = (from, to) => {
   if (code.split(from).length !== 2) throw Error(`Driver anchor missing or repeated: ${from}`);
   code = code.replace(from, to);
 };
-replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
+replace("const repo = path.resolve(__dirname, '..');", `const repo = ${JSON.stringify(repo)};`);
+replace("const output = path.resolve(repo, outputArg?.slice(9) ?? 'output/programming-selection-trace-year');",
+  `const output = ${JSON.stringify(output)};`);
+replace('fs.readFileSync(__filename)', `fs.readFileSync(${JSON.stringify(original)})`);
+replace('sourceDriver: __filename, sourceDriverSha256,', `sourceDriver: ${JSON.stringify(original)}, sourceDriverSha256,`);
+// Keep this variant's receipt alongside the shared driver's receipt.
+replace("path.join(output, 'driver-receipt.json')", "path.join(output, 'base-driver-receipt.json')");
 replace("function phaseFor(i) {return i<12?'Off-season':i<28?'Pre-season':'In-season';}\nfunction phaseWeek(i) {return i<12?i+1:i<28?i-11:i-27;}",
   `const {annualFootballPhaseForIndex,annualFootballPhaseWeek}=app('src/rules/annualFootballPhaseCalendar');
 function phaseFor(i) {return annualFootballPhaseForIndex(i);}
@@ -63,8 +69,7 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           if(e.kind==='sick') illnessId=r.createdModifierIds?.[0];
           label=e.kind==='tired'?'Tired today':e.kind==='cooked'?'Totally cooked - rest today':'Sick';
         } else if(e.kind==='christmas_break') {
-          const span=${JSON.stringify(ACCEPTED_CHRISTMAS_BREAK)};
-          await act({type:'set_schedule_modifier',source:{screen:'program_tab',surface:'christmas_break',initiatedBy:'tap'},scope:'current_week',payload:{date:span.from,todayISO:date,noTeamTrainingSpan:span},requiresRebuild:false,createsActiveModifier:true,oneOffOnly:false},date,'Christmas team-training break');
+          await act(app('scripts/programming-final-year-audit-rules.cjs').auditChristmasBreakAction(date),date,'Christmas team-training break');
           label='Christmas team-training break accepted';`);
 replace(
   "    for(let d=0;d<7;d++) {",
@@ -132,10 +137,8 @@ replace("save('year-programs.json',data);", `save('year-programs.json',data);
     sourceDriverSha256: ${JSON.stringify(originalHash)},
     traceBatches: programmingSelectionTraceBatches,
   });`);
-replace('rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
-  "rest:item.role!=='power'&&row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined, domainRestSeconds:row.restSeconds,");
 replace('role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
-  'role:item.role,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||(conditioning&&app("src/utils/sessionComponents").getSessionComponents(workout).some(c=>c.kind==="finisher"&&c.completionPolicy==="optional_no_penalty"))||undefined,pair:item.superset?.groupId');
+  'role:item.role,domainRestSeconds:row.restSeconds,domainRole:row.role,power:row.power,section18Evidence:row.section18Evidence,modalityLabel:item.modalityLabel,withheld:row.unavailableForInjury,optional:item.optional||undefined,pair:item.superset?.groupId');
 replace('name:o.title,description:o.description,rows:o.rows.map',
   'name:o.title,modalityLabel:o.modalityLabel,description:o.description,rows:o.rows.map');
 replace('return {name:formatExerciseDisplayName(row.exercise?.name??row.name),',
@@ -154,7 +157,7 @@ fs.writeFileSync(path.join(output, 'driver-receipt.json'), JSON.stringify({
   sourceDriver: original, sourceDriverSha256: originalHash, kit: fullKit ? 'onboarding commercial preset' : 'original explicit partial answer',
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
   sourceDiff: execFileSync('git', ['diff', '--stat', '--', 'src', 'scripts', 'package.json'], { cwd: repo, encoding: 'utf8' }),
-  corrections: ['Full onboarding equipment capabilities asserted before generation', 'The canonical annual phase calendar shifts the accepted profile to pre-season in mid-November and in-season in late March', 'Pre-season team training is Monday/Wednesday; in-season team training is Tuesday/Thursday', 'The accepted 19 December-11 January Christmas team-training break is committed through the production action', 'Accepted availability, club nights, fixture facts and usual game day captured per compiled week', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away 28 December-1 January and atomic 2 January return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Main muscles projected from the signed metadata owners for PDF reporting only', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
+  corrections: ['Full onboarding equipment capabilities asserted before generation', 'The canonical annual phase calendar shifts the accepted profile to pre-season in mid-November and in-season in late March', 'Pre-season team training is Monday/Wednesday; in-season team training is Tuesday/Thursday', `The accepted ${ACCEPTED_CHRISTMAS_BREAK.from}-${ACCEPTED_CHRISTMAS_BREAK.until} Christmas team-training break is committed through the shared production action`, 'Accepted availability, club nights, fixture facts and usual game day captured per compiled week', 'Very-tired remaining-week deload event added through the production readiness action', 'Going Away 28 December-1 January and atomic 2 January return-home equipment restoration added through production actions', 'Power rest hidden from display, retained as domainRestSeconds', 'Individual Speed rows exported as evidence from the existing typed component owner', 'Canonical energy-system evidence projected from the shared session classifier', 'Raw catalogue identity retained beside athlete-facing row and warm-up copy', 'Main muscles projected from the signed metadata owners for PDF reporting only', 'Actual conditioning identity and resolved equipment captured', 'Optional conditioning flag projected from existing component completion policy', 'Actual compiler selection traces captured through the scoped observer'],
   notCovered: ['Physical iPhone acceptance', 'Native onboarding taps (separate simulator evidence)'],
 }, null, 2));
 const driver = new Module(path.join(output, 'generate-year.cjs'), module);

@@ -60,6 +60,8 @@ export interface CoachingInputs {
   seasonPhase: SeasonPhase;
   availableDays: number;
   selectedDays: string[];
+  strengthSessionTarget?: number;
+  equipmentAccessDays?: string[];
   teamTrainingDaysPerWeek: number;
   teamTrainingDays: string[];
   sprintExposure: SprintExposure | undefined;
@@ -978,6 +980,8 @@ export function onboardingToCoachingInputs(
     seasonPhase: data.seasonPhase || 'Pre-season',
     availableDays,
     selectedDays: selectedDays as any,
+    strengthSessionTarget: data.trainingDaysPerWeek,
+    equipmentAccessDays: data.preferredTrainingDays,
     // Both come from the phase-scoped set above, never from the raw answer —
     // a count that outlived the days it counts is the same defect one field on.
     teamTrainingDaysPerWeek: teamDays.length,

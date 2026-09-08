@@ -220,7 +220,8 @@ function theAthlete(): OnboardingData {
     // training, ever.
     gender: 'male', seasonPhase: 'Off-season', seasonFinishedOn: '2026-07-12',
     trainingDaysPerWeek: 2,
-    preferredTrainingDays: ['Monday', 'Thursday'],
+    // Two requested sessions with real access for the offered third session.
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Thursday'],
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
     usualGameDay: null,
@@ -264,7 +265,9 @@ function theBlockedAthlete(over: Partial<OnboardingData> = {}): OnboardingData {
     ...theAthlete(),
     gender: 'male', seasonPhase: 'In-season',
     trainingDaysPerWeek: 3,
-    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    // Sunday equipment is available, but the Saturday game's recovery rules
+    // prevent it from providing the extra session. This reaches the rebuild.
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Sunday'],
     teamTrainingDaysPerWeek: 2,
     teamTrainingDays: ['Tuesday', 'Thursday'],
     teamTrainingDuration: '90 minutes',

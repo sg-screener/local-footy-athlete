@@ -27,6 +27,8 @@ import { flushPendingStorageWrites } from '../store/asyncStorageCompat';
 import { readinessActionForKind } from '../utils/weekReadinessActions';
 import { useReadinessStore } from '../store/readinessStore';
 import { constraintInputsForPersistence, readinessInputsForPersistence } from '../store/compatibilityPersistence';
+import { undoLastDecision } from '../store/undoLastDecision';
+import { activeInjuryFactsOn } from '../rules/injuryWithheldRows';
 
 let passed = 0;
 const failures: string[] = [];
@@ -134,6 +136,8 @@ async function main() {
       setJourneyClock(date);
       const day = () => quiet(() => deriveVisibleWeekLive(YEAR_START, date)).find(day => day.date === date)?.workout;
       const label = `${archetype.id}/${date}`;
+      const healthyWeek = quiet(() => deriveVisibleWeekLive(YEAR_START, date));
+      let acceptedInjuryEdit: { date: string; componentId: string; name: string; sets: number } | null = null;
       const rolesBefore = new Map(quiet(() => deriveVisibleWeekLive(YEAR_START, date)).flatMap(day =>
         day.workout?.exercises.map(row => [row.id, { name: row.exercise?.name, role: row.section18Evidence?.role }] as const) ?? []));
       check(`${label} reached a real session`, !!day()?.exercises.length);
@@ -193,14 +197,49 @@ async function main() {
           const row = target?.workout?.exercises.find(row => !row.unavailableForInjury && row.section18Evidence?.role === 'strength_accessory');
           check(`${label} reaches an accumulated exercise edit`, !!row?.exercise);
           if (row?.exercise && target) {
+            const originalSets = row.prescribedSets;
+            const originalName = row.exercise.name;
+            const originalConditioning = JSON.stringify(target.workout?.conditioningBlock);
             const edit = await quietAsync(() => executeProgramControlActionDurably({ type: 'swap_exercise',
               source: { screen: 'session_detail', surface: 'exercise_edit', initiatedBy: 'tap' },
               scope: 'today_only', payload: { date: target.date, fromExercise: row.exercise!.name, fromExerciseId: row.id,
-                toExercise: { name: row.exercise!.name, sets: row.prescribedSets + 1,
+                toExercise: { name: row.exercise!.name, sets: originalSets + 1,
                   repsMin: row.prescribedRepsMin ?? 8, repsMax: row.prescribedRepsMax ?? 8 } },
               requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: date }));
             check(`${label} accepts edit while injury is active`, edit.ok, edit.message);
+            if (edit.ok) acceptedInjuryEdit = { date: target.date, componentId: row.id, name: originalName, sets: originalSets + 1 };
             check(`${label} edit retains compiler preview continuation`, !!useProgramStore.getState().sourceFactCompilerInput);
+            const editedDay = () => quiet(() => deriveVisibleWeekLive(YEAR_START, date)).find(day => day.date === target.date)?.workout;
+            const currentRows = () => editedDay()?.exercises.filter(candidate => candidate.exercise?.name === originalName) ?? [];
+            check(`${label} strength-only edit preserves injury-adjusted conditioning`,
+              JSON.stringify(editedDay()?.conditioningBlock) === originalConditioning);
+            check(`${label} accepted injury-row edit delivers the requested sets`,
+              currentRows().length === 1 && currentRows()[0].prescribedSets === originalSets + 1,
+              JSON.stringify({ expected: originalSets + 1, rows: currentRows().map(candidate => [candidate.id, candidate.prescribedSets]) }));
+            const editedSignature = signature(editedDay());
+            const editedBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
+            check(`${label} exact edited injury session survives restart`, editedBoot.ok && signature(editedDay()) === editedSignature);
+            check(`${label} reopened strength edit preserves injury-adjusted conditioning`,
+              JSON.stringify(editedDay()?.conditioningBlock) === originalConditioning);
+            if (edit.ok) {
+              // Reopening creates the current screen's row objects. A second
+              // tap uses that row's current identity, not a pre-restart handle.
+              const current = currentRows()[0];
+              const second = await quietAsync(() => executeProgramControlActionDurably({ type: 'swap_exercise',
+                source: { screen: 'session_detail', surface: 'exercise_edit', initiatedBy: 'tap' },
+                scope: 'today_only', payload: { date: target.date, fromExercise: originalName, fromExerciseId: current?.id,
+                  toExercise: { name: originalName, sets: originalSets + 2,
+                    repsMin: row.prescribedRepsMin ?? 8, repsMax: row.prescribedRepsMax ?? 8 } },
+                requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: date }));
+              check(`${label} a second injury-row edit accumulates`, second.ok &&
+                currentRows().length === 1 && currentRows()[0].prescribedSets === originalSets + 2,
+                JSON.stringify({ second, rows: currentRows().map(candidate => [candidate.id, candidate.prescribedSets]) }));
+              const undo = await quietAsync(() => undoLastDecision());
+              check(`${label} Undo restores the first injury-row edit exactly`, undo.outcome === 'undone' && signature(editedDay()) === editedSignature,
+                JSON.stringify({ undo, before: editedSignature, after: signature(editedDay()) }));
+              const undoneBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
+              check(`${label} accumulated injury-row Undo survives restart`, undoneBoot.ok && signature(editedDay()) === editedSignature);
+            }
           }
         }
       }
@@ -210,7 +249,68 @@ async function main() {
       check(`${label} compiler reached dated overlays`, !!overlays);
       const inputs = projectProgramPersistedInputs(useProgramStore.getState());
       check(`${label} compiler continuation is not persisted`, !JSON.stringify(inputs).includes('sourceFactCompilerInput'));
+      const episodes = activeInjuryFactsOn(useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts, date);
+      check(`${label} accumulated Clear reaches one active episode and an accepted edit`, episodes.length === 1 && !!acceptedInjuryEdit);
+      const clear = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
+        source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+        scope: 'current_and_future', payload: { episodeId: episodes[0]?.episodeId },
+        requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false }, { todayISO: date }));
+      check(`${label} accumulated injury Clear succeeds`, clear.ok, clear.message);
+      if (acceptedInjuryEdit) {
+        const edit = acceptedInjuryEdit;
+        // A replacement can keep an original slot's identity under a new name.
+        // Only a genuinely added injury row has no original component.
+        const originallyPresent = healthyWeek.find(day => day.date === edit.date)?.workout?.exercises
+          .filter(row => row.id === edit.componentId) ?? [];
+        const current = () => quiet(() => deriveVisibleWeekLive(YEAR_START, date)).find(day => day.date === edit.date)?.workout;
+        const rows = current()?.exercises.filter(row => row.exercise?.name === edit.name) ?? [];
+        check(`${label} Clear preserves retained-row edits without adding retired injury rows`,
+          originallyPresent.length === 0 ? rows.length === 0 :
+            originallyPresent.length === 1 && rows.length === 1 && rows[0].prescribedSets === edit.sets,
+          JSON.stringify({ edit, originallyPresent: originallyPresent.length, rows: rows.map(row => [row.id, row.prescribedSets]) }));
+        const cleared = signature(current());
+        const clearBoot = await quietAsync(() => relaunchApp({ storage, todayISO: date }));
+        check(`${label} injury-era edit and Clear survive reopening`, clearBoot.ok && signature(current()) === cleared);
+      }
     }
+  }
+  // Earlier accepted edits remain the base when an injury comes and goes.
+  // Use the real generated day, accepted tap, injury door and Clear door.
+  for (const archetype of ARCHETYPES.filter(athlete => ['male-3-experienced-gym', 'female-5-home'].includes(athlete.id))) {
+    await quietAsync(() => coldStartThroughOnboarding({ profile: athleteAnswers(archetype), installDayISO: YEAR_START }));
+    const days = () => quiet(() => deriveVisibleWeekLive(YEAR_START, YEAR_START));
+    const target = days().find(day => day.workout?.exercises.some(row => row.section18Evidence?.role === 'main_strength'));
+    const row = target?.workout?.exercises.find(row => row.section18Evidence?.role === 'main_strength');
+    const label = `${archetype.id}/edit-before-injury`;
+    check(`${label} reaches a real main lift`, !!row?.exercise && !!target);
+    if (!target || !row?.exercise) continue;
+    const edited = await quietAsync(() => executeProgramControlActionDurably({ type: 'swap_exercise',
+      source: { screen: 'session_detail', surface: 'exercise_edit', initiatedBy: 'tap' },
+      scope: 'today_only', payload: { date: target.date, fromExercise: row.exercise.name, fromExerciseId: row.id,
+        toExercise: { name: row.exercise.name, sets: row.prescribedSets + 1,
+          repsMin: row.prescribedRepsMin ?? 8, repsMax: row.prescribedRepsMax ?? 8 } },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: true }, { todayISO: YEAR_START }));
+    check(`${label} accepts the original edit`, edited.ok, edited.message);
+    const beforeInjury = signature(days().find(day => day.date === target.date)?.workout);
+    const constraint = buildGuidedInjuryConstraint({ region: 'lower_body', area: 'knee', severity: 7,
+      severityBand: 'moderate', adjustmentLevel: 'moderate', triggers: ['running'], seriousSymptoms: false }, { todayISO: YEAR_START });
+    const injured = await quietAsync(() => executeProgramControlActionDurably({ type: 'set_injury_modifier',
+      source: { screen: 'session_detail', surface: 'session_injury_review', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { constraint }, requiresRebuild: false,
+      createsActiveModifier: true, oneOffOnly: false }, { todayISO: YEAR_START }));
+    check(`${label} accepts the later injury`, injured.ok, injured.message);
+    const injurySignature = signature(days().find(day => day.date === target.date)?.workout);
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check(`${label} injury-adjusted earlier edit reopens exactly`, boot.ok && signature(days().find(day => day.date === target.date)?.workout) === injurySignature);
+    const episodes = activeInjuryFactsOn(useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts, YEAR_START);
+    check(`${label} Clear addresses exactly one active episode`, episodes.length === 1);
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({ type: 'clear_injury_modifier',
+      source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future', payload: { episodeId: episodes[0]?.episodeId },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false }, { todayISO: YEAR_START }));
+    check(`${label} Clear restores the earlier edited session exactly`, cleared.ok && signature(days().find(day => day.date === target.date)?.workout) === beforeInjury, cleared.message);
+    const clearBoot = await quietAsync(() => relaunchApp({ storage, todayISO: YEAR_START }));
+    check(`${label} earlier edited session survives Clear and reopening`, clearBoot.ok && signature(days().find(day => day.date === target.date)?.workout) === beforeInjury);
   }
   console.log(`Injury compiler preview: ${passed} passed, ${failures.length} failed`);
   if (failures.length) process.exitCode = 1;

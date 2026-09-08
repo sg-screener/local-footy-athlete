@@ -5,6 +5,7 @@ import type {
 import type {
   InjuryState,
 } from '../utils/injuryProgression';
+import { factHorizon } from './durableFactHorizon';
 
 export const INJURY_EPISODE_PROTOCOL_VERSION = 1 as const;
 
@@ -42,6 +43,9 @@ export interface InjuryEpisodeV1 {
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+  resolvedOnISO?: string;
+  /** Last reported injury inputs, retained when Clear sets current severity to zero. */
+  restrictionBeforeResolution?: { severity: number; policy: InjuryRestrictionPolicyV1 };
   triggers: string[];
   seriousSymptoms: boolean;
   seriousSymptom?: string;
@@ -135,6 +139,18 @@ export function normalizeInjuryEpisode(value: unknown): InjuryEpisodeV1 | null {
       ? value.resolvedAt
       : null,
     triggers: strings(value.triggers),
+    ...(typeof value.resolvedOnISO === 'string' ? { resolvedOnISO: isoDate(value.resolvedOnISO) } : {}),
+    ...(isRecord(value.restrictionBeforeResolution) && isRecord(value.restrictionBeforeResolution.policy)
+      ? { restrictionBeforeResolution: {
+        severity: clampSeverity(value.restrictionBeforeResolution.severity),
+        policy: {
+          rules: strings(value.restrictionBeforeResolution.policy.rules),
+          safeFocus: strings(value.restrictionBeforeResolution.policy.safeFocus),
+          advice: strings(value.restrictionBeforeResolution.policy.advice),
+          severityBand: value.restrictionBeforeResolution.policy.severityBand as InjuryRestrictionPolicyV1['severityBand'],
+          adjustmentLevel: value.restrictionBeforeResolution.policy.adjustmentLevel as InjuryRestrictionPolicyV1['adjustmentLevel'],
+        },
+      } } : {}),
     seriousSymptoms: value.seriousSymptoms === true,
     seriousSymptom: typeof value.seriousSymptom === 'string' ? value.seriousSymptom : undefined,
     transitionHistory: history,
@@ -198,6 +214,7 @@ export function deriveInjuryConstraintFromEpisode(
     severity: episode.severity,
     status: episode.status === 'improving' ? 'improving' : 'active',
     startDate: episode.onsetOrReportedDate,
+    ...(episode.resolvedOnISO ? { expiresAt: factHorizon(episode).endsAfter! } : {}),
     lastUpdatedAt: episode.updatedAt,
     source: episode.sourceSurface === 'guided_injury_flow' ? 'guided_injury_flow' : 'coach',
     triggers: [...episode.triggers],

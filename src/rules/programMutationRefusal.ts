@@ -60,6 +60,7 @@ export type ProgramMutationRefusalKind =
   | 'week_cannot_be_built'
   /** Committed, could not be verified, and was rolled back whole. */
   | 'verification_rolled_back'
+  | 'exercise_choice_not_preserved'
   /** The change itself is not something we can apply. Retrying is pointless. */
   | 'invalid_change'
   /** Generation failed inside the transaction; that owner supplies the copy. */
@@ -94,6 +95,7 @@ const CAN_RETRY: Record<ProgramMutationRefusalKind, boolean> = {
   // therefore asks them to CHANGE something first.
   week_cannot_be_built: false,
   verification_rolled_back: true,
+  exercise_choice_not_preserved: false,
   invalid_change: false,
   generation_failed: true,
   unknown: true,
@@ -110,6 +112,8 @@ const COPY: Record<ProgramMutationRefusalKind, string> = {
     'Tell us your usual game day first — or say you do not have one — and we will build the week around that answer.',
   week_cannot_be_built:
     'Those training days cannot make a full week alongside your club nights and your game, so nothing changed. Pick different days, or change your club nights or game day, and save again.',
+  exercise_choice_not_preserved:
+    'We could not keep an exercise you chose, so your settings and program have been left unchanged.',
   verification_rolled_back:
     'We could not confirm the rebuilt program, so nothing changed and your previous plan is intact. You can try again.',
   invalid_change: 'That change cannot be applied to your program as it stands, so nothing changed.',
@@ -145,6 +149,7 @@ const REASON_KINDS: Record<string, ProgramMutationRefusalKind> = {
   // identifier, and the athlete cannot act on a clause id.
   weekly_schedule_refused: 'week_cannot_be_built',
 
+  accepted_exercise_choice_not_preserved: 'exercise_choice_not_preserved',
   accepted_profile_candidate_mismatch: 'verification_rolled_back',
   accepted_composition_base_candidate_mismatch: 'verification_rolled_back',
   accepted_profile_durable_readback_mismatch: 'verification_rolled_back',

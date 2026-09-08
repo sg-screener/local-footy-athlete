@@ -1,0 +1,2926 @@
+{
+  "provenance": "Captured unmodified composeWeek inputs from real controlled-2 annual action/save/reopen journey, week 51; see output/yearcheck-fixes-2026-09-07/probes/reopen-rotation.",
+  "before": {
+    "profile": {
+      "firstName": "Controlled 2 gym days",
+      "ageRange": "22-26",
+      "gender": "male",
+      "position": "inside_mid",
+      "heightCm": 178,
+      "weightKg": 80,
+      "motivation": "Get stronger",
+      "goals": [
+        "stronger_and_fitter"
+      ],
+      "seasonPhase": "In-season",
+      "seasonFinishedOn": "2026-09-27",
+      "trainingDaysPerWeek": 2,
+      "preferredTrainingDays": [
+        "Monday",
+        "Thursday"
+      ],
+      "teamTrainingDays": [
+        "Tuesday",
+        "Thursday"
+      ],
+      "teamTrainingDaysPerWeek": 2,
+      "teamTrainingStopsOverChristmas": false,
+      "trainingLocation": "Commercial gym",
+      "equipment": [
+        "barbell",
+        "dumbbells",
+        "squat_rack",
+        "pullup_bar",
+        "cable_machine",
+        "hamstring_curl",
+        "knee_extension",
+        "bands"
+      ],
+      "equipmentAnswer": {
+        "tags": {
+          "barbell": "have",
+          "dumbbells": "have",
+          "cables": "have",
+          "machine": "have",
+          "bands": "have",
+          "bench": "have",
+          "pullup_bar": "have",
+          "kettlebell": "have",
+          "foam_roller": "have",
+          "plyo_box": "have",
+          "rack": "have",
+          "trap_bar": "have",
+          "swiss_ball": "have",
+          "ab_wheel": "have",
+          "back_extension_bench": "have",
+          "dip_bars": "have",
+          "rings_trx": "have",
+          "sandbag": "have",
+          "medicine_ball": "have",
+          "tib_bar": "have"
+        },
+        "modalities": {
+          "bike_erg": "have",
+          "air_bike": "have",
+          "row": "have",
+          "ski": "have",
+          "treadmill": "have"
+        },
+        "answeredOn": "2026-09-28"
+      },
+      "injuries": [],
+      "experienceLevel": "2-5 years",
+      "squatStrength": "1.5x bodyweight",
+      "benchStrength": "1.25x bodyweight",
+      "conditioningLevel": "Good",
+      "sprintExposure": "2+ times per week",
+      "recentTrainingLoad": "Pretty consistent",
+      "twoKmTimeTrial": {
+        "seconds": 480,
+        "recordedOn": "2026-09-28",
+        "source": "onboarding"
+      },
+      "usualGameDay": "Saturday",
+      "gameDay": "Saturday"
+    },
+    "recordedLoads": {
+      "Back Squat": 90,
+      "Single-Leg RDL": 25,
+      "Bench Press": 82.5,
+      "RDLs": 80,
+      "DB Shoulder Press": 50,
+      "Chest-Supported DB Row": 55,
+      "Bulgarian Split Squats": 25,
+      "B-Stance RDL": 22.5,
+      "Incline DB Bench": 50,
+      "Pull-Ups": 17.5,
+      "Trap Bar Deadlift": 105,
+      "Walking Lunges": 25,
+      "Chest Supported Row": 65,
+      "Landmine Press": 32.5,
+      "Front Squat": 55,
+      "Close Grip Bench": 65,
+      "Single-Leg Leg Press": 62.5,
+      "Reverse Lunges": 20,
+      "Single-Arm DB Floor Press": 20,
+      "Half-Kneeling Single-Arm Overhead Press": 20,
+      "High Box Squat": 117.5,
+      "Overhead Press": 55,
+      "Seated Cable Row": 47.5,
+      "Box Squat": 95,
+      "Neutral-Grip Pulldown": 45,
+      "Single-Leg Squat (to Box)": 15,
+      "Bent Row": 67.5,
+      "Seated DB Press": 35,
+      "Lat Pulldown": 50,
+      "Cossack Squat": 5,
+      "Z-Press": 35,
+      "Single-Arm Lat Pulldown": 32.5,
+      "Lateral Lunge": 2.5,
+      "SL 45\u00b0 Back Extension": 2.5,
+      "DB Bench Press": 60
+    },
+    "phaseClock": {
+      "weekNumber": 45
+    },
+    "seasonPhase": "In-season",
+    "offseasonSubphase": null,
+    "plannedDays": [
+      {
+        "dayOfWeek": 1,
+        "isTeamDay": false,
+        "planEntryId": "sched:2027-09-13:1:full_body",
+        "strengthIntent": {
+          "archetype": "full_body",
+          "primaryPattern": "squat",
+          "plannedPatterns": [
+            "squat",
+            "hinge",
+            "push",
+            "pull"
+          ],
+          "effectivePatterns": [
+            "squat",
+            "hinge",
+            "push",
+            "pull"
+          ]
+        },
+        "name": "full_body",
+        "workoutType": "Strength",
+        "sessionTier": "core",
+        "daysToGame": 5
+      },
+      {
+        "dayOfWeek": 4,
+        "isTeamDay": true,
+        "planEntryId": "sched:2027-09-13:4:upper",
+        "strengthIntent": {
+          "archetype": "upper",
+          "primaryPattern": "push",
+          "plannedPatterns": [
+            "push",
+            "pull"
+          ],
+          "effectivePatterns": [
+            "push",
+            "pull"
+          ]
+        },
+        "name": "upper",
+        "workoutType": "Team Training",
+        "sessionTier": "core",
+        "daysToGame": 2
+      }
+    ],
+    "kit": [
+      "bodyweight",
+      "barbell",
+      "dumbbells",
+      "cables",
+      "machine",
+      "bands",
+      "bench",
+      "pullup_bar",
+      "kettlebell",
+      "foam_roller",
+      "plyo_box",
+      "rack",
+      "trap_bar",
+      "swiss_ball",
+      "ab_wheel",
+      "back_extension_bench",
+      "dip_bars",
+      "rings_trx",
+      "sandbag",
+      "medicine_ball",
+      "tib_bar",
+      "bike_or_treadmill"
+    ],
+    "temporaryKitByDayOfWeek": {
+      "0": [
+        "bodyweight"
+      ],
+      "2": [
+        "bodyweight"
+      ],
+      "3": [
+        "bodyweight"
+      ],
+      "5": [
+        "bodyweight"
+      ],
+      "6": [
+        "bodyweight"
+      ]
+    },
+    "injuries": {
+      "prohibitedPatterns": [],
+      "excludedIdentities": [],
+      "excludedIdentitiesByDate": {}
+    },
+    "todayISO": "2027-09-13",
+    "blockNumber": 12,
+    "pinnedIdentities": [],
+    "progressedIdentities": [
+      "Back Squat",
+      "Single-Leg RDL",
+      "Bench Press",
+      "RDLs",
+      "DB Shoulder Press",
+      "Chest-Supported DB Row",
+      "Bulgarian Split Squats",
+      "B-Stance RDL",
+      "Incline DB Bench",
+      "Pull-Ups",
+      "Trap Bar Deadlift",
+      "Walking Lunges",
+      "Chest Supported Row",
+      "Landmine Press",
+      "Front Squat",
+      "Close Grip Bench",
+      "Single-Leg Leg Press",
+      "Reverse Lunges",
+      "Single-Arm DB Floor Press",
+      "Half-Kneeling Single-Arm Overhead Press",
+      "High Box Squat",
+      "Overhead Press",
+      "Seated Cable Row",
+      "Box Squat",
+      "Neutral-Grip Pulldown",
+      "Single-Leg Squat (to Box)",
+      "Bent Row",
+      "Seated DB Press",
+      "Lat Pulldown",
+      "Cossack Squat",
+      "Z-Press",
+      "Single-Arm Lat Pulldown",
+      "Lateral Lunge",
+      "SL 45\u00b0 Back Extension",
+      "DB Bench Press"
+    ],
+    "blockStartISO": "2027-09-13",
+    "selectionHistory": [
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Hollow Hold"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Bench Press"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Half-Kneeling Single-Arm Overhead Press"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Banded Tricep Pushdown"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Band Pull-Apart"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "High Box Squat"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Banded Dead Bug"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Z-Press"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Single-Arm Lat Pulldown"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Skull Crushers"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Incline Y Raise"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Front Squat"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Woodchop (Standing)"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Z-Press"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Overhead Tricep Extension"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Incline Dumbbell Curl"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Single-Leg Calf Raise"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "main_bilateral",
+        "identity": "Bulgarian Split Squats"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Band Pallof Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Single-Arm DB Floor Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest-Supported DB Row"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Shoulder Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Lateral Raise"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Bicep Curl (Dumbbell)"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Seated Calf Raise"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "main_bilateral",
+        "identity": "Walking Lunges"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "main_bilateral",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "hamstring",
+        "role": "single_leg",
+        "identity": "Nordic Lower"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Side Plank"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest-Supported DB Row"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Shoulder Press"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Lat Pulldown"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Tricep Circuit (Dirty 30)"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "trap",
+        "role": "accessory",
+        "identity": "Shrugs"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "McGill Sit Up"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bent Row"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated DB Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Dumbbell Skull Crusher"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Concentration Curl"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Dips"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Long-Lever Copenhagen"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Slant Board Step-Down"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated DB Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bent Row"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "Single-Leg Calf Raise"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Box Squat"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Neutral-Grip Pulldown"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Groin Squeeze"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Single-Leg Squat (to Box)"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Overhead Press"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "SL 45\u00b0 Back Extension Hold"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "High Box Squat"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Copenhagen Plank (Half)"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Bulgarian Split Squats"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Overhead Press"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Front Squat"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Close Grip Bench"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Long-Lever Copenhagen"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Single-Leg Leg Press"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Landmine Press"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chin-Ups"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Groin Squeeze"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Walking Lunges"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Landmine Press"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "Seated Calf Raise"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "main_bilateral",
+        "identity": "Bulgarian Split Squats"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Incline DB Bench"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Copenhagen Plank (Half)"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Shoulder Press"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest-Supported DB Row"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-10-26",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "Single-Leg Calf Raise"
+      }
+    ],
+    "trackedLiftChoices": {}
+  },
+  "after": {
+    "profile": {
+      "firstName": "Controlled 2 gym days",
+      "ageRange": "22-26",
+      "gender": "male",
+      "position": "inside_mid",
+      "heightCm": 178,
+      "weightKg": 80,
+      "motivation": "Get stronger",
+      "goals": [
+        "stronger_and_fitter"
+      ],
+      "seasonPhase": "In-season",
+      "seasonFinishedOn": "2026-09-27",
+      "trainingDaysPerWeek": 2,
+      "preferredTrainingDays": [
+        "Monday",
+        "Thursday"
+      ],
+      "teamTrainingDays": [
+        "Tuesday",
+        "Thursday"
+      ],
+      "teamTrainingDaysPerWeek": 2,
+      "teamTrainingStopsOverChristmas": false,
+      "trainingLocation": "Commercial gym",
+      "equipment": [
+        "barbell",
+        "dumbbells",
+        "squat_rack",
+        "pullup_bar",
+        "cable_machine",
+        "hamstring_curl",
+        "knee_extension",
+        "bands"
+      ],
+      "equipmentAnswer": {
+        "tags": {
+          "barbell": "have",
+          "dumbbells": "have",
+          "cables": "have",
+          "machine": "have",
+          "bands": "have",
+          "bench": "have",
+          "pullup_bar": "have",
+          "kettlebell": "have",
+          "foam_roller": "have",
+          "plyo_box": "have",
+          "rack": "have",
+          "trap_bar": "have",
+          "swiss_ball": "have",
+          "ab_wheel": "have",
+          "back_extension_bench": "have",
+          "dip_bars": "have",
+          "rings_trx": "have",
+          "sandbag": "have",
+          "medicine_ball": "have",
+          "tib_bar": "have"
+        },
+        "modalities": {
+          "bike_erg": "have",
+          "air_bike": "have",
+          "row": "have",
+          "ski": "have",
+          "treadmill": "have"
+        },
+        "answeredOn": "2026-09-28"
+      },
+      "injuries": [],
+      "experienceLevel": "2-5 years",
+      "squatStrength": "1.5x bodyweight",
+      "benchStrength": "1.25x bodyweight",
+      "conditioningLevel": "Good",
+      "sprintExposure": "2+ times per week",
+      "recentTrainingLoad": "Pretty consistent",
+      "twoKmTimeTrial": {
+        "seconds": 480,
+        "recordedOn": "2026-09-28",
+        "source": "onboarding"
+      },
+      "usualGameDay": "Saturday",
+      "gameDay": "Saturday"
+    },
+    "recordedLoads": {
+      "Back Squat": 90,
+      "Single-Leg RDL": 25,
+      "Bench Press": 82.5,
+      "RDLs": 80,
+      "DB Shoulder Press": 50,
+      "Chest-Supported DB Row": 55,
+      "Bulgarian Split Squats": 25,
+      "B-Stance RDL": 22.5,
+      "Incline DB Bench": 50,
+      "Pull-Ups": 17.5,
+      "Trap Bar Deadlift": 105,
+      "Walking Lunges": 25,
+      "Chest Supported Row": 65,
+      "Landmine Press": 32.5,
+      "Front Squat": 55,
+      "Close Grip Bench": 65,
+      "Single-Leg Leg Press": 62.5,
+      "Reverse Lunges": 20,
+      "Single-Arm DB Floor Press": 20,
+      "Half-Kneeling Single-Arm Overhead Press": 20,
+      "High Box Squat": 117.5,
+      "Overhead Press": 55,
+      "Seated Cable Row": 47.5,
+      "Box Squat": 95,
+      "Neutral-Grip Pulldown": 45,
+      "Single-Leg Squat (to Box)": 15,
+      "Bent Row": 67.5,
+      "Seated DB Press": 35,
+      "Lat Pulldown": 50,
+      "Cossack Squat": 5,
+      "Z-Press": 35,
+      "Single-Arm Lat Pulldown": 32.5,
+      "Lateral Lunge": 2.5,
+      "SL 45\u00b0 Back Extension": 2.5,
+      "DB Bench Press": 60
+    },
+    "phaseClock": {
+      "weekNumber": 45
+    },
+    "seasonPhase": "In-season",
+    "offseasonSubphase": null,
+    "plannedDays": [
+      {
+        "dayOfWeek": 1,
+        "isTeamDay": false,
+        "planEntryId": "sched:2027-09-13:1:full_body",
+        "strengthIntent": {
+          "archetype": "full_body",
+          "primaryPattern": "squat",
+          "plannedPatterns": [
+            "squat",
+            "hinge",
+            "push",
+            "pull"
+          ],
+          "effectivePatterns": [
+            "squat",
+            "hinge",
+            "push",
+            "pull"
+          ]
+        },
+        "name": "full_body",
+        "workoutType": "Strength",
+        "sessionTier": "core",
+        "daysToGame": 5
+      },
+      {
+        "dayOfWeek": 4,
+        "isTeamDay": true,
+        "planEntryId": "sched:2027-09-13:4:upper",
+        "strengthIntent": {
+          "archetype": "upper",
+          "primaryPattern": "push",
+          "plannedPatterns": [
+            "push",
+            "pull"
+          ],
+          "effectivePatterns": [
+            "push",
+            "pull"
+          ]
+        },
+        "name": "upper",
+        "workoutType": "Team Training",
+        "sessionTier": "core",
+        "daysToGame": 2
+      }
+    ],
+    "kit": [
+      "bodyweight",
+      "barbell",
+      "dumbbells",
+      "cables",
+      "machine",
+      "bands",
+      "bench",
+      "pullup_bar",
+      "kettlebell",
+      "foam_roller",
+      "plyo_box",
+      "rack",
+      "trap_bar",
+      "swiss_ball",
+      "ab_wheel",
+      "back_extension_bench",
+      "dip_bars",
+      "rings_trx",
+      "sandbag",
+      "medicine_ball",
+      "tib_bar",
+      "bike_or_treadmill"
+    ],
+    "temporaryKitByDayOfWeek": {
+      "0": [
+        "bodyweight"
+      ],
+      "2": [
+        "bodyweight"
+      ],
+      "3": [
+        "bodyweight"
+      ],
+      "5": [
+        "bodyweight"
+      ],
+      "6": [
+        "bodyweight"
+      ]
+    },
+    "injuries": {
+      "prohibitedPatterns": [],
+      "excludedIdentities": [],
+      "excludedIdentitiesByDate": {}
+    },
+    "todayISO": "2027-09-13",
+    "blockNumber": 12,
+    "pinnedIdentities": [],
+    "progressedIdentities": [
+      "Back Squat",
+      "Single-Leg RDL",
+      "Bench Press",
+      "RDLs",
+      "DB Shoulder Press",
+      "Chest-Supported DB Row",
+      "Bulgarian Split Squats",
+      "B-Stance RDL",
+      "Incline DB Bench",
+      "Pull-Ups",
+      "Trap Bar Deadlift",
+      "Walking Lunges",
+      "Chest Supported Row",
+      "Landmine Press",
+      "Front Squat",
+      "Close Grip Bench",
+      "Single-Leg Leg Press",
+      "Reverse Lunges",
+      "Single-Arm DB Floor Press",
+      "Half-Kneeling Single-Arm Overhead Press",
+      "High Box Squat",
+      "Overhead Press",
+      "Seated Cable Row",
+      "Box Squat",
+      "Neutral-Grip Pulldown",
+      "Single-Leg Squat (to Box)",
+      "Bent Row",
+      "Seated DB Press",
+      "Lat Pulldown",
+      "Cossack Squat",
+      "Z-Press",
+      "Single-Arm Lat Pulldown",
+      "Lateral Lunge",
+      "SL 45\u00b0 Back Extension",
+      "DB Bench Press",
+      "Incline Bench"
+    ],
+    "blockStartISO": "2027-09-13",
+    "selectionHistory": [
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Box Squat"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Side Plank Row"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Incline Bench"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Half-Kneeling Single-Arm Overhead Press"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Dumbbell Kickback"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "trap",
+        "role": "accessory",
+        "identity": "Single-Arm Shrug"
+      },
+      {
+        "blockNumber": 12,
+        "blockStartISO": "2027-09-13",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Seated Calf Raise"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Hollow Hold"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Bench Press"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Half-Kneeling Single-Arm Overhead Press"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Banded Tricep Pushdown"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Band Pull-Apart"
+      },
+      {
+        "blockNumber": 11,
+        "blockStartISO": "2027-08-16",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "High Box Squat"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Banded Dead Bug"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Z-Press"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Single-Arm Lat Pulldown"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Skull Crushers"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Incline Y Raise"
+      },
+      {
+        "blockNumber": 10,
+        "blockStartISO": "2027-07-19",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Front Squat"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Woodchop (Standing)"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Z-Press"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Overhead Tricep Extension"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Incline Dumbbell Curl"
+      },
+      {
+        "blockNumber": 9,
+        "blockStartISO": "2027-06-21",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Single-Leg Calf Raise"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "main_bilateral",
+        "identity": "Bulgarian Split Squats"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Band Pallof Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Single-Arm DB Floor Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest-Supported DB Row"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Shoulder Press"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "shoulder",
+        "role": "accessory",
+        "identity": "Lateral Raise"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Bicep Curl (Dumbbell)"
+      },
+      {
+        "blockNumber": 8,
+        "blockStartISO": "2027-05-24",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Seated Calf Raise"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "main_bilateral",
+        "identity": "Walking Lunges"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "main_bilateral",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Cossack Squat"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "hamstring",
+        "role": "single_leg",
+        "identity": "Nordic Lower"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Side Plank"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest-Supported DB Row"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "DB Shoulder Press"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Lat Pulldown"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Tricep Circuit (Dirty 30)"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "trap",
+        "role": "accessory",
+        "identity": "Shrugs"
+      },
+      {
+        "blockNumber": 7,
+        "blockStartISO": "2027-04-26",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Lateral Lunge"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "core",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "McGill Sit Up"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bent Row"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated DB Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "push_accessory_1",
+        "seatIndex": 0,
+        "group": "tricep",
+        "role": "accessory",
+        "identity": "Dumbbell Skull Crusher"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "pull_accessory_1",
+        "seatIndex": 0,
+        "group": "bicep",
+        "role": "accessory",
+        "identity": "Concentration Curl"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-29",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Dips"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Long-Lever Copenhagen"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": null,
+        "role": "single_leg",
+        "identity": "Slant Board Step-Down"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated DB Press"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bent Row"
+      },
+      {
+        "blockNumber": 6,
+        "blockStartISO": "2027-03-08",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "Single-Leg Calf Raise"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Box Squat"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Neutral-Grip Pulldown"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Groin Squeeze"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Single-Leg Squat (to Box)"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Overhead Press"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 5,
+        "blockStartISO": "2027-02-08",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "SL 45\u00b0 Back Extension Hold"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "High Box Squat"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "B-Stance RDL"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Copenhagen Plank (Half)"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Bulgarian Split Squats"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Overhead Press"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Seated Cable Row"
+      },
+      {
+        "blockNumber": 4,
+        "blockStartISO": "2027-01-11",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "Calf Raises"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Front Squat"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "Single-Leg RDL"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Close Grip Bench"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Pull-Ups"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Long-Lever Copenhagen"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Trap Bar Deadlift"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Single-Leg Leg Press"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Landmine Press"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 3,
+        "blockStartISO": "2026-12-14",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": "calf",
+        "role": "accessory",
+        "identity": "T-Bar Tib Raises"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "squat",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Back Squat"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "single_leg_hip",
+        "seatIndex": 0,
+        "group": "single_leg_hip",
+        "role": "single_leg",
+        "identity": "SL 45\u00b0 Back Extension"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "horizontal_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Bench Press"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "vertical_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chin-Ups"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "football_robustness",
+        "seatIndex": 0,
+        "group": null,
+        "role": "accessory",
+        "identity": "Groin Squeeze"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "hinge",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "RDLs"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "single_leg_knee",
+        "seatIndex": 0,
+        "group": "single_leg_knee",
+        "role": "single_leg",
+        "identity": "Walking Lunges"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "vertical_push",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Landmine Press"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "horizontal_pull",
+        "seatIndex": 0,
+        "group": null,
+        "role": "main_bilateral",
+        "identity": "Chest Supported Row"
+      },
+      {
+        "blockNumber": 2,
+        "blockStartISO": "2026-11-16",
+        "slot": "football_robustness",
+        "seatIndex": 1,
+        "group": null,
+        "role": "accessory",
+        "identity": "Seated Calf Raise"
+      }
+    ],
+    "trackedLiftChoices": {}
+  }
+}

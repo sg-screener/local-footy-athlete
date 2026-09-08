@@ -1,3 +1,4 @@
+import { isOffseasonPreparation } from './offseasonSubphasePolicy';
 /**
  * weekStructureValidator.ts — Programming Bible weekly-structure validator.
  *
@@ -106,7 +107,7 @@ export interface ValidateProgramWeekInput {
    * THE WEEK'S §18 SUBPHASE, AND IT EXISTS TO CLAIM A RUNNING-FLOOR EXEMPTION.
    *
    * Sam's floor sentence names its own two escapes — the shipped detail string
-   * says *"lifted in early off-season weeks 1-2 and bye recovery"*
+   * says *"lifted in off-season preparation weeks 1-4 and bye recovery"*
    * (`weeklyExposureCounts.ts:330`). `auditWeekAgainstCaps` has taken a TYPED
    * `runningFloorExemption` for exactly those two cases since it was written,
    * and `rulesKernelTests` proves both suppress the finding.
@@ -476,7 +477,7 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
   // Sam's two authored cases it is standing on, and the build can check the
   // reason still holds.
   const runningFloorExemption: RunningFloorExemption | null =
-    input.subphase === 'early_offseason' ? 'early_off_season_weeks_1_2'
+    isOffseasonPreparation(input.subphase) ? 'off_season_preparation_weeks_1_4'
     : input.subphase === 'bye_recovery' ? 'bye_recovery'
     : flags.byeWeek ? 'bye_recovery'
     : null;

@@ -1,3 +1,4 @@
+import { requiresStrengthComponent } from '../utils/sessionComponents';
 import type { Workout } from '../types/domain';
 import {
   parseGameSessionOutcome,
@@ -215,7 +216,7 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
     },
     completion: args.feedback.completion,
     feeling: args.feedback.feeling ?? null,
-    soreness: args.feedback.soreness ?? null,
+
     reason: args.feedback.completion === 'partial'
       ? args.feedback.partialReason ?? null
       : args.feedback.completion === 'skipped'
@@ -288,7 +289,7 @@ export async function commitSessionOutcomeTransaction(
   try {
     const target = resolveSessionOutcomeTarget(intent.date, commandTodayISO);
     normalizedIntent = normalizeIntent(intent, target);
-    candidateFeedback = feedbackFromIntent(normalizedIntent);
+    candidateFeedback = { ...feedbackFromIntent(normalizedIntent), strengthRequired: requiresStrengthComponent(target.workout) };
     const semanticHash = deterministicHash(semanticAcceptedAnswers(normalizedIntent));
     receipt = {
       protocolVersion: 1,
@@ -534,7 +535,7 @@ function normalizeIntent(
     },
     completion: aggregate,
     feeling: skipped ? null : intent.feeling,
-    soreness: skipped ? null : intent.soreness,
+
     reason: aggregate === 'full' ? null : intent.reason,
     componentOutcomes,
     ...(strength && strength.length > 0 ? { strength } : {}),
@@ -610,7 +611,6 @@ function feedbackFromIntent(intent: RecordSessionOutcomeIntent): SessionFeedback
     completion: intent.completion,
     ...(components.length > 0 ? { components } : {}),
     ...(intent.feeling ? { feeling: intent.feeling } : {}),
-    ...(intent.soreness ? { soreness: intent.soreness } : {}),
     ...(intent.completion === 'partial' && intent.reason
       ? { partialReason: intent.reason as FeedbackPartialReason }
       : {}),

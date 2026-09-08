@@ -104,7 +104,7 @@ import {
   PHASE_SHIFT_MESSAGES,
   type PhaseShiftStep,
 } from './homeScreenConstants';
-import { REST_DAY_REASON_COPY_ID } from '../../rules/restDayReason';
+import { HomeRestDayReason } from './HomeRestDayReason';
 
 type DayPickerMode = 'normal' | 'moveGame' | 'addGame';
 
@@ -2968,11 +2968,7 @@ function DayRow({
 
               The sentence is looked up, never composed here: the reason is a
               typed member and its words are signed copy. */}
-          <Text style={styles.expandedMeta} testID="home-rest-day-reason">
-            {signedCopy(day.restReason
-              ? REST_DAY_REASON_COPY_ID[day.restReason]
-              : 'day.rest.default')}
-          </Text>
+          <HomeRestDayReason reason={day.restReason} style={styles.expandedMeta} />
           <Button
             label={signedCopy('day.add_session.action')}
             variant="secondary"

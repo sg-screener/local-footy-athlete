@@ -111,7 +111,7 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && /global:coach-chat/.test(read('supabase/migrations/007_coach_rate_limits.sql')));
 }
 
-console.log('\n[2] THE DEPLOYED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
+console.log('\n[2] THE BUNDLED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
 {
   const manifest = read('src/rules/coachKnowledgeManifest.ts');
   const generated = read('supabase/functions/coach-chat/canonicalCoachKnowledge.generated.ts');
@@ -129,11 +129,18 @@ console.log('\n[2] THE DEPLOYED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
   ok('a generator owns the artifact instead of a hand-maintained mini-Bible',
     /canonicalCoachKnowledge\.generated\.ts/.test(read('scripts/build-coach-knowledge-bundle.ts'))
       && /COACH_KNOWLEDGE_SOURCE_SPECS/.test(read('scripts/build-coach-knowledge-bundle.ts')));
-  ok('every deployed byte equals its current canonical source',
-    COACH_KNOWLEDGE_SOURCE_SPECS.every((spec) => {
-      const deployed = CANONICAL_COACH_KNOWLEDGE.find((entry) => entry.path === spec.path);
-      return deployed?.authority === spec.authority && deployed.content === read(spec.path);
-    }));
+  const expected = COACH_KNOWLEDGE_SOURCE_SPECS.map(spec => ({ ...spec, content: read(spec.path) }));
+  const matches = (sources: readonly unknown[]) => JSON.stringify(sources) === JSON.stringify(expected);
+  ok('the bundled sources exactly match the manifest, authority and current bytes', matches(CANONICAL_COACH_KNOWLEDGE));
+  for (const [index, source] of expected.entries()) {
+    ok(`freshness rejects changed bytes in ${source.path}`, !matches(expected.map((entry, at) =>
+      at === index ? { ...entry, content: entry.content + '\nSTALE' } : entry)));
+  }
+  ok('freshness rejects a missing source', !matches(expected.slice(1)));
+  ok('freshness rejects an extra duplicate source', !matches([...expected, expected[0]]));
+  ok('freshness rejects a changed authority', !matches(expected.map((entry, index) =>
+    index === 0 ? { ...entry, authority: 'canonical_source' } : entry)));
+
 }
 
 console.log('\n[3] THE APP CHAT IS TERRA-READ-ONLY');

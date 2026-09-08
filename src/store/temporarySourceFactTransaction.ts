@@ -430,6 +430,9 @@ async function transactTemporarySourceFactWithinTrace(
     if (!input.fact) {
       return { outcome: 'safely_rejected', factId: targetFactId, changedProgram: false, message: 'No exact source fact was supplied.', reason: 'temporary_source_fact_missing' };
     }
+    if ('factKind' in input.fact && input.fact.factKind === 'soreness') {
+      return { outcome: 'safely_rejected', factId: temporarySourceFactId(input.fact), changedProgram: false, message: 'This option is no longer available.', reason: 'retired_soreness_input' };
+    }
     targetFactId = temporarySourceFactId(input.fact);
     const index = nextFacts.findIndex((fact) => temporarySourceFactId(fact) === targetFactId);
     if (input.operation === 'update' && index < 0) {
@@ -478,6 +481,7 @@ async function transactTemporarySourceFactWithinTrace(
         status,
         updatedAt: now,
         resolvedAt: now,
+        resolvedOnISO: todayISO,
         sourceActor: actor,
         sourceSurface: surface,
         transitionHistory: [
@@ -502,7 +506,7 @@ async function transactTemporarySourceFactWithinTrace(
             fact.sourceSurface === 'away_this_week' && fact.scope.kind === 'window' &&
             existing.scope.kind === 'window' && fact.scope.from === existing.scope.from &&
             fact.scope.until === existing.scope.until) {
-          return { ...fact, status, updatedAt: now, resolvedAt: now,
+          return { ...fact, status, updatedAt: now, resolvedAt: now, resolvedOnISO: todayISO,
             transitionHistory: [...fact.transitionHistory, {
               at: now, from: fact.status, to: status, actor, surface,
               reason: `transaction_${effectiveOperation}_linked_trip`,

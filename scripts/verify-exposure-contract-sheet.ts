@@ -20,6 +20,7 @@ process.env.TZ = 'Australia/Melbourne';
 import fs from 'fs';
 import path from 'path';
 
+import { OFFSEASON_PREPARATION } from '../src/rules/offseasonSubphasePolicy';
 import { readXlsx } from '../src/__tests__/support/xlsxReader';
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -114,7 +115,14 @@ console.log('\n[4] THE ROUND TRIP — prefilled values equal what actually ships
 
   const slotOf = (blob: string, key: string): string | null => {
     const m = new RegExp(`${key}:\\s*([^,}]+)`).exec(blob);
-    return m ? m[1].trim() : null;
+    if (!m) return null;
+    const value = m[1].trim();
+    const shared: Record<string, number> = {
+      'OFFSEASON_PREPARATION.exposureConditioning.required': OFFSEASON_PREPARATION.exposureConditioning.required,
+      'OFFSEASON_PREPARATION.exposureConditioning.preferred.min': OFFSEASON_PREPARATION.exposureConditioning.preferred.min,
+      'OFFSEASON_PREPARATION.exposureConditioning.preferred.max': OFFSEASON_PREPARATION.exposureConditioning.preferred.max,
+    };
+    return value in shared ? String(shared[value]) : value;
   };
 
   const fromSource = new Map<string, string>();

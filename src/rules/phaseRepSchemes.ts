@@ -94,8 +94,8 @@ function offseasonSubphaseSchemes(
       setsMin: 2,
       setsMax: 4,
       repsMax: policy.strength.repsMax,
-      base: '3x8',
-      intent: 'Mid off-season bridge work: controlled strength volume; leave 2-4 reps in reserve.',
+      base: '3x10',
+      intent: 'Off-season body-armour work: smooth, controlled reps; leave 3-4 reps in reserve.',
       loadMultiplier: 0.9,
       ...rpe,
     };

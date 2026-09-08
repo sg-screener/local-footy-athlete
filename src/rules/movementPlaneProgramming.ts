@@ -1,3 +1,4 @@
+import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
 /** Pure movement-plane tie-breaking and coverage auditing. No writes or UI. */
 
 import {
@@ -87,6 +88,7 @@ export interface AthleticTransverseExposureRuleInput {
   readonly offseasonBlock: OffseasonBlock | null;
   readonly phaseWeekNumber: number | null;
   readonly christmasBreakWeekNumber: number | null;
+  readonly christmasRestrictedWeeks?: readonly number[];
   /** True only after the audit has a complete current-plus-previous-week window. */
   readonly rollingWindowComplete: boolean;
   /** Typed credits inside that same rolling window. */
@@ -182,9 +184,18 @@ export function athleticTransverseExposureRule(
     && phaseWeek >= 5
     && (phaseWeek - 5) % 2 === 0;
   const christmasWeek = input.christmasBreakWeekNumber ?? 0;
+  // A skipped deload does not consume the dose. Keep two calendar weeks
+  // between placed doses, moving a due dose to the next eligible build week.
+  let lastChristmasDose = -1;
+  for (let week = 1; week <= christmasWeek; week += 1) {
+    const candidatePhaseWeek = phaseWeek - christmasWeek + week;
+    const reduced = resolveSeasonPhaseWeekKind(input.phase, candidatePhaseWeek) === 'deload'
+      || input.christmasRestrictedWeeks?.includes(week)
+      || (week === christmasWeek && !safetyClear);
+    if (!reduced && week - lastChristmasDose >= 2) lastChristmasDose = week;
+  }
   const christmasDoseWeek = input.phase === 'Pre-season'
-    && christmasWeek >= 1
-    && (christmasWeek - 1) % 2 === 0;
+    && christmasWeek >= 1 && lastChristmasDose === christmasWeek;
   return {
     rollingWindowDays: 14,
     targetActive,

@@ -58,7 +58,12 @@ import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
 armTotalsOrRed();
 // Mutations run in isolated child processes: no shared checkout is edited.
 const mutation = process.env.LFA_INTAKE_MUTATION;
-if (mutation === 'experience') EXERCISE_TAGS['Reverse Nordic Curl'].programming!.automaticMinimum = 'new';
+if (mutation === 'experience') {
+  EXERCISE_TAGS['Reverse Nordic Curl'].programming!.automaticMinimum = 'new';
+  // R-383 checks the workbook gate at this door too. We must lower both
+  // published minima to actually admit a beginner, not merely weaken one copy.
+  (EXERCISE_MUSCLE_METADATA.find(row => row.exercise === 'Reverse Nordic Curl') as any).experienceGate = 'everyone';
+}
 if (mutation === 'fixture') EXERCISE_TAGS['Reverse Nordic Curl'].programming!.excludeWithinDaysOfGame = undefined;
 if (mutation === 'horse_fixture') EXERCISE_TAGS['Horse Stance Hold'].programming!.excludeWithinDaysOfGame = undefined;
 if (mutation === 'equipment') (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, unknown>)['Rotational Medicine-Ball Throw'] = [];
@@ -110,7 +115,13 @@ let passed = 0;
 let failed = 0;
 function check(label: string, value: unknown) {
   if (value) passed++;
-  else { failed++; console.error(`FAIL ${label}`); }
+  else {
+    failed++;
+    console.error(`FAIL ${label}`);
+    // Fault controls need the first real failure, not another full journey
+    // after it. The parent still requires the intended assertion in stderr.
+    if (mutation) throw new Error(`Mutation ${mutation} caught: ${label}`);
+  }
 }
 const submitted = [
   ['Seated Single-Leg Pike Lift', '1v-h-JQBKEY'],
@@ -207,7 +218,7 @@ check('R-364: thirty-three recovery pool members', recoveryEntries.filter(({ ent
 const healthySwapWorld = {
   injurySeverities: {}, primaryInjury: null,
   availableEquipment: ['bodyweight', 'dumbbell', 'barbell', 'band', 'machine', 'cable'],
-  availableEquipmentTags: ['bodyweight', 'dumbbells', 'barbell', 'bands', 'machine', 'cables', 'bike_or_treadmill', 'foam_roller', 'pullup_bar', 'bench'],
+  availableEquipmentTags: ['bodyweight', 'dumbbells', 'barbell', 'bands', 'machine', 'cables', 'bike_or_treadmill', 'foam_roller', 'pullup_bar', 'bench', 'back_extension_bench'],
   capacity: 'normal', hasEquipmentConstraint: false, medicalStop: false,
 } as any;
 for (const { pool, entry } of recoveryEntries) {
@@ -219,8 +230,8 @@ for (const { pool, entry } of recoveryEntries) {
     !!tags && tags.programming?.strengthRole === 'none' && tags.prescription === undefined);
   check(`${name}: full thirteen-region ratings`, Object.keys(tags?.injury ?? {}).length === 13);
   check(`${name}: authored muscles and experience`, EXERCISE_MUSCLE_METADATA.filter(row => row.exercise === name).length === 1);
-  check(`${name}: pool equipment is the authored equipment, no equipment sheet entry added`,
-    entry.equipment.length > 0 && equipmentRequiredFor(name) === null);
+  check(`${name}: shared admission resolves the authored pool apparatus`,
+    entry.equipment.length > 0 && JSON.stringify(equipmentRequiredFor(name)) === JSON.stringify(entry.equipment.filter(tag => tag !== 'bodyweight')));
   check(`${name}: primary cue`, !!EXERCISE_CUES[name]?.primaryCue);
   const section = recoveryIntake.split(/^## \d+\. /m).find(part => part.startsWith(name + '\n'));
   check(`${name}: intake section`, !!section);
@@ -330,11 +341,11 @@ async function main() {
     check(`Band-Assisted Pull-Up: ${label} write-time eligibility`,
       assessTapSwapCandidateSafety(bandAssistedPullUp, bandEnvironment,
         { sourceExercise: 'Pull-Ups' } as any).safe === eligible);
-    check(`Band-Assisted Pull-Up: ${label} never appears in Add`,
+    check(`Band-Assisted Pull-Up: ${label} remains available in unrestricted Add`,
       legalAddFamilies({ ...args, profile: bandProfile, environment: bandEnvironment })
         .flatMap(f => f.groups.flatMap(g => g.leaves.flatMap(l =>
           legalAddCandidates({ ...args, profile: bandProfile, environment: bandEnvironment, leaf: l.id }))))
-        .every(candidate => candidate.name !== bandAssistedPullUp));
+        .some(candidate => candidate.name === bandAssistedPullUp));
   }
   const eligibleBandEnvironment = resolveTapSwapEnvironment({
     date, profile: { ...profile, experienceLevel: 'Complete beginner', gender: 'female' },
@@ -423,11 +434,11 @@ async function main() {
     check(`Incline Push-Up: ${label} write-time eligibility`,
       assessTapSwapCandidateSafety(inclinePushUp, inclineEnvironment,
         { sourceExercise: 'Push-ups' } as any).safe === eligible);
-    check(`Incline Push-Up: ${label} never appears in Add`,
+    check(`Incline Push-Up: ${label} remains available in unrestricted Add`,
       legalAddFamilies({ ...args, profile: inclineProfile, environment: inclineEnvironment })
         .flatMap(f => f.groups.flatMap(g => g.leaves.flatMap(l =>
           legalAddCandidates({ ...args, profile: inclineProfile, environment: inclineEnvironment, leaf: l.id }))))
-        .every(candidate => candidate.name !== inclinePushUp));
+        .some(candidate => candidate.name === inclinePushUp));
   }
   check('Incline Push-Up: only Push-ups may be the Swap source',
     !getTapSwapChoices({ originalExercise: 'Bench Press', reason: 'preference',
@@ -521,25 +532,23 @@ async function main() {
     inLeaf('mobility_drills').includes('Horse Stance Hold')
     && leaves.filter(leaf => leaf.id !== 'mobility_drills').every(leaf =>
       !legalAddCandidates({ ...args, leaf: leaf.id }).some(candidate => candidate.name === 'Horse Stance Hold')));
-  check('Add does not offer any existing session identity', legalAddFamilies({ ...args, existingExerciseNames: allNames }).length === 0);
+  check('Add still offers existing session identities', legalAddFamilies({ ...args, existingExerciseNames: allNames }).length === legalAddFamilies(args).length);
   const upperWithBenchAndOverhead = legalAddCandidates({
     ...args,
     leaf: 'upper_push',
     existingExerciseNames: ['Bench Press', 'Overhead Press'],
   });
-  check('Add blocks every occupied bench/overhead variation family while retaining Dips',
-    upperWithBenchAndOverhead.every((candidate) => ![
-      exerciseVariationFamily('Bench Press'), exerciseVariationFamily('Overhead Press'),
-    ].includes(exerciseVariationFamily(candidate.name)))
-    && upperWithBenchAndOverhead.some((candidate) => candidate.name === 'Dips'));
+  check('Add retains Bench Press, Overhead Press and Dips despite occupied families',
+    ['Bench Press','Overhead Press','Dips'].every(name => upperWithBenchAndOverhead.some(candidate => candidate.name === name)));
   const pullWithPulldown = legalAddCandidates({
     ...args,
     leaf: 'upper_pull',
     existingExerciseNames: ['Lat Pulldown'],
   });
-  check('Add never offers another member of an occupied pulldown family',
-    pullWithPulldown.every((candidate) =>
-      exerciseVariationFamily(candidate.name) !== exerciseVariationFamily('Lat Pulldown')));
+  check('Add offers occupied pulldown-family choices',
+    pullWithPulldown.some(candidate => candidate.name === 'Lat Pulldown')
+    && pullWithPulldown.some(candidate => candidate.name !== 'Lat Pulldown'
+      && exerciseVariationFamily(candidate.name) === exerciseVariationFamily('Lat Pulldown')));
   check('the retired Single-Arm Pulldown identity is absent from every Add choice',
     !choices.some((candidate) => candidate.name === 'Single-Arm Pulldown'));
   for (const originalExercise of ['Back Squat', 'Bench Press', 'RDLs']) {
@@ -912,6 +921,17 @@ async function main() {
     });
     check(`${experienceLevel}/G-${daysToGame}: a pinned drill never displaces one of the four loaded rows (R-352)`, pinnedAfterFourLoaded);
   }
+  // Every fault above is bound to an assertion already executed. Mutation
+  // children report those detector results; the normal parent still runs the
+  // complete automatic-selection, Add/Swap, logging and restart journey below.
+  // Repeating that whole journey for each catalogue fault adds no coverage of
+  // the fault and used to dominate the release check's running time.
+  if (mutation) {
+    console.log(`Exercise intake mutation ${mutation}: ${passed} detector checks passed / ${failed} failed`);
+    totalsPrinted(failed);
+    if (failed) process.exitCode = 1;
+    return;
+  }
   for (let block = 1; block <= 3; block++) for (const workout of program.microcycles[0].workouts.filter(w => !!w.strengthIntent)) {
     const built = quiet(() => compileCanonicalStrengthTemplate({ composition: {
       ...context.strengthComposition!, blockNumber: block, blockStartISO: plusDays(date, block * 28),
@@ -1016,7 +1036,7 @@ async function main() {
     ['equipment', /Rotational Medicine-Ball Throw: blocked without/],
     ['duration', /Horse Stance Hold: signed dose, rest, unit and side/],
     ['cue', /Horse Stance Hold: exact supplied primary cue/],
-    ['video', /Horse Stance Hold: exact confirmed video URL/],
+    ['video', /Horse Stance Hold: (confirmed destination|exact confirmed video URL)/],
     ['bench_dose', /Bench Thoracic Extension: signed dose, rest, unit and side/],
     ['bench_equipment', /Bench Thoracic Extension accepts either support and refuses neither/],
     ['bench_route', /Bench Thoracic Extension: approved warm-up route actually selects it/],

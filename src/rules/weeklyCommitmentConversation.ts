@@ -284,6 +284,7 @@ export function deriveWeeklyCommitmentConversation(
     blockEndISO: previous.endISO,
     // NO FALLBACK, by ruling. An absent record means there is no accepted
     // previous block to measure against and the gate is correctly unreachable.
+    requiredStrengthDates: acceptedBlocks[previous.startISO]?.requiredStrengthDates,
     requiredStrengthSessions:
       acceptedBlocks[previous.startISO]?.requiredStrengthSessions ?? 0,
   });

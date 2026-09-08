@@ -1,3 +1,13 @@
+import { additionOverridesInjury } from './athleteAdditionAuthority';
+import { injuryWithholdsExistingRow } from './injuryExerciseRisk';
+import { resolveExerciseName } from '../utils/loadEstimation';
+import { resolveSeasonPhaseClock } from './seasonPhaseClock';
+import { selectedTrackedLifts, TRACKED_LIFTS } from './estimatedOneRepMax';
+import { resolveDoorDeloadPolicy } from './deloadWeekRules';
+import { conditioningRecoveryWindowsForProgram } from './canonicalWeeklyProgressionCompiler';
+import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
+import { restDayReasonsForWeek } from './restDayReason';
+import { activeInjuryFactsOn, isRedFlagInjury } from './injuryWithheldRows';
 /** Dated facts -> derived weeks. No stores, wall clock, transactions or writes.
  * Live fact acceptance and cold reconstruction supply the same accepted base,
  * fact history and generation inputs. Derived overlays are never fact history.
@@ -11,7 +21,7 @@ import { compileCanonicalProgram } from './canonicalProgramCompiler';
 import { compileWeekOverlay } from './canonicalWeekOverlay';
 import { carryOwnAcceptedLoadsIntoWorkout } from './acceptedLoadCarry';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
-import { activeTemporarySourceFacts, composeTemporarySourceFactCompatibility, datedFatigueReportsFromFacts, isInjurySourceFact, READINESS_FACT_KINDS, temporarySourceFactId,
+import { temporarySourceFactId, sourceFactsForHistoricalCompilation, composeTemporarySourceFactCompatibility, datedFatigueReportsFromFacts, isInjurySourceFact, READINESS_FACT_KINDS,
   type TemporarySourceFact } from './temporarySourceFact';
 import { factHorizon, factHorizonCoversDate, factHorizonCoversWeek, factHorizonWeeks, firstShapedDateInWeek } from './durableFactHorizon';
 import { isoDateForWeekday } from '../utils/appDate';
@@ -22,11 +32,12 @@ import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import type { CalendarDayType } from '../store/calendarStore';
 import { compileCanonicalInjuryWeek } from './canonicalWeeklyInjuryCompiler';
 import { withPlannedInjuryConditioning } from './canonicalInjuryConditioning';
-import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { resolveEquipmentCapabilities, FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { composedRowIsLegal } from './composedRowLegality';
 import { fatiguePoliciesForWeek, resolveFatigueDayPolicy } from './fatigueSequencePolicy';
 import { compileCanonicalLighterDayWorkout } from './canonicalWeeklyLighterDayCompiler';
 import { preserveAcceptedFixtureRelativeOffer } from './fixtureRelativePlannerOffer';
+import type { CanonicalWeeklyExerciseEdit } from './canonicalWeeklyExerciseEditState';
 
 export function sourceFactRequiresCompilation(fact: TemporarySourceFact): boolean {
   if (!isInjurySourceFact(fact) && fact.factKind === 'fatigue') return true;
@@ -45,6 +56,8 @@ export interface CanonicalWeeklySourceFactInput {
   /** The boundary captures profile, block position, selections and earned loads. */
   readonly programsByWeek: Readonly<Record<string, CanonicalProgramCompilerInput>>;
   readonly recordedLoads: Parameters<typeof compileCanonicalInjuryWeek>[0]['recordedLoads'];
+  /** Accepted row edits that belong after dated injury composition. */
+  readonly exerciseEdits?: readonly CanonicalWeeklyExerciseEdit[];
 }
 
 export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFactInput): {
@@ -54,19 +67,13 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
   injuryStagesByDate: ReturnType<typeof compileCanonicalInjuryWeek>['stagesByDate'];
 } {
   const overlays = { ...input.surfaces.weekScopedOverlays };
+  const compiledMicrocycles = new Map<string, import('../types/domain').Microcycle>();
   const changed = new Set<string>();
-  const active = activeTemporarySourceFacts(input.facts);
-  // A one-day fatigue fact becomes expired at midnight but remains a factual
-  // report for consecutive-calendar-day policy. Cleared/resolved facts do not.
-  const fatigueHistory = input.facts.filter((fact) =>
-    !isInjurySourceFact(fact) && fact.factKind === 'fatigue' && fact.status === 'expired');
-  const compilationFacts = Array.from(new Map(
-    [...active, ...fatigueHistory].map((fact) => [temporarySourceFactId(fact), fact]),
-  ).values());
+  const compilationFacts = sourceFactsForHistoricalCompilation(input.facts);
   const deriving = compilationFacts.filter(sourceFactRequiresCompilation).sort((a, b) =>
     factHorizon(a).startsFrom.localeCompare(factHorizon(b).startsFrom) ||
       a.createdAt.localeCompare(b.createdAt));
-  const appliedFacts = active.filter(fact => !sourceFactRequiresCompilation(fact));
+  const appliedFacts = compilationFacts.filter(fact => !sourceFactRequiresCompilation(fact));
   for (const fact of deriving) {
     if (!isInjurySourceFact(fact) && fact.factKind === 'fatigue') {
       const visibleReports = datedFatigueReportsFromFacts(compilationFacts.filter((candidate) =>
@@ -117,6 +124,8 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
             } : null,
           },
         });
+        const compiledWeek = compiled.program.microcycles.find(week => String(week.startDate).slice(0,10) === weekStart);
+        if (compiledWeek) compiledMicrocycles.set(weekStart, compiledWeek);
         overlay = compileWeekOverlay({ program: compiled.program, weekStart,
           anchorDate: null, reason: 'readiness_reduction', authoredAtISO: fact.updatedAt });
         // Fixture actions and dated source facts are independent accepted
@@ -160,28 +169,44 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
             {
               const accepted = effective.visibleWorkouts.find(workout => workout.dayOfWeek === day.dayOfWeek);
               const planned = overlay.workoutsByDate[day.date] ?? null;
+              // Fixture replay already compiled this dated fact into its own
+              // accepted layout. Replanning that historical day here would
+              // rotate its conditioning a second time after Clear.
+              const fixtureBase = input.surfaces.weekScopedOverlays[weekStart];
+              const fixtureHistory = !!fact.resolvedOnISO && day.date < fact.resolvedOnISO
+                && (fixtureBase?.reason === 'one_off_game' || fixtureBase?.reason === 'one_off_no_game');
               // Explicit athlete placements/removals and fixtures take priority
               // over a fresh scheduler seat; the final injury stage still makes
               // their retained contents safe. Never resurrect a removed day.
               const athleteOwned = !!input.surfaces.dateOverrides[day.date] ||
                 input.surfaces.userRemovalConstraints.some(removal => removal.status === 'active' &&
                   (removal.targetDate === day.date || removal.moveTargetDate === day.date));
-              return [day.date, athleteOwned || accepted?.authoredDay?.anchor === 'game'
+              // A serious-symptom day stays visible and withheld, even when
+              // ordinary injury planning would empty it. The existing injury
+              // predicate owns this distinction across combined injuries.
+              const withheld = activeInjuryFactsOn(visibleFacts, day.date).some(isRedFlagInjury);
+              return [day.date, fixtureHistory || withheld || athleteOwned || accepted?.authoredDay?.anchor === 'game'
                 ? accepted ?? null
-                : accepted ? withPlannedInjuryConditioning(accepted, planned) : planned];
+                : !hasMeaningfulWorkoutContent(planned) && overlay.restDayReasonByDay?.[day.dayOfWeek] === 'injury'
+                  ? null
+                  : accepted ? withPlannedInjuryConditioning(accepted, planned) : planned];
             })) };
         }
         const fatigueReports = datedFatigueReportsFromFacts(visibleFacts);
         if (fatigueReports.length > 0) {
+          const restDayReasonByDay = { ...overlay.restDayReasonByDay };
           const fatigueByDate = new Map(fatiguePoliciesForWeek(fatigueReports, weekStart)
             .map((policy) => [policy.dateISO, policy]));
-          overlay = { ...overlay, workoutsByDate: Object.fromEntries(
+          overlay = { ...overlay, restDayReasonByDay, workoutsByDate: Object.fromEntries(
             Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
               const policy = fatigueByDate.get(date);
               if (!policy || !workout || policy.effect === 'none' || policy.effect === 'deload') {
                 return [date, workout];
               }
-              if (policy.effect === 'rest') return [date, null];
+              if (policy.effect === 'rest') {
+                restDayReasonByDay[new Date(`${date}T12:00:00Z`).getUTCDay()] = 'fatigue';
+                return [date, null];
+              }
               return [date, compileCanonicalLighterDayWorkout(workout).workout];
             }),
           ) };
@@ -189,7 +214,15 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         const currentFatiguePolicy = !isInjurySourceFact(fact) && fact.factKind === 'fatigue'
           ? resolveFatigueDayPolicy(datedFatigueReportsFromFacts(visibleFacts), fact.observedDate)
           : null;
-        overlay = { ...overlay, workoutsByDate: {
+        const priorReasons = restDayReasonsForWeek(input.surfaces.currentProgram, weekStart, overlays[weekStart]);
+        const nextReasons = { ...priorReasons };
+        for (const day of effective.dates) {
+          if (day.date < governedFromISO || !factHorizonCoversDate(fact, day.date)) continue;
+          delete nextReasons[day.dayOfWeek];
+          const reason = overlay.restDayReasonByDay?.[day.dayOfWeek];
+          if (reason) nextReasons[day.dayOfWeek] = reason;
+        }
+        overlay = { ...overlay, restDayReasonByDay: nextReasons, workoutsByDate: {
           ...(overlays[weekStart]?.workoutsByDate ?? {}),
           ...Object.fromEntries(effective.dates.filter(day => day.date < governedFromISO)
             .map(day => [day.date, effective.visibleWorkouts.find(workout =>
@@ -245,21 +278,36 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
   }
   const dateOverrides = { ...input.surfaces.dateOverrides };
   const injuryStagesByDate: ReturnType<typeof compileCanonicalInjuryWeek>['stagesByDate'] = {};
-  const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: input.facts }).activeConstraints;
+  const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: compilationFacts }).activeConstraints;
   for (const weekStart of changed) {
     const effective = rebaseAcceptedEffectiveWeek({ surfaces: { ...input.surfaces,
+      ...composeTemporarySourceFactCompatibility({ temporarySourceFacts: compilationFacts }),
+      temporarySourceFacts: compilationFacts,
       weekScopedOverlays: overlays, dateOverrides }, weekStart,
       profile: input.profile, markedDays: { ...input.markedDays } });
-    // Accepted Add content is replayed above the generated overlay. Its optional
-    // rows still answer to the dated kit. Shrink that authored component, never
-    // refill it with new work or overwrite its healthy accepted source; Clear
-    // reconstructs that source through this same compiler.
+    // Evaluate authority against the injury that would change this row. A
+    // fatigue, kit, schedule or unrelated injury report is not a retraction.
+    const holdsChoice = (row: import('../types/domain').WorkoutExercise, dateISO: string): boolean =>
+      !!row.athleteAdditionId && !!row.additionFactVersions && deriving
+        .filter(fact => factHorizonCoversDate(fact, dateISO))
+        .every(fact => {
+          const current = input.facts.find(candidate => temporarySourceFactId(candidate) === temporarySourceFactId(fact)) ?? fact;
+          if (!isInjurySourceFact(fact)) {
+            if (fact.factKind !== 'equipment' || row.additionFactVersions!.includes(semanticFingerprint(current))) return true;
+            const kit = fact.mode === 'only' ? fact.equipmentTags
+              : FULL_GYM_EQUIPMENT.filter(tag => !fact.equipmentTags.includes(tag));
+            return composedRowIsLegal(row.exercise.name, kit);
+          }
+          return (isInjurySourceFact(current) && additionOverridesInjury(row, current))
+            || (!fact.seriousSymptoms && (!fact.bucket || !injuryWithholdsExistingRow(
+              resolveExerciseName(row.exercise.name), fact.bucket, fact.severity, fact.triggers)));
+        });
     const equipmentWorkoutsByDate = Object.fromEntries(effective.visibleWorkouts.map(workout => {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
       const kit = resolveEquipmentCapabilities(input.profile, constraints, dateISO).tags;
-      const exercises = workout.exercises.filter(row =>
+      const exercises = workout.exercises.filter(row => !row.athleteAdditionId && (
         !(row.composedOptionalKind ?? workout.composedOptionalKind) ||
-        composedRowIsLegal(row.exercise.name, kit));
+        composedRowIsLegal(row.exercise.name, kit)));
       return [dateISO, exercises.length === workout.exercises.length ? workout : { ...workout, exercises }];
     }));
     // R-354: days before the newest injury report's first shaped date are
@@ -268,12 +316,52 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
       .filter((fact) => factHorizonCoversWeek(fact, weekStart))
       .map((fact) => firstShapedDateInWeek(fact, weekStart))
       .sort().pop();
+    const programInput = input.programsByWeek[weekStart];
+    const doseWeek = compiledMicrocycles.get(weekStart) ?? effective.baseMicrocycle;
+    const phase = programInput?.weeks.profile.seasonPhase ?? input.profile.seasonPhase ?? 'Off-season';
+    const phaseResolution = resolveSeasonPhaseClock({ selectedPhase: phase, targetWeekStartISO: weekStart,
+      persistedClock: programInput?.weeks.seasonPhaseClock });
+    const recoveryWindows = programInput ? conditioningRecoveryWindowsForProgram(programInput.progression) : [];
+    const programmingContextByDate = Object.fromEntries(Object.entries(equipmentWorkoutsByDate).map(([date, workout]) => [date, {
+      seasonPhase: phase, offseasonSubphase: phaseResolution.offseasonSubphase,
+      deloadPolicy: doseWeek?.dosePolicyByDay?.[workout.dayOfWeek]
+        ?? (recoveryWindows.some(window => date >= window.startISO && date <= window.endISO)
+          ? resolveDoorDeloadPolicy({ door: 'readiness', seasonPhase: phase }) : null),
+      blockNumber: programInput?.weeks.blockNumber,
+      blockStartISO: programInput?.weeks.blockStartISO,
+      selectionHistory: programInput?.weeks.selectionHistory,
+      progressedIdentities: programInput?.weeks.progressedIdentities,
+      pinnedIdentities: [...(programInput?.weeks.athletePrefs?.pinned ?? []),
+        ...selectedTrackedLifts(programInput?.weeks.trackedLiftChoices).map(id => TRACKED_LIFTS[id].names[0])],
+    }]));
     const injuryWeek = compileCanonicalInjuryWeek({
+      programmingContextByDate,
       workoutsByDate: equipmentWorkoutsByDate,
       profile: input.profile, constraints, exclusions: input.surfaces.athleteExclusions ?? [],
       recordedLoads: input.recordedLoads,
+      exerciseEdits: input.exerciseEdits,
       ...(historyBeforeISO ? { historyBeforeISO } : {}),
     });
+    // Athlete additions have their own accepted size. A later injury can
+    // adjust that work, but restoring an automatic row must not reallocate it.
+    // Run the same injury owner on that accepted addition, independently of
+    // the automatic session's set/pattern budget.
+    const changedAdditionWorkouts = Object.fromEntries(effective.visibleWorkouts.flatMap(workout => {
+      const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
+      const kit = resolveEquipmentCapabilities(input.profile, constraints, dateISO).tags;
+      const rows = workout.exercises.filter(row => row.athleteAdditionId && !holdsChoice(row, dateISO)
+        && (!(row.composedOptionalKind ?? workout.composedOptionalKind) || composedRowIsLegal(row.exercise.name, kit)));
+      return rows.length ? [[dateISO, {...workout, exercises: rows}]] : [];
+    }));
+    const changedAdditions = Object.keys(changedAdditionWorkouts).length ? compileCanonicalInjuryWeek({
+      programmingContextByDate, workoutsByDate: changedAdditionWorkouts,
+      profile: input.profile, constraints, exclusions: input.surfaces.athleteExclusions ?? [],
+      recordedLoads: input.recordedLoads,
+      reservedExerciseNames: [...effective.visibleWorkouts.flatMap(workout => workout.exercises
+        .filter(row => !row.athleteAdditionId).map(row => row.exercise.name)),
+        ...(input.surfaces.athleteExclusions ?? []).map(exclusion => exclusion.exercise)],
+      ...(historyBeforeISO ? {historyBeforeISO} : {}),
+    }) : null;
     // Fix 1 (Sam, 2026-09-02): count the core-conditioning sessions the injury
     // withdrew outright (accepted day carried a conditioning block; the injured
     // day carries none) and record them on the week's contract as the
@@ -319,6 +407,18 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
     for (const workout of effective.visibleWorkouts) {
       const dateISO = isoDateForWeekday(weekStart, workout.dayOfWeek);
       let next = injuryWeek.workoutsByDate[dateISO];
+      const athleteRows = workout.exercises.filter(row => holdsChoice(row, dateISO));
+      const adjustedAddition = changedAdditions?.workoutsByDate[dateISO];
+      const parent = changedAdditionWorkouts[dateISO]?.exercises[0];
+      const adjustedRows = (adjustedAddition?.exercises ?? []).map(row => ({...row,
+        athleteAdditionId: row.athleteAdditionId ?? `${parent!.athleteAdditionId}:injury:${row.id}`,
+        additionFactVersions: row.additionFactVersions ?? parent!.additionFactVersions,
+        automaticSelection: undefined,
+      }));
+      if (athleteRows.length || adjustedRows.length) next = { ...next,
+        exercises: [...next.exercises, ...athleteRows, ...adjustedRows] };
+      if (changedAdditions?.stagesByDate[dateISO]?.length)
+        (injuryWeek.stagesByDate[dateISO] ??= []).push(...changedAdditions.stagesByDate[dateISO]);
       if (next !== workout) {
         if (workout.athletePlacement?.constraintId) next = { ...next,
           sourceFactAdjustedPlacementId: workout.athletePlacement.constraintId };

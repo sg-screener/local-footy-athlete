@@ -9,10 +9,10 @@
  * ## THIS IS NOT AN INJURY FEATURE
  *
  * The reason that prompted it was an injury closing a session (R-378), and
- * building only that would have been the edge case Sam refused. Every cause that
- * empties a day answers here: illness, travel, a lighter week, a day kept clear
- * before a fixture. **One vocabulary, one carrier, one reader.** A new cause adds
- * a member and its sentence and nothing else.
+ * building only that would have been the edge case Sam refused. Supported
+ * causes share one vocabulary, carrier and reader. This module does not prove
+ * that every producer supplies a reason. Illness and deload labels below are
+ * available vocabulary, not evidence that those policies empty a day.
  *
  * ## THE VOCABULARY IS TYPED AND THE SENTENCE IS SIGNED
  *
@@ -28,20 +28,14 @@
 /**
  * THE TOTAL LIST, and every map over the union is built from it.
  *
- * Same reason as `ALL_MAIN_STRENGTH_PATTERNS` and `ALL_SESSION_PURPOSES`:
- * `satisfies` makes a new cause a BUILD failure rather than a member that
- * silently renders nothing.
+ * The union comes from this list; the copy map must cover every member. Adding
+ * a cause without its copy entry therefore fails the build.
  */
-export type RestDayReason =
-  | 'injury'
-  | 'game_proximity'
-  | 'illness'
-  | 'away'
-  | 'deload';
-
 export const ALL_REST_DAY_REASONS = [
-  'injury', 'game_proximity', 'illness', 'away', 'deload',
-] as const satisfies readonly RestDayReason[];
+  'injury', 'game_proximity', 'fatigue', 'illness', 'away', 'deload',
+] as const;
+
+export type RestDayReason = typeof ALL_REST_DAY_REASONS[number];
 
 /**
  * The signed-copy id for each reason. The card resolves the sentence through
@@ -50,6 +44,7 @@ export const ALL_REST_DAY_REASONS = [
 export const REST_DAY_REASON_COPY_ID: Readonly<Record<RestDayReason, string>> = {
   injury: 'day.rest.reason.injury',
   game_proximity: 'day.rest.reason.game_proximity',
+  fatigue: 'day.rest.reason.fatigue',
   illness: 'day.rest.reason.illness',
   away: 'day.rest.reason.away',
   deload: 'day.rest.reason.deload',
@@ -72,9 +67,22 @@ export function restDayReasonsForWeek(
     readonly restDayReasonByDay?: Readonly<Partial<Record<number, RestDayReason>>>;
   }[] } | null | undefined,
   mondayISO: string | undefined,
+  overlay?: {
+    readonly workoutsByDate: Readonly<Record<string, unknown>>;
+    readonly restDayReasonByDay?: Readonly<Partial<Record<number, RestDayReason>>>;
+  },
 ): Readonly<Partial<Record<number, RestDayReason>>> {
-  if (!program?.microcycles || !mondayISO) return {};
-  const week = program.microcycles.find(
+  if (!mondayISO) return {};
+  const week = program?.microcycles?.find(
     (cycle) => String(cycle.startDate ?? '').slice(0, 10) === mondayISO);
-  return week?.restDayReasonByDay ?? {};
+  const reasons = { ...week?.restDayReasonByDay };
+  // Sparse overlays replace only their owned dates. An owned date with no
+  // reason clears a stale base reason, including a date filled by an Add.
+  for (const date of Object.keys(overlay?.workoutsByDate ?? {})) {
+    const day = new Date(`${date}T12:00:00Z`).getUTCDay();
+    delete reasons[day];
+    const reason = overlay?.restDayReasonByDay?.[day];
+    if (reason) reasons[day] = reason;
+  }
+  return reasons;
 }

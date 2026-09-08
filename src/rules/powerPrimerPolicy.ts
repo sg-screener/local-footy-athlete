@@ -1,3 +1,4 @@
+import { isOffseasonPreparation } from './offseasonSubphasePolicy';
 /**
  * Deterministic power / contrast primer policy.
  *
@@ -193,12 +194,12 @@ function decideFullPowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | null 
 
   // ── Off-season progression ──
   // Missing subphase is deliberately treated as early off-season. Power is
-  // rebuilt progressively: none early, primer-only mid, contrast eligibility
+  // rebuilt progressively: none through week four, contrast eligibility
   // only late after every other safety gate passes.
   const offseasonSubphase = ctx.phase === 'Off-season'
     ? (ctx.offseasonSubphase ?? 'early_offseason')
     : null;
-  if (offseasonSubphase === 'early_offseason') return null;
+  if (isOffseasonPreparation(offseasonSubphase)) return null;
 
   const family = familyFromPattern(ctx.strengthPattern);
   const regionSeverity = regionInjurySeverity(family, ctx.injuries);

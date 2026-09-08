@@ -1,0 +1,33 @@
+{
+  "id": "we-w-composed-mc-ai-6-1-0",
+  "workoutId": "w-composed-mc-ai-6-1",
+  "exerciseId": "ex-custom-single-leg-leg-press",
+  "exerciseOrder": 2,
+  "prescribedSets": 3,
+  "prescribedRepsMin": 2,
+  "prescribedRepsMax": 4,
+  "restSeconds": 0,
+  "perSide": true,
+  "exercise": {
+    "id": "ex-custom-single-leg-leg-press",
+    "name": "Single-Leg Leg Press",
+    "description": "Single-Leg Leg Press",
+    "exerciseType": "Compound",
+    "muscleGroups": [],
+    "equipmentRequired": [],
+    "difficultyLevel": "Intermediate",
+    "createdAt": "2026-08-17T12:00:00.000Z",
+    "updatedAt": "2026-08-17T12:00:00.000Z"
+  },
+  "createdAt": "2026-08-17T12:00:00.000Z",
+  "updatedAt": "2026-08-17T12:00:00.000Z",
+  "section18Evidence": {
+    "protocolVersion": 1,
+    "role": "main_strength",
+    "strengthPattern": "squat",
+    "mainStrengthPattern": "squat",
+    "slot": "squat",
+    "provenance": "composer_declaration"
+  },
+  "prescribedWeightKg": 72.5
+}

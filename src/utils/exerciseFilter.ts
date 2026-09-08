@@ -25,7 +25,9 @@ import {
   ladderLevelForProfile,
   meetsTrainingAgeMinimum,
   TRAINING_AGE_LEVELS,
+  visibleGatesForLadderLevel,
 } from '../rules/experienceCrosswalk';
+import { muscleMetadataFor } from '../data/muscleExperienceMetadata';
 import type { ExperienceLevel } from '../types/domain';
 import type { EquipmentTag } from '../data/exercisePools';
 import {
@@ -43,9 +45,14 @@ export function exerciseProgrammingAllows(name: string, context: {
   if (isSeatedGoodMorningIdentity(name)
     && !seatedGoodMorningVariantAllowsExperience(
       context.selectedImplement, context.experienceLevel)) return false;
+  const athleteLevel = ladderLevelForProfile(context.experienceLevel);
+  const gate = muscleMetadataFor(name)?.experienceGate;
+  // The workbook owns automatic experience minimums on every selection route.
+  // Regression eligibility remains with the source/equipment regression owner.
+  if (context.route !== 'manual' && !getExerciseTags(name)?.power && gate && gate !== 'everyone_regression'
+    && !visibleGatesForLadderLevel(athleteLevel).includes(gate)) return false;
   const policy = getExerciseTags(name)?.programming;
   if (!policy) return true;
-  const athleteLevel = ladderLevelForProfile(context.experienceLevel);
   if (!meetsTrainingAgeMinimum(athleteLevel,
     context.route === 'manual' ? policy.manualMinimum : policy.automaticMinimum)) return false;
   if (context.route !== 'manual' && policy.automaticMaximum

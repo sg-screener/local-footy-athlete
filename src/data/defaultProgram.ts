@@ -120,6 +120,7 @@ import {
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { conditioningEquipmentOnDate } from '../rules/canonicalWeeklyAvailabilityState';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import {
   applyResolvedConditioningSubstitution,
@@ -1309,16 +1310,14 @@ export function buildPowerRow(
     dateISO: 'unknown', weekStartISO: 'unknown', dayOfWeek: -1,
     experience: selection.experienceLevel ?? null, injuries: [], daysToGame: null,
   });
+  const ranked = rankedPowerExerciseCandidates(powerContext).filter(candidate =>
+    !selection.sessionExerciseNames?.includes(candidate.name));
+  const pickedIdentity = selection.automaticWeeklyExerciseSelector?.acceptPower(ranked.map(candidate => ({
+    identity: candidate.name, requestedSlot: slotsForExerciseName(candidate.name)[0] ?? 'core',
+    dayKind: null, route: 'power', requestedAsMain: false,
+  })))?.identity;
   const picked = selection.automaticWeeklyExerciseSelector
-    ? rankedPowerExerciseCandidates(powerContext).find((candidate) =>
-        selection.automaticWeeklyExerciseSelector!.canUse({
-          identity: candidate.name,
-          requestedSlot: slotsForExerciseName(candidate.name)[0] ?? 'core',
-          dayKind: null,
-          route: 'power',
-          requestedAsMain: false,
-        })) ?? null
-    : decision.entry;
+    ? ranked.find(candidate => candidate.name === pickedIdentity) ?? null : ranked[0] ?? null;
   selection.selectionTracesOut?.push(picked === decision.entry ? decision.trace : {
     ...decision.trace,
     selected: picked?.name ?? null,
@@ -1328,15 +1327,8 @@ export function buildPowerRow(
   // The selector covers every real (family, phase, experience) cell, so null is
   // unreachable in practice; falling back to the family's bodyweight default
   // keeps a missing power row from being worse than a plain one.
-  if (selection.automaticWeeklyExerciseSelector && !picked) return null;
+  if (!picked) return null;
   const name = picked?.name ?? (spec.family === 'lower' ? 'Vertical Jump' : 'Explosive Push-up');
-  selection.automaticWeeklyExerciseSelector?.accept({
-    identity: name,
-    requestedSlot: slotsForExerciseName(name)[0] ?? 'core',
-    dayKind: null,
-    route: 'power',
-    requestedAsMain: false,
-  });
   const authored = getExerciseTags(name)?.prescription;
 
   // PLACEMENT and CONTRAST guidance only. Per-exercise coaching text is NOT
@@ -1390,6 +1382,8 @@ export function buildPowerRow(
 /** Context the power selector needs that the policy's dose spec does not carry. */
 interface PowerBlockSelectionInput {
   automaticWeeklyExerciseSelector?: AutomaticWeeklyExerciseSelector;
+  /** Same-day rows cannot be duplicated by the exhausted-week power exception. */
+  sessionExerciseNames?: readonly string[];
   phase?: SeasonPhase;
   experienceLevel?: ExperienceLevel | null;
   availableEquipment?: readonly string[];
@@ -1476,6 +1470,12 @@ export function buildWorkoutsFromCoach(
     .filter((modality) => modality !== 'treadmill')
     .map((modality) => (modality === 'bike_erg' ? 'bike' : modality)) as
       Array<'bike' | 'air_bike' | 'row' | 'ski'>;
+  const machinesForDay = (day: number) => rotationContext?.conditioningMachinesByDay?.[day]
+    ?? (onboardingData && conditioningEquipmentOnDate(onboardingData, syntheticDateStr(day), equipmentCapabilities)
+      .conditioningModalities.length === 0 ? [] : availableMachines);
+  const equipmentForDay = (day: number) => rotationContext?.equipmentTagsByDay?.[day]
+    ?? (onboardingData ? conditioningEquipmentOnDate(onboardingData, syntheticDateStr(day), equipmentCapabilities).tags
+      : availableEquipment);
   const deloadedWeeklyPlan = rotationContext?.canonicalPlanDoseResolved
     ? weeklyPlan
     : weeklyPlan?.map((entry) => applyDeloadPolicyToSessionAllocation(
@@ -1737,6 +1737,7 @@ export function buildWorkoutsFromCoach(
   let runStreak = 0;
   let prevDow = -2;
   for (const cw of sortedCw) {
+    const availableMachines = machinesForDay(cw.dayOfWeek);
     const planEntry = resolveGeneratedPlanEntry(cw, planIdentityLookup, planLookup);
     const isTeamDay = !!planEntry?.isTeamDay;
     const isConsecutiveFromPrev = cw.dayOfWeek - prevDow === 1;
@@ -1803,7 +1804,7 @@ export function buildWorkoutsFromCoach(
       dateStr,
       miniCycleNumber: rotationContext?.miniCycleNumber,
       offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
-      runOnly: runOnUpperDay || undefined,
+      runOnly: runOnUpperDay || availableMachines.length === 0 || undefined,
       availableMachines,
       role: selectionRole,
       // THE GATE THAT WAS DEAD TWICE, AND THEN READ THE WRONG THING.
@@ -2038,6 +2039,7 @@ export function buildWorkoutsFromCoach(
   }
 
   const acceptedWorkouts = completedCoachWorkouts.map((cw) => {
+    const availableMachines = machinesForDay(cw.dayOfWeek);
     const workoutId = `w-coach-${cw.dayOfWeek}`;
     const planEntry = resolveGeneratedPlanEntry(cw, planIdentityLookup, planLookup);
     const aiTier = (cw.sessionTier as SessionTier) || undefined;
@@ -2252,7 +2254,7 @@ export function buildWorkoutsFromCoach(
         planEntry.focus,
         {
           injuries: onboardingData?.injuries ?? [],
-          equipmentTags: [...availableEquipment],
+          equipmentTags: [...equipmentForDay(cw.dayOfWeek)],
           daysToGame: rotationContext?.daysToGameByDay?.[cw.dayOfWeek],
           powerSelectionHistory: [
             ...(rotationContext?.powerSelectionHistory ?? []),
@@ -2598,7 +2600,7 @@ export function buildWorkoutsFromCoach(
     // used to skip power entirely on deload weeks, which the law supersedes —
     // a deload is not a reason to lose sharpness. The dose shrinks instead.
     let resolvedPowerRow: WorkoutExercise | undefined;
-    if (planEntry?.powerPrimer) {
+    if (planEntry?.powerPrimer && !rotationContext?.composedStrengthDays?.includes(cw.dayOfWeek)) {
       const powerSpec = deloadPolicyForDayOfWeek(cw.dayOfWeek)
         ? (() => {
             const shrunk = deloadPowerDose({
@@ -2618,9 +2620,10 @@ export function buildWorkoutsFromCoach(
         : planEntry.powerPrimer;
 
       if (powerSpec) resolvedPowerRow = buildPowerRow(powerSpec, workoutId, {
+        sessionExerciseNames: finalExercises.map(row => row.exercise?.name ?? ''),
         phase: onboardingData?.seasonPhase,
         experienceLevel: onboardingData?.experienceLevel,
-        availableEquipment,
+        availableEquipment: equipmentForDay(cw.dayOfWeek),
         // Mini-cycle = the 3-4 week block. Stable all block, rotates at rollover.
         blockId: `mini-${rotationContext?.miniCycleNumber ?? 1}`,
         automaticWeeklyExerciseSelector: rotationContext?.automaticWeeklyExerciseSelector,

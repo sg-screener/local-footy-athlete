@@ -31,7 +31,7 @@ export const COACH_DASHBOARD_COPY = {
   loadIn: 'In the sweet spot',
   loadAbove: 'Potentially overtraining',
   loadDeload: 'Deload week',
-  loadSweetSpotGuidance: 'The sweet spot helps you build fitness without training too hard or undertraining.',
+  loadSweetSpotGuidance: 'The sweet spot helps you build fitness without overdoing it or undertraining.',
   loadDeloadGuidance: 'Lower load is expected during a deload week.',
   loadHistoryGuidance: 'Complete and rate your sessions to build your 4-week load baseline.',
   loadHistoryBuilding: 'Your load graph builds as you train.',

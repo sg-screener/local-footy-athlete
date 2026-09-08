@@ -180,6 +180,9 @@ export interface PoolDefinition {
 }
 
 export interface RotationContext {
+  equipmentTagsByDay?: Readonly<Partial<Record<number, readonly EquipmentTag[]>>>;
+  /** Weekly availability writes; the conditioning adapter reads, never widens. */
+  conditioningMachinesByDay?: Readonly<Partial<Record<number, readonly ('bike' | 'air_bike' | 'row' | 'ski')[]>>>;
   /** One compiler-owned history shared by all automatic gym exercise families. */
   automaticWeeklyExerciseSelector?: import('../rules/automaticWeeklyExerciseSelection').AutomaticWeeklyExerciseSelector;
   daysToGameByDay?: Readonly<Partial<Record<number, number | null>>>;

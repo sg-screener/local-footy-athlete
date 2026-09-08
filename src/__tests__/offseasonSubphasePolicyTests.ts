@@ -54,16 +54,16 @@ console.log('\n[1] early off-season defaults');
 console.log('\n[2] mid off-season transition');
 {
   const policy = getOffseasonSubphasePolicy('mid_offseason');
-  eq('mid allows aerobic base and tempo',
+  eq('mid allows optional aerobic base only',
     policy.conditioning.allowedCategories,
-    ['aerobic_base', 'tempo']);
+    ['aerobic_base']);
   eq('mid has no default hard conditioning', policy.conditioning.hardSessionCap, 0);
   eq('mid still blocks sprint/COD', policy.speedSprint.allowedBySubphase, false);
   eq('mid running is conditional, not default', policy.running.enabledByDefault, false);
-  eq('mid running policy is careful re-entry', policy.running.policy, 'careful_reentry_if_healthy');
-  eq('mid strength bridges through 6-10 reps',
+  eq('mid running stays blocked', policy.running.policy, 'blocked_by_default');
+  eq('mid retains body-armour reps',
     [policy.strength.repBias, policy.strength.repsMin, policy.strength.repsMax],
-    ['bridge_6_10', 6, 10]);
+    ['body_armour_8_12', 8, 12]);
 }
 
 console.log('\n[3] late off-season build');

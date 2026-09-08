@@ -1,3 +1,4 @@
+import { observeStrengthPlacementScope } from './placementObservation';
 import type { CanonicalProgramCompilerInput, compileCanonicalProgram } from '../../rules/canonicalProgramCompiler';
 import { progressedFromOwnHistory, smallestPracticalIncrementKg } from '../../rules/blockBoundaryProgression';
 import { isoDateForWeekday } from '../../utils/appDate';
@@ -23,14 +24,16 @@ const equal = (a: number | null | undefined, b: number) => typeof a === 'number'
 export function observeProgramDose(input: CanonicalProgramCompilerInput, compile: typeof compileCanonicalProgram) {
   const receipts: DoseReceipt[] = [];
   const errors: string[] = [];
+  const placement = observeStrengthPlacementScope();
   const originalRows = rowsModule.materialiseComposedWeek;
   const originalDecide = loadsModule.decideBlockBoundaryLoads;
   const originalApply = loadsModule.applyBlockBoundaryProgression;
   let materialisations = 0;
   let loadApplications = 0;
   rowsModule.materialiseComposedWeek = (week, context) => {
-    materialisations++;
     const workouts = originalRows(week, context);
+    if (placement.isPreview()) return workouts;
+    materialisations++;
     for (const day of week.days) {
       if (!context.deloadPolicyForDay?.(day.dayOfWeek)) continue;
       const date = isoDateForWeekday(context.weekStartISO, day.dayOfWeek);
@@ -49,6 +52,7 @@ export function observeProgramDose(input: CanonicalProgramCompilerInput, compile
   };
   loadsModule.decideBlockBoundaryLoads = args => {
     const decisions = originalDecide(args);
+    if (placement.isPreview()) return decisions;
     for (const decision of decisions) {
       const recorded = args.history.lastRecordedLoadByExercise[decision.exerciseName];
       if (typeof recorded !== 'number') continue;
@@ -63,8 +67,9 @@ export function observeProgramDose(input: CanonicalProgramCompilerInput, compile
     return decisions;
   };
   loadsModule.applyBlockBoundaryProgression = args => {
-    loadApplications++;
     const workouts = originalApply(args);
+    if (placement.isPreview()) return workouts;
+    loadApplications++;
     for (const workout of workouts) {
       // A decision can share an exercise with a standalone mobility session.
       // Only strength-bearing workout types belong to this load application;
@@ -111,6 +116,7 @@ export function observeProgramDose(input: CanonicalProgramCompilerInput, compile
       detail: errors.length ? errors.join(' | ') : `${materialisations} materialiser calls, ${loadApplications} load applications, ${receipts.length} numeric row observations` }];
     return { output, checks, receipts };
   } finally {
+    placement.restore();
     rowsModule.materialiseComposedWeek = originalRows;
     loadsModule.decideBlockBoundaryLoads = originalDecide;
     loadsModule.applyBlockBoundaryProgression = originalApply;

@@ -1,3 +1,4 @@
+import { OFFSEASON_PREPARATION } from '../../rules/offseasonSubphasePolicy';
 import { ARCHETYPES, athleteAnswers } from '../compilerYear/catalog';
 import { visibleSignature, signatureDifferences } from '../compilerYear/invariants';
 import { presetEquipmentAnswer } from './equipmentAnswerFixture';
@@ -124,42 +125,63 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
         .every(line => !/\b(?:variant|alternative)\b/i.test(line.text)
           && !/\b\d[^.;]*\bor\b[^.;]*\d/i.test(line.text)));
   }
-  for (const gender of ['male', 'female'] as const) {
+  for (const gender of ['male', 'female'] as const) for (const preparation of [true, false]) {
+    const installDay = preparation ? '2026-09-28' : '2026-10-26';
+    const mondays = preparation ? ['2026-10-12', '2026-10-19'] : ['2026-10-26', '2026-11-02'];
+    const expectedConditioning = preparation ? OFFSEASON_PREPARATION.exposureConditioning.preferred.max : 3;
     const profile = { ...athleteAnswers({ ...ARCHETYPES[6], gender, initialPhase: 'Off-season', extraGame: false }),
       seasonFinishedOn: '2026-09-27' };
-    const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: '2026-09-28' }));
+    const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: installDay }));
     if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
     const acceptedHistory = JSON.stringify(blockConditioningSelectionHistory());
-    ok(`${gender}: real onboarding records nonempty conditioning selections`, blockConditioningSelectionHistory().length > 0);
-    quiet(() => generateProgramLocally(profile, { todayISO: '2026-10-26', blockStartISO: '2026-10-26', blockNumber: 2 } as never));
+    ok(`${gender}/${preparation}: accepted conditioning history follows the phase`,
+      blockConditioningSelectionHistory().length > 0 && (!preparation
+        || blockConditioningSelectionHistory().every(row => mondays.includes(row.weekStartISO ?? '')
+          && ['aerobic_base', 'recovery_flush'].includes(row.category))));
+    quiet(() => generateProgramLocally(profile, { todayISO: '2026-11-23', blockStartISO: '2026-11-23', blockNumber: 3 } as never));
     ok(`${gender}: speculative future generation cannot write conditioning history`, JSON.stringify(blockConditioningSelectionHistory()) === acceptedHistory);
-    for (const monday of ['2026-10-12', '2026-10-19']) {
-      const week = quiet(() => deriveVisibleWeekLive(monday, '2026-09-28'));
+    for (const monday of mondays) {
+      const week = quiet(() => deriveVisibleWeekLive(monday, installDay));
       const receivers = week.filter(day => day.workout?.conditioningBlock?.options.length).map(day => day.dayOfWeek);
-      ok(`${gender}/${monday}: original weeks 3/4 distribute conditioning beyond Wednesday`,
-        receivers.length === 3 && receivers.some(day => [4, 5, 6, 0].includes(day)), JSON.stringify(receivers));
+      ok(`${gender}/${monday}: preparation offers light add-ons; build distributes conditioning beyond Wednesday`,
+        receivers.length === expectedConditioning && (preparation || receivers.some(day => [4, 5, 6, 0].includes(day))), JSON.stringify(receivers));
+      if (preparation) ok(`${gender}/${monday}: preparation offers stay optional on selected gym days`,
+        week.filter(day => day.workout?.conditioningBlock?.options.length).every(day =>
+          profile.preferredTrainingDays?.includes(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][day.dayOfWeek] as never)
+          && day.workout?.attachedConditioningKind === 'finisher'
+          && day.workout.conditioningCategory === 'aerobic_base'
+          && buildSessionTemplate(day.workout).items.filter(item => item.role === 'conditioning')
+            .every(item => 'optional' in item && item.optional === true)));
       const receiverOrder = receivers.map(day => (day + 6) % 7).sort((a, b) => a - b);
-      ok(`${gender}/${monday}: conditioning receiver spacing includes week boundary`, receivers.length === 3
-        && receiverOrder.every((day, i) => (receiverOrder[(i + 1) % receiverOrder.length] - day + 7) % 7 >= 2), JSON.stringify(receivers));
+      // R-337: later build weeks prefer existing training days before even
+      // spacing. Their Speed/hard-work schedule is not the retired mid-phase
+      // three-tempo schedule. Keep the cross-week two-consecutive-day ceiling.
+      ok(`${gender}/${monday}: conditioning spacing respects the build-week boundary`, receivers.length === expectedConditioning
+        && receiverOrder.every(day => !(receiverOrder.includes((day + 1) % 7)
+          && receiverOrder.includes((day + 2) % 7))) && !receivers.includes(0), JSON.stringify(receivers));
       ok(`${gender}/${monday}: no automatic no-game Gunshow or Primer`,
         week.every(day => !['gunshow', 'primer'].includes(day.workout?.composedOptionalKind ?? '')));
       const conditioning = week.flatMap(day => getSessionComponentRows(day.workout).conditioningRows)
         .map(row => row.exercise?.name ?? '');
+      // A COD prescription contains several drills. Count selected templates
+      // separately from rendered rows; neither count stands in for the other.
+      const selectedTemplates = week.flatMap(day => day.workout?.conditioningBlock?.options ?? []).map(option => option.title);
       ok(`${gender}/${monday}: equivalent conditioning seats have distinct eligible templates`,
-        conditioning.length === 3 && new Set(conditioning).size === 3, JSON.stringify(conditioning));
+        selectedTemplates.length === expectedConditioning && new Set(selectedTemplates).size === expectedConditioning, JSON.stringify(selectedTemplates));
       const modeRows = week.flatMap(day => buildSessionTemplate(day.workout ?? {}).items
         .filter(item => item.kind === 'exercise' && item.presentation === 'conditioning_phase'));
       ok(`${gender}/${monday}: single prescriptions retain their typed running or off-leg mode`,
-        modeRows.length === 3 && modeRows.every(item => !!(item as { modalityLabel?: string }).modalityLabel),
+        modeRows.length === conditioning.length && modeRows.length >= expectedConditioning
+          && modeRows.every(item => !!(item as { modalityLabel?: string }).modalityLabel),
         JSON.stringify(modeRows.map(item => ({ name: item.kind === 'exercise' ? item.row.exercise?.name : '',
           mode: (item as { modalityLabel?: string }).modalityLabel }))));
     }
-    const beforeBoot = visibleSignature(quiet(() => deriveVisibleWeekLive('2026-10-12', '2026-09-28')));
-    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: '2026-09-28' }));
+    const beforeBoot = visibleSignature(quiet(() => deriveVisibleWeekLive(mondays[0], installDay)));
+    const boot = await quietAsync(() => relaunchApp({ storage, todayISO: installDay }));
     ok(`${gender}: accepted conditioning history and final rows survive restart`, boot.ok
       && JSON.stringify(blockConditioningSelectionHistory()) === acceptedHistory
-      && visibleSignature(quiet(() => deriveVisibleWeekLive('2026-10-12', '2026-09-28'))) === beforeBoot,
+      && visibleSignature(quiet(() => deriveVisibleWeekLive(mondays[0], installDay))) === beforeBoot,
       JSON.stringify({ boot: boot.ok, historyBefore: JSON.parse(acceptedHistory), historyAfter: blockConditioningSelectionHistory(),
-        rowDiff: signatureDifferences(beforeBoot, visibleSignature(quiet(() => deriveVisibleWeekLive('2026-10-12', '2026-09-28')))) }));
+        rowDiff: signatureDifferences(beforeBoot, visibleSignature(quiet(() => deriveVisibleWeekLive(mondays[0], installDay)))) }));
   }
 }

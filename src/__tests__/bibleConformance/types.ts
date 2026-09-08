@@ -22,7 +22,7 @@ export type BibleScenarioId = StrengthScenarioId | ComponentScenarioId;
 
 export type Slice3ScenarioId =
   | 'early-offseason-healthy'
-  | 'mid-offseason-primer'
+  | 'mid-offseason-preparation'
   | 'late-offseason-valid-contrast'
   | 'late-offseason-invalid-contrast'
   | 'inseason-game-sat-g2-lower'

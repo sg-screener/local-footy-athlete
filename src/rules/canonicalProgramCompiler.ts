@@ -4,7 +4,7 @@
 import type { TrainingProgram, OnboardingData } from '../types/domain';
 import type { CoachingPlan } from '../utils/coachingEngine';
 import { compileCanonicalProgramWeeks, type CanonicalProgramWeeksInput } from './canonicalWeeklyRowCompiler';
-import { compileCanonicalProgramProgression } from './canonicalWeeklyProgressionCompiler';
+import { compileCanonicalProgramProgression, conditioningRecoveryWindowsForProgram } from './canonicalWeeklyProgressionCompiler';
 import { recordedLoadsFromFeedback } from './blockBoundaryProgression';
 import { applyExclusionsToAuthoredWeek } from './exerciseExclusions';
 import { publishAutomaticProgrammingSelectionTraces } from './programmingSelectionTrace';
@@ -26,7 +26,16 @@ export function compileCanonicalProgram(input: CanonicalProgramCompilerInput) {
   const recordedLoads = input.weeks.recordedLoads ?? recordedLoadsFromFeedback(Object.fromEntries(
     Object.entries(feedback).filter(([, entry]) => entry.dateStr < input.progression.asOfISO),
   ));
-  const compiled = compileCanonicalProgramWeeks({ ...input.weeks, recordedLoads });
+  const compiled = compileCanonicalProgramWeeks({ ...input.weeks, recordedLoads,
+    strengthFeedback: feedback, strengthCompletedBeforeISO: input.progression.asOfISO,
+    strengthDoseForPlacement: (week, weekIndex) => {
+      const workouts = applyExclusionsToAuthoredWeek({workouts: week.workouts,
+        weekStart: week.startDate.slice(0, 10), exclusions: input.exclusions});
+      return compileCanonicalProgramProgression({...input.progression, weekIndexOffset: weekIndex,
+        program: {...input.metadata, microcycles: [{...week, workouts}]},
+      }).microcycles[0].workouts;
+    },
+    conditioningRecoveryWindows: conditioningRecoveryWindowsForProgram(input.progression) });
   publishAutomaticProgrammingSelectionTraces(compiled.selectionTraces);
   /**
    * ── REMOVE MEANS REMOVE, IN STORAGE AND NOT ONLY ON THE SCREEN ────────────

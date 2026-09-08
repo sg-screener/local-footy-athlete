@@ -1,3 +1,5 @@
+import { lowerBodyWorkloadForWeek, type StrengthTrainingRecord } from './lowerBodyWorkload';
+import { applyGoalProgramming } from './goalProgramming';
 /** Final-week row compiler. Explicit accepted inputs in; complete weeks, selections
  * and diagnostics out. The service only captures inputs and records accepted decisions.
  * Existing scheduler, composer, adapter and dose specialists retain their policies. */
@@ -24,6 +26,7 @@ import { resolveWeekExclusions } from '../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../rules/schedulerPlannedDays';
 import { compileCanonicalWeek, type CanonicalWeeklyIllnessFact, type CanonicalWeeklyReadinessFact } from '../rules/canonicalWeeklyCompiler';
+import { evaluateSection18EffectiveWeek } from './section18EffectiveWeekEvaluator';
 import { canonicalWeeklyScheduledDeloadStateFrom } from '../rules/canonicalWeeklyScheduledDeloadState';
 import { canonicalFixtureStateFrom } from '../rules/canonicalWeeklyFixtureState';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
@@ -196,6 +199,11 @@ function composerExclusionInput(
 
 
 export interface CanonicalProgramWeeksInput {
+  /** The existing exclusion/progression owners resolve this draft's final strength dose. */
+  readonly strengthDoseForPlacement?: (week: Microcycle, weekIndex: number) => readonly Workout[];
+  readonly strengthFeedback?: Readonly<Record<string, StrengthTrainingRecord>>;
+  readonly strengthCompletedBeforeISO?: string;
+  conditioningRecoveryWindows?: readonly { startISO: string; endISO: string }[];
   coachWorkouts: CoachGeneratedWorkouts;
   /** Legacy/test-only precompiled plan. Product generation supplies coachingInputs. */
   plan?: CoachingPlan;
@@ -356,6 +364,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     const weeklyAvailability = canonicalWeeklyAvailabilityStateFrom({
       profile,
       weekStartISO: blockState.weekStart,
+      conditioningRecoveryWindows: args.conditioningRecoveryWindows,
       activeConstraints: args.activeConstraints,
       ...(!args.activeConstraints
         ? {
@@ -426,11 +435,9 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     // unchanged — the adapter, the §18 gateway, the store and the coach all read
     // it and none of them moved.
     //
-    // Order matters and is the whole point: SCHEDULE first (it owns existence,
-    // count, purpose, weekday, hard/rest and spacing), then MATERIALISE (the
-    // specialists fill content into days they cannot change), then CONNECT
-    // (translation only). The old order asked the planner first and let the
-    // scheduler disagree with it afterwards.
+    // Each legal strength arrangement is composed as a pure trial. The same
+    // scheduler compares the complete weeks using their actual lower-body dose.
+    // Only the final compiler result can leave this boundary.
     const cutoverInputs = args.coachingInputs;
     let allocatedWeekPlan: CoachingPlan;
     let compiledSchedule: WeeklySchedule | null = null;
@@ -439,6 +446,99 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     let compiledDoseDoor: 'scheduled' | 'readiness' | 'illness' | null = null;
     let compiledActiveInjuryKeys = weeklyInjury.activeInjuryKeys;
     let weeklyCompositionAvailability = weeklyAvailability.composition;
+    const acceptedAutomaticHistory = boundary
+      ? boundary.pinnedHistoryWorkouts
+          .filter((workout) =>
+            dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
+          .flatMap((workout) => workout.exercises
+            .filter(workoutExerciseWasAutomaticallySelected)
+            .map((row) => row.exercise?.name ?? '').filter(Boolean))
+      : [];
+    const blockSelectionsAuthored = selections;
+    let authoredStrength: ReturnType<typeof composeWeek> | null = null;
+    const strengthCandidates = new Map<string, ReturnType<typeof composeWeek>>();
+    const composeStrength = (draft: {
+      plan: CoachingPlan; schedule: WeeklySchedule | null;
+      daysToGameByDay: Readonly<Record<number, number | null>>;
+      compositionAvailability: typeof weeklyCompositionAvailability | null;
+    }): ReturnType<typeof composeWeek> => {
+      const weekPlan = draft.plan;
+      const compositionAvailability = draft.compositionAvailability ?? weeklyCompositionAvailability;
+    const plannerNameByDay: Record<number, string> = {};
+    const plannerTierByDay: Record<number, string> = {};
+    for (const entry of weekPlan.weeklyPlan) {
+      const dayNumber = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? ''));
+      if (dayNumber < 0) continue;
+      if (entry.focus) plannerNameByDay[dayNumber] = String(entry.focus);
+      if (entry.tier) plannerTierByDay[dayNumber] = String(entry.tier);
+    }
+    const schedulerOwnedPlannedDays = draft.schedule
+      ? schedulerPlannedDays({
+          weekStartISO: blockState.weekStart,
+          days: draft.schedule.days,
+          nameByDayOfWeek: plannerNameByDay,
+          tierByDayOfWeek: plannerTierByDay,
+        })
+      : composedPlannedDaysFrom(weekPlan.weeklyPlan);
+    return composeWeek({
+          profile,
+          recordedLoads: args.recordedLoads,
+          phaseClock: { weekNumber: blockState.weekNumber },
+          // B1-M1: the phase the DOSE is resolved against, before authorship.
+          seasonPhase: profile.seasonPhase as never,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+          plannedDays: schedulerOwnedPlannedDays.map(day => ({ ...day,
+            daysToGame: draft.daysToGameByDay[day.dayOfWeek] })),
+          /* PERMANENT, so a five-day trip cannot enter the athlete's rotation
+           * history. The dated half rides the next argument. */
+          kit: compositionAvailability.permanentKit,
+          temporaryKitByDayOfWeek:
+            compositionAvailability.temporaryKitByDayOfWeek,
+          injuries: {
+            // §18's OWN safety answer, not a second injury reading.
+            prohibitedPatterns:
+              weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
+            /* ── THE ATHLETE'S EXCLUSIONS, RESOLVED AGAINST THE WEEK BEING BUILT ──
+             *
+             * It used to be `args.athletePrefs?.excluded` — a flat list of names
+             * with no scope, applied to every week forever. Sam's approved
+             * contract gives the answer THREE spans and only one of them is
+             * week-wide, so a flat list can be right for at most one of them.
+             *
+             * `resolveWeekExclusions` splits the one predicate two ways: names
+             * out for the WHOLE week, and names out on PARTICULAR DAYS. A "today
+             * only" answer must not take the exercise out of Thursday's session
+             * as well, and this seam is where that stops happening. */
+            ...composerExclusionInput(args.athletePrefs, blockState.weekStart),
+          },
+      todayISO: blockState.weekStart,
+      /* ── THE SELECTION OWNER'S INPUTS. See `rules/blockExerciseSelection.ts`. ──────
+       * Selection is keyed by the BLOCK, so the block identity that was already
+       * resolved here has to reach the composer. It was not passed before, which
+       * is why the composer fell back to the phase WEEK number and a main lift
+       * changed every week. */
+      blockNumber: blockState.miniCycleNumber ?? 1,
+      pinnedIdentities: (args.athletePrefs?.pinned ?? []).map(composedIdentityFor),
+      progressedIdentities: args.progressedIdentities ?? [],
+      /* ── THE RECORDED PAST, HANDED DOWN EXPLICITLY ────────────────────────
+       * The composer never reads a store. Boot and rollover reach this same
+       * argument, so every path feeds the selector the same history. */
+      blockStartISO: blockState.blockStart,
+      ...(boundary ? { automaticSelectionHistory: {
+        governedFromISO: boundary.governedFromISO,
+        identities: acceptedAutomaticHistory,
+      } } : {}),
+      ...(args.acceptedWeekIdentitiesByDay
+        ? { acceptedWeekIdentitiesByDay: args.acceptedWeekIdentitiesByDay }
+        : {}),
+      // Later weeks in a newly authored block must see the same accepted seat
+      // choices that restart will read. Otherwise a changed weekly layout can
+      // re-pick core/accessory seats before their first week's record is saved.
+      selectionHistory: [...(args.selectionHistory ?? []), ...selections],
+      trackedLiftChoices: args.trackedLiftChoices ?? {},
+    });
+    };
     if (cutoverInputs) {
       const schedulerInputs = weeklySchedulerInputsFrom({
         profile,
@@ -451,19 +551,42 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       });
       const agePolicy = resolveTrainingAgePolicy(cutoverInputs.experienceLevel);
       const compiled = compileCanonicalWeek({
+        resolveStrengthWorkload: (draft) => {
+          authoredStrength = composeStrength(draft);
+          strengthCandidates.set(JSON.stringify(draft.schedule.days.filter(day => day.owner === 'strength').map(day => [day.dayOfWeek, day.purpose])), authoredStrength);
+          const strength = materialiseComposedWeek(authoredStrength, {
+            microcycleId, weekStartISO: blockState.weekStart,
+            deloadPolicyForDay: day => draft.dosePolicyByDay[day] ?? null,
+          });
+          const prescribed = applyGoalProgramming(strength, {
+            profile, protectedDays: Object.keys(draft.dosePolicyByDay).map(Number),
+            daysToGameByDay: draft.daysToGameByDay,
+            injuryAdjusted: draft.activeInjuryKeys.length > 0,
+          });
+          const resolved = args.strengthDoseForPlacement?.({
+            id: microcycleId, programId: args.programId, weekNumber: blockState.weekNumber,
+            startDate: dateAtNoonISO(blockState.weekStart), endDate: dateAtNoonISO(blockState.weekEnd),
+            miniCycleNumber: blockState.miniCycleNumber, weekKind: effectiveWeekKind,
+            intensityMultiplier: blockState.intensityMultiplier, workouts: prescribed,
+            createdAt: args.authoredAtISO, updatedAt: args.authoredAtISO,
+          }, stateIndex) ?? prescribed;
+          const governed = boundary ? [
+            ...resolved.filter(workout => dateForWeekday(blockState.weekStart, workout.dayOfWeek) >= boundary.governedFromISO),
+            ...boundary.pinnedHistoryWorkouts.filter(workout => dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO),
+          ] : resolved;
+          const strengthContract = draft.plan.weeklyExposureContractV2;
+          const strengthBlockers = strengthContract ? evaluateSection18EffectiveWeek({
+            contract: strengthContract, workouts: governed, weekStart: blockState.weekStart,
+          }).blockingViolations.filter(finding =>
+            finding.domain === 'main_strength' || finding.domain === 'strength_patterns').length : 0;
+          return {strengthBlockers,
+            lowerBodyWorkloadByDay: lowerBodyWorkloadForWeek({workouts: governed, weekStartISO: blockState.weekStart,
+              feedback: args.strengthFeedback, completedBeforeISO: args.strengthCompletedBeforeISO})};
+        },
         scheduler: { ...schedulerInputs,
           governedFromISO: boundary?.governedFromISO ?? null,
           deliveredEnergySystemDays,
-          mildSorenessDays: [0, 1, 2, 3, 4, 5, 6].filter(day => {
-            const date = isoDateForWeekday(blockState.weekStart, day);
-            const reported = activeTemporarySourceFacts(args.temporarySourceFacts ?? [], date)
-              .flatMap(fact => 'factKind' in fact && fact.factKind === 'soreness' ? [fact.athleteReportedLevel] : []);
-            const legacy = filterConstraintsForDate([...(args.activeConstraints ?? [])], date)
-              .filter(c => c.type === 'soreness' && c.status !== 'resolved').map(c => c.severity);
-            const levels = [...reported, ...legacy];
-            return levels.length > 0 && levels.every(level => level === 'slight'
-              || (typeof level === 'number' && level > 0 && level < 4));
-          }),
+
         },
         coaching: cutoverInputs,
         readiness: canonicalReadinessFactFrom(generationConstraints),
@@ -537,6 +660,7 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       });
       if (compiled.ok) selectionTraces.push(...compiled.selectionTraces);
       if (compiled.ok === false) throw new WeeklyScheduleRefusedError(compiled.refusal);
+      authoredStrength = strengthCandidates.get(JSON.stringify(compiled.schedule.days.filter(day => day.owner === 'strength').map(day => [day.dayOfWeek, day.purpose]))) ?? composeStrength(compiled);
       compiledSchedule = compiled.schedule;
       compiledDaysToGame = compiled.daysToGameByDay;
       allocatedWeekPlan = compiled.plan;
@@ -570,94 +694,13 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     // Conditioning content, warm-ups and the §18 exposure contract are its work;
     // the contract explicitly does not own exercise selection or dose. What it
     // no longer owns is WHICH DAYS carry strength and WHAT THOSE SESSIONS ARE.
-    // The compiler's schedule is the schedule composition consumes. There is no
-    // second scheduler pass after the connector and no opportunity for the same
-    // week to acquire a different day/purpose answer downstream.
+    // Only the chosen trial supplies the strength rows and block records below;
+    // no persisted or visible week is patched afterwards.
     // The planner's own names and tiers, by weekday, so a composed day keeps the
     // athlete-facing label it already had where the two agree on the day.
-    const blockSelectionsAuthored = selections;
-    const plannerNameByDay: Record<number, string> = {};
-    const plannerTierByDay: Record<number, string> = {};
-    for (const entry of weekPlan.weeklyPlan) {
-      const dayNumber = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? ''));
-      if (dayNumber < 0) continue;
-      if (entry.focus) plannerNameByDay[dayNumber] = String(entry.focus);
-      if (entry.tier) plannerTierByDay[dayNumber] = String(entry.tier);
-    }
-    const schedulerOwnedPlannedDays = compiledSchedule
-      ? schedulerPlannedDays({
-          weekStartISO: blockState.weekStart,
-          days: compiledSchedule.days,
-          nameByDayOfWeek: plannerNameByDay,
-          tierByDayOfWeek: plannerTierByDay,
-        })
-      : composedPlannedDaysFrom(weekPlan.weeklyPlan);
-    const acceptedAutomaticHistory = boundary
-      ? boundary.pinnedHistoryWorkouts
-          .filter((workout) =>
-            dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
-          .flatMap((workout) => workout.exercises
-            .filter(workoutExerciseWasAutomaticallySelected)
-            .map((row) => row.exercise?.name ?? '').filter(Boolean))
-      : [];
-    const composedWeek = composeWeek({
-          profile,
-          recordedLoads: args.recordedLoads,
-          phaseClock: { weekNumber: blockState.weekNumber },
-          // B1-M1: the phase the DOSE is resolved against, before authorship.
-          seasonPhase: profile.seasonPhase as never,
-          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-          plannedDays: schedulerOwnedPlannedDays.map(day => ({ ...day,
-            daysToGame: compiledDaysToGame[day.dayOfWeek] })),
-          /* PERMANENT, so a five-day trip cannot enter the athlete's rotation
-           * history. The dated half rides the next argument. */
-          kit: weeklyCompositionAvailability.permanentKit,
-          temporaryKitByDayOfWeek:
-            weeklyCompositionAvailability.temporaryKitByDayOfWeek,
-          injuries: {
-            // §18's OWN safety answer, not a second injury reading.
-            prohibitedPatterns:
-              weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
-            /* ── THE ATHLETE'S EXCLUSIONS, RESOLVED AGAINST THE WEEK BEING BUILT ──
-             *
-             * It used to be `args.athletePrefs?.excluded` — a flat list of names
-             * with no scope, applied to every week forever. Sam's approved
-             * contract gives the answer THREE spans and only one of them is
-             * week-wide, so a flat list can be right for at most one of them.
-             *
-             * `resolveWeekExclusions` splits the one predicate two ways: names
-             * out for the WHOLE week, and names out on PARTICULAR DAYS. A "today
-             * only" answer must not take the exercise out of Thursday's session
-             * as well, and this seam is where that stops happening. */
-            ...composerExclusionInput(args.athletePrefs, blockState.weekStart),
-          },
-      todayISO: blockState.weekStart,
-      /* ── THE SELECTION OWNER'S INPUTS. See `rules/blockExerciseSelection.ts`. ──────
-       * Selection is keyed by the BLOCK, so the block identity that was already
-       * resolved here has to reach the composer. It was not passed before, which
-       * is why the composer fell back to the phase WEEK number and a main lift
-       * changed every week. */
-      blockNumber: blockState.miniCycleNumber ?? 1,
-      pinnedIdentities: (args.athletePrefs?.pinned ?? []).map(composedIdentityFor),
-      progressedIdentities: args.progressedIdentities ?? [],
-      /* ── THE RECORDED PAST, HANDED DOWN EXPLICITLY ────────────────────────
-       * The composer never reads a store. Boot and rollover reach this same
-       * argument, so every path feeds the selector the same history. */
-      blockStartISO: blockState.blockStart,
-      ...(boundary ? { automaticSelectionHistory: {
-        governedFromISO: boundary.governedFromISO,
-        identities: acceptedAutomaticHistory,
-      } } : {}),
-      ...(args.acceptedWeekIdentitiesByDay
-        ? { acceptedWeekIdentitiesByDay: args.acceptedWeekIdentitiesByDay }
-        : {}),
-      // Later weeks in a newly authored block must see the same accepted seat
-      // choices that restart will read. Otherwise a changed weekly layout can
-      // re-pick core/accessory seats before their first week's record is saved.
-      selectionHistory: [...(args.selectionHistory ?? []), ...selections],
-      trackedLiftChoices: args.trackedLiftChoices ?? {},
-    });
+    const composedWeek = authoredStrength ?? composeStrength({plan: weekPlan,
+      schedule: compiledSchedule, daysToGameByDay: compiledDaysToGame,
+      compositionAvailability: weeklyCompositionAvailability});
     // Normal strength chooses first. Every later automatic family consumes the
     // same canonical weekly history, so optional and power rows can only select
     // an unused legal identity.
@@ -787,6 +830,11 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
           profile,
           {
             conditioningFeasibilityResolved: true,
+            equipmentTagsByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
+              .map(([day, kit]) => [day, kit.tags])),
+            conditioningMachinesByDay: Object.fromEntries(Object.entries(weeklyAvailability.equipmentByDayOfWeek)
+              .map(([day, capabilities]) => [day, capabilities.conditioningModalities
+                .filter(modality => modality !== 'treadmill').map(modality => modality === 'bike_erg' ? 'bike' : modality)])),
             miniCycleNumber: blockState.miniCycleNumber,
             weekInBlock: blockState.weekInBlock,
             weekStartISO: blockState.weekStart,
@@ -855,6 +903,15 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         : constrained);
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
+    workouts = applyGoalProgramming(workouts, {
+      profile,
+      protectedDays: [...Object.keys(compiledDosePolicyByDay).map(Number),
+        ...workouts.filter(workout => boundary?.governedFromISO &&
+          dateForWeekday(blockState.weekStart, workout.dayOfWeek) < boundary.governedFromISO)
+          .map(workout => workout.dayOfWeek)],
+      daysToGameByDay: compiledDaysToGame,
+      injuryAdjusted: compiledActiveInjuryKeys.length > 0,
+    });
     /* ── THE WEEKLY POWER BUDGET, APPLIED BY THE AUTHORING SIDE ──────────────
      *
      * MOVE 1 of the §18 demolition (Sam, 2026-08-19): *"Power trimming → power

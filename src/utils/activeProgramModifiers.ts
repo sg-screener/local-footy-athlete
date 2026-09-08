@@ -558,13 +558,12 @@ function statusModifier(
   c: Exclude<ActiveConstraint, ActiveInjuryConstraint | ActivePreferenceConstraint>,
   source: ActiveProgramModifierSource,
 ): ActiveProgramModifier | null {
-  if (c.type === 'missed_session') return null;
+  if (c.type === 'missed_session' || c.type === 'soreness') return null;
   const rules = 'rules' in c ? c.rules : [];
   const focus = 'safeFocus' in c ? c.safeFocus : [];
   const isCoachRestriction = c.type === 'schedule';
   const isLegacyFixtureProjection = c.type === 'schedule' &&
     c.noteProof?.kind === 'game_change' && !c.reversibleAdjustmentId;
-  const isSoreness = c.type === 'soreness';
   // A4: the title is attributed to the FACT KIND through the projection's typed
   // `readinessKind` discriminator — the same source the body already reads via
   // `readinessBodyLead`. Branching on the constraint TYPE is what made a severe
@@ -576,7 +575,6 @@ function statusModifier(
         kind: readinessFactKind,
         scope: readinessScopeOfConstraint(c as never),
         severity: 'severity' in c ? c.severity : undefined,
-        bodyPart: isSoreness ? capitaliseWords(displayBodyPart(c)) : undefined,
       })
     : c.reasonLabel || 'Program adjustment active';
   const fallbackBody = c.type === 'fatigue'
@@ -584,12 +582,7 @@ function statusModifier(
         'Your training load is reduced while you recover.',
         `Limits: ${listPreview(rules, 'extra hard work')}.`,
       ])
-    : isSoreness
-      ? sentence([
-          `Your program is managing soreness around ${displayBodyPart(c)}.`,
-          `Keep: ${listPreview(focus, 'pain-free work')}.`,
-        ])
-      : sentence([
+    : sentence([
           `Your program is being adjusted around this constraint.`,
           `Limits: ${listPreview(rules, 'normal loading')}.`,
         ]);

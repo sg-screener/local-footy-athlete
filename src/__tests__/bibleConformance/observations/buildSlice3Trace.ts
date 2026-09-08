@@ -407,8 +407,8 @@ function fixture(scenario: Slice3GoldenScenario): FixtureResult {
     return { raw, generated: generated.workout, effective: generated.workout, week: [{ date, workout: generated.workout }], profile: baseProfile('Off-season'), date, evidence: generated.evidence };
   }
 
-  if (scenario.id === 'mid-offseason-primer' || scenario.id.startsWith('late-offseason-')) {
-    const mid = scenario.id === 'mid-offseason-primer';
+  if (scenario.id === 'mid-offseason-preparation' || scenario.id.startsWith('late-offseason-')) {
+    const mid = scenario.id === 'mid-offseason-preparation';
     const invalid = scenario.id === 'late-offseason-invalid-contrast';
     const id = scenario.id;
     const specContext: PowerPrimerContext = {

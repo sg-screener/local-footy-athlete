@@ -1,3 +1,4 @@
+import { consecutiveIdentityWeeks } from './blockRotationStagger';
 /**
  * THE COMPOSER — slice B1, checkpoint 1. `composeWeek(inputs) -> ComposedWeek`,
  * a PURE function: no store, no clock, no network, no logging.
@@ -320,7 +321,7 @@ export interface ComposedRow {
      * the return date, an exclusion ends when the athlete restores the exercise.
      * The same distinction `ComposedGap.cause` already draws.
      */
-    readonly cause: 'excluded_today' | 'kit_today' | 'already_on_day' | 'accepted_on_another_day';
+    readonly cause: 'excluded_today' | 'kit_today' | 'already_on_day' | 'accepted_on_another_day' | 'reserved_for_main_lift';
   };
 }
 
@@ -595,7 +596,7 @@ const GATE_BY_IDENTITY: ReadonlyMap<ComposedExerciseIdentity, ExperienceGate> = 
   EXERCISE_MUSCLE_METADATA.map((entry) =>
     [composedIdentityFor(entry.exercise), entry.experienceGate] as const));
 
-function experiencePreferred(
+export function experiencePreferred(
   candidates: readonly ComposedExerciseIdentity[],
   profile: OnboardingData,
 ): readonly ComposedExerciseIdentity[] {
@@ -777,7 +778,7 @@ function poolOrderedFor(
  * The weighted-before-unloaded preference still applies INSIDE each grade, so
  * Sam's *"yes i'd prefer weighted exercises"* is not overturned by a grade.
  */
-function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
+export function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
   if (!poolSlot) return weightedFirst(slotCandidates(slot));
   const pool = STRENGTH_POOLS[poolSlot];
@@ -813,7 +814,7 @@ function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[
  * So the narrowing happens here, on the already-legal list, and falls back the
  * moment it would empty — which is Sam's *"give them best availble i think"*.
  */
-function gradedFirstAmongLegal(
+export function gradedFirstAmongLegal(
   legal: readonly ComposedExerciseIdentity[],
 ): readonly ComposedExerciseIdentity[] {
   /* ⚠ **A GRADE MAY NOT DEMOTE AN EXPERIENCE REGRESSION.** `Band-Assisted
@@ -1168,6 +1169,10 @@ export function composedWeekIsFullBodyOnClubNights(
   if (strengthDays.length === 0) return false;
   // Bible `:94` — two strength sessions are two full-body sessions.
   if (strengthDays.length === 2) return true;
+  // R-390: three authored full-body days share the existing alternating shapes.
+  // A first-day coverage session would concentrate both main lower lifts again.
+  if (strengthDays.length === 3
+    && strengthDays.every((day) => day.strengthIntent.archetype === 'full_body')) return true;
   return strengthDays.every((day) => day.isTeamDay);
 }
 
@@ -1563,7 +1568,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
    * It decides only WHICH SEATS HOLD. It never picks an exercise —
    * `decideExerciseForBlock` remains the one selection owner, and a released
    * seat is decided exactly as it was before this existed. */
+  const identityWeeksHeld = Object.fromEntries([...new Set(inputs.selectionHistory.map(row => row.identity))]
+    .map(identity => [identity, consecutiveIdentityWeeks(inputs.selectionHistory, identity, inputs.blockStartISO)]));
   const heldIdentityBySlot = new Map<SessionSlot, ComposedExerciseIdentity>();
+  const rotationAlternativeBySlot = new Map<SessionSlot, ComposedExerciseIdentity>();
   {
     const weekKit = [...new Set(inputs.plannedDays.flatMap((day) => kitOn(day.dayOfWeek)))];
     const seats = STAGGER_CORE_SLOTS.flatMap((slot) => {
@@ -1573,19 +1581,19 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
       const previous = history[0]?.identity ?? null;
       if (previous === null) return [];
-      const legal = anchorCandidates(slot).filter((id) =>
-        !excluded.has(id) && composedRowIsLegal(id, weekKit));
+      const legal = gradedFirstAmongLegal(experiencePreferred(anchorCandidates(slot).filter((id) =>
+        !excluded.has(id) && composedRowIsLegal(id, weekKit)
+        && exerciseProgrammingAllows(id, { experienceLevel: inputs.profile.experienceLevel,
+          route: 'automatic' })), inputs.profile));
       if (legal.length === 0) return [];
       // A recorded lift the world no longer permits is a FORCED move, not a
       // planned rotation, and Sam ruled those out of the quota: *"Injury and
       // travel substitutions do not count as planned rotations."*
       const forced = !legal.includes(previous as ComposedExerciseIdentity);
-      let blocksHeld = 0;
-      for (const entry of history) {
-        if (entry.identity !== previous) break;
-        blocksHeld += 1;
-      }
+      const weeksHeld = consecutiveIdentityWeeks(inputs.selectionHistory, previous, inputs.blockStartISO);
+      const blocksHeld = Math.ceil(weeksHeld / 4);
       const decided = decideExerciseForBlock({
+        identityWeeksHeld,
         phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
         blockNumber: inputs.blockNumber,
         slot,
@@ -1598,18 +1606,37 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         progressedIdentities: inputs.progressedIdentities,
         pinnedIdentities: inputs.pinnedIdentities,
       });
+      const aGradeCandidates = legal.filter(id => id !== previous && primaryGradeOf(id) === 'A'
+        && (identityWeeksHeld[id] ?? 0) + 4 <= 8);
+      const aGradeAlternative = aGradeCandidates.length ? decideExerciseForBlock({
+        identityWeeksHeld, phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+        blockNumber: inputs.blockNumber, slot, group: null, role: selectionRoleFor(slot),
+        legalCandidates: aGradeCandidates, previousSelection: history[0] ?? null,
+        // This alternative is an accepted block choice too. Restoring it must
+        // precede ranking against history that may have been pruned at save.
+        currentBlockSelection: inputs.selectionHistory.find(entry => entry.slot === slot
+          && selectionSeatIndex(entry) === 0 && entry.blockStartISO === inputs.blockStartISO) ?? null,
+        recentSelections: history,
+        progressedIdentities: inputs.progressedIdentities, pinnedIdentities: inputs.pinnedIdentities,
+      }).identity : null;
       return [{
         slot,
+        aGradeAlternative,
         previousIdentity: previous,
         wouldRotateTo: decided.identity,
         blocksHeld,
+        weeksHeld,
         currentGrade: primaryGradeOf(previous),
         candidateGrade: primaryGradeOf(decided.identity),
         forced,
       }];
     });
     for (const decision of decideBlockRotationStagger(seats)) {
-      if (decision.rotates) continue;
+      if (decision.rotates) {
+        if (decision.replacementIdentity) rotationAlternativeBySlot.set(decision.slot,
+          decision.replacementIdentity as ComposedExerciseIdentity);
+        continue;
+      }
       const seat = seats.find((entry) => entry.slot === decision.slot);
       if (seat?.previousIdentity) {
         heldIdentityBySlot.set(decision.slot, seat.previousIdentity as ComposedExerciseIdentity);
@@ -1818,11 +1845,21 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // ITSELF. `SLOTS_FOR_KIND['full_body_coverage']` is deliberately the whole
     // ten-slot weekly set — the ladder the day draws FROM — so it must never be
     // used as the day's own seven. That is what this branch exists to prevent.
-    const authoredShapeSlots = isCoverageDay && plannedCoverageGaps
+    const threeFullBodyDays = inputs.plannedDays.filter((day) => composedDayIsStrength(day.strengthIntent));
+    const sharesThreeFullBodySeats = threeFullBodyDays.length === 3
+      && threeFullBodyDays.every((day) => day.strengthIntent.archetype === 'full_body');
+    const sharedFullBodySlots: readonly SessionSlot[] = seatsOwnedHere.includes('squat')
+      ? ['squat', 'single_leg_hip', 'horizontal_push', 'pull_accessory_1', 'football_robustness', 'core']
+      : seatsOwnedHere.includes('hinge')
+        ? ['hinge', 'single_leg_knee', 'horizontal_pull', 'push_accessory_1', 'football_robustness', 'core']
+        : ['single_leg_knee', 'single_leg_hip', 'vertical_push', 'vertical_pull', 'football_robustness', 'core'];
+    const authoredShapeSlots = sharesThreeFullBodySeats ? sharedFullBodySlots
+      : isCoverageDay && plannedCoverageGaps
       ? plannedCoverageGaps
       // R-130a: one switch, one pick — the female tables for female athletes,
       // the male objects untouched for everyone else.
-      : withOwnedSeats(slotsForKind(kind, inputs.profile?.gender), isBalanceShape ? seatsOwnedHere : []);
+      : withOwnedSeats(slotsForKind(kind, inputs.profile?.gender),
+        isBalanceShape ? seatsOwnedHere : []);
     // P16: when permanent kit leaves only Leg Press as the suitable bilateral
     // squat, cover that pattern once and retain the other day's single-leg work.
     // Do not rename a unilateral lift, add sets, or rewrite an accepted seat.
@@ -2241,8 +2278,29 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       ))));
       // One exercise once per day. Keep the block record independent of the
       // day's shape; resolve a collision here, before any row is authored.
+      // A support seat yields the only feasible lift for another main seat.
+      // Keep that reservation so its replacement can name the actual cause.
+      const reservedForMainLift = (id: ComposedExerciseIdentity): boolean =>
+        !isMainLift && WEEKLY_MAIN_STRENGTH_SLOTS.some((mainSlot) =>
+          !prohibited.has(PATTERN_FOR_SLOT[mainSlot]!)
+          && inputs.plannedDays.some((day) => {
+            if (day === planned || !weeklyStrengthBudget.canSpend(mainSlot, day.planEntryId)
+              || !suppliedByDay.get(day)?.has(mainSlot)) return false;
+            const retainedElsewhere = new Set(Object.entries(inputs.acceptedWeekIdentitiesByDay ?? {})
+              .filter(([dayOfWeek]) => Number(dayOfWeek) !== day.dayOfWeek)
+              .flatMap(([, identities]) => identities.map(composedIdentityFor)));
+            const choices = gradedFirstAmongLegal(experiencePreferred(anchorCandidates(mainSlot).filter((candidate) =>
+              !usedThisWeek.has(candidate) && !retainedElsewhere.has(candidate)
+              && !excludedOn(day.dayOfWeek).has(candidate)
+              && composedRowIsLegal(candidate, kitOn(day.dayOfWeek))
+              && exerciseProgrammingAllows(candidate, { experienceLevel: inputs.profile.experienceLevel,
+                daysToGame: day.daysToGame, route: 'automatic' })), inputs.profile));
+            return choices.length === 1 && choices[0] === id;
+          }));
+      const reservedMainIdentities = new Set(legalBeforeDayIdentity.filter(reservedForMainLift));
       const legal = legalBeforeDayIdentity.filter((id) =>
-        !identitiesThisDay.has(id) && !acceptedElsewhere.has(id));
+        !identitiesThisDay.has(id) && !acceptedElsewhere.has(id)
+        && !reservedMainIdentities.has(id));
       /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
        * The PERMANENT list is empty, so the slot is not this athlete's to have
        * and there is no base selection to record. R-083's removal, disclosed. */
@@ -2394,7 +2452,15 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * has become illegal is not held at all: it was marked `forced` in the
        * pre-pass and never entered the hold set. */
       const heldAnchor = heldIdentityBySlot.get(slot) ?? null;
-      const selection = heldAnchor && !trackedAnchor && selectionCandidates.includes(heldAnchor)
+      const rotationAlternative = seatIndex === 0 ? rotationAlternativeBySlot.get(slot) : null;
+      const selection = rotationAlternative && selectionCandidates.includes(rotationAlternative)
+        && (!recordedForThisBlock || recordedForThisBlock.identity === rotationAlternative)
+        ? { identity: rotationAlternative, decisionKind: 'rotated' as const,
+            reason: recordedForThisBlock?.identity === rotationAlternative
+              ? 'restored_recorded_selection' as const : 'staggered_block_rotation' as const,
+            previousIdentity: slotHistory[0]?.identity ?? null,
+            consideredCandidates: selectionCandidates }
+        : heldAnchor && !trackedAnchor && selectionCandidates.includes(heldAnchor)
         ? {
             identity: heldAnchor,
             decisionKind: 'retained' as const,
@@ -2416,6 +2482,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
          * been held twice"*. So the athlete's choice still leads its pattern,
          * and still yields at the eight-week ceiling like every other lift. */
         : decideExerciseForBlock({
+            identityWeeksHeld,
             phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
             blockNumber: inputs.blockNumber,
             slot,
@@ -2441,6 +2508,10 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
              * before. Everything else about it is now an ordinary pin. */
             currentBlockSelection: trackedAnchor
               && selectionCandidates.includes(trackedAnchor)
+              // A preference already at its tenure ceiling cannot replace
+              // this block's accepted alternative. Re-deciding that break on
+              // reopen would rank against history pruned when it was saved.
+              && (identityWeeksHeld[trackedAnchor] ?? 0) + 4 <= 8
               ? null : recordedForThisBlock,
             recentSelections: slotHistory,
             progressedIdentities: inputs.progressedIdentities,
@@ -2523,12 +2594,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           }).identity
         : selection.identity;
       const changedByDayIdentity = identitiesThisDay.has(selection.identity)
-        || [...identitiesThisDay].some((id) => sameExerciseVariationFamily(id, selection.identity));
+        || [...identitiesThisDay].some((id) => sameExerciseVariationFamily(id, selection.identity))
+        // R-233 also pairs bilateral and single-leg RDLs, which have separate
+        // variation families. Attribute the same-day filter that removed it.
+        || (rdlAlreadyOnDay && RDL_FAMILY_IDENTITIES.has(selection.identity));
       const substitutionCause: NonNullable<ComposedRow['substitutedFor']>['cause'] | undefined =
         !substitutedToday ? undefined
           : excludedToday.has(selection.identity) ? 'excluded_today'
           : changedByDayIdentity ? 'already_on_day'
           : acceptedElsewhere.has(selection.identity) ? 'accepted_on_another_day'
+          : reservedMainIdentities.has(selection.identity) ? 'reserved_for_main_lift'
           : !composedRowIsLegal(selection.identity, kitToday) ? 'kit_today'
           : undefined;
       if (substitutedToday && !substitutionCause) {
@@ -2557,6 +2632,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         })) rejectedBy.push('experience');
         if (identitiesThisDay.has(candidate)) rejectedBy.push('already_on_day');
         if (acceptedElsewhere.has(candidate)) rejectedBy.push('accepted_on_another_day');
+        if (reservedMainIdentities.has(candidate)) rejectedBy.push('weekly_spacing');
         if (rejectedBy.length === 0 && !considered.has(candidate) && candidate !== identity) {
           rejectedBy.push('weekly_spacing');
         }

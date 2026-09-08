@@ -172,9 +172,9 @@ function multiModality(trace: Slice3ScenarioTrace): InvariantCheckResult {
 
 function powerPhase(trace: Slice3ScenarioTrace): InvariantCheckResult {
   const id = 'INV_POWER_PHASE_GATED' as const;
-  const applied = applies(trace, 'early-offseason-healthy', 'mid-offseason-primer', 'late-offseason-valid-contrast');
+  const applied = applies(trace, 'early-offseason-healthy', 'mid-offseason-preparation', 'late-offseason-valid-contrast');
   const expected = trace.scenario.id === 'early-offseason-healthy' ? 'none'
-    : trace.scenario.id === 'mid-offseason-primer' ? 'primer' : 'contrast';
+    : trace.scenario.id === 'mid-offseason-preparation' ? 'none' : 'contrast';
   const actual = stage(trace, 'generated_fallback').power.kind;
   return one(id, trace, applied, actual === expected, () => failure({
     trace, invariantId: id, ruleId: 'OS-PWR-PHASE-01', stage: 'generated_fallback', expected: `power ${expected}`, actual: `power ${actual}`, extra: actual !== 'none' ? [actual] : [],
@@ -197,7 +197,7 @@ function contrastValid(trace: Slice3ScenarioTrace): InvariantCheckResult {
 
 function powerIdentity(trace: Slice3ScenarioTrace): InvariantCheckResult {
   const id = 'INV_POWER_CONTENT_IDENTITY_HONEST' as const;
-  const applied = applies(trace, 'mid-offseason-primer', 'late-offseason-valid-contrast', 'late-offseason-invalid-contrast');
+  const applied = applies(trace, 'mid-offseason-preparation', 'late-offseason-valid-contrast', 'late-offseason-invalid-contrast');
   const effective = stage(trace, 'resolved_effective');
   const week = stage(trace, 'visible_week');
   const detail = stage(trace, 'visible_detail');

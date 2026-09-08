@@ -13,11 +13,16 @@ import { applyPlanChange } from '../../utils/planChangeProducer';
 import { selectActiveProgramModifiers } from '../../utils/activeProgramModifiers';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import { rankedQuickSwapChoices } from '../../utils/quickExerciseActions';
-import { resolveTapSwapEnvironment } from '../../utils/tapSwapHierarchy';
+import { assessTapSwapCandidateSafety, resolveTapSwapEnvironment } from '../../utils/tapSwapHierarchy';
 import { buildSwapSuggestionPayload } from '../../utils/swapSuggestionPayload';
 import { chooseInjurySessionAdditions } from '../../utils/injurySessionAdjustment';
 import { assessProgramEditRisk } from '../../utils/programEditRiskAssessment';
 import { EXERCISE_LOAD_MAP } from '../../utils/loadEstimation';
+import { legalAutomaticAdditionCandidates } from '../../utils/addExerciseCandidates';
+import { finerPatternIdentityOf } from '../../rules/injuryFallbackLadder';
+import { composedIdentityFor } from '../../rules/composedRowLegality';
+import { anchorCandidates, experiencePreferred } from '../../rules/composeWeek';
+import type { SessionSlot } from '../../rules/sessionSlotCoverage';
 
 export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (let severity = 1; severity <= 10; severity++) {
@@ -98,6 +103,14 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
     if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
     const view = () => quiet(() => deriveVisibleWeekLive(week, now));
     const healthyWeek = visibleSignature(view());
+    const healthyEnvironment = quiet(() => resolveTapSwapEnvironment({ date: target, profile,
+      activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints, readinessSignal: null }));
+    const healthyReplacement = quiet(() => chooseInjurySessionAdditions({ environment: healthyEnvironment, profile,
+      keptRowNames: [], pausedRowNames: ['Bench Press'], weekExerciseNames: ['Bodyweight Squat'],
+      otherMainStrengthPatterns: ['squat', 'squat', 'squat'], excludedByAthlete: [],
+      pausedCount: 1, originalRowCount: 1, injuredHalf: 'upper', keptSets: 0, dateISO: target }));
+    ok(`simple-injury/manual/${gender}/${severity}: available healthy replacement favours the uncovered hinge`,
+      healthyReplacement[0]?.mainStrengthPattern === 'hinge', JSON.stringify(healthyReplacement));
     const constraint = buildGuidedInjuryConstraint({ region: 'upper_body', area: 'Shoulder', severity,
       severityBand: severity >= 8 ? 'avoid' : 'moderate',
       adjustmentLevel: severity >= 8 ? 'training_paused' : 'moderate', triggers: [], seriousSymptoms: false }, { todayISO: now });
@@ -134,8 +147,19 @@ export async function simpleInjurySafetyTruth(storage: Map<string, string>, ok: 
           otherMainStrengthPatterns: ['squat', 'squat', 'squat'],
           excludedByAthlete: [], pausedCount: 1, originalRowCount: 1,
           injuredHalf: 'upper', keptSets: 0, dateISO: target }));
-        ok(`${label}: eligible lower replacement favours the uncovered hinge`,
-          balanced[0]?.mainStrengthPattern === 'hinge', JSON.stringify(balanced));
+        const eligibleMainHinges = quiet(() => legalAutomaticAdditionCandidates({ leaf: 'lower_hinge',
+          environment, profile, existingExerciseNames: [] })).filter(candidate => {
+          const identity = composedIdentityFor(candidate.name);
+          return anchorCandidates(finerPatternIdentityOf(candidate.name) as SessionSlot).includes(identity)
+            && experiencePreferred([identity], profile).includes(identity);
+        });
+        // These shoulder reports exclude every loaded main hinge. The healthy
+        // control above holds preference; this case holds the safe fallback.
+        ok(`${label}: unavailable main hinges use a safe lower replacement`,
+          eligibleMainHinges.length === 0 && balanced.length > 0
+            && balanced[0]?.mainStrengthPattern === 'squat'
+            && balanced.every(candidate => assessTapSwapCandidateSafety(candidate.name, environment).safe),
+          JSON.stringify({ eligibleMainHinges, balanced }));
       }
       const choice = quiet(() => rankedQuickSwapChoices({ originalExercise: row.exercise.name, reason: 'preference',
         environment, existingExerciseNames: workout.exercises.map(row => row.exercise.name), profile }))[0];

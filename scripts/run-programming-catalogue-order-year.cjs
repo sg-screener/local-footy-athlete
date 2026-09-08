@@ -15,14 +15,20 @@ const reverseScope = scopeArg?.slice('--reverse-scope='.length) ?? 'all';
 const outputArg = process.argv.find((arg) => arg.startsWith('--output='));
 if (!outputArg) throw Error('--output=<relative directory> is required');
 const output = path.resolve(repo, outputArg.slice(9));
-const original = path.join(repo, 'outputs/release-candidate-0bcc3353-rcsteps/current-shoulder-review/generate-year.cjs');
+const original = path.join(repo, 'scripts/run-programming-selection-trace-year.cjs');
 let code = fs.readFileSync(original, 'utf8');
 const originalHash = createHash('sha256').update(code).digest('hex');
 const replace = (from, to) => {
   if (code.split(from).length !== 2) throw Error(`Driver anchor missing or repeated: ${from}`);
   code = code.replace(from, to);
 };
-replace("const repo = '/Users/samgeurts/Documents/local-footy-athlete';", `const repo = ${JSON.stringify(repo)};`);
+replace("const repo = path.resolve(__dirname, '..');", `const repo = ${JSON.stringify(repo)};`);
+replace("const output = path.resolve(repo, outputArg?.slice(9) ?? 'output/programming-selection-trace-year');",
+  `const output = ${JSON.stringify(output)};`);
+replace('fs.readFileSync(__filename)', `fs.readFileSync(${JSON.stringify(original)})`);
+replace('sourceDriver: __filename, sourceDriverSha256,', `sourceDriver: ${JSON.stringify(original)}, sourceDriverSha256,`);
+// Keep this variant's receipt alongside the shared driver's receipt.
+replace("path.join(output, 'driver-receipt.json')", "path.join(output, 'base-driver-receipt.json')");
 if (fullKit) replace('const profile=athleteAnswers(archetype);',
   "const profile=athleteAnswers(archetype); profile.equipmentAnswer=app('src/__tests__/support/equipmentAnswerFixture').presetEquipmentAnswer('commercial_gym',start); if(!app('src/utils/equipmentAvailability').resolveEquipmentCapabilities(profile).tags.includes('rack'))throw Error('Corrected commercial input has no rack');");
 replace('const events = [];', `const catalogueOrderSelections = [];
@@ -31,8 +37,8 @@ app('src/rules/programmingSelectionTrace').installAutomaticProgrammingSelectionT
 });
 const events = [];`);
 replace(
-  'rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,',
-  'rest:row.restSeconds>=90?helpers.formatRest(row.restSeconds):undefined,modalityLabel:item.modalityLabel,',
+  'role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId',
+  'role:item.role,modalityLabel:item.modalityLabel,optional:item.optional||undefined,pair:item.superset?.groupId',
 );
 replace(
   'result.restarts.push({date,ok:same,error:boot.error}); check(same,\'restart\',boot);',

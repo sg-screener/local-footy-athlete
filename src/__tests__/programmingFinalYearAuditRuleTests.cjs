@@ -72,7 +72,11 @@ run('team anchors follow both phase schedules and the accepted Christmas break',
       day('2027-01-04'), day('2027-01-06'),
     ]),
     week(16, '2027-01-11', 'Pre-season', [
-      day('2027-01-11'), day('2027-01-13', { type: 'Team Training' }),
+      day('2027-01-11'), day('2027-01-13'),
+    ]),
+    week(18, '2027-01-25', 'Pre-season', [day('2027-01-25'), day('2027-01-27')]),
+    week(19, '2027-02-01', 'Pre-season', [
+      day('2027-02-01', { type: 'Team Training' }), day('2027-02-03', { type: 'Team Training' }),
     ]),
     week(29, '2027-04-12', 'In-season', [
       day('2027-04-13', { type: 'Team Training' }),
@@ -85,7 +89,7 @@ run('team anchors follow both phase schedules and the accepted Christmas break',
     : item);
   assert.equal(teamTrainingAnchorFindings(staleChristmas).length, 1);
   assert.deepEqual(ACCEPTED_CHRISTMAS_BREAK,
-    { from: '2026-12-19', until: '2027-01-11' });
+    { from: '2026-12-18', until: '2027-01-30' });
 });
 
 run('Going Away is 28 December through 1 January and normal kit returns 2 January', () => {

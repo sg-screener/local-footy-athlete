@@ -33,7 +33,6 @@ import type {
 } from '../types/domain';
 import type {
   FeedbackCompletion,
-  FeedbackFeeling,
   SessionFeedback,
 } from '../store/programStore';
 import {
@@ -93,6 +92,7 @@ import {
   type AutomaticProgrammingSelectionTrace,
 } from '../rules/programmingSelectionTrace';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
+import { equipmentTagsOnDate } from '../rules/canonicalWeeklyAvailabilityState';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { PowerFamily } from '../rules/powerPrimerPolicy';
 import {
@@ -1012,16 +1012,14 @@ function pickPowerEntries(
     );
     const ranked = rankedPowerExerciseCandidates({ ...context, seatIndex: index })
       .filter((entry) => eligible.some((candidate) => candidate.name === entry.name));
-    const selected = ranked.find((entry) => !athlete.automaticWeeklyExerciseSelector
-      || athlete.automaticWeeklyExerciseSelector.canUse({
-        identity: entry.name, requestedSlot: slotsForExerciseName(entry.name)[0] ?? 'core',
-        dayKind: null, route: 'power', requestedAsMain: false,
-      }));
-    if (!selected) continue;
-    athlete.automaticWeeklyExerciseSelector?.accept({
-      identity: selected.name, requestedSlot: slotsForExerciseName(selected.name)[0] ?? 'core',
+    const available = ranked.filter(entry => !picks.some(pick => pick.name === entry.name));
+    const pickedIdentity = athlete.automaticWeeklyExerciseSelector?.acceptPower(available.map(entry => ({
+      identity: entry.name, requestedSlot: slotsForExerciseName(entry.name)[0] ?? 'core',
       dayKind: null, route: 'power', requestedAsMain: false,
-    });
+    })))?.identity;
+    const selected = athlete.automaticWeeklyExerciseSelector
+      ? available.find(entry => entry.name === pickedIdentity) : available[0];
+    if (!selected) continue;
     picks.push(selected);
     if (athlete.powerSelectionBlockStartISO && athlete.powerSelectionsOut &&
         !athlete.powerSelectionsOut.some((row) =>
@@ -1180,6 +1178,8 @@ export function buildDerivedSession(
   existingExerciseNames: readonly string[] = [],
 ): Workout {
   const meta = SESSION_META[type];
+  if (athlete.onboardingData) athlete = { ...athlete,
+    equipmentTags: equipmentTagsOnDate(athlete.onboardingData, dateStr, athlete.equipmentTags) };
   const seed = dateHash(dateStr);
 
   // Build constraint sets
@@ -1513,151 +1513,8 @@ function finaliseDerivedSession(args: {
 // CONDITIONING SESSION BUILDING
 // ═══════════════════════════════════════════════════════════════
 
-import type { ConditioningProgressionInput } from './conditioningProgressionRules';
-import { calculateConditioningLoad } from './progressionHelpers';
-
-function feedbackFeelingToConditioningRPE(feeling?: FeedbackFeeling | null): number | null {
-  switch (feeling) {
-    case 'very_easy': return 3;
-    case 'easy': return 4;
-    case 'good': return 6;
-    case 'hard': return 8;
-    case 'very_hard': return 9;
-    default: return null;
-  }
-}
-
-function conditioningComponentCompletion(feedback: SessionFeedback): FeedbackCompletion | null {
-  const component = feedback.components?.find((entry) => entry.kind === 'conditioning')
-    ?? feedback.components?.find((entry) => entry.kind === 'finisher');
-  if (component) return component.completion;
-  if (feedback.conditioning) return feedback.completion;
-  return null;
-}
-
-function hasConditioningFeedback(feedback: SessionFeedback): boolean {
-  return conditioningComponentCompletion(feedback) !== null;
-}
-
-function completionQualityFromFeedback(
-  completion: FeedbackCompletion | null,
-): ConditioningProgressionInput['completionQuality'] {
-  if (completion === 'skipped') return 'failed';
-  if (completion === 'partial') return 'partial';
-  return 'full';
-}
-
-/** R-232: stored feedback → the ease module's plain entries. Effort and
- *  completion come from the SAME readers the progression overrides use, so
- *  the two consumers cannot classify one log differently. */
-function conditioningFeedbackEaseEntries(
-  feedbackMap: Record<string, SessionFeedback> | undefined,
-): import('../rules/conditioningFeedbackEase').ConditioningFeedbackEntry[] {
-  if (!feedbackMap) return [];
-  return Object.values(feedbackMap)
-    .filter(hasConditioningFeedback)
-    .map((feedback) => ({
-      date: feedback.dateStr,
-      tier: conditioningTierForFeedback(feedback) as import('../data/exerciseTags').ConditioningTier,
-      effort: feedback.conditioning?.rpe ?? feedback.difficulty
-        ?? feedbackFeelingToConditioningRPE(feedback.feeling),
-      completedFully: conditioningComponentCompletion(feedback) === 'full',
-    }));
-}
-
-function recentConditioningFeedback(
-  feedbackMap: Record<string, SessionFeedback> | undefined,
-  beforeDate: string,
-): SessionFeedback | null {
-  if (!feedbackMap) return null;
-  return Object.values(feedbackMap)
-    .filter((feedback) => feedback.dateStr < beforeDate)
-    .filter(hasConditioningFeedback)
-    .sort((a, b) => b.dateStr.localeCompare(a.dateStr))[0] ?? null;
-}
-
-function mondayForISO(dateISO: string): string {
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
-  const dow = date.getDay();
-  const mondayOffset = dow === 0 ? -6 : -(dow - 1);
-  date.setDate(date.getDate() + mondayOffset);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function addDaysISO(dateISO: string, days: number): string {
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
-  date.setDate(date.getDate() + days);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function conditioningTierForFeedback(feedback: SessionFeedback): string {
-  const sessionName = feedback.conditioning?.sessionName ?? '';
-  const exact = CONDITIONING_META[sessionName]?.tier;
-  if (exact) return exact;
-  if (feedback.conditioning?.intervalsCompleted || feedback.conditioning?.roundsCompleted) return 'B-low';
-  if (feedback.conditioning?.totalTimeMinutes) return 'C';
-  return 'C';
-}
-
-function previousWeekConditioningLoad(
-  feedbackMap: Record<string, SessionFeedback> | undefined,
-  dateStr: string,
-): number {
-  if (!feedbackMap) return 0;
-  const thisMonday = mondayForISO(dateStr);
-  const previousMonday = addDaysISO(thisMonday, -7);
-  const previousSunday = addDaysISO(thisMonday, -1);
-  const sessions = Object.values(feedbackMap)
-    .filter((feedback) => feedback.dateStr >= previousMonday && feedback.dateStr <= previousSunday)
-    .filter(hasConditioningFeedback)
-    .map((feedback) => ({ tier: conditioningTierForFeedback(feedback) }));
-  return calculateConditioningLoad(sessions);
-}
-
-function primaryConditioningRow(exercises: WorkoutExercise[]): WorkoutExercise | null {
-  const workRows = exercises.filter((exercise) => {
-    const name = `${exercise.exercise?.name ?? ''} ${exercise.notes ?? ''}`.toLowerCase();
-    return !/\bwarm-?up\b|\bcool\s*down\b|\beasy\b/.test(name);
-  });
-  return workRows.sort((a, b) => {
-    const aScore = a.prescribedSets + (a.restSeconds > 0 ? 1 : 0);
-    const bScore = b.prescribedSets + (b.restSeconds > 0 ? 1 : 0);
-    return bScore - aScore;
-  })[0] ?? exercises[0] ?? null;
-}
-
-export function deriveConditioningProgressionInputOverrides(args: {
-  feedback: SessionFeedback | null;
-  exercises: WorkoutExercise[];
-  baseDuration: number;
-}): Partial<ConditioningProgressionInput> {
-  const { feedback, exercises, baseDuration } = args;
-  if (!feedback) return {};
-
-  const completion = conditioningComponentCompletion(feedback);
-  const conditioningLog = feedback.conditioning;
-  const primaryRow = primaryConditioningRow(exercises);
-  const rpe = conditioningLog?.rpe ?? feedback.difficulty ?? feedbackFeelingToConditioningRPE(feedback.feeling);
-
-  return {
-    hasRecentFeedback: true,
-    completionQuality: completionQualityFromFeedback(completion),
-    recentRPE: rpe ?? 6,
-    sorenessLevel: feedback.soreness,
-    currentReps: conditioningLog?.roundsCompleted ?? conditioningLog?.intervalsCompleted ?? primaryRow?.prescribedRepsMax ?? 6,
-    currentIntervals: conditioningLog?.intervalsCompleted ?? conditioningLog?.roundsCompleted ?? primaryRow?.prescribedSets ?? 4,
-    currentDuration: conditioningLog?.totalTimeMinutes ?? baseDuration,
-    currentRest: primaryRow?.restSeconds ?? 60,
-  };
-}
+// R-380: removed the unused feedback-to-dose adapter and its private hard→8
+// and soreness readers. Accepted conditioning decisions use the canonical owner.
 
 // ─── Conditioning Session Templates ───
 //

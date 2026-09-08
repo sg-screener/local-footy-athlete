@@ -263,8 +263,8 @@ function offeredAddFor(existing: string[]): AddCandidate {
   };
   const families = legalAddFamilies(args) as
     { groups: { leaves: { id: string }[] }[] }[];
-  ok('early off-season Add does not offer rejected power work',
-    !families.some(family => family.groups.some(group => group.leaves.some(leaf => leaf.id === 'power'))));
+  ok('early off-season Add offers athlete-chosen power despite the automatic contract',
+    families.some(family => family.groups.some(group => group.leaves.some(leaf => leaf.id === 'power'))));
   const leaf = families[0]!.groups[0]!.leaves[0]!.id;
   return (legalAddCandidates({ ...args, leaf }) as AddCandidate[])[0]!;
 }
@@ -436,7 +436,7 @@ async function main(): Promise<void> {
   console.log('\n[5] EQUIPMENT change -> SWAP -> REMOVE -> restart');
   await install();
   const s5Equip = await equipmentGone(['barbell']);
-  ok('CONTROL — the equipment door accepted the change', s5Equip.ok);
+  ok('CONTROL — the equipment door accepted the change', s5Equip.ok, JSON.stringify(s5Equip));
   const s5AfterEquip = rowsOn(TARGET);
   const s5Victim = s5AfterEquip[0]!.split('@')[0]!;
   const s5New = offeredReplacementFor(s5Victim, s5AfterEquip.map((r) => r.split('@')[0]!));

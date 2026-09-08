@@ -396,10 +396,10 @@ function componentForTemplateItem(
 
 function sectionForTemplateItem(item: SessionTemplateItem, workout: Workout): SessionExecutionSectionId {
   if (item.kind === 'team_training') return 'team_training';
+  if ((item.kind === 'exercise' || item.kind === 'conditioning_choice') && item.optional) return 'optional';
   if (item.kind === 'exercise' && item.presentation === 'speed') return 'speed';
   if (item.kind === 'exercise' && item.row.sessionSection && item.row.sessionSection !== 'strength') return item.row.sessionSection;
   if (item.kind === 'conditioning_choice' || item.role === 'conditioning') return 'conditioning';
-  if (item.kind === 'exercise' && item.optional) return 'optional';
   if (item.kind === 'exercise' && item.presentation === 'mobility') return 'mobility';
   if (item.kind === 'exercise' && item.presentation === 'recovery') return 'recovery';
   if (item.kind === 'exercise') {

@@ -1,3 +1,4 @@
+import { historicalSorenessConstraint as buildSorenessConstraint } from './support/historicalSorenessConstraint';
 /**
  * exposureEngineTests — proves the universal S&C constraint + exposure
  * engine makes correct decisions across all 8 acceptance criteria:
@@ -27,7 +28,6 @@ import {
   validateWorkoutAgainstConstraints,
   buildInjuryConstraint,
   buildFatigueConstraint,
-  buildSorenessConstraint,
   getConstraintHierarchyTier,
   severityToTier,
   type Constraint,

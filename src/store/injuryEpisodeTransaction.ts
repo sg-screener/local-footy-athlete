@@ -568,6 +568,8 @@ export async function transactExactInjuryEpisode(
         status: 'resolved',
         updatedAt: input.occurredAtISO,
         resolvedAt: input.occurredAtISO,
+        resolvedOnISO: input.todayISO,
+        restrictionBeforeResolution: { severity: existing.severity, policy: existing.currentRestrictionPolicy },
         transitionHistory: [
           ...existing.transitionHistory,
           transition({

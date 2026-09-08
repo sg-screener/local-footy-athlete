@@ -168,7 +168,7 @@ export function completeWeeklyLowerBodyFrontal(args: {
     });
     const decisions = rotated.map((entry) => ({
       entry,
-      decision: assessTapSwapCandidateSafety(entry.name, environment),
+      decision: assessTapSwapCandidateSafety(entry.name, environment, { route: 'automatic' }),
     }));
     const safe = decisions.filter(({ decision }) => decision.safe).map(({ entry }) => entry);
     // The completed session keeps its dedicated purpose: a frontal lunge may
@@ -311,7 +311,7 @@ export function completeWeeklyCore(args: {
     });
     const decisions = rotated.map((entry) => ({
       entry,
-      decision: assessTapSwapCandidateSafety(entry.name, environment),
+      decision: assessTapSwapCandidateSafety(entry.name, environment, { route: 'automatic' }),
     }));
     const safe = decisions.filter(({ decision }) => decision.safe).map(({ entry }) => entry);
     const dayKind = workout.composedDayShape ?? null;

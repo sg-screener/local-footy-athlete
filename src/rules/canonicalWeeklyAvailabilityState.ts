@@ -1,3 +1,5 @@
+import { buildGenerationConstraintContext } from '../utils/generationConstraints';
+import { canonicalWeeklyInjuryStateFrom } from './canonicalWeeklyInjuryState';
 /**
  * ONE SEMANTIC ANSWER TO "WHAT CAN THIS ATHLETE REACH THIS WEEK?"
  *
@@ -71,13 +73,43 @@ export interface CanonicalWeeklyAvailabilityState {
   readonly clubClosedDayNumbers: readonly number[];
   /** One-based week within the accepted Christmas club shutdown, else null. */
   readonly christmasBreakWeekNumber: number | null;
+  readonly christmasRestrictedWeeks?: readonly number[];
   readonly permanentEquipment: ResolvedEquipmentCapabilities;
   readonly equipmentByDayOfWeek: Readonly<Record<number, ResolvedEquipmentCapabilities>>;
   readonly reachableEquipmentAcrossWeek: ResolvedEquipmentCapabilities;
   readonly composition: CanonicalWeeklyCompositionAvailability;
 }
 
+/** The same dated kit answer for stored rows and derived optional sessions. */
+export function equipmentTagsOnDate(
+  profile: Pick<OnboardingData, 'preferredTrainingDays'>,
+  dateISO: string,
+  tags: readonly EquipmentTag[],
+): EquipmentTag[] {
+  const day = new Date(`${dateISO.slice(0, 10)}T12:00:00Z`).getUTCDay();
+  return profile.preferredTrainingDays === undefined
+    || profile.preferredTrainingDays.includes(DAY_NAMES[day] as never)
+    ? [...tags] : ['bodyweight'];
+}
+
+/** Owned equipment stays stored; gym access is derived for the actual date. */
+export function conditioningEquipmentOnDate(
+  profile: Pick<OnboardingData, 'preferredTrainingDays'>,
+  dateISO: string,
+  equipment: ResolvedEquipmentCapabilities,
+): ResolvedEquipmentCapabilities {
+  const day = new Date(`${dateISO.slice(0, 10)}T12:00:00Z`).getUTCDay();
+  const hasGymAccess = profile.preferredTrainingDays === undefined
+    || profile.preferredTrainingDays.includes(DAY_NAMES[day] as never);
+  return hasGymAccess ? equipment : {
+    ...equipment,
+    tags: equipmentTagsOnDate(profile, dateISO, equipment.tags),
+    conditioningModalities: [],
+  };
+}
+
 export function canonicalWeeklyAvailabilityStateFrom(args: {
+  readonly conditioningRecoveryWindows?: readonly { startISO: string; endISO: string }[];
   readonly profile: OnboardingData;
   readonly weekStartISO: string;
   readonly activeConstraints?: readonly ActiveConstraint[];
@@ -119,6 +151,19 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
     Math.floor((Date.parse(`${weekStartISO}T12:00:00Z`)
       - Date.parse(`${firstClosedWeekStart}T12:00:00Z`)) / (7 * 86_400_000)) + 1);
 
+  const christmasRestrictedWeeks: number[] = [];
+  if (firstClosedWeekStart && christmasBreakWeekNumber) {
+    for (let week = 1; week <= christmasBreakWeekNumber; week += 1) {
+      const start = new Date(Date.parse(`${firstClosedWeekStart}T12:00:00Z`) + (week-1)*7*86_400_000).toISOString().slice(0,10);
+      const end = new Date(Date.parse(`${start}T12:00:00Z`) + 6*86_400_000).toISOString().slice(0,10);
+      const context = buildGenerationConstraintContext({ activeConstraints: args.activeConstraints, todayISO:start, periodEndISO:end });
+      const injury = canonicalWeeklyInjuryStateFrom({ profile:args.profile, generationConstraints:context });
+      if(args.conditioningRecoveryWindows?.some(window => window.startISO <= end && window.endISO >= start)
+        || context?.readiness?.deloaded || injury.lowerBodyRestricted || injury.blocksAppSprint
+        || [0,1,2,3,4,5,6].some(day=>dateIsInsideAwaySpan(isoDateForWeekday(start,day),awaySpans))) christmasRestrictedWeeks.push(week);
+    }
+  }
+
   for (let day = 0; day < 7; day += 1) {
     const dateISO = isoDateForWeekday(weekStartISO, day);
     const isAway = dateIsInsideAwaySpan(dateISO, awaySpans);
@@ -144,13 +189,17 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
     const equipment = args.activeConstraints
       ? resolveEquipmentCapabilities(args.profile, args.activeConstraints, dateISO)
       : permanentEquipment;
-    equipmentByDayOfWeek[day] = equipment;
-    for (const tag of equipment.tags) reachableTags.add(tag);
-    for (const modality of equipment.conditioningModalities) {
+    // Owning a gym machine does not provide access on an unselected day.
+    // Keep the owned answer intact; all conditioning consumers share this
+    // dated access answer, including the retained display adapter.
+    const datedEquipment = conditioningEquipmentOnDate(args.profile, dateISO, equipment);
+    equipmentByDayOfWeek[day] = datedEquipment;
+    for (const tag of datedEquipment.tags) reachableTags.add(tag);
+    for (const modality of datedEquipment.conditioningModalities) {
       reachableModalities.add(modality);
     }
-    if (!sameSet(equipment.tags, permanentEquipment.tags)) {
-      temporaryKitByDayOfWeek[day] = [...equipment.tags];
+    if (!sameSet(datedEquipment.tags, permanentEquipment.tags)) {
+      temporaryKitByDayOfWeek[day] = [...datedEquipment.tags];
     }
   }
 
@@ -167,6 +216,7 @@ export function canonicalWeeklyAvailabilityStateFrom(args: {
     awayDayNumbers: [...away].sort((left, right) => left - right),
     clubClosedDayNumbers: [...clubClosed].sort((left, right) => left - right),
     christmasBreakWeekNumber,
+    christmasRestrictedWeeks,
     permanentEquipment,
     equipmentByDayOfWeek,
     reachableEquipmentAcrossWeek,
@@ -188,11 +238,17 @@ export function schedulerInputsWithAvailabilityState(
   if (!availability) return scheduler;
   const away = new Set(availability.awayDayNumbers);
   const clubClosed = new Set(availability.clubClosedDayNumbers);
+  const removedForTravel = [...scheduler.clubNights,
+    ...(scheduler.gameDays ?? (scheduler.gameDay === null ? [] : [scheduler.gameDay]))]
+    .filter(day => away.has(day));
   const gameDays = (scheduler.gameDays ?? (scheduler.gameDay === null ? [] : [scheduler.gameDay]))
     .filter((day) => !away.has(day));
   return {
     ...scheduler,
+    restDayReasonByDay: { ...scheduler.restDayReasonByDay,
+      ...Object.fromEntries(removedForTravel.map(day => [day, 'away' as const])) },
     christmasBreakWeekNumber: availability.christmasBreakWeekNumber,
+    christmasRestrictedWeeks: availability.christmasRestrictedWeeks,
     clubNights: scheduler.clubNights.filter((day) => !clubClosed.has(day)),
     gameDays,
     gameDay: gameDays[0] ?? null,

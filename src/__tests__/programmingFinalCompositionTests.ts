@@ -6,7 +6,7 @@ import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { resolveComposedDose } from '../rules/composedDose';
 import { decideBlockBoundaryLoads, type BlockHistorySignal } from '../rules/blockBoundaryProgression';
-import { applyStrengthProgression, DEFAULT_PROGRESSION_CONTEXT } from '../utils/strengthProgressionIntegration';
+import { applyStrengthProgression, DEFAULT_PROGRESSION_CONTEXT } from './support/legacyStrengthProgression';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
 

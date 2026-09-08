@@ -95,7 +95,7 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
       && !/\bMAS\b/.test(actual.notes ?? ''), actual?.notes);
     ok(`clarity/${t.name}/${machines}: wording preserves all dose numbers and complete-rest instructions`,
       !!actual && JSON.stringify(prescriptionNumbers(actual.notes ?? '')) === JSON.stringify(prescriptionNumbers(rows.at(-1)!.notes ?? ''))
-      && ((actual.notes ?? '').includes('complete rest') === rows.at(-1)!.notes!.includes('complete rest'))
+      && ((actual.notes ?? '').includes('complete rest') === conditioningAthletePrescription(t, rows.at(-1)!.prescribedSets, option.modality).recovery.includes('complete rest'))
       && actual.prescribedSets === rows.at(-1)!.prescribedSets && actual.restSeconds === rows.at(-1)!.restSeconds);
   }
   ok('clarity: the equipment matrix actually reaches mixed flush prescriptions',mixed>0);

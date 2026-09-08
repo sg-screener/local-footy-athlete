@@ -71,7 +71,7 @@ export interface ResolveVisibleReadinessStateInput {
 // fact, so clearing fell to a decoupled path that reverted the week but left the
 // fact active (finding #4). Illness is a first-class sibling of fatigue/soreness/
 // poor_sleep for the visible active-state.
-const READINESS_FACT_KINDS = new Set(['fatigue', 'soreness', 'poor_sleep', 'illness']);
+const READINESS_FACT_KINDS = new Set(['fatigue', 'poor_sleep', 'illness']);
 
 // A4: the card and the coach note read ONE vocabulary owner, so the two
 // surfaces cannot drift into naming the same fact differently. The card passes
@@ -79,7 +79,7 @@ const READINESS_FACT_KINDS = new Set(['fatigue', 'soreness', 'poor_sleep', 'illn
 // "Cooked". That is a refinement of one vocabulary, not a second one.
 function factKindTitle(factKind: string, scope: 'today' | 'week'): string {
   const kind: ReadinessFactKind =
-    factKind === 'poor_sleep' || factKind === 'soreness' || factKind === 'illness'
+    factKind === 'poor_sleep' || factKind === 'illness'
       ? factKind
       : 'fatigue';
   return readinessFactTitle({ kind, scope });
