@@ -172,9 +172,9 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
   workoutsByDate: Readonly<Record<string, Workout>>;
   reservedExerciseNames?: readonly string[];
   /**
-   * R-354: the first date this compile may shape. Days before it are history
-   * — the source-fact fold pins them from the accepted week — and no pass in
-   * here may add to them. Absent, every date is placeable (boot replays).
+   * R-354: the first date new reports and weekly completion may shape.
+   * Earlier days still replay injury facts already in force before this date.
+   * Absent, every date is placeable (boot replays).
    */
   historyBeforeISO?: string;
   exerciseEdits?: readonly CanonicalWeeklyExerciseEdit[];
@@ -190,7 +190,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
     // Fold chronologically; later days see the additions already made to the
     // week, so a single report cannot duplicate its new compound on every day.
     for (const [dateISO, workout] of Object.entries(workoutsByDate).sort(([left], [right]) => left.localeCompare(right))) {
-      if (args.historyBeforeISO && dateISO < args.historyBeforeISO) continue;
+      if (args.historyBeforeISO && dateISO < args.historyBeforeISO && stages[index].startDate >= args.historyBeforeISO) continue;
       if (!filterConstraintsForDate([stages[index]], dateISO).length) continue;
       const weekExerciseNames = [...(args.reservedExerciseNames ?? []), ...Object.values(workoutsByDate).flatMap(day =>
         day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean))];
@@ -289,7 +289,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
       })()
     : workoutsByDate;
   const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, original]) => {
-    if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, args.workoutsByDate[dateISO]];
+    if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, workoutsByDate[dateISO]];
     let workout = reduceDemandingPrehab(original,original.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false);
     // Base edits retain their existing order. The edit compiler carries only
     // injury-era edits and unresolved targets here, after those rows exist.
