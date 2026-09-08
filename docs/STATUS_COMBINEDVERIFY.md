@@ -1,5 +1,7 @@
 # Combined verification — 2026-09-09
 
+**Final handoff: stopped before annual, 43/44 release command groups green. See the final section below; it supersedes earlier plans and progress notes.**
+
 Owner: combinedverify. Sam requested completion of combined release and exactly one final eight-profile / 52-week audit, followed by switch preparation and approval. No merge, install, deployment, original-folder change, server restart or simulator action is authorized before approval.
 
 Candidate: /private/tmp/lfa-ui-programming-integration-20260909, codex/ui-programming-integration-20260909, b18b6561. Compared with app checkpoint a75a2587: only handoff/status documentation differs. Tracked source clean before verification. Existing output/outputs/tmp directories contain cloned historical artifacts and are not evidence.
@@ -70,3 +72,58 @@ Latest Sam instruction: continue via continue.cjs, retain completed receipts exc
 What catches the next defect: the real two-injury/completed-history witness, the protected earlier-dose case with a live injected counterexample, full leg injury/kit journeys, dated preservation/reopen repair groups, fresh full canonical group and final stable-source annual audit. Registry-mapped reuse preserves unchanged group evidence; old canonical/year results do not stand in for the final fresh witnesses.
 
 NOT COVERED: full canonical rerun after this injury fix, remaining unreached release groups, fresh final eight-profile audit after this fix, native Release build, physical iPhone acceptance, mail delivery, cloud sync and real OS process death. The original folder, server and simulator remain untouched.
+
+
+## Final handoff — stopped before annual
+
+Sam requested the running canonical group finish, then stop before the annual audit. That is complete. **43 of 44 distinct release command groups are green: groups 1–15 and 17–44. Group 16 is pending, not failed.** This is verification of the named release groups, not a percentage claim about the whole app.
+
+Tested application checkpoint: a66ebb9472894056a5c10da4e107155d999f6574. The final handoff commit changes only this status document; all application and test code remains identical to that checkpoint. The injury fix is 296b3478; its test fault-anchor correction is b3e2a08a.
+
+Evidence and reuse:
+
+- Fresh on the fixed code: groups 2 (compilation), 4 (leg programming), 5 (canonical program/history compiler), 35 (rest-day reasons), 37 (progression dose), 38 (off-season preparation), 39 (conditioning equipment), 40 and 41 (annual repair journeys), 42 (Saturday speed), 43 (full-body conditioning/rest), and 44 (whole-week planning).
+- Groups 2, 4, 35, 40 and 41 reuse the successful **post-fix** prerequisite receipts in `/private/tmp/lfa-combined-verify-20260909/group35-fix-verification/retry/result.json`; they were not run twice. Source hashes match the committed injury file. Groups 5, 37–39 and 42–44 completed in the continuation.
+- Earlier passing receipts reused for groups **1, 3, 6–15, 17–34 and 36** (31 distinct groups). Sam explicitly authorized this reuse: the release registry's production-path map excludes the changed injury file for these witnesses. Group 36 uses the prior focused coach receipt; the others use the prior release receipts. This is registry-based reuse, not a claim that those 31 commands ran again. The four witnesses mapped to the changed file—groups 4, 5, 40 and 41—all have fresh post-fix results.
+- The 42 receipts other than canonical and annual are in `/private/tmp/lfa-combined-verify-20260909/release-after-group35/release-units.json`. All 42 passing exits and their actual log SHA-256 values were checked at handoff.
+
+The complete fresh group 5 command exited 0, without interruption, in 4,735.604 seconds (78.9 minutes). Its main suite reported 10,753 passed and 0 failed; its remaining chained checks and fault controls completed, ending with conditioning balance 42 passed and 0 failures. Actual group receipt:
+
+```json
+{
+  "label": "test:canonical-weekly-compiler",
+  "exit": 0,
+  "processExit": 0,
+  "signal": null,
+  "ms": 4735604,
+  "log": "/private/tmp/lfa-combined-verify-20260909/release-after-group35/test-canonical-weekly-compiler.log",
+  "sha256": "1eb3c48fc2377cfe9e6b113e604a299172144b1ced1cd3874a1f6103a54c0758",
+  "reused": false,
+  "revision": "a66ebb9472894056a5c10da4e107155d999f6574"
+}
+```
+
+The receipt above is printed as `END GROUP 5` in `/private/tmp/lfa-combined-verify-20260909/continue-after-group35.log`; its log hash was checked. To prevent the already-running controller from automatically launching the annual, this status document was deliberately modified while canonical continued. The controller printed canonical's successful exit, then its candidate-change guard stopped it before saving that receipt into the aggregate. The controller's exit 1 / `Candidate changed` is therefore an **intentional orchestration stop**, not a failed canonical group or annual audit. Do not rerun canonical to repair that aggregate. Combine its logged receipt with the 42 existing receipts.
+
+### Annual handoff — not run on fixed code
+
+The annual audit **has not run on the fixed code**. The old annual passed 8 distinct profiles × 52 weeks = 416 distinct athlete-weeks on 7d450425, before the injury fix. It is only a placeholder, explicitly `acceptedForCurrentSource: false`; it does not make this release 44/44. Its preserved copies are `/private/tmp/lfa-combined-verify-20260909/release-after-group35/prior-annual-result.json` and `prior-annual-report.html`. No `START GROUP 16`, final-annual-start.json or new test-compiler-year.log exists in this continuation. Nothing annual was killed because nothing annual started.
+
+The next agent should run exactly this once, from the candidate (do not restart continue.cjs):
+
+```sh
+cd /private/tmp/lfa-ui-programming-integration-20260909
+npm run test:compiler-year > /private/tmp/lfa-combined-verify-20260909/release-after-group35/test-compiler-year-final.log 2>&1
+```
+
+This runs the annual verifier followed by all eight profiles over 52 weeks. Exact results: `/private/tmp/lfa-ui-programming-integration-20260909/outputs/compiler-year-acceptance/result.json` and `/private/tmp/lfa-ui-programming-integration-20260909/outputs/compiler-year-acceptance/index.html`. Record the command's actual exit separately. These replace the default older annual artifacts; the older copies above are preserved. The `working-tree changes` stamp is expected because output/, outputs/ and tmp/ are untracked; verify tracked source remains unchanged. It is not a new source defect.
+
+Before using `/private/tmp/lfa-combined-verify-20260909/summarize-year.cjs`, the next agent must set `annualExpectedRevision` in `/private/tmp/lfa-combined-verify-20260909/source.json` to the final status-only HEAD and verify the annual result carries that revision. Its existing expected revision is a66ebb9472894056a5c10da4e107155d999f6574. If interrupted, retain completed profiles and rerun only missing profiles with `node scripts/run-compiler-year.js --only <id> --output <new-directory>`, then explicitly compose and document reused evidence; do not restart all eight.
+
+Historical disclosure: the earlier composed group-5 result replaced one failed run with test-only fixes; its distinct-templates check ignores sprint history entries. That historical composed result is now superseded for this fixed code by the complete fresh group-5 exit 0 above. Failed attempts remain recorded rather than relabelled as passes.
+
+No outstanding failure remains among the 43 accepted groups. The fresh annual is the remaining release check. No build, installation, merge, switch, original-folder edit, server action or simulator action was performed for this stop. Any later switch or running-app update still requires Sam's approval and a fresh check that newer original-folder changes are preserved.
+
+What catches another history defect: the real completed-history/two-injury witness, the earlier-dose case with a live fault control, and the fresh canonical and repair journeys. The full annual remains the pending wider accumulated-history check.
+
+NOT COVERED: annual audit on the fixed code; fresh Release build; device/UI acceptance; physical iPhone verification; remote persistence, mail delivery, cloud sync and real OS process death. No whole-app acceptance claimed.
