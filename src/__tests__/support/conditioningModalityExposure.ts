@@ -45,17 +45,35 @@ export async function conditioningModalityExposure(ok: (label: string, value: bo
     });
     ok(`${modality}: typed off-leg identity survives every authored title mutation`,
       everyTemplateDistinct && failures.length === 0, JSON.stringify(failures.map(t => t.name)));
-    const renamed = CONDITIONING_TEMPLATES.filter(template => {
+    const outcomes = CONDITIONING_TEMPLATES.map(template => {
       const candidate = { ...workout, name: template.name, exercises: workout.exercises.map(row => ({ ...row,
         exercise: { ...row.exercise, name: template.name }, section18Evidence: { ...row.section18Evidence, role: 'conditioning' as const } })),
         conditioningBlock: { ...workout.conditioningBlock!, options: workout.conditioningBlock!.options.map(option =>
           ({ ...option, title: template.name, modality: 'running' as const })) } };
       const swapped = applyConditioningModalityToWorkout(candidate, { fromModality: null, toModality: modality });
-      return swapped.name !== template.name || swapped.exercises.some(row => row.exercise.name !== template.name) ||
-        swapped.conditioningBlock.options.some(option => option.title !== template.name || String(option.modality) !== modality);
+      // R-298 and R-393: preserve every authored identity, but only a template
+      // that permits this target mode may change. Refusal is the whole input,
+      // not a partly relabelled prescription. Read the authored matrix directly
+      // so this check does not share the rewrite's compatibility predicate.
+      const permitted = template.permittedModalities.includes(modality);
+      const identityPreserved = swapped.name === template.name &&
+        swapped.exercises.every(row => row.exercise.name === template.name) &&
+        swapped.conditioningBlock.options.every(option => option.title === template.name);
+      return { template: template.name, permitted, identityPreserved,
+        applied: swapped !== candidate && swapped.conditioningBlock.options.every(option => String(option.modality) === modality),
+        refusedIntact: swapped === candidate };
     });
-    ok(`${modality}: modality changes preserve every authored template identity and set the typed mode`,
-      everyTemplateDistinct && renamed.length === 0, JSON.stringify(renamed.map(t => t.name)));
+    const permitted = outcomes.filter(outcome => outcome.permitted);
+    const incompatible = outcomes.filter(outcome => !outcome.permitted);
+    ok(`${modality}: every authored template identity survives an applied or refused change`,
+      everyTemplateDistinct && outcomes.every(outcome => outcome.identityPreserved),
+      JSON.stringify(outcomes.filter(outcome => !outcome.identityPreserved)));
+    ok(`${modality}: every permitted authored template changes to its typed mode`,
+      permitted.length > 0 && permitted.every(outcome => outcome.applied),
+      JSON.stringify(permitted.filter(outcome => !outcome.applied)));
+    ok(`${modality}: every incompatible authored template refuses the whole change intact`,
+      incompatible.length > 0 && incompatible.every(outcome => outcome.refusedIntact),
+      JSON.stringify(incompatible.filter(outcome => !outcome.refusedIntact)));
   }
   const running = { ...workout, conditioningBlock: { ...workout.conditioningBlock,
     options: workout.conditioningBlock.options.map(option => ({ ...option, modality: 'running' as const, title: 'Bike intervals' })) } };

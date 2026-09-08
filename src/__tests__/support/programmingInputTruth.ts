@@ -31,6 +31,7 @@ import { simpleInjurySafetyTruth } from './simpleInjurySafetyTruth';
 import { powerOnlyLandmineJourney } from './powerOnlyLandmineTruth';
 import { inseasonSpeedTruth } from './inseasonSpeedTruth';
 import { gameOutcomeJourney } from './gameOutcomeJourney';
+import { runningReturnPrescription } from '../../rules/runningReturnDose';
 
 export async function programmingInputTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   conditioningCategoryTruth(ok);
@@ -125,6 +126,11 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
         .every(line => !/\b(?:variant|alternative)\b/i.test(line.text)
           && !/\b\d[^.;]*\bor\b[^.;]*\d/i.test(line.text)));
   }
+  await conditioningPhaseHistoryTruth(storage, ok);
+}
+
+/** Self-contained phase-history witness; also callable when only this contract changes. */
+export async function conditioningPhaseHistoryTruth(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
   for (const gender of ['male', 'female'] as const) for (const preparation of [true, false]) {
     const installDay = preparation ? '2026-09-28' : '2026-10-26';
     const mondays = preparation ? ['2026-10-12', '2026-10-19'] : ['2026-10-26', '2026-11-02'];
@@ -165,9 +171,32 @@ export async function programmingInputTruth(storage: Map<string, string>, ok: (l
         .map(row => row.exercise?.name ?? '');
       // A COD prescription contains several drills. Count selected templates
       // separately from rendered rows; neither count stands in for the other.
-      const selectedTemplates = week.flatMap(day => day.workout?.conditioningBlock?.options ?? []).map(option => option.title);
+      const selectedOptions = week.flatMap(day => (day.workout?.conditioningBlock?.options ?? [])
+        .map(option => ({ option, workout: day.workout! })));
+      const selectedTemplates = selectedOptions.map(({ option }) => option.title);
+      // R-393 replaces field prescriptions with the same introductory drill.
+      // Rotation is still held at its selection owner; ordinary final options
+      // must also stay distinct. Only verified return rows can share identity.
+      const returning = selectedOptions.filter(({ option, workout }) =>
+        option.modality === 'running' && !!workout.runningReturnStage);
+      const ordinary = selectedOptions.filter(entry => !returning.includes(entry)).map(({ option }) => option.title);
+      const authoredSelections = blockConditioningSelectionHistory()
+        .filter(selection => selection.weekStartISO === monday && selection.category !== 'sprint')
+        .map(selection => selection.templateName);
       ok(`${gender}/${monday}: equivalent conditioning seats have distinct eligible templates`,
-        selectedTemplates.length === expectedConditioning && new Set(selectedTemplates).size === expectedConditioning, JSON.stringify(selectedTemplates));
+        selectedTemplates.length === expectedConditioning && authoredSelections.length === expectedConditioning
+          && new Set(authoredSelections).size === expectedConditioning && new Set(ordinary).size === ordinary.length,
+        JSON.stringify({ authoredSelections, ordinary, selectedTemplates }));
+      const expectedReturnStage = preparation ? null : monday === mondays[0] ? 1 : 2;
+      const expectedReturnReps = expectedReturnStage === 1 ? 4 : 6;
+      ok(`${gender}/${monday}: shared return identities carry the ruled stage and reduced prescription`,
+        expectedReturnStage === null ? returning.length === 0 : returning.length > 0 && returning.every(({ option, workout }) => {
+          const rows = workout.exercises.filter(row => option.exerciseIds.includes(row.id));
+          return workout.runningReturnStage === expectedReturnStage && option.title === '20 m Acceleration Reps'
+            && rows.length === 1 && rows[0].exercise.name === '20 m Acceleration Reps'
+            && rows[0].prescribedSets === expectedReturnReps
+            && rows[0].notes === runningReturnPrescription(expectedReturnStage, expectedReturnReps);
+        }), JSON.stringify(returning.map(({ option, workout }) => ({ title: option.title, stage: workout.runningReturnStage }))));
       const modeRows = week.flatMap(day => buildSessionTemplate(day.workout ?? {}).items
         .filter(item => item.kind === 'exercise' && item.presentation === 'conditioning_phase'));
       ok(`${gender}/${monday}: single prescriptions retain their typed running or off-leg mode`,
