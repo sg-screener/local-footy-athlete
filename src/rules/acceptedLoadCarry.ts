@@ -28,6 +28,8 @@
  * blank is the athlete's choice and stays theirs.
  */
 import type { Workout, WorkoutExercise } from '../types/domain';
+import { getSessionComponentRows } from '../utils/sessionComponents';
+import { isDemandingPrehab } from './trainingWorkload';
 import {
   automaticExerciseRouteForIdentity,
   workoutExerciseWasAutomaticallySelected,
@@ -98,8 +100,10 @@ function ownRowInWeek(
  * WHAT A DOOR CARRIES. `'loads'` is the readiness reduction (R-034: the reduced
  * dose is the compiler's, only the load is the athlete's). `'loads_and_dose'`
  * is the fixture rebuild (Sam, 2026-09-02, item 1): a bye or a moved game is
- * not a lighter week, so the same lift keeps its accepted sets and reps too —
- * the earned extra set, the very-hard-block reduction, the in-block wave.
+ * not a lighter week, so the same strength lift keeps its accepted sets and
+ * reps too — the earned extra set, the very-hard-block reduction, the in-block
+ * wave. Other components retain their compiler-owned dose, including reduced
+ * returning jumps and runs (R-393); copying their old reps undoes that policy.
  */
 export type AcceptedCarry = 'loads' | 'loads_and_dose';
 
@@ -111,13 +115,14 @@ export function carryOwnAcceptedLoadsIntoWorkout(args: {
   readonly carry?: AcceptedCarry;
 }): Workout {
   const carry = args.carry ?? 'loads';
+  const strengthIds = new Set(getSessionComponentRows(args.rebuilt).strengthRows.map(row => row.id));
   let touched = false;
   const exercises = (args.rebuilt.exercises ?? []).map((row) => {
     const own = ownRowOnDay(row, args.acceptedSameDay)
       ?? ownRowInWeek(row, args.acceptedWeek);
     if (!own) return row;
     const next = { ...row, prescribedWeightKg: own.prescribedWeightKg };
-    if (carry === 'loads_and_dose') {
+    if (carry === 'loads_and_dose' && strengthIds.has(row.id) && !isDemandingPrehab(row.exercise.name)) {
       next.prescribedSets = own.prescribedSets;
       next.prescribedRepsMin = own.prescribedRepsMin;
       next.prescribedRepsMax = own.prescribedRepsMax;

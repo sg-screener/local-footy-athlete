@@ -13,7 +13,6 @@ import {
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import { exerciseProgrammingAllows } from './exerciseFilter';
-import { equipmentTagsOnDate } from '../rules/canonicalWeeklyAvailabilityState';
 import { getSessionComponentRows } from './sessionComponents';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import {
@@ -28,6 +27,9 @@ import {
 } from '../rules/programmingSelectionTrace';
 import { getMondayForDate } from './sessionResolver';
 import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
+import { datedAthleteContext } from '../rules/datedAthleteContext';
+import { prehabSets, prehabWorkRows } from '../rules/trainingWorkload';
+import { buildGenerationConstraintContext } from './generationConstraints';
 
 /**
  * D13/D17 — the Mobility & Prehab flow that sits collapsed at the top of a session.
@@ -71,11 +73,12 @@ import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariatio
  * authored prehab slots in the menus. What SURVIVES is the shape DETECTION, which
  * was never the placeholder: D17 needs to know the day type.
  *
- * ## The flow is never load-bearing
+ * ## The flow is optional, but meaningful work still loads the athlete
  *
  * §6 item 6 and `FLOW_IS_NEVER_LOAD_BEARING`: the product assumes athletes will
  * sometimes skip the flow entirely, so any prehab that matters must live in the
- * session as an ordinary badged row. Nothing here feeds `SessionComponentKind`,
+ * session as an ordinary badged row. R-393 counts demanding prehab in whole-day muscle workload without making
+ * optional completion compulsory. Nothing here feeds `SessionComponentKind`,
  * conditioning credit, the Finish action, or the feedback panel — and
  * `mobilityPrehabFlowTests` §5 fails if a future change wires it in.
  */
@@ -415,8 +418,7 @@ function retainPerformed(
 export function selectMobilityPrehabFlow(
   context: MobilityPrehabFlowContext,
 ): MobilityPrehabFlow | null {
-  if (context.athlete.onboardingData) context = { ...context, athlete: { ...context.athlete,
-    equipmentTags: equipmentTagsOnDate(context.athlete.onboardingData, context.date, context.athlete.equipmentTags) } };
+  context={...context,athlete:datedAthleteContext(context.athlete,context.date)};
   const { workout } = context;
   if (!workout) return null;
 
@@ -448,12 +450,20 @@ export function selectMobilityPrehabFlow(
     )).filter(Boolean),
   );
 
+  const health=buildGenerationConstraintContext({activeConstraints:context.athlete.activeConstraints,todayISO:context.date});
+  const reduced=context.workout?.usefulStrengthSessionContract?.reductionReasons.some(reason=>
+    ['scheduled_deload','low_readiness','illness'].includes(reason)) || health?.readiness?.deloaded || !!health?.illness;
+  const loaded = prehabWorkRows(workout);
   const movements = retainPerformed(
     fillMenu(menu, context.athlete, dateHash(context.date), sessionExerciseNames),
     context.performedMovementIds,
     context.athlete,
     sessionExerciseNames,
-  );
+  ).map(movement=> {
+    const sets=prehabSets(movement.exercise.name,movement.exercise.sets,loaded,!!reduced);
+    loaded.push({exercise:{name:movement.exercise.name},prescribedSets:sets});
+    return sets===movement.exercise.sets ? movement : {...movement,exercise:{...movement.exercise,sets}};
+  });
   // An empty draw is no flow rather than an empty one.
   if (movements.length === 0) return null;
 

@@ -3513,6 +3513,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'docs/RULINGS_REGISTRY.md R-391',
     guard: {state: 'guarded', by: 'test:whole-week-planning', chainStatus: 'in_chain', receipt: 'Owner yearbook. Real onboarding, bye removal, frequency/access edits, unavailable dates and restart; source fault controls. Verification in output/whole-week-planner-2026-09-08/. Physical device acceptance outstanding.'},
   },
+  { id: 'LAW-weekly-leg-coverage-and-return',
+    law: 'R-393: year-round calf strength and Nordic/curl minimums credit existing work before repairs, with equipment-only hamstring alternatives and health restrictions first. Whole-day leg demand includes strength, field work, hard conditioning, jumping, demanding prehab and club/game commitments; avoidable three/four-day runs rank worse without a full-body-before-speed ban or assumed session order. Returning field work replaces existing sessions for two weeks with fewer controlled efforts then faster runs/controlled turns; strength stays. Dated injury restrictions cover every section and replacements, recovery reopens options, and returning jumps reduce reps. Demanding prehab counts muscle workload, avoids duplicate full doses and reduces on deload. Availability, fixtures, optional status and intentional edits remain protected.',
+    ruledAt: 'docs/RULINGS_REGISTRY.md R-393',
+    guard: {state:'guarded',by:'test:leg-programming',chainStatus:'in_chain',
+      receipt:'Owner legprogram. Red-first RDL coverage failure; isolated real onboarding, eight-week progression, injury/clear, equipment changes and reopen; in-memory fault controls. Existing annual compiler audit includes final weekly coverage. Returning field display is held across both stages and section kinds, including actual repetitions, registered copy, template identity and invalid modality rewrites. Results and remaining failures are recorded in docs/STATUS_LEGPROGRAM.md; physical device acceptance remains outstanding.'},
+  },
+
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

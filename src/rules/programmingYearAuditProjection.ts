@@ -1,3 +1,4 @@
+import { runningReturnAthleticExposure } from './runningReturn';
 import {
   resolveTemplateByName,
   resolveTemplateBySectionName,
@@ -30,6 +31,7 @@ export interface ProgrammingAuditExportRow {
 }
 
 export interface ProgrammingAuditExportDay {
+  readonly runningReturnStage?: 1 | 2;
   readonly date: string;
   readonly rows?: readonly ProgrammingAuditExportRow[];
   /** Typed evidence only. Never a second display source. */
@@ -69,6 +71,8 @@ export function athleticPlaneExposuresForAuditDay(
   day: ProgrammingAuditExportDay,
 ): TypedAthleticPlaneExposure[] {
   const exposures = new Set<TypedAthleticPlaneExposure>();
+  const returning=runningReturnAthleticExposure(day.runningReturnStage??null);
+  if(returning)exposures.add(returning);
   for (const row of finalAthleteFacingAuditRows(day)) {
     if (row.role === 'team_training') {
       exposures.add('team_training');

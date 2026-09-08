@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
+const {annualJourneyCoverage} = require('./annual-journey-coverage.cjs');
 require('sucrase/register');
 
 const repo = path.resolve(__dirname, '..');
@@ -54,11 +55,13 @@ for (const athlete of year.athletes ?? []) {
     const finalAudit = auditFinalAutomaticWeek(weekDays.map((day) => ({
       dayKind: day.name === 'lower_squat' || day.name === 'lower_hinge'
         ? day.name : null,
+      injuryAdjustment: day.injuryAdjustment,
       exercises: (day.rows ?? []).filter(isAutomaticStrengthRow).map((row) => ({
         identity: identity(row),
         authorship: 'automatic',
         route: row.role === 'power' ? 'power' : automaticExerciseRouteForIdentity(identity(row)),
         requestedAsMain: false,
+        addedForInjury: row.addedForInjury === true,
       })),
     })));
     repeatedExactExerciseBreaches.push(...finalAudit.repeatedExact.map((finding) => ({
@@ -164,9 +167,8 @@ for (const athlete of year.athletes ?? []) {
 }
 
 const exactSource = year.revision === revision;
-const completeAthletes = athleteSummaries.length === 2 && athleteSummaries.every((summary) =>
-  summary.weeks === 52 && summary.athleteDays === 364
-  && summary.restartChecks === 52 && summary.successfulRestarts === 52);
+const coverage = annualJourneyCoverage(year);
+const {expectedGenders,complete:completeAthletes} = coverage;
 const selectionVerdict = exactSource && completeAthletes
   && repeatedExactExerciseBreaches.length === 0
   && repeatedMainFamilyBreaches.length === 0
@@ -180,6 +182,9 @@ const verdict = selectionVerdict === 'PASS' && movementPlaneVerdict === 'PASS' ?
 const receipt = {
   revision,
   sourceRevision: year.revision,
+  expectedGenders,
+  completeAthletes,
+  coverage,
   verdict,
   selectionVerdict,
   movementPlaneVerdict,

@@ -717,14 +717,16 @@ export default function DayWorkoutScreenV2() {
     () => excludedExerciseNamesOn(storedAthletePrefs.exclusions, date),
     [date, storedAthletePrefs.exclusions],
   );
+  const flowAthlete = useAthleteContext();
   const effectiveWorkout = React.useMemo(
     () => workout ? applyRecoveryAddonExerciseDecisions({
+      athlete: flowAthlete,
       workout,
       date,
       entries: ledgerEntries,
       excludedExerciseNames,
     }) : workout,
-    [date, excludedExerciseNames, ledgerEntries, workout],
+    [date, excludedExerciseNames, ledgerEntries, workout, flowAthlete],
   );
   const [
     pendingComponentDeletionObservation,
@@ -826,7 +828,6 @@ export default function DayWorkoutScreenV2() {
     () => resolvedWeek.some((day) => day.indicator === 'game'),
     [resolvedWeek],
   );
-  const flowAthlete = useAthleteContext();
   /* ⚠ **R-213 — A TICKED WARM-UP OUTLIVES THE WORK IT WAS DERIVED FOR.**
    *
    * Sam, 2026-08-25: *"If a warm up is already ticked off then it should stay,
@@ -853,12 +854,13 @@ export default function DayWorkoutScreenV2() {
   );
   const mobilityFlow = React.useMemo(
     () => applyMobilityFlowExerciseDecisions({
+      athlete: flowAthlete,
       flow: baseMobilityFlow,
       date,
       entries: ledgerEntries,
       excludedExerciseNames,
     }),
-    [baseMobilityFlow, date, excludedExerciseNames, ledgerEntries],
+    [baseMobilityFlow, date, excludedExerciseNames, ledgerEntries, flowAthlete],
   );
   const editableExercises = React.useMemo(
     () => [...storedEditableExercises, ...buildMobilityEditableExercises(mobilityFlow)],

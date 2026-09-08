@@ -5,6 +5,8 @@ import type { ExercisePrescriptionPayload } from '../types/programControlAction'
 import { canonicalWeeklyExerciseEditStateFrom } from '../rules/canonicalWeeklyExerciseEditState';
 import { canonicalExerciseName } from './exerciseCanonicalisation';
 import type { MobilityPrehabFlow } from './mobilityPrehabFlow';
+import type { AthleteContext } from './sessionBuilder';
+import { injuryAllowsContextExercise } from '../rules/datedAthleteContext';
 
 type DerivedKind = 'mobility_flow' | 'recovery_addon';
 
@@ -70,6 +72,7 @@ function excluded(name: string, excludedNames: readonly string[]): boolean {
  * which is what lets the same button advance to the next-ranked option.
  */
 export function applyMobilityFlowExerciseDecisions(args: {
+  athlete?: AthleteContext;
   flow: MobilityPrehabFlow | null;
   date: string;
   entries: readonly DecisionLedgerEntry[];
@@ -109,7 +112,7 @@ export function applyMobilityFlowExerciseDecisions(args: {
         : {}),
     };
     return excluded(replacement.name, excludedNames) ? [] : [{ ...movement, exercise: replacement }];
-  });
+  }).filter(movement=>injuryAllowsContextExercise(movement.exercise.name,args.athlete,args.date));
   if (movements.length === 0) return null;
   return { ...args.flow, movements, movementCount: movements.length };
 }
@@ -124,13 +127,14 @@ function addonPrescription(replacement: ExercisePrescriptionPayload): string {
 
 /** Project optional recovery rows through the same ledger decisions. */
 export function applyRecoveryAddonExerciseDecisions(args: {
+  athlete?: AthleteContext;
   workout: Workout;
   date: string;
   entries: readonly DecisionLedgerEntry[];
   excludedExerciseNames?: readonly string[];
 }): Workout {
   const decisions = decisionsOn(args.entries, args.date, 'recovery_addon');
-  if (decisions.length === 0 && (args.excludedExerciseNames ?? []).length === 0) {
+  if (!args.athlete && decisions.length === 0 && (args.excludedExerciseNames ?? []).length === 0) {
     return args.workout;
   }
   const byId = new Map(decisions.map((decision) => [decision.sourceId, decision]));
@@ -154,7 +158,7 @@ export function applyRecoveryAddonExerciseDecisions(args: {
           name: decision.replacement.name,
           prescription: addonPrescription(decision.replacement),
         }];
-      }),
+      }).filter(exercise=>injuryAllowsContextExercise(exercise.name,args.athlete,args.date)),
     })),
   };
 }

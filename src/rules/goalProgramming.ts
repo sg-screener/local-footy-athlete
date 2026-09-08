@@ -89,8 +89,13 @@ export function applyGoalProgramming(workouts: readonly Workout[], context: Goal
         const daySets = [...parts.strengthRows,...parts.supportRows,...parts.powerRows]
           .reduce((n,row) => n + (changed.get(row) ?? row).prescribedSets,0);
         if (daySets >= SET_CEILING) continue;
+        // A combined muscle goal shares its repetition allowance with added
+        // sets too; high-rep calf/prehab work cannot bypass the weekly limit.
+        const extraReps = displayReps(item.row.prescribedRepsMin,item.row.prescribedRepsMax);
+        if (muscle && (extraReps === null || extraReps > repAllowance)) continue;
         changed.set(item.row, {...item.row, prescribedSets:item.row.prescribedSets+1});
         setAllowance--;
+        if (muscle) repAllowance -= extraReps ?? 0;
       }
     }
   }

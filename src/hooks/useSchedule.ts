@@ -73,6 +73,7 @@ export function useAthleteContext(): AthleteContext {
   const trainingLocation = onboardingData.trainingLocation || 'Commercial gym';
 
   return {
+    activeConstraints,
     injuries: onboardingData.injuries || [],
     equipmentTags: resolveEquipmentAvailability(onboardingData, activeConstraints, todayISO),
     onboardingData,

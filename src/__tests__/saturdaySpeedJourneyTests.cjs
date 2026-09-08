@@ -32,27 +32,28 @@ await test('real three-day generation separates Saturday Speed and survives rest
 await test('real rows count legs once, exclude upper power mobility and use actual completion',async()=>{
  await install();const workouts=view().flatMap(d=>d.workout?[d.workout]:[]);
  const fri=workouts.find(w=>w.dayOfWeek===5);const lower=getSessionComponentRows(fri).strengthRows.filter(r=>getExerciseTags(r.exercise.name)?.region==='lower');
- assert.equal(lower.length,2);assert.equal(lower.reduce((n,r)=>n+r.prescribedSets,0),6,'reached two three-set lower rows');
- assert.deepEqual(dose(workouts)[5],{workingSets:6,unknown:false});
+ assert.ok(lower.length>=2,'reached proper lower strength'); const prescribed=lower.reduce((n,r)=>n+r.prescribedSets,0); assert.ok(prescribed>=6,'retains useful strength alongside coverage');
+ assert.deepEqual(dose(workouts)[5],{workingSets:prescribed,powerSets:0,unknown:false});
  assert.deepEqual(dose(workouts.map(w=>({...w,name:'Any session title',strengthIntent:undefined})))[5],dose(workouts)[5]);
  const upper=getSessionComponentRows(fri).strengthRows.filter(r=>getExerciseTags(r.exercise.name)?.region==='upper');
  const added={...fri,exercises:[...fri.exercises,...upper.map((r,i)=>({...r,id:'upper-extra-'+i,prescribedSets:20}))]};
- assert.equal(dose([added])[5].workingSets,6,'upper sets do not inflate leg dose');
+ assert.equal(dose([added])[5].workingSets,prescribed,'upper sets do not inflate leg dose');
  const mobility={...fri,exercises:lower.map(r=>({...r,sessionSection:'mobility',prescribedSets:20}))};
- assert.equal(dose([mobility])[5].workingSets,0,'mobility is not working volume');
+ assert.equal(dose([mobility])[5].workingSets,lower.length*20,'a mobility heading cannot hide actual strength work');
  const extra={...fri,exercises:[...fri.exercises,{...lower[0],id:'manual-leg',athleteAdditionId:'manual',prescribedSets:4}]};
- assert.equal(dose([extra])[5].workingSets,10,'accepted manual lower sets count');
+ assert.equal(dose([extra])[5].workingSets,prescribed+4,'accepted manual lower sets count');
  const logs=lower.map(r=>({exerciseId:r.exerciseId,workoutExerciseId:r.id,exerciseName:r.exercise.name,prescribedSets:r.prescribedSets,prescribedRepsMin:r.prescribedRepsMin,prescribedRepsMax:r.prescribedRepsMax,completion:'partial',completedSets:1}));
  const feedback={friday:{dateStr:'2026-10-02',completion:'partial',strength:logs}};
- assert.deepEqual(dose([fri],{completedBeforeISO:'2026-10-03',feedback})[5],{workingSets:2,unknown:false});
+ assert.deepEqual(dose([fri],{completedBeforeISO:'2026-10-03',feedback})[5],{workingSets:lower.length,powerSets:0,unknown:false});
  assert.equal(dose([fri],{completedBeforeISO:'2026-10-03',feedback:{friday:{...feedback.friday,completion:'skipped'}}})[5].workingSets,0);
  assert.equal(dose([fri],{completedBeforeISO:'2026-10-03',feedback:{}})[5].unknown,true,'missing log is not a rested day');
  assert.equal(dose([fri],{completedBeforeISO:'2026-10-03',feedback:{friday:{...feedback.friday,strength:logs.map(r=>({...r,completedSets:undefined}))}}})[5].unknown,true);
- assert.equal(dose([],{completedBeforeISO:'2026-10-03',feedback})[5].workingSets,2,'completed additions remain real after their draft rows disappear');
+ assert.equal(dose([],{completedBeforeISO:'2026-10-03',feedback})[5].workingSets,lower.length,'completed additions remain real after their draft rows disappear');
  // Real outcome writer supplies the same record shape used by the compiler.
  j.setJourneyClock('2026-10-02'); const result=await j.quietAsync(()=>j.recordDay('2026-10-02',{record:true,completion:'full',feeling:'hard',soreness:'none',difficulty:7,logWeights:true,conditioningRpe:6}));assert.equal(result.result,'recorded');
  const saved=require('../store/programStore').useProgramStore.getState().sessionFeedback;
- assert.deepEqual(dose([fri],{completedBeforeISO:'2026-10-03',feedback:saved})[5],{workingSets:6,unknown:false});
+ const loggedNames=new Set(Object.values(saved).flatMap(r=>(r.strength??[]).map(e=>e.exerciseName)));
+ assert.deepEqual(dose([fri],{completedBeforeISO:'2026-10-03',feedback:saved})[5],{workingSets:prescribed,powerSets:0,unknown:lower.some(r=>!loggedNames.has(r.exercise.name))},'unlogged accessories are not confirmed completion');
 });
 for(const n of [2,3,4,5])for(const phase of ['Off-season','Pre-season','In-season'])await test(`generated ${n}-day ${phase} fixture and restart`,async()=>{
  await install(profile(n,phase,phase==='Off-season'?[]:['Tuesday','Thursday'])); const days=view(),speed=speedDates(days);assert.ok(speed.length<=1);

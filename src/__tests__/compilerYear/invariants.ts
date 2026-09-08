@@ -1,7 +1,9 @@
+import { completeWeeklyLegCoverage } from '../../rules/weeklyLegCoverage';
+import type { ActiveConstraint } from '../../store/coachUpdatesStore';
 import { createHash } from 'crypto';
 import type { CanonicalWeeklyCompilerResult } from '../../rules/canonicalWeeklyCompiler';
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
-import type { Microcycle, OnboardingData } from '../../types/domain';
+import type { Microcycle, OnboardingData, UserRemovalConstraint } from '../../types/domain';
 import type { WeeklyExposureContractV2 } from '../../rules/weeklyExposureContractV2';
 import type { ResolvedDay } from '../../utils/sessionResolver';
 import { semanticFingerprint, snapshotSemanticResolvedDay } from '../../utils/programSemanticSnapshot';
@@ -54,6 +56,8 @@ export function inspectWeek(args: {
   week: Microcycle; days: ResolvedDay[]; weekStart: string; phase: string; phaseWeek: number;
   profile: OnboardingData; marks: Record<string, string>;
   effectiveContract: WeeklyExposureContractV2;
+  activeConstraints?: readonly ActiveConstraint[];
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): Check[] {
   const { week, days, weekStart, phase, phaseWeek, profile, marks } = args;
   const dates = Array.from({ length: 7 }, (_, i) => plusDays(weekStart, i));
@@ -95,7 +99,9 @@ export function inspectWeek(args: {
     .map(() => day.date));
   let projectionError = '';
   try { project({ week: days, weekStart }); } catch (error) { projectionError = String(error); }
+  const coverage=completeWeeklyLegCoverage({weekStartISO:weekStart,workoutsByDate:Object.fromEntries(days.filter(d=>d.workout).map(d=>[d.date,d.workout!])),profile,activeConstraints:args.activeConstraints,userRemovalConstraints:args.userRemovalConstraints,gameDates:actualGames.map(d=>d.date)});
   return [
+    { id:'weekly_calf_hamstring',ok:!coverage.receipts.some(r=>r.status==='added'),detail:JSON.stringify(coverage.receipts) },
     { id: 'phase_clock', ok: args.effectiveContract.identity.seasonPhase === phase && args.effectiveContract.identity.phaseWeek === phaseWeek,
       detail: `expected=${phase}/${phaseWeek} actual=${args.effectiveContract.identity.seasonPhase}/${args.effectiveContract.identity.phaseWeek}` },
     { id: 'placement', ok: placement, detail: `visible dates=${days.map((d) => d.date).join(',')}` },

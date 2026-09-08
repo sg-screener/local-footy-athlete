@@ -13,6 +13,11 @@ const RELEASE_COMMAND = 'node scripts/release-gate.js';
 const BOOTSTRAP_SCRIPT = 'test:test-truth';
 const TYPECHECK_SCRIPT = 'test:compile';
 const TYPECHECK_COMMAND = 'node scripts/typecheck-gate.js';
+const FOUNDATION_WITNESSES = [
+  'test:weekly-writer-zero',
+  'test:leg-programming',
+  'test:canonical-weekly-compiler',
+];
 const FORBIDDEN_WITNESSES = new Set([
   RELEASE_SCRIPT,
   BOOTSTRAP_SCRIPT,
@@ -77,7 +82,15 @@ function deriveReleaseGate(pkg, decisionRegistry, repo = REPO) {
         role: 'typecheck',
         contracts: [],
       },
-      ...[...witnesses.entries()].map(([label, labels]) => ({
+      // Check shared ownership and programming before the expensive year replay.
+      // Ordering changes; the validated witness set remains complete and unique.
+      ...[...witnesses.entries()].sort(([left], [right]) => {
+        const rank = label => {
+          const index = FOUNDATION_WITNESSES.indexOf(label);
+          return index < 0 ? FOUNDATION_WITNESSES.length : index;
+        };
+        return rank(left) - rank(right);
+      }).map(([label, labels]) => ({
         label,
         role: 'current_contract',
         contracts: labels,

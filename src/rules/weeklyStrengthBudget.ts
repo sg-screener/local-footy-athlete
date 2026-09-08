@@ -114,6 +114,7 @@ function handVerticalSeatsToAnUnseatedFullBodyDay(
 
 export function createWeeklyStrengthBudget(
   days: readonly WeeklyStrengthBudgetDay[],
+  slotAvailable?: (slot: WeeklyMainStrengthSlot, day: WeeklyStrengthBudgetDay) => boolean,
 ): WeeklyStrengthBudget {
   const reserved: Partial<Record<WeeklyMainStrengthSlot, string>> = {};
   // R-390: the six main lifts belong to three useful sessions before any
@@ -131,6 +132,24 @@ export function createWeeklyStrengthBudget(
     }
   }
   handVerticalSeatsToAnUnseatedFullBodyDay(days, reserved);
+  // A full-body day must receive a usable main seat even when its reserved
+  // vertical lifts need unavailable kit. Reserve before selecting exercises;
+  // the donor retains at least one usable main and the target is not reduced.
+  if (slotAvailable) {
+    const usable = (day: WeeklyStrengthBudgetDay) => WEEKLY_MAIN_STRENGTH_SLOTS
+      .filter(slot => reserved[slot] === day.planEntryId && slotAvailable(slot, day));
+    for (const receiver of days) {
+      if (receiver.strengthIntent.archetype !== 'full_body' || usable(receiver).length > 0) continue;
+      for (const donor of days) {
+        const donorSlots = usable(donor);
+        if (donorSlots.length < 2) continue;
+        const transfer = [...donorSlots].reverse().find(slot => slotAvailable(slot, receiver));
+        if (!transfer) continue;
+        reserved[transfer] = receiver.planEntryId;
+        break;
+      }
+    }
+  }
   const spent = new Set<WeeklyMainStrengthSlot>();
 
   const canSpend = (slot: SessionSlot, planEntryId: string): boolean => {

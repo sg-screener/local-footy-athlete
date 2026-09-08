@@ -1,3 +1,5 @@
+import { runningSpeedTemplatePreference } from '../rules/speedTemplates';
+import { isHardMetabolicConditioningCategory } from '../rules/conditioningDemand';
 /**
  * THE OFF-SEASON DELOAD'S CONDITIONING — on a REAL generated block.
  *
@@ -36,8 +38,6 @@ function ok(name: string, condition: unknown, detail?: string): void {
 }
 
 const WEEK_MONDAY = '2026-08-10';
-/** Categories the approved source treats as HARD conditioning. */
-const HARD = new Set(['vo2', 'glycolytic']);
 const SPRINT_QUALITIES = new Set(['acceleration', 'top_end_speed', 'repeat_sprint']);
 
 function clockAtPhaseWeek(selectedPhase: string, phaseWeekNumber: number) {
@@ -130,7 +130,7 @@ function conditioning(program: TrainingProgram): Cond[] {
           week: week + 1,
           day: w.dayOfWeek,
           category,
-          hard: HARD.has(category),
+          hard: isHardMetabolicConditioningCategory(category),
           templateName: (headline as unknown as { exercise?: { name?: string } })
             ?.exercise?.name ?? null,
           sets: headline?.prescribedSets,
@@ -199,7 +199,9 @@ ok('[non-vacuity] the block contains BOTH build weeks with hard work and one wit
   `hardByWeek=${JSON.stringify([...hardByWeek])}`);
 
 const deloadWeek = deloadWeeks[0];
-const buildWeek = buildWeeks[0];
+// Compare the last normal build week. R-393 deliberately replaces the first
+// two returning field weeks, so their introductory template is not the deload baseline.
+const buildWeek = buildWeeks.filter(week => week < deloadWeek).at(-1);
 const relevantBuildWeek = deloadWeek === undefined ? undefined : deloadWeek - 1;
 
 ok('[rule] the deload contains NO hard conditioning session',
@@ -244,9 +246,13 @@ ok('[rule] ...and that lower volume is the SHEET\'S OWN authored minimum',
     return `${r.templateName} sets=${r.sets} authored="${t?.setsRounds}"`;
   }).join(' | '));
 
-ok('[rule] the deload keeps the athlete\'s OWN sprint template, not a substitute',
-  deloadSprints[0]?.templateName === buildSprints[0]?.templateName,
-  `build=${buildSprints[0]?.templateName} deload=${deloadSprints[0]?.templateName}`);
+// R-393 replaces the first returning week, while R-311 still rotates the
+// subsequent normal Speed templates. Deload retains its dated normal selection.
+const normalDeloadTemplate = runningSpeedTemplatePreference({phase:'Off-season',
+  phaseWeekNumber:6 + deloadWeek - 1,requestedQualities:['acceleration','top_end_speed']});
+ok('[rule] the deload retains its normal dated sprint selection after the introductory return',
+  deloadSprints[0]?.templateName === normalDeloadTemplate,
+  `normal=${normalDeloadTemplate} deload=${deloadSprints[0]?.templateName}`);
 
 // ── THE HARD SESSION IS DOWNGRADED TO AUTHORED EASY/TEMPO WORK, NOT DELETED ──
 const buildCount = rows.filter((r) => r.week === buildWeek).length;

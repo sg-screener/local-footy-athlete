@@ -284,17 +284,19 @@ export default function HomeScreenV2() {
   const projectedWorkoutByDate = useMemo(() => new Map(weekDays.map((day) => {
     if (!day.workout) return [day.date, null] as const;
     return [day.date, applyRecoveryAddonExerciseDecisions({
+      athlete: reviewAthlete,
       workout: day.workout,
       date: day.date,
       entries: ledgerEntries,
       excludedExerciseNames: excludedExerciseNamesOn(athletePrefs.exclusions, day.date),
     })] as const;
-  })), [athletePrefs.exclusions, ledgerEntries, weekDays]);
+  })), [athletePrefs.exclusions, ledgerEntries, weekDays, reviewAthlete]);
   const mobilityFlowByDate = useMemo(() => {
     const isGameWeek = weekDays.some((day) => day.indicator === 'game');
     return new Map(weekDays.map((day) => [
       day.date,
       applyMobilityFlowExerciseDecisions({
+        athlete: reviewAthlete,
         flow: selectMobilityPrehabFlow({
           workout: projectedWorkoutByDate.get(day.date) ?? null,
           seasonPhase: currentPhase,

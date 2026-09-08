@@ -95,7 +95,9 @@ check('[2] R-090 selects the two kit-achievable main-strength days',
 check('[3] R-083 keeps pull out of the required safe pattern set',
   !bodyweightGame.exposureContractV2?.strengthPatterns.requiredSafePatterns.includes('pull'));
 check('[4] only the unavailable capability on a selected required day remains typed',
-  JSON.stringify(kitGaps(bodyweightGame)) === JSON.stringify(['vertical_push']),
+  // The minimum-useful-session rule also attempts a second push accessory.
+  // Both unavailable selected slots must remain disclosed; neither is a pull gap.
+  JSON.stringify(kitGaps(bodyweightGame).sort()) === JSON.stringify(['push_accessory_2', 'vertical_push']),
   JSON.stringify(kitGaps(bodyweightGame)));
 check('[5] the full-gym control still selects and delivers all three layout days',
   fullGymGame.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget === 3
@@ -126,11 +128,24 @@ const mutation = validateGeneratedWeek({
     attended: true,
   })),
 });
-check('[7 MUTATION] removing an ACHIEVABLE push day is still refused',
+check('[7 MUTATION] removing every push lift is still refused for missing push',
   mutation.verdict === 'refused'
     && mutation.findings.some((finding) =>
-      finding.clause === 'main_strength_planner_selected_target'),
+      finding.clause === 'required_safe_patterns_present' && finding.actual === 'push'),
   JSON.stringify(mutation.findings));
+// A push session can share a day with pulling. Removing only its push rows
+// does not remove that lifting day, so test the frequency promise separately.
+const withoutStrengthDay = fullGymGame.workouts.filter(workout =>
+  !(workout.exercises ?? []).some(row => row.section18Evidence?.role === 'main_strength'
+    && row.section18Evidence.mainStrengthPattern === 'push'));
+const dayMutation = validateGeneratedWeek({
+  workouts: withoutStrengthDay, contract: generatedWeekContractFrom(contract), declaredKitGaps: [],
+  anchors: contract.anchors.map(anchor => ({dayOfWeek:anchor.dayOfWeek, participation:'normal_unrestricted', attended:true})),
+});
+check('[7b MUTATION] removing an achievable lifting day is still refused for frequency',
+  dayMutation.verdict === 'refused' && dayMutation.findings.some(finding =>
+    finding.clause === 'main_strength_planner_selected_target' || finding.clause === 'main_strength_required_minimum'),
+  JSON.stringify(dayMutation.findings));
 
 console.log('\n-- Travel plus zero equipment, through dated facts --');
 const scope = temporaryFactScope({

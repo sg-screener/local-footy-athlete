@@ -19,6 +19,7 @@ import {
 import type { MovementPlane } from '../data/exerciseMovementPlaneMetadata';
 import { muscleMetadataFor, type MuscleGroup } from '../data/muscleExperienceMetadata';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
+import { exerciseVariationConflictsWithSession } from './exerciseVariationFamily';
 import type { ComposedExerciseIdentity } from './composedRowLegality';
 import {
   slotsForExerciseName,
@@ -497,6 +498,7 @@ export interface FinalAutomaticSelectionExercise {
   readonly route: AutomaticExerciseRoute;
   readonly requestedAsMain: boolean;
   readonly requestedSlot?: SessionSlot;
+  readonly addedForInjury?: boolean;
 }
 
 export interface FinalAutomaticSessionAudit {
@@ -523,6 +525,7 @@ export function auditFinalAutomaticSession(
 export interface FinalAutomaticSelectionDay {
   readonly dayKind: SlotDayKind | null;
   readonly exercises: readonly FinalAutomaticSelectionExercise[];
+  readonly injuryAdjustment?: {readonly paused: readonly string[]; readonly added: readonly string[]};
 }
 
 export interface FinalAutomaticWeekSelectionAudit {
@@ -547,6 +550,9 @@ export function auditFinalAutomaticWeek(
   const dedicatedDayOwnership: FinalAutomaticWeekSelectionAudit['dedicatedDayOwnership'][number][] = [];
 
   for (const day of days) {
+    // R-386 permits one compound in the vacated injury position. Retain the
+    // ordinary family check unless both the row and the adjustment identify it.
+    let injuryFamilyUsed = false;
     for (const row of day.exercises) {
       if (row.authorship !== 'automatic') continue;
       const identity = canonicalExerciseName(row.identity);
@@ -560,7 +566,13 @@ export function auditFinalAutomaticWeek(
       const family = automaticMainFamilyForExercise(identity, {
         route, requestedAsMain: false,
       });
-      if (family) {
+      const injuryReplacement = !!family && !injuryFamilyUsed && row.addedForInjury === true
+        && !exerciseVariationConflictsWithSession({candidate: identity,
+          existingExerciseNames: day.exercises.filter(other => other !== row).map(other => other.identity)})
+        && (day.injuryAdjustment?.paused.length ?? 0) > 0
+        && day.injuryAdjustment!.added.some(name => canonicalExerciseName(name) === identity);
+      if (injuryReplacement) injuryFamilyUsed = true;
+      if (family && !injuryReplacement) {
         const list = families.get(family) ?? [];
         list.push(identity);
         families.set(family, list);

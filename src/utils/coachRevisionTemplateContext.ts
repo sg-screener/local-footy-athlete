@@ -80,7 +80,7 @@ function liveStoreProvider(dateISO?: string): CoachRevisionTemplateContext {
     const todayISO = dateISO ?? todayISOLocal();
 
     const athlete: AthleteContext = onboardingData
-      ? {
+      ? { activeConstraints,
           injuries: onboardingData.injuries || [],
           equipmentTags: resolveEquipmentAvailability(
             onboardingData,
@@ -154,9 +154,9 @@ export function coachRevisionExistingExerciseNames(workout: Workout | null, date
   if (!workout) return [];
   const ctx = getCoachRevisionTemplateContext(date);
   const read = ctx.dayExerciseReadState ?? { performedMovementIds: [], entries: [], excludedExerciseNames: [] };
-  const visible = applyRecoveryAddonExerciseDecisions({ workout, date, entries: read.entries,
+  const visible = applyRecoveryAddonExerciseDecisions({ athlete:ctx.athlete,workout, date, entries: read.entries,
     excludedExerciseNames: read.excludedExerciseNames });
-  const flow = applyMobilityFlowExerciseDecisions({ date, entries: read.entries,
+  const flow = applyMobilityFlowExerciseDecisions({ athlete:ctx.athlete,date, entries: read.entries,
     excludedExerciseNames: read.excludedExerciseNames,
     flow: selectMobilityPrehabFlow({ workout: visible, date, athlete: ctx.athlete,
       seasonPhase: ctx.strengthComposition?.seasonPhase ?? ctx.athlete.onboardingData?.seasonPhase,

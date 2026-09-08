@@ -1,3 +1,4 @@
+import { HARD_CONDITIONING_CATEGORIES, type HardConditioningCategory } from './conditioningDemand';
 import { displayReps } from './prescriptionDisplay';
 import { currentConditioningDose, applyConditioningDoseStep } from './conditioningDisplay';
 import { requiresStrengthComponent } from '../utils/sessionComponents';
@@ -1684,10 +1685,7 @@ export function applyBlockBoundarySetAdditions(args: {
  * conditioning ... worked but composed" (`domain.ts`), and the contract reduces
  * HARD work before easy — so tempo is what remains, never what is cut.
  */
-export const HARD_CONDITIONING_CATEGORIES: ReadonlySet<HardConditioningCategory> =
-  new Set<HardConditioningCategory>(['sprint', 'vo2', 'glycolytic', 'repeat_sprint', 'cod_decel']);
-
-export type HardConditioningCategory = 'sprint' | 'vo2' | 'glycolytic' | 'repeat_sprint' | 'cod_decel';
+export { HARD_CONDITIONING_CATEGORIES, type HardConditioningCategory } from './conditioningDemand';
 
 /**
  * The category a replaced session becomes.

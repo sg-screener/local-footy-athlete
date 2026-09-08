@@ -110,6 +110,8 @@ import { preferAvailableEquipmentProgressions } from '../rules/exerciseVariation
 // ─── Athlete Context ───
 
 export interface AthleteContext {
+  /** Accepted dated facts; warm-up and prehab consume them on the displayed date. */
+  activeConstraints?: readonly import('../store/coachUpdatesStore').ActiveConstraint[];
   daysToGame?: number | null;
   /** Injury list from onboarding. */
   injuries: OnboardingInjury[];
@@ -642,17 +644,17 @@ export function filterPoolEntriesForAthlete(
 ): PoolExercise[] {
   return preferAvailableEquipmentProgressions(preferAutomaticCurlCandidates(filterPool(
     [...entries],
-    injuriesToTags(athlete.injuries),
+    new Set<InjuryTag>(),
     new Set(athlete.equipmentTags),
   ), athlete.onboardingData?.experienceLevel, row => row.name)
     .filter(row => exerciseProgrammingAllows(row.name, {
       experienceLevel: athlete.onboardingData?.experienceLevel,
       daysToGame: athlete.daysToGame, route: 'automatic',
-    }) && (!EXERCISE_TAGS[row.name]?.programming || athlete.injuries.every(injury => {
+    }) && athlete.injuries.every(injury => {
       const region = guidedInjuryBucketForArea(injury.bodyArea);
       return !region || injuryPermitsExerciseAtSeverity(row.name,
-        region, onboardingInjurySeverityScore(injury));
-    }))), row => row.name);
+        region, onboardingInjurySeverityScore(injury), injury.movementTriggers);
+    })), row => row.name);
 }
 
 export function dateHash(dateStr: string): number {

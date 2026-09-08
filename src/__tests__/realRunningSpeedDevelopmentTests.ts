@@ -105,7 +105,7 @@ function speedDetail(program: TrainingProgram | null) {
 armTotalsOrRed();
 console.log('\nR-311 — real running-speed development\n');
 
-const offseason = [1, 3, 5, 6, 9, 10].map(phaseWeek => ({
+const offseason = [1, 3, 5, 6, 7, 8, 9, 10].map(phaseWeek => ({
   phaseWeek,
   detail: speedDetail(build({ phase: 'Off-season', phaseWeek })),
 }));
@@ -117,12 +117,12 @@ ok('[non-vacuity] every sampled Off-season phase step builds',
 ok('Off-season weeks 1-4 contain zero automatic Speed',
   offseason.filter(sample => sample.phaseWeek <= 4).every(sample => sample.detail.workout === null),
   offseason.slice(0, 2).map(sample => sample.detail.block?.templateName ?? null));
-ok('middle Off-season retains acceleration and adds progressive build-ups',
-  new Set(offseason.filter(sample => sample.phaseWeek >= 5 && sample.phaseWeek <= 8)
+ok('after the two introductory weeks, normal acceleration and progressive build-ups resume',
+  new Set(offseason.filter(sample => sample.phaseWeek >= 7 && sample.phaseWeek <= 8)
     .map(sample => sample.detail.template?.quality)).size === 2
-  && offseason.filter(sample => sample.phaseWeek >= 5 && sample.phaseWeek <= 8)
+  && offseason.filter(sample => sample.phaseWeek >= 7 && sample.phaseWeek <= 8)
     .some(sample => sample.detail.template?.name === 'Progressive Sprint Exposure'),
-  offseason.filter(sample => sample.phaseWeek >= 5 && sample.phaseWeek <= 8)
+  offseason.filter(sample => sample.phaseWeek >= 7 && sample.phaseWeek <= 8)
     .map(sample => sample.detail.block?.templateName ?? null));
 ok('late Off-season uses small Fly 20/Fly 30 exposures',
   offseason.filter(sample => sample.phaseWeek >= 9).every(sample =>

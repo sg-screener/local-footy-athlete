@@ -1,3 +1,4 @@
+import { isHardMetabolicConditioningCategory } from '../rules/conditioningDemand';
 /**
  * THE WEEKLY SCHEDULER + CONTRACT, GUARDED BEHAVIOURALLY.
  *
@@ -187,12 +188,9 @@ console.log('\n[layouts] The approved purposes, per layout row');
     && purposesOf(inSeason2).length === 2, JSON.stringify(purposesOf(inSeason2)));
 
   const pre3NoWeekend = built({ phase: 'Pre-season', gymAccessDays: [MON, WED, FRI] });
-  ok('[WC-111] Pre-season 3, weekend UNAVAILABLE = Lower + Upper + Full Body',
-    ['WC-111'],
-    new Set(purposesOf(pre3NoWeekend)).size === 3
-    && purposesOf(pre3NoWeekend).includes('lower')
-    && purposesOf(pre3NoWeekend).includes('upper')
-    && purposesOf(pre3NoWeekend).includes('full_body'),
+  ok('[R-390] Pre-season three available gym days use full body regardless of weekend access',
+    ['WC-111'], purposesOf(pre3NoWeekend).length===3
+    && purposesOf(pre3NoWeekend).every(p=>p==='full_body'),
     JSON.stringify(purposesOf(pre3NoWeekend)));
 
   const pre3Weekend = built({ phase: 'Pre-season', gymAccessDays: [MON, WED, SAT] });
@@ -678,9 +676,8 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   // These cells hold the SCHEDULER's half — that the overlay is what it reads.
   const preseasonWeek = built({ phase: 'Pre-season',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
-  const hardCategories = new Set(['vo2', 'glycolytic', 'repeat_sprint']);
   const preseasonHard = preseasonWeek.days.filter(
-    (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory));
+    (d) => d.conditioningCategory !== null && isHardMetabolicConditioningCategory(d.conditioningCategory));
   ok('[WC-136] a pre-season week authors a HARD conditioning quality, not just capacity',
     ['WC-136'], preseasonHard.length === 1,
     JSON.stringify(preseasonWeek.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
@@ -699,7 +696,7 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   const inseasonBye = built({ phase: 'In-season',
     gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
   const hardIn = (week: WeeklySchedule) => week.days.filter(
-    (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory)).length;
+    (d) => d.conditioningCategory !== null && isHardMetabolicConditioningCategory(d.conditioningCategory)).length;
   // WC-143 (Sam's Q2 ruling, 2026-08-26) SUPERSEDED the unqualified form of
   // this cell for the no-club athlete: their only fast work all week was the
   // game, and Sam ruled that is not enough. The CLUB game week keeps the
@@ -751,7 +748,7 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   // late Pre-season (phase week 4) and in the in-season bye week; it is never
   // reachable through the Speed slot.
   const hardOf = (week: WeeklySchedule) => week.days
-    .map((d) => d.conditioningCategory).filter((c) => c !== null && hardCategories.has(c));
+    .map((d) => d.conditioningCategory).filter((c) => c !== null && isHardMetabolicConditioningCategory(c));
   const latePreCycle1 = built({ phase: 'Pre-season', offseasonBlock: null, phaseWeekNumber: 5, miniCycleNumber: 1,
     gymAccessDays: [MON, TUE, THU, FRI, SAT], clubNights: [], gameDay: null });
   const latePreCycle2 = built({ phase: 'Pre-season', offseasonBlock: null, phaseWeekNumber: 6, miniCycleNumber: 2,
@@ -852,7 +849,7 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
       day.conditioningCategory, day.sprintComponent])));
   // ── R-338: flys count as conditioning AND speed in a club pre-season week ──
   // Sam, 2026-09-02: two team nights + the hard session + the fly are the
-  // four; no aerobic session is owed; the fly stays with the hinge on Friday.
+  // four; no aerobic session is owed. R-391/R-393 allow a separate Speed day.
   const clubPre = built({ phase: 'Pre-season', offseasonBlock: null,
     gymAccessDays: [MON, TUE, WED, THU, FRI, SAT], clubNights: [MON, WED], gameDay: null });
   const clubPreApp = clubPre.days.filter((day) =>
@@ -867,11 +864,10 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
     && clubPreSpeed.sprintComponent === false,
     JSON.stringify(clubPre.days.map((day) => [day.dayOfWeek, day.owner, day.purpose, day.conditioning,
       day.conditioningCategory, day.sprintComponent])));
-  ok('[R-338] the fly sits on an existing strength day, after lower work rather than on a new day',
-    ['WC-138'],
-    clubPreSpeed !== undefined && clubPreSpeed.owner === 'strength'
-    && clubPreSpeed.dayOfWeek === FRI,
-    JSON.stringify(clubPre.days.map((day) => [day.dayOfWeek, day.owner, day.purpose])));
+  ok('[R-391/R-393] the fly can use a separate available day without an assumed lifting order',
+    ['WC-138'], clubPreSpeed!==undefined && ![MON,WED].includes(clubPreSpeed.dayOfWeek)
+    && clubPreSpeed.conditioning==='sprint_high_speed',
+    JSON.stringify(clubPre.days.map(day=>[day.dayOfWeek,day.owner,day.purpose])));
 
   ok('[R-337] the Speed day carries no metabolic conditioning when the week has room',
     ['WC-138'],

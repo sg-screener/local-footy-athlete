@@ -292,6 +292,8 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         if (!current) throw new Error('No current compiled microcycle for this date');
         const before = visible(week.weekStart);
         checks.push(...inspectWeek({ week: current, days: before, ...week,
+          activeConstraints:useProgramStore.getState().acceptedMaterialContext.activeConstraints,
+          userRemovalConstraints:useProgramStore.getState().userRemovalConstraints,
           effectiveContract: quiet(() => rebaseAcceptedEffectiveWeek({ surfaces: { ...useProgramStore.getState(),
             removalDecisions: useProgramStore.getState().userRemovalConstraints, athleteExclusions: getAthleteExclusions() }, weekStart: week.weekStart,
             profile: useProfileStore.getState().onboardingData, markedDays: useCalendarStore.getState().markedDays })).contract,

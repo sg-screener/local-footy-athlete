@@ -43,7 +43,7 @@ const {buildGuidedInjuryConstraint} = app('src/utils/guidedInjuryControl');
 const {selectActiveProgramModifiers} = app('src/utils/activeProgramModifiers');
 const {normalizeAcceptedMaterialContext} = app('src/store/acceptedStateColdStart');
 const {decisionLedgerEntries} = app('src/store/decisionLedgerStore');
-const {visibleSignature} = app('src/__tests__/compilerYear/invariants');
+const {visibleSignature,signatureDifferences} = app('src/__tests__/compilerYear/invariants');
 const {project} = app('src/rules/projectVisibleWeek');
 const start = '2026-09-28';
 const sixDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -68,7 +68,7 @@ for (const [week,area,severity,duration] of [[8,'Shoulder',4,10],[22,'Calf / Ach
 }
 function phaseFor(i) {return i<12?'Off-season':i<28?'Pre-season':'In-season';}
 function phaseWeek(i) {return i<12?i+1:i<28?i-11:i-27;}
-function save(name,data) {fs.writeFileSync(path.join(output,name),JSON.stringify(data,null,2));}
+function save(name,data) {require(path.join(repo,'scripts/write-json-evidence.cjs')).writeJsonEvidence(path.join(output,name),data);}
 function view(week,date) {return quiet(()=>deriveVisibleWeekLive(week,date));}
 function rowView(item,workout) {
   if(item.kind==='team_training') return {name:'Team training',dose:'Club session',role:'team_training'};
@@ -78,7 +78,7 @@ function rowView(item,workout) {
   return {name:formatExerciseDisplayName(row.exercise?.name??row.name),
     dose:conditioning?helpers.formatConditioningRowPrescription(row):(['mobility','recovery','addon'].includes(item.presentation)?helpers.formatLowLoadSetsReps(row):helpers.formatStrengthSetsReps(row)),
     notes:conditioning?row.notes:undefined,
-    kg:row.prescribedWeightKg,
+    kg:row.prescribedWeightKg,addedForInjury:row.addedForInjury,
     load:!conditioning&&sessionAsksForLoad(workout)?formatLoadControlLabel(resolveLoadControlMode(row.exercise?.name??row.name),row.prescribedWeightKg??null):'',
     role:item.role,optional:item.optional||undefined,pair:item.superset?.groupId};
 }
@@ -155,7 +155,8 @@ async function run(gender) {
       try {projected=quiet(()=>project({week:days,weekStart,program:useProgramStore.getState().currentProgram})).days.find(x=>x.date===date);}
       catch(error) {projectionError=error.message;}
       const flow=quiet(()=>selectMobilityPrehabFlow({workout:day.workout,seasonPhase:phase,isGameWeek:days.some(x=>x.indicator==='game'),athlete:assembleScheduleState(gatherDeriveInputs(date)).athleteContext,date,performedMovementIds:[]}));
-      const shown={date,source:day.source,name:day.workout?weeklyPlanTitle(day.workout):null,conditioning:day.workout?combinedConditioningCategoryLabel(day.workout):null,type:day.workout?.workoutType,
+      const shown={date,source:day.source,name:day.workout?weeklyPlanTitle(day.workout):null,conditioning:day.workout?combinedConditioningCategoryLabel(day.workout):null,type:day.workout?.workoutType,runningReturnStage:day.workout?.runningReturnStage,
+        injuryAdjustment:day.workout?.injuryAdjustment,
         kind:projected?.kind,parts:projected?.parts.map(p=>({kind:p.kind,name:String(p.headline)})),projectionError,tier:day.workout?.sessionTier,warmup:flow?.movements.map(m=>({name:formatExerciseDisplayName(m.exercise.name),dose:mobilityFlowMovementDose(m.exercise)})),rows:template.items.map(item=>rowView(item,day.workout)),modifiers:modifiers(weekStart,date,days)};
       if(probe&&i===0&&d===0) save('probe.json',{day,template,shown,program:useProgramStore.getState().currentProgram});
       w.days.push(shown);
@@ -166,15 +167,19 @@ async function run(gender) {
     const date=plusDays(weekStart,6),before=visibleSignature(view(weekStart,date));
     const boot=await quietAsync(()=>journey.relaunchApp({storage,todayISO:date}));
     const same=boot.ok&&before===visibleSignature(view(weekStart,date));
+    const differences=same?[]:signatureDifferences(before,visibleSignature(view(weekStart,date)));
     result.restarts.push({date,ok:same,error:boot.error}); check(same,'restart',boot);
+    Object.assign(result.restarts.at(-1),{differences});
     result.weeks.push(w);save(`${gender}-year.json`,result);
     process.stdout.write(`${gender}: week ${i+1}/${weekLimit} ${phase} captured\n`);
   }
   return result;
 }
 (async()=>{
+  const auditScope={expectedGenders:['male','female'].filter(x=>!genderOnly||genderOnly===x),expectedWeeks:weekLimit};
   const data={revision:execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim(),start,end:plusDays(start,363),assumptions:{offSeasonWeeks:12,preSeasonWeeks:16,inSeasonWeeks:24,clubDays:['Tuesday','Thursday'],logging:'All offered sessions logged at prescribed loads and moderate effort; no sessions logged while sick.'},athletes:[]};
   for(const gender of ['male','female'].filter(x=>!genderOnly||genderOnly===x))data.athletes.push(await run(gender));
+  Object.assign(data,{auditScope});
   save('year-programs.json',data);
   save('programming-selection-traces.json', { schemaVersion: 1, revision: data.revision, sourceDriverSha256, traceBatches: selectionTraceBatches });
   process.stdout.write('Generated '+data.athletes.length+' athletes\n');

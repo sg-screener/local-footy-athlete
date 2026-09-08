@@ -1,3 +1,4 @@
+import { isHardMetabolicConditioningCategory } from '../rules/conditioningDemand';
 /**
  * WC-136 — PHASE-OWNED CONDITIONING, GUARDED ON REAL GENERATED PROGRAMS.
  *
@@ -40,7 +41,7 @@ function ok(name: string, condition: unknown, detail?: string): void {
 
 const WEEK_MONDAY = '2026-07-13';
 /** Categories the approved source treats as HARD conditioning. */
-const HARD = new Set(['vo2', 'glycolytic']);
+
 
 function clockAtPhaseWeek(selectedPhase: string, phaseWeekNumber: number) {
   const entry = new Date(`${WEEK_MONDAY}T12:00:00`);
@@ -147,7 +148,7 @@ function build(args: {
         exposures.push({
           dayOfWeek: w.dayOfWeek,
           category: String(cat),
-          hard: HARD.has(String(cat)),
+          hard: isHardMetabolicConditioningCategory(String(cat)),
           offFeet: (w as any).conditioningOffFeet === true,
           combined: ((w as any).exercises ?? []).length > 0,
         });

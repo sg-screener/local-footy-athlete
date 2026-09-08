@@ -5,6 +5,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+import { typography } from '../../theme/typography';
 import type { ProgressStackParamList } from '../../navigation/ProgressNavigator';
 import { PROGRESS_PERIODS, filterProgressPeriod, progressAvailableDateRange, progressDateRange, type ProgressPeriod } from '../../rules/progressPeriod';
 import { progressChartDateRangeLabel } from '../../rules/progressChartTimeline';
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', minHeight: 54, paddingHorizontal: 12 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, lineHeight: 34, flex: 1 },
-  content: { padding: 16, paddingTop: 0, paddingBottom: 32, gap: 16 },
+  content: { padding: spacing.md, paddingTop: 0, paddingBottom: 32, gap: 16 },
   subtitle: { color: colors.text.secondary, marginLeft: 40, marginBottom: 4 },
   muted: { color: colors.text.secondary },
   green: { color: colors.status.successLight },
@@ -197,16 +199,17 @@ const styles = StyleSheet.create({
   optionText: { fontSize: 12, color: colors.text.secondary },
   optionActive: { color: colors.text.accent },
   dates: { width: 112, fontSize: 12, textAlign: 'right', color: colors.text.secondary },
-  card: { padding: 16, borderWidth: 1, borderColor: colors.neutral.gray700, borderRadius: 18, backgroundColor: colors.surface.secondary, gap: 10 },
+  card: { padding: spacing.md, borderWidth: 1, borderColor: colors.neutral.gray700, borderRadius: 18, backgroundColor: colors.surface.secondary, gap: 10 },
   baseline: { color: colors.text.secondary, fontSize: 10, marginTop: 4 },
   chartHint: { color: colors.text.secondary, textAlign: 'center', marginTop: 8 },
   total: { fontSize: 34, lineHeight: 42 },
   explanation: { color: colors.text.secondary, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.neutral.gray700, paddingTop: 12, marginTop: 4 },
-  weekNavigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
+  // Keep the 44-point arrow targets without letting them add padding around the label.
+  weekNavigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginVertical: -(44 - typography.labelSmall.lineHeight) / 2 },
   weekArrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.25 },
   sessionCard: { borderWidth: 1, borderColor: colors.neutral.gray700, borderRadius: 18, backgroundColor: colors.surface.secondary, overflow: 'hidden' },
-  sessionRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 8, minHeight: 76, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.neutral.gray700 },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: 8, minHeight: 76, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.neutral.gray700 },
   sessionIdentity: { flex: 1, gap: 4 },
   part: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.neutral.gray700, paddingTop: 12, gap: 4 },
   pressed: { opacity: 0.6 },

@@ -63,6 +63,27 @@ const actualWitnesses = new Set(gate.units
   .filter((unit: any) => unit.role === 'current_contract')
   .map((unit: any) => unit.label));
 
+function foundationsBeforeYear(units: Array<{ label: string }>): boolean {
+  const year = units.findIndex(unit => unit.label === 'test:compiler-year');
+  return year >= 0 && ['test:weekly-writer-zero', 'test:leg-programming', 'test:canonical-weekly-compiler']
+    .every(label => {
+      const index = units.findIndex(unit => unit.label === label);
+      return index >= 2 && index < year;
+    });
+}
+function uniqueWitnesses(units: Array<{ label: string; role: string }>): boolean {
+  const labels = units.filter(unit => unit.role === 'current_contract').map(unit => unit.label);
+  return new Set(labels).size === labels.length;
+}
+ok('ownership and focused programming checks precede the annual replay', foundationsBeforeYear(gate.units));
+const withoutLeg = gate.units.filter((unit: any) => unit.label !== 'test:leg-programming');
+const legUnit = gate.units.find((unit: any) => unit.label === 'test:leg-programming');
+ok('liveness: a missing or delayed programming prerequisite fails the order check',
+  !!legUnit && !foundationsBeforeYear(withoutLeg) && !foundationsBeforeYear([...withoutLeg, legUnit]));
+ok('reordering keeps each validated witness exactly once', uniqueWitnesses(gate.units));
+ok('liveness: a duplicated witness fails the uniqueness check',
+  !!legUnit && !uniqueWitnesses([...gate.units, legUnit]));
+
 ok('the release command has one canonical owner',
   RELEASE_SCRIPT === 'test:release'
     && RELEASE_COMMAND === 'node scripts/release-gate.js'

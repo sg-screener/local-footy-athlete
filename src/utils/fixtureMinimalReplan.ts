@@ -1,3 +1,8 @@
+import { applyRunningReturn, runningReturnStage } from '../rules/runningReturn';
+import { composeTemporarySourceFactCompatibility, sourceFactsForHistoricalCompilation } from '../rules/temporarySourceFact';
+import { factsForWorld } from '../rules/acceptedEffectiveWeek';
+import { resolveWeekExclusions } from '../rules/exerciseExclusions';
+import { completeWeeklySupport } from '../rules/weeklyLegCoverage';
 import type {
   DerivedSessionProvenance,
   Microcycle,
@@ -52,8 +57,8 @@ import {
   workoutExerciseWasAutomaticallySelected,
 } from '../rules/automaticWeeklyExerciseSelection';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
-import { isoDateForWeekday } from './appDate';
-import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from '../rules/canonicalWeeklyPlaneCompletion';
+import { isoDateForWeekday, dayOfWeekForISODate } from './appDate';
+import { completeWeeklyLowerBodyFrontal } from '../rules/canonicalWeeklyPlaneCompletion';
 import { rankStrengthTemplatesForWeek, reselectRepeatedStrengthIdentities } from '../rules/fixtureStrengthPurposeSelection';
 
 export { isAutomaticFixtureRelativePlannerOffer } from '../rules/fixtureRelativePlannerOffer';
@@ -1269,6 +1274,19 @@ export function buildFixtureMinimalReplan(
       }
       : input.targetMicrocycle,
   };
+  // Fixture repairs can create field sessions inside a resolved injury's return
+  // window. Author the same reduced rows before the gateway checks and saves them.
+  const returnConstraints = composeTemporarySourceFactCompatibility({
+    temporarySourceFacts: sourceFactsForHistoricalCompilation(factsForWorld(args.surfaces)),
+  }).activeConstraints;
+  const runFixtureGateway = (gate: Parameters<typeof runSection18AcceptedWeekGateway>[0]) =>
+    runSection18AcceptedWeekGateway({
+      ...gate,
+      workouts: gate.workouts.map(workout => {
+        const dateISO = isoDateForWeekday(args.weekStart, workout.dayOfWeek);
+        return applyRunningReturn(workout, dateISO, runningReturnStage({dateISO, constraints:returnConstraints}));
+      }),
+    });
   const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
@@ -1291,9 +1309,13 @@ export function buildFixtureMinimalReplan(
   });
   // One core row per week (Sam, 2026-09-03): the repaired week answers for it
   // the way it answers for the frontal plane — on the source, before the search.
-  const sourceWithCore = completeWeeklyCore({
+  const sourceWithCore = completeWeeklySupport({
+    dosePolicyForDate: date => args.targetMicrocycle.dosePolicyByDay?.[dayOfWeekForISODate(date)] ?? null,
     weekStartISO: args.weekStart,
     workoutsByDate: sourceCompletion.workoutsByDate,
+    activeConstraints: composeTemporarySourceFactCompatibility({temporarySourceFacts:factsForWorld(args.surfaces)}).activeConstraints,
+    excludedExerciseNames:resolveWeekExclusions(args.surfaces.athleteExclusions,args.weekStart).wholeWeek,
+    excludedExerciseNamesByDate:resolveWeekExclusions(args.surfaces.athleteExclusions,args.weekStart).byDate,
     profile: args.profile,
     gameDates: args.proposedFixtures.map((fixture) => fixture.date),
   });
@@ -1418,7 +1440,7 @@ export function buildFixtureMinimalReplan(
                   ];
             }
             candidate.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
-            const gateway = runSection18AcceptedWeekGateway({
+            const gateway = runFixtureGateway({
               contract,
               workouts: candidate,
               weekStart: args.weekStart,
@@ -1512,7 +1534,7 @@ export function buildFixtureMinimalReplan(
   // transaction's override/constraint fold; a regenerated base is never
   // permission to erase an edit.
   const regenerateFromCompilerTarget = (): FixtureMinimalReplanResult => {
-    const fallbackGateway = runSection18AcceptedWeekGateway({
+    const fallbackGateway = runFixtureGateway({
       contract,
       workouts: args.targetMicrocycle.workouts,
       weekStart: args.weekStart,
@@ -1666,7 +1688,7 @@ export function buildFixtureMinimalReplan(
         .join('|');
       if (seenFallbackSeeds.has(seedSignature)) continue;
       seenFallbackSeeds.add(seedSignature);
-      const gateway = runSection18AcceptedWeekGateway({
+      const gateway = runFixtureGateway({
         contract,
         workouts: fallbackSeed,
         weekStart: args.weekStart,
@@ -1700,7 +1722,7 @@ export function buildFixtureMinimalReplan(
     });
     let reducedGateway: Section18AcceptedWeekGatewayResult;
     for (let attempt = 0; ; attempt += 1) {
-      reducedGateway = runSection18AcceptedWeekGateway({
+      reducedGateway = runFixtureGateway({
         contract: reducedContract,
         workouts: reductionSource,
         weekStart: args.weekStart,

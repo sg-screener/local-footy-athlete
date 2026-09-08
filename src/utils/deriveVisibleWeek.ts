@@ -132,6 +132,7 @@ export function assembleScheduleState(
   const athleteContext = onboardingData
     ? {
         injuries: onboardingData.injuries || [],
+        activeConstraints: (normalizeAcceptedMaterialContext(inputs.acceptedMaterialContext as never).activeConstraints ?? inputs.coachActiveConstraints ?? []) as never,
         equipmentTags: resolveEquipmentAvailability(
           onboardingData,
           (inputs.coachActiveConstraints ?? []) as never,

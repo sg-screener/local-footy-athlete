@@ -31,6 +31,7 @@ import {
 import type { AdjustmentEvent } from './programAdjustmentEngine';
 import { logger } from './logger';
 import { resolveTemplateByName } from '../rules/conditioningSelection';
+import { templateSupportsSelectedModalities } from '../rules/conditioningModalityCompatibility';
 
 // ─── Modality vocabulary ────────────────────────────────────────────
 
@@ -1016,6 +1017,16 @@ export function applyConditioningModalityToWorkout<
   const from = opts.fromModality;
   const to = opts.toModality;
   const bikeLabel = opts.bikeLabel ?? (to === 'bike' ? 'standard' : null);
+  const targetMode = to === 'bike' && bikeLabel === 'assault' ? 'air_bike' : to;
+  const matchesSourceOption = (option: { title: string; modality?: string }) => !from || !option.modality
+    || option.modality === 'mixed' || option.modality === (from === 'run' ? 'running' : from);
+  const ownedIds = new Set((workout.conditioningBlock?.options ?? []).filter(matchesSourceOption)
+    .flatMap(option => option.exerciseIds ?? []));
+  const authored = (workout.exercises ?? []).filter(row => ownedIds.has(row.id))
+    .map(row => resolveTemplateByName(row.exercise?.name ?? '')).filter(Boolean);
+  // A modality rewrite cannot turn a run-only field prescription into ergs.
+  // Equivalent-template selection belongs to the existing conditioning owner.
+  if (authored.some(template => !templateSupportsSelectedModalities(template!, [targetMode as never]))) return workout;
   const isLabelOnlyFix =
     !!opts.isLabelOnlyFix ||
     (!!bikeLabel && to === 'bike' && (from === null || from === 'bike'));
@@ -1145,8 +1156,7 @@ export function applyConditioningModalityToWorkout<
     let blockChanged = false;
     const newOptions = newBlock.options.map((opt: any) => {
       const newTitle = rewriteText(opt?.title);
-      const matchesSource = !from || !opt.modality || opt.modality === 'mixed' ||
-        opt.modality === (from === 'run' ? 'running' : from);
+      const matchesSource = matchesSourceOption(opt);
       const modality = !matchesSource ? opt.modality : to === 'run' ? 'running'
         : ['bike', 'row', 'ski'].includes(to) ? to : opt.modality;
       const modalitySequence = !matchesSource ? opt.modalitySequence

@@ -81,6 +81,7 @@ export interface MaterialisedSession {
    * Separate from `conditioningTemplate` because the day genuinely carries two:
    * Sam's pre-season Tuesday is *"Sprint first → Upper strength → authored hard
    * conditioning"*. Reusing the one slot displaced the hard session.
+   * R-393 retains separate components while letting athletes choose order.
    *
    * **The specialist still names it.** `speedTemplateByName` is the same
    * authority the standalone sprint goes through; this module names no session.

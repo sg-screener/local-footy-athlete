@@ -1580,6 +1580,38 @@
       ],
       "witnessScript": "test:whole-week-planning",
       "evidenceKind": "green_now"
+    },
+    "test:leg-programming": {
+      "kind": "current_contract",
+      "reason": "R-393 weekly leg coverage, whole-day workload, return running, dated health and meaningful prehab; R-386 evidenced injury replacements and R-390 kit-achievable main seats, through real programming, profile changes and reopen. Support completion consumes the existing dated compiler dose through generation, injury and fixture callers. Returning prescriptions keep their authored identity and share exact display dose; modality rewrites respect existing template eligibility.",
+      "productionPaths": [
+        "src/rules/weeklyLegCoverage.ts",
+        "src/rules/footballRobustnessFoundation.ts",
+        "src/rules/runningReturn.ts",
+        "src/rules/trainingWorkload.ts",
+        "src/rules/lowerBodyWorkload.ts",
+        "src/rules/datedAthleteContext.ts",
+        "src/rules/canonicalInjuryConditioning.ts",
+        "src/rules/weeklyStrengthBudget.ts",
+        "src/rules/automaticWeeklyExerciseSelection.ts",
+        "src/rules/canonicalWeeklyRowCompiler.ts",
+        "src/rules/canonicalWeeklyInjuryCompiler.ts",
+        "src/utils/fixtureMinimalReplan.ts",
+        "src/rules/acceptedLoadCarry.ts",
+        "src/rules/canonicalWeeklySourceFactCompiler.ts",
+        "src/rules/runningReturnDose.ts",
+        "src/rules/projectVisibleWeek.ts",
+        "src/rules/projectionCopy.ts",
+        "src/utils/coachModalitySwap.ts"
+      ],
+      "contractRefs": [
+        "R-393",
+        "docs/LFA_PROGRAMMING_BIBLE.md",
+        "R-386",
+        "R-390"
+      ],
+      "witnessScript": "test:leg-programming",
+      "evidenceKind": "green_now"
     }
   }
 }

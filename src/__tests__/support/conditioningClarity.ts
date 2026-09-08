@@ -1,6 +1,7 @@
 import { CONDITIONING_TEMPLATES } from '../../data/conditioningTemplates';
 import { CONDITIONING_ATHLETE_COPY } from '../../rules/conditioningAthleteCopy';
-import { composeConditioningRows, renderableModalities } from '../../rules/conditioningSelection';
+import { composeConditioningRows, renderableModalities, resolveTemplateByName } from '../../rules/conditioningSelection';
+import { templateSupportsSelectedModalities } from '../../rules/conditioningModalityCompatibility';
 import { conditioningDisplayLines, conditioningAthletePrescription, conditioningWordingForModality } from '../../rules/conditioningDisplay';
 import { conditioningModeLabel, conditioningModeLabelForRow } from '../../utils/conditioningVisibleIdentity';
 import { applyConditioningModalityToWorkout } from '../../utils/coachModalitySwap';
@@ -131,7 +132,17 @@ export async function conditioningClarity(storage: Map<string, string>, ok: Chec
       return !!t && !!sequence?.length && sequence.every(m => renderableModalities(t).includes(m as never));
     }), JSON.stringify(options));
     for (const workout of workouts.filter(w => w.conditioningBlock?.options.length)) {
+      const beforeChange = JSON.stringify(workout);
       const changed = applyConditioningModalityToWorkout(workout, { fromModality: null, toModality: 'bike' });
+      const ownedIds = new Set(workout.conditioningBlock!.options.flatMap(option => option.exerciseIds));
+      const selected = workout.exercises.filter(row => ownedIds.has(row.id))
+        .map(row => resolveTemplateByName(row.exercise.name)).filter(Boolean);
+      if (selected.some(template => !templateSupportsSelectedModalities(template!, ['bike']))) {
+        ok(`clarity/${gender}/${workout.dayOfWeek}: run-only field work cannot become a machine by rewriting its label`,
+          changed === workout && JSON.stringify(changed) === beforeChange,
+          JSON.stringify(selected.map(template => template!.name)));
+        continue;
+      }
       const labels = changed.exercises.filter(row => changed.conditioningBlock?.options.some(o => o.exerciseIds.includes(row.id)))
         .map(row => conditioningModeLabelForRow(changed, row.id));
       ok(`clarity/${gender}/${workout.dayOfWeek}: a modality change replaces every old machine instruction`,

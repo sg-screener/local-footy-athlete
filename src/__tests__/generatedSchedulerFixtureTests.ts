@@ -119,8 +119,8 @@ const byeSchedulerInputs = schedulerInputsWithFixtureState(weeklySchedulerInputs
   targetFixtureDay: null,
   seasonPhase: profile.seasonPhase,
 }));
-ok('the availability owner releases Saturday into the scheduler input',
-  byeSchedulerInputs.gymAccessDays.includes(6)
+ok('the bye releases Saturday without inventing gym access (R-391)',
+  !byeSchedulerInputs.gymAccessDays.includes(6)
     && byeSchedulerInputs.releasedFixtureDays?.includes(6),
   {
     released: byeAvailability.releasedFixtures,
@@ -141,10 +141,10 @@ ok('the released fixture day is used for athlete work rather than left empty',
     rows: workout.exercises?.length ?? 0,
     conditioning: workout.conditioningCategory ?? null,
   })));
-ok('the healthy bye puts the hard replacement exposure on the released fixture day',
-  !!byeSaturday?.conditioningBlock
-    && (byeSaturday.conditioningCategory === 'vo2'
-      || byeSaturday.conditioningCategory === 'glycolytic'),
+ok('the healthy bye retains hard off-feet conditioning across the whole week',
+  byeWeek.some(workout => !!workout.conditioningBlock
+    && ['vo2','glycolytic','repeat_sprint'].includes(workout.conditioningCategory ?? '')
+    && workout.conditioningBlock.options.every(option => option.modality !== 'running')),
   {
     type: byeSaturday?.workoutType,
     category: byeSaturday?.conditioningCategory ?? null,
@@ -159,10 +159,10 @@ const noClubProfile = {
 const noClubBye = generated(null, 1, noClubProfile);
 const noClubSaturday = noClubBye.microcycles[0]?.workouts
   .find((workout) => workout.dayOfWeek === 6);
-ok('released-day provenance places the hard bye exposure even when strength uses other days',
-  !!noClubSaturday?.conditioningBlock
-    && (noClubSaturday.conditioningCategory === 'vo2'
-      || noClubSaturday.conditioningCategory === 'glycolytic'),
+ok('the no-club bye retains hard off-feet work without forcing its day',
+  noClubBye.microcycles[0].workouts.some(workout => !!workout.conditioningBlock
+    && ['vo2','glycolytic','repeat_sprint'].includes(workout.conditioningCategory ?? '')
+    && workout.conditioningBlock.options.every(option => option.modality !== 'running')),
   {
     type: noClubSaturday?.workoutType,
     rows: noClubSaturday?.exercises?.length ?? 0,

@@ -52,6 +52,8 @@ import {
   STRENGTH_HEADLINE_ID_BY_LABEL,
 } from './projectionCopy';
 import { conditioningVisibleDoseFor } from './conditioningSelection';
+import { runningReturnStageForRow } from './runningReturnDose';
+import { runningReturnDoseCopy } from './projectionCopy';
 import { displayReps } from './prescriptionDisplay';
 import { signedCopy, type SignedCopy } from './signedCopy';
 import {
@@ -533,7 +535,11 @@ export function isComposedPrescriptionRow(row: any): boolean {
  * authored sits on the template those rows were built from. The projection was
  * rendering the placeholder over the top of the real thing.
  *
- * **THE LOOKUP IS BY AUTHORED NAME, WHICH IS THE ESTABLISHED LINK.** A
+ * R-393 returning field rows first read the shared return sheet and the actual
+ * repetition count, through their existing typed stage and component ownership.
+ * The original maximal template is not their current prescription.
+ *
+ * **ORDINARY TEMPLATE LOOKUP IS BY AUTHORED NAME.** A
  * conditioning row's `exercise.name` IS its template's `name`, verbatim —
  * `composeConditioningRows` passes `template.name` — and `SpeedBlock.templateName`
  * already states the rule in its own words: *"rows derive from the template by
@@ -553,6 +559,8 @@ export function isComposedPrescriptionRow(row: any): boolean {
  * second rule about the same row.
  */
 function doseCopy(row: any, workout?: Workout | null): readonly SignedCopy[] {
+  const returning = runningReturnStageForRow(workout, row);
+  if (returning) return runningReturnDoseCopy(returning, row.prescribedSets);
   const modality = workout?.conditioningBlock?.options.find(option => option.exerciseIds.includes(row.id))?.modality;
   const dose = conditioningVisibleDoseFor(String(row?.exercise?.name ?? row?.name ?? ''), modality);
   if (!dose) return [];
@@ -670,7 +678,7 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail, workout
   // once. The rows come from the SAME owner every other kind's do
   // (`getSessionComponentRows`, via `composeDayDetail`), which is what makes
   // this a re-file rather than a second decomposition of the day.
-  if (kind === 'speed') return toVisibleRows(composed.speedExercises);
+  if (kind === 'speed') return toVisibleRows(composed.speedExercises, workout);
   if (kind === 'recovery') {
     return toVisibleRows([
       ...composed.mobilityExercises,

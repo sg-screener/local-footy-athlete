@@ -1,3 +1,4 @@
+import { applyRunningReturn } from '../../rules/runningReturn';
 import type { CanonicalProgramCompilerInput, compileCanonicalProgram } from '../../rules/canonicalProgramCompiler';
 import type { Workout } from '../../types/domain';
 import { applyExclusionsToAuthoredWeek } from '../../rules/exerciseExclusions';
@@ -33,7 +34,9 @@ export function finalRowChecks(input: CanonicalProgramCompilerInput, output: Out
     const retained = applyExclusionsToAuthoredWeek({ workouts: source.workouts,
       weekStart: source.weekStart, exclusions: input.exclusions });
     const week = output.program.microcycles.find((w) => w.startDate.slice(0, 10) === source.weekStart);
-    for (const workout of retained) {
+    for (const authored of retained) {
+      const final=week?.workouts.find(candidate=>candidate.dayOfWeek===authored.dayOfWeek);
+      const workout=applyRunningReturn(authored,isoDateForWeekday(source.weekStart,authored.dayOfWeek),final?.runningReturnStage??null);
       const date = isoDateForWeekday(source.weekStart, workout.dayOfWeek);
       if (input.weeks.remainderBoundary && date < input.weeks.remainderBoundary.governedFromISO) continue;
       if (source.producer === 'strength' && workout.exercises.length > 0) {

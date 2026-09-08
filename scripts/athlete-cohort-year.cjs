@@ -168,6 +168,8 @@ replace("        if(e.kind==='tired'||e.kind==='sick') {\n          const r=awai
           label='Christmas team-training break accepted';`);
 replace("  for(const gender of ['male','female'].filter(x=>!genderOnly||genderOnly===x))data.athletes.push(await run(gender));",
   `  data.athletes.push(await run(${JSON.stringify(preset.gender)}));`);
+replace("const auditScope={expectedGenders:['male','female'].filter(x=>!genderOnly||genderOnly===x),expectedWeeks:weekLimit};",
+  `const auditScope={expectedGenders:[${JSON.stringify(preset.gender)}],expectedWeeks:weekLimit};`);
 // A refused step is a FINDING, not the end of the year: the pair driver threw
 // on the first failed check, which hid everything after it (three athletes
 // stopped at their week-8 injury report). The failure is recorded with its

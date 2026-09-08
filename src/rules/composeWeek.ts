@@ -1385,7 +1385,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // One typed weekly allowance exists before the first exercise is selected.
   // Dedicated sessions reserve their purpose; full-body days may spend only
   // seats that the rest of the week has not reserved or spent.
-  const weeklyStrengthBudget = createWeeklyStrengthBudget(inputs.plannedDays);
+  const weeklyStrengthBudget = createWeeklyStrengthBudget(inputs.plannedDays, (slot, day) => {
+    const planned = inputs.plannedDays.find(entry => entry.planEntryId === day.planEntryId)!;
+    const kit = inputs.temporaryKitByDayOfWeek?.[planned.dayOfWeek] ?? inputs.kit;
+    return !prohibited.has(PATTERN_FOR_SLOT[slot]!) && anchorCandidates(slot).some(identity =>
+      !excludedOn(planned.dayOfWeek).has(identity) && composedRowIsLegal(identity, kit)
+      && exerciseProgrammingAllows(identity, {experienceLevel: inputs.profile.experienceLevel,
+        daysToGame: planned.daysToGame, route: 'automatic'}));
+  });
   const weeklyExerciseSelector = createAutomaticWeeklyExerciseSelector();
   const deliveredSelectorCheckpoint = inputs.automaticSelectionHistory
     ? createAutomaticWeeklyExerciseSelector(
@@ -1853,7 +1860,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       : seatsOwnedHere.includes('hinge')
         ? ['hinge', 'single_leg_knee', 'horizontal_pull', 'push_accessory_1', 'football_robustness', 'core']
         : ['single_leg_knee', 'single_leg_hip', 'vertical_push', 'vertical_pull', 'football_robustness', 'core'];
-    const authoredShapeSlots = sharesThreeFullBodySeats ? sharedFullBodySlots
+    const authoredShapeSlots = sharesThreeFullBodySeats ? withOwnedSeats(
+      sharedFullBodySlots.filter(slot => !isWeeklyMainStrengthSlot(slot) || seatsOwnedHere.includes(slot)), seatsOwnedHere)
       : isCoverageDay && plannedCoverageGaps
       ? plannedCoverageGaps
       // R-130a: one switch, one pick — the female tables for female athletes,
@@ -2285,7 +2293,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           !prohibited.has(PATTERN_FOR_SLOT[mainSlot]!)
           && inputs.plannedDays.some((day) => {
             if (day === planned || !weeklyStrengthBudget.canSpend(mainSlot, day.planEntryId)
-              || !suppliedByDay.get(day)?.has(mainSlot)) return false;
+              || !(weeklyStrengthBudget.reservedOwnerBySlot[mainSlot] === day.planEntryId
+                || suppliedByDay.get(day)?.has(mainSlot))) return false;
             const retainedElsewhere = new Set(Object.entries(inputs.acceptedWeekIdentitiesByDay ?? {})
               .filter(([dayOfWeek]) => Number(dayOfWeek) !== day.dayOfWeek)
               .flatMap(([, identities]) => identities.map(composedIdentityFor)));
@@ -2809,7 +2818,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   }
 
   // A later ordinary row can make an earlier robustness seat redundant (an
-  // upper session may precede the lower session that supplies the same RDL or
+  // upper session may precede the lower session that supplies the same curl or
   // unilateral quality). Inspect the COMPLETE composed strength week and keep
   // a robustness row only when it adds a still-missing category. This remains
   // canonical composition: the slot selector authored every retained row and

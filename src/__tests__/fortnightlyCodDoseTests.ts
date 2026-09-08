@@ -193,8 +193,9 @@ for (const gymAccessDays of [[1,4],[1,3,5],[1,2,4,5],[1,2,3,4,5]]) {
   ok(`${gymAccessDays.length} days: catch-up adds no day or conditioning component`,
     authoredWorkDays(recovered)===authoredWorkDays(control)
     && recovered.days.filter(d=>d.conditioningCategory).length===control.days.filter(d=>d.conditioningCategory).length);
-  ok(`${gymAccessDays.length} days: catch-up preserves existing aerobic base`,
-    recovered.days.filter(d=>d.conditioningCategory==='aerobic_base').length>=control.days.filter(d=>d.conditioningCategory==='aerobic_base').length);
+  ok(`${gymAccessDays.length} days: catch-up preserves the last aerobic-base session (R-382)`,
+    recovered.days.some(d=>d.conditioningCategory==='aerobic_base')
+      && recovered.days.filter((d,i)=>d.conditioningCategory!==control.days[i].conditioningCategory).length===1, {recovered:recovered.days,control:control.days});
 }
 console.log(`\n${passed}/${passed + failures.length} fortnightly COD cells passed`);
 if (failures.length > 0) process.exitCode = 1;

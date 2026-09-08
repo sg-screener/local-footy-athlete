@@ -4,7 +4,7 @@ const mutations={
  'support-steals-main':['src/rules/composeWeek.ts','return choices.length === 1 && choices[0] === id;','return false;','deep'],
  'old-weekday-split':['src/rules/weeklyProgrammingContract.ts',"clauseId: 'WC-111', phase: 'Pre-season', gymDays: [3], weekendAvailable: false,\n    purposes: ['full_body', 'full_body', 'full_body']","clauseId: 'WC-111', phase: 'Pre-season', gymDays: [3], weekendAvailable: false,\n    purposes: ['lower', 'upper', 'full_body']"],
  'unreserved-third-day':['src/rules/weeklyStrengthBudget.ts',"if (days.length === 3 && days.every((day) => day.strengthIntent.archetype === 'full_body'))",'if (false)'],
- 'concentrated-first-day':['src/rules/composeWeek.ts',"const authoredShapeSlots = sharesThreeFullBodySeats ? sharedFullBodySlots",'const authoredShapeSlots = false ? sharedFullBodySlots'],
+ 'concentrated-first-day':['src/rules/composeWeek.ts',"const authoredShapeSlots = sharesThreeFullBodySeats ? withOwnedSeats(",'const authoredShapeSlots = false ? withOwnedSeats('],
  'active-erg-recovery':['src/rules/conditioningDisplay.ts',"if (!erg || quality !== 'aerobic_capacity' || !seconds", "if (true || !erg || quality !== 'aerobic_capacity' || !seconds"],
  'row-projection-disconnected':['src/utils/conditioningVisibleIdentity.ts',"template?.quality,\n          option.modality, option.modalitySequence)","undefined,\n          option.modality, option.modalitySequence)"],
  'short-interval-overreach':['src/rules/conditioningDisplay.ts','seconds.min < LONG_AEROBIC_INTERVAL_MIN_SECONDS','seconds.min < 0'],

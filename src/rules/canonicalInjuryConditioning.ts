@@ -12,6 +12,7 @@ import { compileActiveExposureConstraints } from './canonicalWeeklyConstraintCom
 import { withoutConditioningComponent } from './strengthRelocationTemplate';
 import { collapseWorkoutToRest, isEmptiedConditioningShell, shouldCollapseWorkoutToRest } from '../utils/workoutContent';
 import { getSessionComponentRows } from '../utils/sessionComponents';
+import { normalizeVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
 
 export function compileInjuryConditioning(args: {
   workout: Workout; profile: OnboardingData; dateISO: string;
@@ -80,26 +81,33 @@ function honestlyEmptyToRest(workout: Workout): Workout {
  * already placed these components, including replacements for withdrawn field
  * exposure. Athlete-owned days are handled separately by the source-fact fold.
  */
-export function withPlannedInjuryConditioning(accepted: Workout, planned: Workout | null): Workout | null {
+export function withPlannedInjuryConditioning(accepted: Workout | null, planned: Workout | null): Workout | null {
+  const plannedParts = getSessionComponentRows(planned);
+  const plannedEnergyIds = new Set([...plannedParts.conditioningRows, ...plannedParts.speedRows].map(row => row.id));
+  const plannedEnergyRows = planned?.exercises.filter(row => plannedEnergyIds.has(row.id)) ?? [];
   const components = getSessionComponentRows(accepted);
   const hasOtherWork = components.strengthRows.length + components.supportRows.length +
     components.powerRows.length + components.mobilityRows.length + components.recoveryRows.length +
     components.teamTrainingRows.length > 0;
   // A relocated standalone energy session takes its warm-up with it. Keeping
   // the old container would leave a conditioning card containing only Warm-up.
-  if (!hasOtherWork && (accepted.conditioningBlock || accepted.speedBlock)) {
-    return planned && (shouldCollapseWorkoutToRest(planned) || isEmptiedConditioningShell(planned))
-      ? collapseWorkoutToRest(planned) : planned;
+  if (!accepted || !hasOtherWork) {
+    // Strength is retained on its accepted dates. Only the planner's energy
+    // components may travel to another day; its proposed lifts cannot join them.
+    if (!planned || plannedEnergyRows.length === 0) return null;
+    return normalizeVisibleWorkoutIdentity({
+      ...planned, exercises: plannedEnergyRows, workoutType: 'Conditioning',
+      strengthIntent: undefined, strengthIntentDiagnostics: undefined,
+      strengthPatternContributions: undefined, usefulStrengthSessionContract: undefined,
+      hasCombinedConditioning: false, isTeamDay: false, recoveryAddons: undefined,
+      injuryAdjustment: undefined,
+    });
   }
-  const conditioningIds = new Set(accepted.conditioningBlock?.options.flatMap(option => option.exerciseIds) ?? []);
-  const rows = accepted.exercises.filter(row => row.section18Evidence?.role !== 'conditioning' &&
-    !conditioningIds.has(row.id));
-  const plannedIds = new Set(planned?.conditioningBlock?.options.flatMap(option => option.exerciseIds) ?? []);
-  const conditioningRows = planned?.exercises.filter(row => row.section18Evidence?.role === 'conditioning' ||
-    plannedIds.has(row.id)) ?? [];
+  const acceptedEnergyIds = new Set([...components.conditioningRows, ...components.speedRows].map(row => row.id));
+  const rows = accepted.exercises.filter(row => !acceptedEnergyIds.has(row.id));
   return {
     ...accepted,
-    exercises: [...rows, ...conditioningRows],
+    exercises: [...rows, ...plannedEnergyRows],
     conditioningBlock: planned?.conditioningBlock,
     conditioningCategory: planned?.conditioningCategory,
     conditioningFlavour: planned?.conditioningFlavour,

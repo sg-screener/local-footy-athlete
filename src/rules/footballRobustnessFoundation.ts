@@ -1,8 +1,8 @@
 /**
  * The shared football-robustness vocabulary.
  *
- * A category is derived from authored pool membership and the existing RDL
- * variation-family owner.  Display names never decide policy.  The weekly
+ * Normal hamstring and calf coverage is derived from authored pool membership.
+ * Hinge alternatives have a separate equipment-only predicate.  Display names never decide policy.  The weekly
  * composer consumes this answer both when it chooses a missing exposure and
  * when it removes a robustness row made redundant by another final row.
  */
@@ -29,7 +29,7 @@ const canonicalSet = (names: readonly string[]): ReadonlySet<string> =>
   new Set(names.map(canonicalExerciseName));
 
 const HAMSTRING_ACCESSORIES = canonicalSet([
-  ...POOL_REGISTRY.hamstring_light.map((entry) => entry.name),
+  ...POOL_REGISTRY.hamstring_light.filter((entry) => entry.name === 'Swiss Ball Hamstring Curl').map((entry) => entry.name),
   ...STRENGTH_POOLS.isolation_lower.accessory.entries
     .filter((entry) => entry.group === 'hamstring')
     .map((entry) => entry.name),
@@ -40,7 +40,7 @@ const GROIN_ACCESSORIES = canonicalSet(
 const CALF_ACCESSORIES = canonicalSet([
   ...POOL_REGISTRY.calves.map((entry) => entry.name),
   ...STRENGTH_POOLS.isolation_lower.accessory.entries
-    .filter((entry) => entry.group === 'calf')
+    .filter((entry) => entry.group === 'calf' && !sameExerciseVariationFamily(entry.name, 'Tib Raises'))
     .map((entry) => entry.name),
 ]);
 const KNEE_CAPACITY_ACCESSORIES = canonicalSet(
@@ -55,7 +55,7 @@ export function footballRobustnessCategoriesForExercise(
   const out: FootballRobustnessCategory[] = [];
   const tags = getExerciseTags(name);
 
-  if (HAMSTRING_ACCESSORIES.has(name) || sameExerciseVariationFamily(name, 'RDLs')) {
+  if (HAMSTRING_ACCESSORIES.has(name)) {
     out.push('hamstring_eccentric_or_isometric');
   }
   if (GROIN_ACCESSORIES.has(name)) out.push('adductor_or_groin');
@@ -69,15 +69,28 @@ export function footballRobustnessCategoriesForExercise(
 
 /**
  * The short accessory bench allowed to fill a required robustness seat.
- * Main RDL and unilateral strength lifts can satisfy the week, but they are not
+ * Unilateral strength lifts can satisfy knee capacity, but they are not
  * candidates for these short accessory seats.
  */
 export function isFootballRobustnessAccessory(rawName: string): boolean {
   const name = canonicalExerciseName(rawName);
   return HAMSTRING_ACCESSORIES.has(name)
+    || POOL_REGISTRY.hamstring_light.some(entry => canonicalExerciseName(entry.name) === name)
     || GROIN_ACCESSORIES.has(name)
     || CALF_ACCESSORIES.has(name)
     || KNEE_CAPACITY_ACCESSORIES.has(name);
+}
+
+/** A hip-dominant alternative is credited only when no Nordic/curl is available. */
+export function suppliesAlternativeHamstringWork(name: string): boolean {
+  return HAMSTRING_ACCESSORIES.has(canonicalExerciseName(name))
+    || sameExerciseVariationFamily(name, 'RDLs')
+    || POOL_REGISTRY.hamstring_light.some(entry => canonicalExerciseName(entry.name) === canonicalExerciseName(name))
+    || canonicalExerciseName(name) === 'Bosch Hold';
+}
+
+export function weeklyLegStrengthCandidates(category: 'calf_or_soleus' | 'hamstring_eccentric_or_isometric'): readonly string[] {
+  return [...(category === 'calf_or_soleus' ? CALF_ACCESSORIES : HAMSTRING_ACCESSORIES)];
 }
 
 export function missingFootballRobustnessCategories(

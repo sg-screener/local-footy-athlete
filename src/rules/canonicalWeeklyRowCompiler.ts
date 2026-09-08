@@ -1,3 +1,6 @@
+import { reduceDemandingPrehab } from './trainingWorkload';
+import { runningReturnStage, applyRunningReturn } from './runningReturn';
+import { completeWeeklySupport, completeWeeklyLegCoverage } from './weeklyLegCoverage';
 import { lowerBodyWorkloadForWeek, type StrengthTrainingRecord } from './lowerBodyWorkload';
 import { applyGoalProgramming } from './goalProgramming';
 /** Final-week row compiler. Explicit accepted inputs in; complete weeks, selections
@@ -5,11 +8,11 @@ import { applyGoalProgramming } from './goalProgramming';
  * Existing scheduler, composer, adapter and dose specialists retain their policies. */
 import { OnboardingData, type DayOfWeek, type ConditioningEquipmentModality, type Workout, type Microcycle, type WeekKind } from '../types/domain';
 import { buildWorkoutsFromCoach, type CoachGeneratedWorkoutInput } from '../data/defaultProgram';
-import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
+import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
 import { effectiveAnchorParticipation } from '../rules/weeklyExposureContractV2';
 import { composedIdentityFor } from '../rules/composedRowLegality';
 import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
-import { isoDateForWeekday } from '../utils/appDate';
+import { isoDateForWeekday, dayOfWeekForISODate } from '../utils/appDate';
 import { type ActiveConstraint } from '../store/coachUpdatesStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { activeTemporarySourceFacts } from './temporarySourceFact';
@@ -579,8 +582,17 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
             contract: strengthContract, workouts: governed, weekStart: blockState.weekStart,
           }).blockingViolations.filter(finding =>
             finding.domain === 'main_strength' || finding.domain === 'strength_patterns').length : 0;
+          const covered=completeWeeklyLegCoverage({weekStartISO:blockState.weekStart,
+            dosePolicyForDate: date => draft.dosePolicyByDay[dayOfWeekForISODate(date)] ?? null,
+            workoutsByDate:Object.fromEntries(governed.map(workout=>[dateForWeekday(blockState.weekStart,workout.dayOfWeek),reduceDemandingPrehab(workout,effectiveWeekKind==='deload')])),
+            profile,activeConstraints:args.activeConstraints,
+            gameDates:draft.schedule.days.filter(day=>day.game).map(day=>dateForWeekday(blockState.weekStart,day.dayOfWeek)),
+            placeableFromISO:boundary?.governedFromISO,
+            excludedExerciseNames:composerExclusionInput(args.athletePrefs,blockState.weekStart).excludedIdentities,
+            excludedExerciseNamesByDate:composerExclusionInput(args.athletePrefs,blockState.weekStart).excludedIdentitiesByDate});
           return {strengthBlockers,
-            lowerBodyWorkloadByDay: lowerBodyWorkloadForWeek({workouts: governed, weekStartISO: blockState.weekStart,
+            lowerBodyWorkloadByDay: lowerBodyWorkloadForWeek({workouts: Object.values(covered.workoutsByDate), weekStartISO: blockState.weekStart,
+              profile,activeConstraints:args.activeConstraints,
               feedback: args.strengthFeedback, completedBeforeISO: args.strengthCompletedBeforeISO})};
         },
         scheduler: { ...schedulerInputs,
@@ -980,7 +992,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
       // ONE CORE ROW PER WEEK (Sam, 2026-09-03), by the same rule and at the
       // same point: the week, not the day, owes "some core" (R-087); a week
       // that already carries a core row is untouched.
-      const withCore = completeWeeklyCore({
+      const withCore = completeWeeklySupport({
+        dosePolicyForDate: date => compiledDosePolicyByDay[dayOfWeekForISODate(date)] ?? null,
+        excludedExerciseNames:composerExclusionInput(args.athletePrefs,blockState.weekStart).excludedIdentities,
+        excludedExerciseNamesByDate:composerExclusionInput(args.athletePrefs,blockState.weekStart).excludedIdentitiesByDate,
         weekStartISO: blockState.weekStart,
         workoutsByDate: completed.workoutsByDate,
         profile,
@@ -996,6 +1011,12 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         return next && firstWorkoutByDate.get(dateISO) === workout ? next : workout;
       });
     }
+    workouts = workouts.map(workout => {
+      const dateISO=dateForWeekday(blockState.weekStart,workout.dayOfWeek);
+      const reduced=reduceDemandingPrehab(workout,workout.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false);
+      return applyRunningReturn(reduced,dateISO,runningReturnStage({dateISO,seasonPhase:profile.seasonPhase,
+        phaseWeekNumber:blockState.phaseWeekNumber,constraints:args.activeConstraints}));
+    });
     if (exposureContractV2) {
       // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
       //

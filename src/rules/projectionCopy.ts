@@ -1,4 +1,5 @@
 import { reductionExplanationCoversWeek } from './blockBoundaryProgression';
+import { RUNNING_RETURN_DOSE_COPY } from './runningReturnDose';
 /**
  * PROJECTION COPY — the words `project()` is allowed to say.
  *
@@ -179,6 +180,12 @@ export function conditioningDoseValueCopyId(
   return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}${suffix}`)
     ? `${DOSE_VALUE_PREFIX}${field}.${templateName}${suffix}`
     : null;
+}
+
+export function runningReturnDoseCopy(stage: 1 | 2, reps: number): readonly SignedCopy[] {
+  return ['work', 'recovery', 'reps'].map(field => signedCopy(`row.return.${stage}.${field}`, {
+    reps, straightReps: Math.max(1, reps - 2),
+  }));
 }
 
 /**
@@ -2329,6 +2336,21 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(renderedDoseEntries);
+
+  // The compiler's return sheet replaces the normal sprint template dose.
+  // Counts remain numeric parameters; authored words keep their provenance.
+  const returnEntries: SignedCopyEntry[] = [];
+  for (const stage of [1, 2] as const) {
+    const copy = RUNNING_RETURN_DOSE_COPY[stage];
+    for (const [field, labelId] of [['work', 'row.dose.work'], ['recovery', 'row.dose.rest'], ['reps', 'row.dose.sets_rounds']] as const) {
+      const valueId = `row.return.value.${stage}.${field}`;
+      registerSignedCopy([{ id: valueId, source: 'authored_sheet', provenance: 'R-393 / runningReturnDose.ts, shared with the compiler prescription.', text: copy[field] }]);
+      returnEntries.push({ id: `row.return.${stage}.${field}`, source: 'authored_sheet',
+        provenance: 'R-393 / runningReturnDose.ts, existing dose label and compiler-owned repetition count.',
+        text: signedCopy(labelId, { value: signedCopy(valueId) }) });
+    }
+  }
+  registerSignedCopy(returnEntries);
 
   // ── Gap slot and kit words. ──
   //

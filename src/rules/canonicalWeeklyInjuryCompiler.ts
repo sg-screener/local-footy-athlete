@@ -1,3 +1,7 @@
+import { runningReturnStage, applyRunningReturn } from './runningReturn';
+import { reduceDemandingPrehab } from './trainingWorkload';
+import { resolveWeekExclusions } from './exerciseExclusions';
+import { completeWeeklySupport } from './weeklyLegCoverage';
 /** Injury facts constrain accepted sessions; they never become athlete edits. */
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { POOL_REGISTRY } from '../data/exercisePools';
@@ -22,7 +26,7 @@ import {
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
 import { workoutExerciseWasAutomaticallySelected } from './automaticWeeklyExerciseSelection';
-import { completeWeeklyCore, completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
+import { completeWeeklyLowerBodyFrontal } from './canonicalWeeklyPlaneCompletion';
 import { getMondayISOForDate } from '../utils/programBlockState';
 import { filterConstraintsForDate } from '../utils/readinessConstraints';
 import {
@@ -186,6 +190,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
     // Fold chronologically; later days see the additions already made to the
     // week, so a single report cannot duplicate its new compound on every day.
     for (const [dateISO, workout] of Object.entries(workoutsByDate).sort(([left], [right]) => left.localeCompare(right))) {
+      if (args.historyBeforeISO && dateISO < args.historyBeforeISO) continue;
       if (!filterConstraintsForDate([stages[index]], dateISO).length) continue;
       const weekExerciseNames = [...(args.reservedExerciseNames ?? []), ...Object.values(workoutsByDate).flatMap(day =>
         day.exercises.map(row => row.exercise?.name ?? '').filter(Boolean))];
@@ -230,6 +235,7 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
    * the ban is on TRAINING that pattern as a main lift, and whether an
    * individual exercise is safe is already owned above. */
   for (const [dateISO, workout] of Object.entries(workoutsByDate)) {
+    if (args.historyBeforeISO && dateISO < args.historyBeforeISO) continue;
     const datedConstraints = filterConstraintsForDate([...args.constraints], dateISO);
     const prohibitedPatterns = new Set(canonicalWeeklyInjuryStateFrom({
     profile: args.profile,
@@ -275,17 +281,23 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
         // One core row per week (Sam, 2026-09-03), re-answered after the injury
         // fold the same way the frontal plane is: an injury that withdrew the
         // week's core row gets a safe one back on a day not yet done.
-        return completeWeeklyCore({ ...weeklyCompletionArgs, workoutsByDate: frontal.workoutsByDate }).workoutsByDate;
+        return completeWeeklySupport({ ...weeklyCompletionArgs,
+          dosePolicyForDate: date => (args.programmingContextByDate?.[date] ?? args.programmingContext)?.deloadPolicy ?? null,
+          excludedExerciseNames:resolveWeekExclusions(args.exclusions,weeklyCompletionArgs.weekStartISO).wholeWeek,
+          excludedExerciseNamesByDate:resolveWeekExclusions(args.exclusions,weeklyCompletionArgs.weekStartISO).byDate,
+          workoutsByDate: frontal.workoutsByDate }).workoutsByDate;
       })()
     : workoutsByDate;
   const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, original]) => {
-    let workout = original;
+    if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, args.workoutsByDate[dateISO]];
+    let workout = reduceDemandingPrehab(original,original.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false);
     // Base edits retain their existing order. The edit compiler carries only
     // injury-era edits and unresolved targets here, after those rows exist.
     // The same ledger translation and edit compiler own both paths.
     const datedConstraints = filterConstraintsForDate([...args.constraints], dateISO);
     const environment = resolveTapSwapEnvironment({ date: dateISO, profile: args.profile,
       activeConstraints: datedConstraints });
+    workout=applyRunningReturn(workout,dateISO,runningReturnStage({dateISO,constraints:args.constraints}));
     for (const edit of args.exerciseEdits ?? []) {
       if (edit.kind !== 'swap' || edit.dateISO !== dateISO) continue;
       const target = resolveCanonicalExerciseEditTarget(workout, edit);

@@ -1153,6 +1153,8 @@ export interface Workout {
    * must not be rendered or counted as a finisher/component.
    */
   speedBlock?: SpeedBlock;
+  /** Automatic introductory field dose; retained on save so reads do not shrink it twice. */
+  runningReturnStage?: 1 | 2;
 
   /**
    * LEGACY STORED SHAPE — read only. Power is a `role: 'power'` row in

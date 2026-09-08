@@ -9,7 +9,7 @@ import { undoLastDecision } from '../../store/undoLastDecision';
 // Native founding case: rest -> Mobility -> Mobility -> Undo -> re-add ->
 // restart -> Remove. The addition and removal share a target, not an effect.
 export async function lowLoadRemovalJourney(storage: Map<string, string>, ok: (label: string, value: boolean, detail?: string) => void) {
-  const today = '2026-08-28', week = '2026-08-24', target = '2026-08-29';
+  const today = '2026-08-28', week = '2026-08-24';
   for (const gender of ['male', 'female'] as const) for (const first of ['mobility', 'recovery'] as const) {
     for (const second of ['mobility', 'recovery'] as const) {
       const profile = athleteAnswers({ id: `remove-lowload-${gender}`, gender,
@@ -18,9 +18,11 @@ export async function lowLoadRemovalJourney(storage: Map<string, string>, ok: (l
       const installed = await quietAsync(() => coldStartThroughOnboarding({ profile, installDayISO: today }));
       if (installed.onboardingRefusal) throw Error(JSON.stringify(installed.onboardingRefusal));
       const view = () => quiet(() => deriveVisibleWeekLive(week, today));
+      const target = view().find(day => day.date >= today && !day.workout)?.date;
+      if (!target) throw Error(`${gender}: real onboarding supplies no future rest day for low-load removal`);
       const rows = () => view().find(day => day.date === target)?.workout?.exercises ?? [];
       const label = `lowload-remove/${gender}/${first}+${second}`;
-      ok(`${label}: real onboarding supplies an empty target`, rows().length === 0);
+      ok(`${label}: real onboarding supplies an empty target`, rows().length === 0, target);
       const add = (category: typeof first) => quiet(() => applyPlanChange({
         change: { kind: 'add_category', date: target, category }, visibleWeek: view(), todayISO: today, applyOverride: () => undefined,
       }));

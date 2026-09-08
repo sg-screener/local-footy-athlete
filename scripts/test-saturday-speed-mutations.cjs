@@ -5,7 +5,7 @@ const mutations={
  'six-set-ban': ['src/rules/weeklyScheduler.ts','dose.workingSets >= 10','dose.workingSets >= 6','unit'],
  'double-leg-sets': ['src/rules/lowerBodyWorkload.ts','workingSets += sets;','workingSets += sets * 2;','real rows'],
  'ignore-completed-sets': ['src/rules/lowerBodyWorkload.ts',"log?.completedSets ?? (log?.completion === 'full' ? log.prescribedSets : row.prescribedSets)",'row.prescribedSets','real rows'],
- 'count-mobility': ['src/rules/lowerBodyWorkload.ts','return [...parts.strengthRows, ...parts.supportRows];','return workout.exercises;','real rows'],
+ 'ignore-meaningful-mobility':['src/rules/lowerBodyWorkload.ts','return [...parts.strengthRows, ...parts.supportRows, ...parts.mobilityRows, ...parts.recoveryRows];','return [...parts.strengthRows, ...parts.supportRows];','real rows count'],
  'consolidate-first': ['src/rules/weeklyScheduler.ts','freshnessCost(day), ...(selection.placementCostByDay?.[day] ?? []), role, orderIndex(day)','freshnessCost(day), role, ...(selection.placementCostByDay?.[day] ?? []), orderIndex(day)','real three-day'],
  'ignore-real-dose': ['src/rules/canonicalWeeklyCompiler.ts','if (!input.resolveStrengthWorkload) return draft;','if (true) return draft;','real three-day'],
  'promote-friday': ['src/rules/canonicalWeeklyCompiler.ts',': Object.fromEntries(draft.schedule.days',': Object.fromEntries([]','real three-day'],

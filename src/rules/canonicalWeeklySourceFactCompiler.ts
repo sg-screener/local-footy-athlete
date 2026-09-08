@@ -1,3 +1,4 @@
+import { runningReturnStage } from './runningReturn';
 import { additionOverridesInjury } from './athleteAdditionAuthority';
 import { injuryWithholdsExistingRow } from './injuryExerciseRisk';
 import { resolveExerciseName } from '../utils/loadEstimation';
@@ -189,7 +190,7 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
                 ? accepted ?? null
                 : !hasMeaningfulWorkoutContent(planned) && overlay.restDayReasonByDay?.[day.dayOfWeek] === 'injury'
                   ? null
-                  : accepted ? withPlannedInjuryConditioning(accepted, planned) : planned];
+                  : withPlannedInjuryConditioning(accepted ?? null, planned)];
             })) };
         }
         const fatigueReports = datedFatigueReportsFromFacts(visibleFacts);
@@ -279,6 +280,21 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
   const dateOverrides = { ...input.surfaces.dateOverrides };
   const injuryStagesByDate: ReturnType<typeof compileCanonicalInjuryWeek>['stagesByDate'] = {};
   const constraints = composeTemporarySourceFactCompatibility({ temporarySourceFacts: compilationFacts }).activeConstraints;
+  // The restriction ends on recovery; the following two field weeks still
+  // belong to that fact's return dose. Materialise them in the compiler too.
+  for (const weekStart of Object.keys(input.programsByWeek)) {
+    if (![0,1,2,3,4,5,6].some(day=>runningReturnStage({
+      dateISO:isoDateForWeekday(weekStart,day),constraints})!==null)) continue;
+    if (!overlays[weekStart]) {
+      const effective=rebaseAcceptedEffectiveWeek({surfaces:{...input.surfaces,weekScopedOverlays:overlays,dateOverrides},
+        weekStart,profile:input.profile,markedDays:{...input.markedDays}});
+      const stamp=input.facts.map(fact=>fact.updatedAt).sort().at(-1)??weekStart+'T00:00:00Z';
+      overlays[weekStart]={id:`running-return:${weekStart}`,weekStart,
+        weekEnd:isoDateForWeekday(weekStart,0),anchorDate:null,reason:'readiness_reduction',
+        exposureContractV2:effective.contract,workoutsByDate:{},createdAt:stamp,updatedAt:stamp};
+    }
+    changed.add(weekStart);
+  }
   for (const weekStart of changed) {
     const effective = rebaseAcceptedEffectiveWeek({ surfaces: { ...input.surfaces,
       ...composeTemporarySourceFactCompatibility({ temporarySourceFacts: compilationFacts }),
@@ -310,9 +326,9 @@ export function compileCanonicalSourceFactWeeks(input: CanonicalWeeklySourceFact
         composedRowIsLegal(row.exercise.name, kit)));
       return [dateISO, exercises.length === workout.exercises.length ? workout : { ...workout, exercises }];
     }));
-    // R-354: days before the newest injury report's first shaped date are
-    // history for this week; no pass of the injury compile may add to them.
-    const historyBeforeISO = deriving.filter(isInjurySourceFact)
+    // R-354/R-393: every dated report preserves earlier days, including fatigue,
+    // illness and equipment changes. Weekly completion cannot backfill history.
+    const historyBeforeISO = deriving
       .filter((fact) => factHorizonCoversWeek(fact, weekStart))
       .map((fact) => firstShapedDateInWeek(fact, weekStart))
       .sort().pop();

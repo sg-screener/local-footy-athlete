@@ -192,11 +192,12 @@ ok('the measured failure census has a valid decision for every reviewed label',
     // R-380 adds the soreness witness; R-381 adds four-week preparation; R-382 adds dated conditioning access.
     // R-387 adds the manual Add, dose, dumbbell and retained-game repair witness.
     // R-389 adds the next-day Speed dose and placement witness.
-    && Object.keys(decisionRegistry.decisions).length === 208
+    // R-393 adds weekly leg coverage, whole-day dose and return-running journeys.
+    && Object.keys(decisionRegistry.decisions).length === 209
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 46
+  censusCounts.current_contract === 47
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',
@@ -207,7 +208,7 @@ ok('only witnessed contracts and the explicit ownership/year acceptance requirem
       'test:block-selection-authority', 'test:programming-selection-trace-observer',
       'test:legality-enforcer-liveness', 'test:injury-matrix-sheet',
       'test:settings-persistence', 'test:rest-day-reason', 'test:coach-chat-integration',
-      'test:progression-dose-ownership', 'test:offseason-preparation', 'test:conditioning-gym-access', 'test:annual-audit-repairs', 'test:annual-audit-second-repairs', 'test:saturday-speed', 'test:full-body-erg-rest', 'test:whole-week-planning']
+      'test:progression-dose-ownership', 'test:offseason-preparation', 'test:conditioning-gym-access', 'test:annual-audit-repairs', 'test:annual-audit-second-repairs', 'test:saturday-speed', 'test:full-body-erg-rest', 'test:whole-week-planning', 'test:leg-programming']
       .every(label => decisionRegistry.decisions[label]?.kind === 'current_contract'
         && decisionRegistry.decisions[label]?.witnessScript === label)
     && ['test:athlete-session-deletion', 'test:program-hydration-ownership',

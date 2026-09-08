@@ -1,3 +1,4 @@
+import { isHardConditioningCategory } from './conditioningDemand';
 /**
  * THE WEEKLY SCHEDULER — the ONE owner that turns the approved contract into
  * dated days. Pure: no store, no clock, no network, no logging.
@@ -86,6 +87,7 @@ export interface SchedulerReadiness {
 
 export interface LowerBodyWorkload {
   readonly workingSets: number;
+  readonly powerSets?: number;
   /** Missing completion/dose is not evidence of a rested day. */
   readonly unknown: boolean;
 }
@@ -257,10 +259,9 @@ export interface SessionIntention {
    * keeps `conditioning`/`conditioningCategory` for its hard or aerobic
    * component, and this says a sprint ALSO rides here.
    *
-   * **ORDER IS PART OF THE RULING** — *"Sprint first"*, and *"do not place
-   * sprinting after Tuesday's hard conditioning"*. The sprint is fresh work; it
-   * goes before the lift and before the conditioning. The materialisation
-   * boundary and the row composer both honour that, and it is guarded.
+   * R-393 supersedes the old order requirement. Athletes choose session
+   * order; compatibility is judged from the whole day's actual workload.
+   * The separate component protects each prescription, not an execution order.
    *
    * ⚠ It is FALSE on a day whose only conditioning IS the sprint — that day
    * uses the ordinary `conditioning: 'sprint_high_speed'` slot (WC-138). This
@@ -745,6 +746,19 @@ function metabolicIsOffFeet(day: number, category: ContractConditioningCategory,
   });
 }
 
+/** Whole-day lower-limb demand, shared by ranking and its checks. */
+export function longestDemandingLegRun(week:WeeklySchedule, inputs:WeeklySchedulerInputs):number {
+  const demandingLegs=new Set(week.days.filter(d=>d.clubTraining || d.game
+    || d.sprintComponent || d.conditioning==='sprint_high_speed'
+    || (inputs.lowerBodyWorkloadByDay?.[d.dayOfWeek]?.workingSets??0)>=10
+    || (inputs.lowerBodyWorkloadByDay?.[d.dayOfWeek]?.powerSets??0)>0
+    || isHardConditioningCategory(d.conditioningCategory))
+    .map(d=>d.dayOfWeek));
+  let legRun=0,longestLegRun=0;
+  for(const day of [...WEEK_ORDER,...WEEK_ORDER]) {legRun=demandingLegs.has(day)?legRun+1:0;longestLegRun=Math.max(longestLegRun,legRun);}
+  return Math.min(7,longestLegRun);
+}
+
 /** Rank complete legal weeks; lower is preferred. Actual dose is supplied by composition. */
 export function wholeWeekPlacementCost(week: WeeklySchedule, inputs: WeeklySchedulerInputs): readonly number[] {
   const speed = week.days.filter(d => d.sprintComponent || d.conditioning === 'sprint_high_speed');
@@ -754,6 +768,7 @@ export function wholeWeekPlacementCost(week: WeeklySchedule, inputs: WeeklySched
     || (d.conditioning !== null && d.conditioningCategory !== 'recovery_flush')).map(d => d.dayOfWeek));
   let run = 0, longest = 0;
   for (const day of [...WEEK_ORDER, ...WEEK_ORDER]) {run = active.has(day) ? run + 1 : 0; longest = Math.max(longest, run);}
+  const longestLegRun=longestDemandingLegRun(week,inputs);
   const freshness = speed.reduce((cost, day) => {
     const previous = (day.dayOfWeek + 6) % 7;
     const dose = inputs.lowerBodyWorkloadByDay?.[previous];
@@ -762,11 +777,12 @@ export function wholeWeekPlacementCost(week: WeeklySchedule, inputs: WeeklySched
       + Number((inputs.lowerBodyWorkloadByDay?.[day.dayOfWeek]?.workingSets ?? 0) >= 10)
       + Number((inputs.lowerBodyWorkloadByDay?.[(day.dayOfWeek + 1) % 7]?.workingSets ?? 0) >= 10)
       + Number(metabolic.some(d => d.dayOfWeek === previous
-        && ['repeat_sprint', 'glycolytic', 'aerobic_power'].includes(d.conditioningCategory ?? '')
+        && isHardConditioningCategory(d.conditioningCategory)
         && !metabolicIsOffFeet(d.dayOfWeek, d.conditioningCategory!, inputs, d.purpose)));
   }, 0);
   return [Math.max(0, active.size - BIBLE_WEEKLY_CAPS.hardDaysAbsoluteMax),
-    -week.demand.mainStrength, -speed.length, -metabolic.length, freshness,
+    -week.demand.mainStrength, -speed.length, -metabolic.length,
+    Math.max(0,Math.min(7,longestLegRun)-2),freshness,
     speed.filter(d => d.owner === 'strength' && metabolic.some(m => m.dayOfWeek === d.dayOfWeek)).length,
     speed.filter(d => d.purpose !== null && PURPOSE_IS_LOWER[d.purpose]).length,
     Math.max(0, Math.min(7, longest) - GLOBAL_RULES.consecutiveHardDays.preferred),
