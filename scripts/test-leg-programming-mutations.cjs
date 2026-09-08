@@ -7,7 +7,7 @@ const mutations={
   'discard-speed-return-display-context':['src/rules/projectVisibleWeek.ts',"if (kind === 'speed') return toVisibleRows(composed.speedExercises, workout);","if (kind === 'speed') return toVisibleRows(composed.speedExercises);"],
   'show-normal-dose-during-return':['src/rules/projectVisibleWeek.ts','if (returning) return runningReturnDoseCopy(returning, row.prescribedSets);',''],
   'rewrite-run-only-return-as-machine':['src/utils/coachModalitySwap.ts','if (authored.some(template => !templateSupportsSelectedModalities(template!, [targetMode as never]))) return workout;',''],
-  're-dose-earlier-days-after-later-report':['src/rules/canonicalWeeklyInjuryCompiler.ts','if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, args.workoutsByDate[dateISO]];',''],
+  're-dose-earlier-days-after-later-report':['src/rules/canonicalWeeklyInjuryCompiler.ts','if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, workoutsByDate[dateISO]];',''],
   'copy-strength-dose-onto-demanding-prehab':['src/rules/acceptedLoadCarry.ts'," && !isDemandingPrehab(row.exercise.name)",""],
   'copy-strength-dose-onto-returning-field-work':['src/rules/acceptedLoadCarry.ts',"if (carry === 'loads_and_dose' && strengthIds.has(row.id) && !isDemandingPrehab(row.exercise.name)) {","if (carry === 'loads_and_dose') {"],
   'drop-fixture-coverage-dose':['src/utils/fixtureMinimalReplan.ts','dosePolicyForDate: date => args.targetMicrocycle.dosePolicyByDay?.[dayOfWeekForISODate(date)] ?? null,','', 'src/__tests__/legProgrammingJourneyTests.cjs'],
