@@ -17,9 +17,11 @@ import { join, resolve } from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   buildCoachSnapshot,
+  projectRecentChange,
   type BuildCoachSnapshotInput,
 } from '../rules/liveAthleteSnapshot';
 import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
+import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
 import { weekdayName } from '../utils/appDate';
 import type { VisibleWeek } from '../rules/visibleProjection';
 import type { JournalWeek } from '../rules/journalWeek';
@@ -384,6 +386,137 @@ console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE
   ok('the glass flow opens Progress and captures its populated dashboard',
     /id: "tab-progress"/.test(glassFlow)
       && /artifacts\/ui-walk\/progress-dashboard/.test(glassFlow));
+}
+
+console.log('\n[5] WHERE THE ATHLETE IS IN THE YEAR CROSSES THE SAME BOUNDARY (R-397, S1)');
+{
+  const nextWeek: VisibleWeek = {
+    weekStart: '2026-08-31',
+    days: [
+      { ...visibleWeek.days[0], date: '2026-08-31', parts: [], gaps: [] },
+      { ...visibleWeek.days[5], date: '2026-09-05', kind: 'game', parts: [], gaps: [] },
+    ],
+    explanations: [],
+  };
+  const situated = buildCoachSnapshot({
+    ...baseInput,
+    isDeloadWeek: true,
+    situation: {
+      season: {
+        phase: 'In-season',
+        subphase: null,
+        phaseWeekNumber: 6,
+        weekKind: 'deload',
+        blockNumber: 2,
+        weekInBlock: 4,
+        isDeloadWeek: true,
+      },
+      standing: {
+        usualGameDay: 'Saturday',
+        clubNights: ['Tuesday', 'Thursday'],
+        gymDays: ['Monday', 'Wednesday'],
+        sessionsPerWeek: 2,
+        christmasBreak: null,
+      },
+      fixturesAhead: ['2026-09-05', '2026-09-12'],
+      nextWeek,
+    },
+    history: {
+      readiness: [{ date: '2026-08-22', energy: 'low', source: 'quick_check', updatedAt: '2026-08-22T08:00:00.000Z' }],
+      sessionOutcomes: [{ date: '2026-08-22', completion: 'partial', reason: 'time', feeling: 'hard', components: [] }],
+      recentChanges: [{ occurredAt: '2026-08-23T10:00:00.000Z', kind: 'lighter_day', provenance: 'athlete_tap', details: { date: '2026-08-23' } }],
+    },
+    injuries: [{ bodyPart: 'Knee', region: 'lower', severity: 4, status: 'active', since: '2026-08-20', triggers: ['deep squat'], seriousSymptoms: false }],
+    mas: { masKmh: 17.1, source: 'measured', seconds: 420 },
+  });
+  const projected = projectCoachSnapshotForModel(situated);
+  ok('the owned phase, block clock and deload flag cross as facts',
+    projected.situation.season?.phase === 'In-season'
+      && projected.situation.season?.blockNumber === 2
+      && projected.situation.season?.weekInBlock === 4
+      && projected.situation.season?.isDeloadWeek === true
+      && projected.load.isDeloadWeek === true);
+  ok('the standing pattern, fixtures ahead and next week cross with weekday names',
+    projected.situation.standing?.usualGameDay === 'Saturday'
+      && projected.situation.standing?.clubNights.length === 2
+      && projected.situation.fixturesAhead[0]?.weekday === 'Saturday'
+      && projected.situation.fixturesAhead[0]?.timing.relationToAsOf === 'future'
+      && projected.situation.nextWeek?.weekStart === '2026-08-31'
+      && projected.situation.nextWeek?.fixtures[0]?.weekday === 'Saturday'
+      && projected.situation.nextWeek?.days[0]?.timing.relationToAsOf === 'future');
+  ok('fourteen days of recorded history, injuries and MAS cross as recorded, never invented',
+    projected.history.readiness[0]?.weekday === 'Saturday'
+      && projected.history.sessionOutcomes[0]?.completion === 'partial'
+      && projected.history.recentChanges[0]?.kind === 'lighter_day'
+      && projected.history.recentChanges[0]?.provenance === 'athlete_tap'
+      && projected.injuries[0]?.bodyPart === 'Knee'
+      && projected.injuries[0]?.triggers[0] === 'deep squat'
+      && projected.mas?.masKmh === 17.1
+      && projected.mas?.source === 'measured');
+  ok('the projection carries no key the server refuses (name, ids, email)',
+    !/"(?:email|userId|athleteId|accountId|name)"\s*:/i.test(JSON.stringify(projected)));
+  ok('the grounding facts read the owned phase from the projection',
+    coachResponseGroundingFacts(projected).seasonPhase === 'In-season');
+
+  const unknown = buildCoachSnapshot(baseInput);
+  const unknownProjected = projectCoachSnapshotForModel(unknown);
+  ok('an absent situation is told as unknown, not guessed',
+    unknown.situation.season === null
+      && unknown.situation.nextWeek === null
+      && unknown.situation.fixturesAhead.length === 0
+      && unknown.history.readiness.length === 0
+      && unknown.injuries.length === 0
+      && unknown.mas === null
+      && unknownProjected.situation.season === null
+      && coachResponseGroundingFacts(unknownProjected).seasonPhase === null);
+
+  let wrongNextWeek = false;
+  try {
+    buildCoachSnapshot({
+      ...baseInput,
+      situation: { season: null, standing: null, fixturesAhead: [], nextWeek: { ...nextWeek, weekStart: '2026-09-07' } },
+    });
+  } catch (error) {
+    wrongNextWeek = /week after the visible week/.test(String(error));
+  }
+  ok('a "next week" that is not the week after the visible week refuses', wrongNextWeek);
+
+  let deloadDisagreement = false;
+  try {
+    buildCoachSnapshot({
+      ...baseInput,
+      isDeloadWeek: false,
+      situation: {
+        season: { phase: 'In-season', subphase: null, phaseWeekNumber: 1, weekKind: 'deload', blockNumber: 1, weekInBlock: 1, isDeloadWeek: true },
+        standing: null,
+        fixturesAhead: [],
+        nextWeek: null,
+      },
+    });
+  } catch (error) {
+    deloadDisagreement = /agree about the deload week/.test(String(error));
+  }
+  ok('season and load cannot disagree about a deload week', deloadDisagreement);
+
+  const decisionProjection = projectRecentChange({
+    occurredAt: '2026-08-23T10:00:00.000Z',
+    provenance: 'athlete_tap',
+    decision: {
+      kind: 'fixture_move',
+      fromDate: '2026-08-29',
+      toDate: '2026-08-30',
+      fixtureKind: 'game',
+      sourceEntryId: 'entry-1',
+      name: 'never',
+      answer: { kind: 'confirmed', sessionsPerWeek: 3, trainingDays: ['Monday', 'Thursday'] },
+    },
+  });
+  ok('a ledger decision crosses with its primitive fields and without ids or a name key',
+    decisionProjection.kind === 'fixture_move'
+      && decisionProjection.details.fromDate === '2026-08-29'
+      && decisionProjection.details['answer.sessionsPerWeek'] === 3
+      && !('sourceEntryId' in decisionProjection.details)
+      && !('name' in decisionProjection.details));
 }
 
 console.log('\n[4] THE SNAPSHOT HAS NO PERSISTED COPY');

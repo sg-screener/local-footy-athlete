@@ -11,6 +11,7 @@ import {
   coachResponseGroundingFacts,
   fixtureClaimGrounded,
   readinessClaimGrounded,
+  phaseClaimGrounded,
 } from '../../rules/coachResponseContract';
 
 interface CoachChatFetchResponse {
@@ -146,7 +147,9 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
   // the server checks, so an invented readiness tier or game day never reaches
   // the athlete even if the server's gate is behind this build.
   const facts = coachResponseGroundingFacts(modelInput.currentAthleteSnapshot);
-  if (!readinessClaimGrounded(message, facts) || !fixtureClaimGrounded(message, facts)) {
+  if (!readinessClaimGrounded(message, facts)
+    || !fixtureClaimGrounded(message, facts)
+    || !phaseClaimGrounded(message, facts)) {
     throw new CoachChatError('refused', 'Coach chat refused an answer that contradicts the athlete snapshot.');
   }
   return message;

@@ -320,3 +320,16 @@ export function useBlockBounds() {
   const state = useScheduleState();
   return getBlockBounds(state);
 }
+
+/**
+ * The week that starts on `mondayISO`, through the one projection the Program
+ * tab reads (`projectWeekFor`). The Coach Snapshot uses it for NEXT week
+ * (R-397, plan slice S1, 2026-09-10) so the coach sees the week the athlete
+ * will see, not a second derivation of it.
+ */
+export function useProjectedWeekFor(
+  mondayISO: string,
+): { weekDays: ResolvedDay[]; visibleWeek: VisibleWeek } {
+  const state = useScheduleState();
+  return projectWeekFor(mondayISO, state);
+}

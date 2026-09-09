@@ -7,6 +7,8 @@ export type CanonicalCoachKnowledgeAuthority =
 interface RetrievalSnapshot {
   readonly readiness: unknown;
   readonly restrictions: unknown;
+  /** Where the athlete is in the year (R-397); phase words steer the ruling search. */
+  readonly situation?: { readonly season?: unknown };
   readonly load: unknown;
   readonly progress: unknown;
   readonly visibleWeek: {
@@ -115,6 +117,7 @@ function queryWeights(message: string, snapshot: RetrievalSnapshot): ReadonlyMap
   addWeightedTerms(weights, JSON.stringify(snapshot.readiness), 2);
   addWeightedTerms(weights, readinessCanonicalSearchText(snapshot.readiness), 12);
   addWeightedTerms(weights, JSON.stringify(snapshot.restrictions), 4);
+  addWeightedTerms(weights, JSON.stringify(snapshot.situation?.season ?? null), 5);
   return weights;
 }
 

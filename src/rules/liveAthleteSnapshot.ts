@@ -42,6 +42,10 @@ import {
   buildProgressMainLiftHistories,
   type ProgressMainLiftHistory,
 } from './progressMainLiftStrength';
+import type { DayOfWeek, PerformanceTesting, SeasonPhase, WeekKind } from '../types/domain';
+import { addDaysISO } from '../utils/programBlockState';
+import { deriveMasFromPerformanceTesting } from '../data/performanceTests';
+import type { DerivedMas } from '../data/twoKmTimeTrial';
 
 export type CoachSnapshotReadinessState =
   | ReadinessQuickOption
@@ -74,6 +78,104 @@ export interface StrengthProgressHistory {
   readonly points: readonly StrengthProgressPoint[];
 }
 
+/**
+ * WHERE THE ATHLETE IS IN THE YEAR (R-397, plan slice S1, 2026-09-10).
+ *
+ * The coach used to guess the phase from day kinds ("you've got a game, so
+ * in-season"). The app owns the phase (`ownSeasonPhase`) and the block clock
+ * (`getStoredBlockStateForDate`); this block carries their answer, and `null`
+ * means the app could not say — the model is told "unknown", never left to
+ * infer. READER: `projectCoachSnapshotForModel`, the retrieval query and the
+ * `phaseClaimGrounded` gate. TEST: `coachSnapshotTests` §5.
+ */
+export interface CoachSnapshotSeason {
+  readonly phase: SeasonPhase;
+  readonly subphase: string | null;
+  readonly phaseWeekNumber: number | null;
+  readonly weekKind: WeekKind | null;
+  readonly blockNumber: number | null;
+  readonly weekInBlock: number | null;
+  readonly isDeloadWeek: boolean;
+}
+
+/** The standing weekly pattern the program is built around. */
+export interface CoachSnapshotStanding {
+  readonly usualGameDay: DayOfWeek | null;
+  readonly clubNights: readonly DayOfWeek[];
+  readonly gymDays: readonly DayOfWeek[];
+  readonly sessionsPerWeek: number | null;
+  readonly christmasBreak: {
+    readonly stopsOverChristmas: boolean;
+    readonly lastTeamTraining: string | null;
+    readonly returns: string | null;
+  } | null;
+}
+
+export interface CoachSnapshotSituation {
+  readonly season: CoachSnapshotSeason | null;
+  readonly standing: CoachSnapshotStanding | null;
+  /** Game dates after the as-of date, four weeks out, from the calendar owner. */
+  readonly fixturesAhead: readonly string[];
+  /** The week after `visibleWeek`, through the same projection, or null when none exists. */
+  readonly nextWeek: VisibleWeek | null;
+}
+
+export interface CoachSnapshotSessionOutcome {
+  readonly date: string;
+  readonly completion: JournalSessionOutcome['completion'];
+  readonly reason: JournalSessionOutcome['reason'];
+  readonly feeling: JournalSessionOutcome['feeling'];
+  readonly components: readonly {
+    readonly label: string;
+    readonly kind: string;
+    readonly completion: string;
+  }[];
+}
+
+/**
+ * One ledger entry, verbatim in kind and provenance, with its primitive
+ * fields flattened one level. Ids never cross (they are internal); a key
+ * literally named `name` never crosses (the server refuses it).
+ */
+export interface CoachSnapshotRecentChange {
+  readonly occurredAt: string;
+  readonly kind: string;
+  readonly provenance: string;
+  readonly details: Readonly<Record<string, string | number | boolean>>;
+}
+
+export interface CoachSnapshotInjury {
+  readonly bodyPart: string;
+  readonly region: string | null;
+  readonly severity: number;
+  readonly status: string;
+  readonly since: string;
+  readonly triggers: readonly string[];
+  readonly seriousSymptoms: boolean;
+}
+
+/** Fourteen days of what the athlete recorded; derived from the owners, stored nowhere. */
+export interface CoachSnapshotHistory {
+  readonly readiness: readonly ReadinessSignal[];
+  readonly sessionOutcomes: readonly CoachSnapshotSessionOutcome[];
+  readonly recentChanges: readonly CoachSnapshotRecentChange[];
+}
+
+export const COACH_SNAPSHOT_HISTORY_DAYS = 14;
+
+export const EMPTY_COACH_SNAPSHOT_SITUATION: CoachSnapshotSituation = {
+  season: null,
+  standing: null,
+  fixturesAhead: [],
+  nextWeek: null,
+};
+
+export const EMPTY_COACH_SNAPSHOT_HISTORY: CoachSnapshotHistory = {
+  readiness: [],
+  sessionOutcomes: [],
+  recentChanges: [],
+};
+
 export interface CoachSnapshot {
   /** The date whose readiness answer this picture carries. */
   readonly asOfDateISO: string;
@@ -91,6 +193,11 @@ export interface CoachSnapshot {
   /** The one recorded 2km answer. An array would falsely imply stored history. */
   readonly twoKmTimeTrial: TwoKmTimeTrialAnswer | null;
   readonly restrictions: readonly ActiveCoachNote[];
+  readonly situation: CoachSnapshotSituation;
+  readonly history: CoachSnapshotHistory;
+  /** Active or improving injury episodes, in the athlete's own facts (body part, since, triggers). */
+  readonly injuries: readonly CoachSnapshotInjury[];
+  readonly mas: DerivedMas | null;
 }
 
 export interface BuildCoachSnapshotInput {
@@ -105,6 +212,10 @@ export interface BuildCoachSnapshotInput {
   readonly readinessSignal: ReadinessSignal | null;
   readonly activeModifiers: readonly ActiveCoachNote[];
   readonly isDeloadWeek?: boolean;
+  readonly situation?: CoachSnapshotSituation;
+  readonly history?: CoachSnapshotHistory;
+  readonly injuries?: readonly CoachSnapshotInjury[];
+  readonly mas?: DerivedMas | null;
 }
 
 /**
@@ -124,6 +235,29 @@ export interface CoachSnapshotRecordedSession {
   readonly game?: JournalLoadSessionInput['game'];
   readonly difficulty?: JournalLoadSessionInput['difficulty'];
   readonly actualMinutes?: JournalLoadSessionInput['actualMinutes'];
+  readonly components?: readonly {
+    readonly label: string;
+    readonly kind: string;
+    readonly completion: string;
+  }[];
+}
+
+/** A decision-ledger entry as the adapter hands it over: kind and provenance verbatim. */
+export interface CoachSnapshotDecisionRecord {
+  readonly occurredAt: string;
+  readonly provenance: string;
+  readonly decision: { readonly kind: string } & Readonly<Record<string, unknown>>;
+}
+
+/** An injury episode as the accepted program context holds it. */
+export interface CoachSnapshotInjuryEpisodeRecord {
+  readonly bodyPart: string;
+  readonly region?: string | null;
+  readonly severity: number;
+  readonly status: string;
+  readonly onsetOrReportedDate: string;
+  readonly triggers: readonly string[];
+  readonly seriousSymptoms: boolean;
 }
 
 export interface DeriveCoachSnapshotInput {
@@ -139,6 +273,103 @@ export interface DeriveCoachSnapshotInput {
   readonly bodyWeightKg?: OnboardingData['weightKg'];
   readonly trackedLiftChoices?: import('./estimatedOneRepMax').TrackedLiftChoices;
   readonly isDeloadWeek?: boolean;
+  readonly season?: CoachSnapshotSeason | null;
+  readonly standing?: CoachSnapshotStanding | null;
+  readonly fixturesAhead?: readonly string[];
+  readonly nextWeek?: VisibleWeek | null;
+  readonly readinessHistory?: readonly ReadinessSignal[];
+  readonly recentDecisions?: readonly CoachSnapshotDecisionRecord[];
+  readonly injuryEpisodes?: readonly CoachSnapshotInjuryEpisodeRecord[];
+  readonly performanceTesting?: PerformanceTesting;
+}
+
+const RECENT_CHANGE_LIMIT = 20;
+const RECENT_CHANGE_DETAIL_LIMIT = 12;
+
+function isPrimitive(value: unknown): value is string | number | boolean {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function detailKeyAllowed(key: string): boolean {
+  return key !== 'kind' && key !== 'name' && !/id$/i.test(key) && !/Ids$/.test(key);
+}
+
+/** Primitive fields one level deep; ids and `name` keys never cross the boundary. */
+export function projectRecentChange(record: CoachSnapshotDecisionRecord): CoachSnapshotRecentChange {
+  const details: Record<string, string | number | boolean> = {};
+  let count = 0;
+  const put = (key: string, value: unknown): void => {
+    if (count >= RECENT_CHANGE_DETAIL_LIMIT || !detailKeyAllowed(key)) return;
+    if (isPrimitive(value)) {
+      details[key] = value;
+      count += 1;
+    }
+  };
+  for (const [key, value] of Object.entries(record.decision)) {
+    if (isPrimitive(value)) {
+      put(key, value);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [subKey, subValue] of Object.entries(value as Record<string, unknown>)) {
+        put(`${key}.${subKey}`, subValue);
+      }
+    } else if (Array.isArray(value) && value.every(isPrimitive)) {
+      put(key, value.join(', '));
+    }
+  }
+  return {
+    occurredAt: record.occurredAt,
+    kind: record.decision.kind,
+    provenance: record.provenance,
+    details,
+  };
+}
+
+function withinHistoryWindow(dateISO: string, asOfDateISO: string): boolean {
+  const since = addDaysISO(asOfDateISO, -(COACH_SNAPSHOT_HISTORY_DAYS - 1));
+  const date = dateISO.slice(0, 10);
+  return date >= since && date <= asOfDateISO;
+}
+
+function deriveHistory(input: DeriveCoachSnapshotInput): CoachSnapshotHistory {
+  const readiness = [...(input.readinessHistory ?? [])]
+    .filter((signal) => withinHistoryWindow(signal.date, input.asOfDateISO))
+    .sort((left, right) => left.date.localeCompare(right.date));
+  const sessionOutcomes = Object.entries(input.recordedSessions)
+    .filter(([date]) => withinHistoryWindow(date, input.asOfDateISO))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, feedback]) => ({
+      date,
+      completion: feedback.completion,
+      reason: feedback.skipReason ?? feedback.partialReason ?? null,
+      feeling: feedback.feeling ?? null,
+      components: (feedback.components ?? []).map((component) => ({
+        label: component.label,
+        kind: component.kind,
+        completion: component.completion,
+      })),
+    }));
+  const recentChanges = [...(input.recentDecisions ?? [])]
+    .filter((record) => withinHistoryWindow(record.occurredAt, input.asOfDateISO))
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    .slice(0, RECENT_CHANGE_LIMIT)
+    .map(projectRecentChange);
+  return { readiness, sessionOutcomes, recentChanges };
+}
+
+function deriveInjuries(
+  episodes: readonly CoachSnapshotInjuryEpisodeRecord[] | undefined,
+): readonly CoachSnapshotInjury[] {
+  return (episodes ?? [])
+    .filter((episode) => episode.status === 'active' || episode.status === 'improving')
+    .map((episode) => ({
+      bodyPart: episode.bodyPart,
+      region: episode.region ?? null,
+      severity: episode.severity,
+      status: episode.status,
+      since: episode.onsetOrReportedDate,
+      triggers: [...episode.triggers],
+      seriousSymptoms: episode.seriousSymptoms,
+    }));
 }
 
 function countRecordedWeeks(
@@ -247,6 +478,24 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
     readinessSignal: input.readinessSignal,
     activeModifiers: input.activeModifiers,
     isDeloadWeek: input.isDeloadWeek,
+    situation: {
+      season: input.season ?? null,
+      standing: input.standing ?? null,
+      fixturesAhead: [...(input.fixturesAhead ?? [])]
+        .map((date) => date.slice(0, 10))
+        .filter((date) => date > input.asOfDateISO)
+        .sort(),
+      nextWeek: input.nextWeek ?? null,
+    },
+    history: deriveHistory(input),
+    injuries: deriveInjuries(input.injuryEpisodes),
+    mas: input.experienceLevel
+      ? deriveMasFromPerformanceTesting(
+        input.performanceTesting,
+        input.twoKmTimeTrial ?? undefined,
+        input.experienceLevel,
+      )
+      : null,
   });
 }
 
@@ -268,6 +517,13 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
   }
   if (input.readinessSignal && input.readinessSignal.date !== input.asOfDateISO) {
     throw new Error('Coach Snapshot readiness must describe its as-of date.');
+  }
+  const situation = input.situation ?? EMPTY_COACH_SNAPSHOT_SITUATION;
+  if (situation.nextWeek && situation.nextWeek.weekStart !== addDaysISO(weekStart, 7)) {
+    throw new Error('Coach Snapshot next week must be the week after the visible week.');
+  }
+  if (situation.season && situation.season.isDeloadWeek !== (input.isDeloadWeek === true)) {
+    throw new Error('Coach Snapshot season and load must agree about the deload week.');
   }
 
   const model = input.loadModel;
@@ -306,5 +562,9 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
     })),
     twoKmTimeTrial: input.twoKmTimeTrial,
     restrictions: [...input.activeModifiers],
+    situation,
+    history: input.history ?? EMPTY_COACH_SNAPSHOT_HISTORY,
+    injuries: [...(input.injuries ?? [])],
+    mas: input.mas ?? null,
   };
 }

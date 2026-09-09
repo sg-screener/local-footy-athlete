@@ -122,7 +122,8 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
   ok('the app client checks the returned words against the same facts before showing them',
     /coachResponseGroundingFacts\(/.test(read('src/services/api/coachChat.ts'))
       && /readinessClaimGrounded\(/.test(read('src/services/api/coachChat.ts'))
-      && /fixtureClaimGrounded\(/.test(read('src/services/api/coachChat.ts')));
+      && /fixtureClaimGrounded\(/.test(read('src/services/api/coachChat.ts'))
+      && /phaseClaimGrounded\(/.test(read('src/services/api/coachChat.ts')));
   const pack = read('src/dev/coachLab/coachLabBrainPack.ts');
   ok('the prompt says what an unreported readiness, the fixture list and earlier turns mean',
     /readiness\.reported is false/.test(pack)
@@ -474,7 +475,7 @@ async function finish(): Promise<void> {
     judgementLabel: 'not_needed',
     programActions: [],
   };
-  const FIXTURE_FACTS = { readinessReported: true, gameWeekdays: ['Saturday'] } as const;
+  const FIXTURE_FACTS = { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: 'In-season' } as const;
   const sound = evaluateCoachResponseContract(grounded, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
@@ -544,7 +545,7 @@ async function finish(): Promise<void> {
   }, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
-    facts: { readinessReported: false, gameWeekdays: ['Saturday'] },
+    facts: { readinessReported: false, gameWeekdays: ['Saturday'], seasonPhase: 'In-season' },
   });
   ok('F14: a readiness tier asserted when nothing was recorded fails closed as a refusal',
     !inventedReadiness.ok
@@ -558,6 +559,42 @@ async function finish(): Promise<void> {
   }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
   ok('the same words pass once a readiness answer actually exists',
     sameWordsReported.ok, sameWordsReported.violations);
+  // R-397 (2026-09-10): the phase is the app's fact, never inferred from a game.
+  const inventedPhase = evaluateCoachResponseContract({
+    ...grounded,
+    message: "You're pre-season, so the Nordic minimum doesn't apply this week.",
+    snapshotFieldsUsed: ['situation'],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('R-397: a phase asserted against the snapshot phase fails closed as a refusal',
+    !inventedPhase.ok
+      && inventedPhase.automaticChecks.phaseClaimsGrounded === false
+      && coachResponseContractFailureCode(inventedPhase) === 'refused',
+    inventedPhase);
+  const phaseUnknown = evaluateCoachResponseContract({
+    ...grounded,
+    message: "You're in-season, so keep the Nordics in.",
+    snapshotFieldsUsed: ['situation'],
+  }, {
+    requiresLiveProgramFacts: true,
+    allowedKnowledgeSourceIds: ['bible:L1-L2'],
+    facts: { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: null },
+  });
+  ok('R-397: a phase asserted when the app could not say one is refused',
+    !phaseUnknown.ok && phaseUnknown.automaticChecks.phaseClaimsGrounded === false, phaseUnknown);
+  const phaseMatches = evaluateCoachResponseContract({
+    ...grounded,
+    message: "You're in-season: week 6, block 2. Keep the Nordics in this week.",
+    snapshotFieldsUsed: ['situation'],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('R-397: the same shape passes when it names the snapshot phase',
+    phaseMatches.ok, phaseMatches.violations);
+  const phaseConditional = evaluateCoachResponseContract({
+    ...grounded,
+    message: "If you're pre-season, a curl can stand in; in-season Nordics stay. Your week is in-season.",
+    snapshotFieldsUsed: ['situation'],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('R-397: a conditional or a general rule naming another phase is not a claim about this athlete',
+    phaseConditional.ok, phaseConditional.violations);
   const inventedFixture = evaluateCoachResponseContract({
     ...grounded,
     message: 'Game Day Saturday and Sunday, so Friday stays light.',
@@ -576,7 +613,7 @@ async function finish(): Promise<void> {
   const gameInAnEmptyWeek = evaluateCoachResponseContract(grounded, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
-    facts: { readinessReported: true, gameWeekdays: [] },
+    facts: { readinessReported: true, gameWeekdays: [], seasonPhase: 'In-season' },
   });
   ok('naming a Saturday game in a week with no fixture fails the same check',
     !gameInAnEmptyWeek.ok && gameInAnEmptyWeek.automaticChecks.fixtureClaimsGrounded === false);
@@ -604,6 +641,7 @@ async function finish(): Promise<void> {
     ['judgementTransparent', hiddenJudgement],
     ['changeClaimsTruthful', falseChange],
     ['readinessClaimsGrounded', inventedReadiness],
+    ['phaseClaimsGrounded', inventedPhase],
     ['fixtureClaimsGrounded', inventedFixture],
   ] as const;
   ok('every truth and read-only contract member independently remains a refusal',

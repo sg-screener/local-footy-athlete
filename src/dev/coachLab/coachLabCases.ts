@@ -246,5 +246,43 @@ export function coachLabFixtureSnapshot(
       updatedAt: '2026-08-24T08:00:00.000Z',
     },
     activeModifiers: [],
+    // R-397 (slice S1): the Lab athlete carries a season and a standing
+    // pattern, so a phase-dependent answer can be held to a fact.
+    situation: {
+      season: {
+        phase: 'In-season',
+        subphase: null,
+        phaseWeekNumber: 6,
+        weekKind: 'build',
+        blockNumber: 2,
+        weekInBlock: 2,
+        isDeloadWeek: false,
+      },
+      standing: {
+        usualGameDay: 'Saturday',
+        clubNights: ['Tuesday'],
+        gymDays: ['Monday', 'Thursday'],
+        sessionsPerWeek: 2,
+        christmasBreak: null,
+      },
+      fixturesAhead: ['2026-09-05', '2026-09-12', '2026-09-19'],
+      nextWeek: null,
+    },
+    history: {
+      readiness: options.readiness === 'not_recorded' ? [] : [{
+        date: '2026-08-24',
+        energy: 'low',
+        soreness: 'moderate',
+        source: 'quick_check',
+        updatedAt: '2026-08-24T08:00:00.000Z',
+      }],
+      sessionOutcomes: [
+        { date: '2026-08-20', completion: 'full', reason: null, feeling: 'good', components: [] },
+        { date: '2026-08-22', completion: 'full', reason: null, feeling: 'hard', components: [] },
+      ],
+      recentChanges: [],
+    },
+    injuries: [],
+    mas: { masKmh: 17.1, source: 'measured', seconds: 420 },
   });
 }

@@ -10,8 +10,10 @@ export type CoachResponseBasis =
 
 export type CoachResponseSnapshotField = keyof Pick<
   CoachSnapshot,
-  'visibleWeek' | 'thisWeek' | 'readiness' | 'load' | 'progress' | 'restrictions'
->;
+  | 'visibleWeek' | 'thisWeek' | 'readiness' | 'load' | 'progress' | 'restrictions'
+  // R-397 (slice S1): the projection's new top-level blocks.
+  | 'situation' | 'history' | 'injuries' | 'mas'
+> | 'estimates';
 
 export interface CoachResponseKnowledgeSource {
   readonly id: string;
@@ -47,6 +49,8 @@ export interface CoachResponseAutomaticChecks {
   readonly readinessClaimsGrounded: boolean;
   /** The words do not put a game on a day the visible week has no game. */
   readonly fixtureClaimsGrounded: boolean;
+  /** The words do not name a season phase the snapshot does not carry (R-397). */
+  readonly phaseClaimsGrounded: boolean;
 }
 
 /**
@@ -62,16 +66,57 @@ export interface CoachResponseGroundingFacts {
   readonly readinessReported: boolean;
   /** Weekday names ("Saturday") of every game in the visible week. */
   readonly gameWeekdays: readonly string[];
+  /**
+   * The owned season phase ("In-season"), or null when the app could not say.
+   * R-397 (2026-09-10): the coach used to infer "in-season" from a game in
+   * the week; now the app's owner is the only source and the words are held
+   * to it.
+   */
+  readonly seasonPhase: string | null;
 }
 
 export function coachResponseGroundingFacts(snapshot: {
   readonly readiness: { readonly reported: boolean };
   readonly visibleWeek: { readonly fixtures: readonly { readonly weekday: string }[] };
+  readonly situation?: { readonly season: { readonly phase: string } | null };
 }): CoachResponseGroundingFacts {
   return {
     readinessReported: snapshot.readiness.reported,
     gameWeekdays: snapshot.visibleWeek.fixtures.map((fixture) => fixture.weekday),
+    seasonPhase: snapshot.situation?.season?.phase ?? null,
   };
+}
+
+/**
+ * A season phase attributed to the athlete as a fact: "you're in-season",
+ * "this is pre-season", "currently off season". A conditional ("if you're in
+ * season…") or a phase named as a general rule ("in-season Nordics stay") is
+ * not a claim about this athlete. Held by `coachChatIntegrationTests`.
+ */
+const PHASE_CLAIM = /\b(?:you(?:'|’)?re|you are|we(?:'|’)?re|we are|this is|it(?:'|’)?s|currently|right now|you(?:'|’)?ve (?:just )?(?:entered|started|moved into)|(?:your|the|this) (?:week|block|program|phase) is)\s+(?:now\s+|still\s+|deep\s+|early\s+|late\s+|well\s+)?(?:in|into|at)?\s*(?:the\s+|your\s+)?(pre|off|in|mid)[- ]?season\b/gi;
+/** The words immediately before the claim make it a hypothesis, not a fact. */
+const PHASE_CONDITIONAL = /\b(?:if|when|whether|unless|once|should|suppose|say)\s*$/i;
+
+function claimedPhase(word: string): string {
+  return `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}-season`;
+}
+
+export function phaseClaimGrounded(
+  message: string,
+  facts: CoachResponseGroundingFacts,
+): boolean {
+  const pattern = new RegExp(PHASE_CLAIM.source, 'gi');
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(message)) !== null) {
+    const before = message.slice(Math.max(0, match.index - 24), match.index);
+    if (PHASE_CONDITIONAL.test(before)) continue;
+    const claimed = claimedPhase(match[1]);
+    if (claimed === 'Mid-season') continue;
+    if (facts.seasonPhase === null || facts.seasonPhase.toLowerCase() !== claimed.toLowerCase()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -161,6 +206,12 @@ const SNAPSHOT_FIELDS = new Set<string>([
   'load',
   'progress',
   'restrictions',
+  // R-397 (slice S1, 2026-09-10): the projection's new top-level blocks.
+  'situation',
+  'history',
+  'injuries',
+  'mas',
+  'estimates',
 ]);
 const ANSWER_MODES = new Set<string>([
   'answer',
@@ -274,7 +325,8 @@ export function coachResponseContractFailureCode(
     || !checks.judgementTransparent
     || !checks.changeClaimsTruthful
     || !checks.readinessClaimsGrounded
-    || !checks.fixtureClaimsGrounded) {
+    || !checks.fixtureClaimsGrounded
+    || !checks.phaseClaimsGrounded) {
     return 'refused';
   }
   return 'invalid_answer';
@@ -324,6 +376,8 @@ export function evaluateCoachResponseContract(
       && readinessClaimGrounded(payload.message, policy.facts),
     fixtureClaimsGrounded: payload !== null
       && fixtureClaimGrounded(payload.message, policy.facts),
+    phaseClaimsGrounded: payload !== null
+      && phaseClaimGrounded(payload.message, policy.facts),
   };
   const violations = (Object.keys(checks) as (keyof CoachResponseAutomaticChecks)[])
     .filter((name) => !checks[name]);

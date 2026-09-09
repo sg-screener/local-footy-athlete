@@ -60,7 +60,12 @@ function validSnapshot(value: unknown): value is CoachModelSnapshot {
     && Array.isArray(fixtures)
     && fixtures.every((fixture) => record(fixture) && typeof fixture.weekday === 'string')
     && record(value.readiness)
-    && typeof value.readiness.reported === 'boolean';
+    && typeof value.readiness.reported === 'boolean'
+    // Where the athlete is in the year (R-397, 2026-09-10): the block is
+    // required; `season` inside it may be null when the app cannot say.
+    && record(value.situation)
+    && (value.situation.season === null
+      || (record(value.situation.season) && typeof value.situation.season.phase === 'string'));
 }
 
 function validModelInput(value: unknown): value is {

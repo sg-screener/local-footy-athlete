@@ -165,48 +165,142 @@ function modelProgress(snapshot: CoachSnapshot) {
 }
 
 /**
- * The positive AI-boundary projection. Internal Snapshot fields are absent by
- * construction; only athlete-visible program content and concise coaching
- * summaries are selected.
+ * One week for the model: every day with its weekday name and deterministic
+ * timing, its parts and rows, plus the exhaustive fixture list the response
+ * contract reads back. Used for the visible week AND next week (R-397).
  */
-export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
+function projectWeekForModel(week: CoachSnapshot['visibleWeek'], asOfDateISO: string) {
   // The model used to receive bare ISO dates and no fixture list, so
   // "2026-07-18" became "Saturday and Sunday" in its mouth (Sam, 2026-09-09).
   // The app already owns both facts: every day carries its weekday name and
   // the fixture list is exhaustive. The response contract reads these same
   // fields back (`coachResponseGroundingFacts`) to refuse an answer that
   // names a game on any other day.
-  const fixtures = snapshot.visibleWeek.days
+  const fixtures = week.days
     .filter((day) => day.kind === 'game')
     .map((day) => ({ date: day.date, weekday: weekdayName(day.date) }));
   return {
-    asOfDateISO: snapshot.asOfDateISO,
-    visibleWeek: {
-      weekStart: snapshot.visibleWeek.weekStart,
-      days: snapshot.visibleWeek.days.map((day) => ({
-        date: day.date,
-        weekday: weekdayName(day.date),
-        kind: day.kind,
-        headline: day.headline,
-        timing: coachModelDayTiming(day.date, snapshot.asOfDateISO),
-        parts: day.parts.map((part) => ({
-          kind: part.kind,
-          headline: part.headline,
-          detail: part.detail,
-          rows: part.rows.map((row) => ({
-            exercise: row.name,
-            prescription: row.prescription,
-            dose: [...row.dose],
-            cue: row.cue,
-          })),
+    weekStart: week.weekStart,
+    days: week.days.map((day) => ({
+      date: day.date,
+      weekday: weekdayName(day.date),
+      kind: day.kind,
+      headline: day.headline,
+      timing: coachModelDayTiming(day.date, asOfDateISO),
+      parts: day.parts.map((part) => ({
+        kind: part.kind,
+        headline: part.headline,
+        detail: part.detail,
+        rows: part.rows.map((row) => ({
+          exercise: row.name,
+          prescription: row.prescription,
+          dose: [...row.dose],
+          cue: row.cue,
         })),
-        gaps: [...day.gaps],
       })),
-      /** Every game this week, each with its weekday. Empty means no game. */
-      fixtures,
-      fixtureCount: fixtures.length,
-      explanations: [...snapshot.visibleWeek.explanations],
+      gaps: [...day.gaps],
+    })),
+    /** Every game this week, each with its weekday. Empty means no game. */
+    fixtures,
+    fixtureCount: fixtures.length,
+    explanations: [...week.explanations],
+  } as const;
+}
+
+/**
+ * The positive AI-boundary projection. Internal Snapshot fields are absent by
+ * construction; only athlete-visible program content and concise coaching
+ * summaries are selected.
+ */
+export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
+  return {
+    asOfDateISO: snapshot.asOfDateISO,
+    visibleWeek: projectWeekForModel(snapshot.visibleWeek, snapshot.asOfDateISO),
+    /**
+     * WHERE THE ATHLETE IS IN THE YEAR AND WHAT COMES NEXT (R-397, slice S1).
+     * `season: null` means the app could not say; the model is told so and the
+     * `phaseClaimGrounded` gate refuses a named phase in that case.
+     */
+    situation: {
+      season: snapshot.situation.season ? {
+        phase: snapshot.situation.season.phase,
+        subphase: snapshot.situation.season.subphase,
+        phaseWeekNumber: snapshot.situation.season.phaseWeekNumber,
+        weekKind: snapshot.situation.season.weekKind,
+        blockNumber: snapshot.situation.season.blockNumber,
+        weekInBlock: snapshot.situation.season.weekInBlock,
+        isDeloadWeek: snapshot.situation.season.isDeloadWeek,
+      } : null,
+      standing: snapshot.situation.standing ? {
+        usualGameDay: snapshot.situation.standing.usualGameDay,
+        clubNights: [...snapshot.situation.standing.clubNights],
+        gymDays: [...snapshot.situation.standing.gymDays],
+        sessionsPerWeek: snapshot.situation.standing.sessionsPerWeek,
+        christmasBreak: snapshot.situation.standing.christmasBreak,
+      } : null,
+      fixturesAhead: snapshot.situation.fixturesAhead.map((date) => ({
+        date,
+        weekday: weekdayName(date),
+        timing: coachModelDayTiming(date, snapshot.asOfDateISO),
+      })),
+      nextWeek: snapshot.situation.nextWeek
+        ? projectWeekForModel(snapshot.situation.nextWeek, snapshot.asOfDateISO)
+        : null,
     },
+    /** Fourteen days of what the athlete recorded — derived, never stored twice. */
+    history: {
+      readiness: snapshot.history.readiness.map((signal) => ({
+        date: signal.date,
+        weekday: weekdayName(signal.date),
+        energy: signal.energy ?? null,
+        soreness: signal.soreness ?? null,
+        painFlag: signal.painFlag ?? null,
+        flatToday: signal.flatToday ?? null,
+        source: signal.source,
+      })),
+      sessionOutcomes: snapshot.history.sessionOutcomes.map((outcome) => ({
+        date: outcome.date,
+        weekday: weekdayName(outcome.date),
+        completion: outcome.completion,
+        reason: outcome.reason,
+        feeling: outcome.feeling,
+        components: outcome.components.map((component) => ({
+          label: component.label,
+          kind: component.kind,
+          completion: component.completion,
+        })),
+      })),
+      recentChanges: snapshot.history.recentChanges.map((change) => ({
+        occurredAt: change.occurredAt,
+        kind: change.kind,
+        provenance: change.provenance,
+        details: { ...change.details },
+      })),
+    },
+    injuries: snapshot.injuries.map((injury) => ({
+      bodyPart: injury.bodyPart,
+      region: injury.region,
+      severity: injury.severity,
+      status: injury.status,
+      since: injury.since,
+      triggers: [...injury.triggers],
+      seriousSymptoms: injury.seriousSymptoms,
+    })),
+    mas: snapshot.mas ? {
+      masKmh: snapshot.mas.masKmh,
+      source: snapshot.mas.source,
+      fromSeconds: snapshot.mas.seconds,
+    } : null,
+    estimates: snapshot.mainLiftEstimates.flatMap((history) => {
+      const latest = history.points[history.points.length - 1];
+      if (!latest) return [];
+      return [{
+        exerciseName: history.exerciseName,
+        latestPredictedOneRepMaxKg: latest.predictedOneRepMaxKg,
+        asOfWeekStart: latest.weekStart,
+        recordedWeeks: history.points.length,
+      }];
+    }),
     thisWeek: {
       weekStart: snapshot.thisWeek.weekStart,
       work: {
@@ -248,6 +342,11 @@ export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
         sessionsPlanned: snapshot.load.coverage.sessionsPlanned,
         liftsUnmeasured: snapshot.load.coverage.liftsUnmeasured,
       } : null,
+      weeklyCompletedLoadAU: snapshot.load.weeklyCompletedLoadAU.map((week) => ({
+        weekStart: week.weekStart,
+        value: week.value,
+      })),
+      isDeloadWeek: snapshot.load.isDeloadWeek,
     },
     progress: modelProgress(snapshot),
     restrictions: snapshot.restrictions.map((restriction) => ({
