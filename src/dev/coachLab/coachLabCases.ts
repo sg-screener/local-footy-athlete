@@ -169,13 +169,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
     // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
-    // 2026-09-10: the tape Sam approved for this row was recorded BEFORE the
-    // fixture had a next week ("I can only see this week…"), so it is not the
-    // ideal. Real answer, same day: "Next week is set around your Saturday
-    // game: Lower Hinge on Monday, team training Tuesday, rest Wednesday,
-    // Upper Pull plus conditioning Thursday, rest Friday, game Saturday, then
-    // rest Sunday…" — PENDING until Sam approves those words.
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "yes to both" — the real next-week answer, approved.
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'Next week is set around your Saturday game: Lower Hinge on Monday, team training Tuesday, rest Wednesday, Upper Pull plus conditioning Thursday, rest Friday, game Saturday, then rest Sunday. It’s an in-season build week, with the two gym sessions kept early enough to protect freshness for game day.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-next-game',
@@ -213,10 +214,15 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['lfa_consistency', 'coaching_quality', 'program_factuality'],
-    // Left PENDING on 2026-09-10: the recorded answer ("yes") contradicts
-    // R-394 (in season a curl does not replace the Nordic), so it cannot be
-    // the ideal. Re-taped after slice S2 (retrieval), then reviewed.
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "yes to both" — the coach's post-deploy words (v11,
+    // 3/3 on R-394) with the last clause pointed at the door (slice S3).
+    ownerReview: {
+      status: 'corrected',
+      idealAnswer: 'Not as a straight swap in-season: leg curls are useful, but they don’t replace Nordics when Nordics are legal. The in-season minimum prioritises a Nordic, with curls able to sit alongside it. Your lower session is today, five days before Saturday’s game, which is suitable spacing. You logged low energy today, so keep the Nordic dose controlled and prioritise clean reps. If you can’t do them safely, tap Something hurts inside the session and it’ll adapt the work.',
+      correctionReason: 'The first taped answer (before slice S2a) approved the swap against R-394; the post-deploy answer applies R-394 but ended with "flag why in the app" — Sam approved the same words ending with the door\'s name (Something hurts).',
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-flat-all-week',

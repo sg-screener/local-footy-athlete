@@ -13,6 +13,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
+import { COACH_APP_DOOR_LABELS } from '../rules/coachAppMap';
 import { join, resolve } from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
@@ -456,7 +457,7 @@ console.log('\n[5] WHERE THE ATHLETE IS IN THE YEAR CROSSES THE SAME BOUNDARY (R
   ok('the projection carries no key the server refuses (name, ids, email)',
     !/"(?:email|userId|athleteId|accountId|name)"\s*:/i.test(JSON.stringify(projected)));
   ok('the grounding facts read the owned phase from the projection',
-    coachResponseGroundingFacts(projected).seasonPhase === 'In-season');
+    coachResponseGroundingFacts(projected, COACH_APP_DOOR_LABELS).seasonPhase === 'In-season');
 
   const unknown = buildCoachSnapshot(baseInput);
   const unknownProjected = projectCoachSnapshotForModel(unknown);
@@ -468,7 +469,7 @@ console.log('\n[5] WHERE THE ATHLETE IS IN THE YEAR CROSSES THE SAME BOUNDARY (R
       && unknown.injuries.length === 0
       && unknown.mas === null
       && unknownProjected.situation.season === null
-      && coachResponseGroundingFacts(unknownProjected).seasonPhase === null);
+      && coachResponseGroundingFacts(unknownProjected, COACH_APP_DOOR_LABELS).seasonPhase === null);
 
   let wrongNextWeek = false;
   try {

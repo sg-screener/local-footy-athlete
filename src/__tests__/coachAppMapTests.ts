@@ -12,9 +12,11 @@ import { armTotalsOrRed } from './support/totalsOrRed';
 import { COACH_APP_DOOR_LABELS, COACH_APP_MAP } from '../rules/coachAppMap';
 import { registerProjectionCopy } from '../rules/projectionCopy';
 import { signedCopyEntry } from '../rules/signedCopy';
+import { CANONICAL_COACH_KNOWLEDGE } from '../../supabase/functions/coach-chat/canonicalCoachKnowledge.generated';
 import {
   coachResponseGroundingFacts,
   doorClaimGrounded,
+  doorLabelsFromKnowledge,
   evaluateCoachResponseContract,
   coachResponseContractFailureCode,
 } from '../rules/coachResponseContract';
@@ -71,7 +73,12 @@ console.log('\n[3] THE DOOR GATE: A QUOTED CONTROL MUST BE A DOOR');
 {
   const facts = coachResponseGroundingFacts(
     buildCoachModelInput({ athleteMessage: 'x', snapshot: coachLabFixtureSnapshot() }).currentAthleteSnapshot,
+    COACH_APP_DOOR_LABELS,
   );
+  const fromBundle = doorLabelsFromKnowledge(CANONICAL_COACH_KNOWLEDGE);
+  ok('the server learns the same labels from the bundled map that the app passes directly',
+    JSON.stringify([...fromBundle].sort()) === JSON.stringify([...COACH_APP_DOOR_LABELS].sort()),
+    { fromBundle: fromBundle.length, app: COACH_APP_DOOR_LABELS.length });
   ok('the facts carry every door label, lower-cased', facts.doorLabels.includes('sick') && facts.doorLabels.includes('log training'));
   ok('naming a real door passes',
     doorClaimGrounded('On the Program tab, under Not feeling 100%?, tap "Sick" and choose Properly sick.', facts));

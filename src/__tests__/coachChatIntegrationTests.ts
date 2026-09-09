@@ -115,9 +115,9 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
   // grounding receipt and never read a snapshot value. Every door that shows
   // an answer now hands the contract the facts to check the words against.
   ok('production hands the contract the snapshot facts the answer must agree with',
-    /facts:\s*coachResponseGroundingFacts\(modelInput\.currentAthleteSnapshot\)/.test(edge));
+    /facts:\s*coachResponseGroundingFacts\(\s*modelInput\.currentAthleteSnapshot,\s*doorLabelsFromKnowledge\(CANONICAL_COACH_KNOWLEDGE\),?\s*\)/.test(edge));
   ok('Coach Lab hands the same facts, read from the same projection',
-    /coachResponseGroundingFacts\(projectCoachSnapshotForModel\(args\.snapshot\)\)/.test(
+    /coachResponseGroundingFacts\(projectCoachSnapshotForModel\(args\.snapshot\), COACH_APP_DOOR_LABELS\)/.test(
       read('src/dev/coachLab/coachLab.ts'),
     ));
   ok('the app client checks the returned words against the same facts before showing them',
@@ -631,7 +631,7 @@ async function finish(): Promise<void> {
     derivedFacts = coachResponseGroundingFacts(buildCoachModelInput({
       athleteMessage: 'x',
       snapshot: coachLabFixtureSnapshot(),
-    }).currentAthleteSnapshot);
+    }).currentAthleteSnapshot, COACH_APP_DOOR_LABELS);
   } catch (error) {
     derivedFacts = `threw: ${error instanceof Error ? error.message : String(error)}`;
   }

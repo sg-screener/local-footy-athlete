@@ -1,6 +1,7 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { readFileSync } from 'fs';
+import { COACH_APP_DOOR_LABELS } from '../rules/coachAppMap';
 import { resolve } from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
@@ -21,7 +22,7 @@ import {
 
 armTotalsOrRed();
 
-const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()));
+const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()), COACH_APP_DOOR_LABELS);
 function evaluateCoachLabResponse(labCase: CoachLabCase, response: CoachLabResponseV1) {
   return evaluateCoachLabResponseWithFacts(labCase, response, LAB_FACTS);
 }

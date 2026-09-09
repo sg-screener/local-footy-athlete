@@ -10,6 +10,10 @@
  */
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { COACH_APP_DOOR_LABELS } from '../rules/coachAppMap';
+// The old local candidate reads the signed sheet; register it before it runs
+// (the crash `UnsignedCopyError "part.headline.strength"` was import order).
+import { registerProjectionCopy } from '../rules/projectionCopy';
 import {
   COACH_LAB_CASES,
   ROOTED_SOL_APPROVED_ANSWER,
@@ -26,9 +30,10 @@ import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
 import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
 
 armTotalsOrRed();
+registerProjectionCopy();
 
 /** The fixture's own facts (one Saturday game, readiness recorded), read from the projection. */
-const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()));
+const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()), COACH_APP_DOOR_LABELS);
 function evaluateCoachLabResponse(labCase: CoachLabCase, response: CoachLabResponseV1) {
   return evaluateCoachLabResponseWithFacts(labCase, response, LAB_FACTS);
 }
@@ -57,16 +62,18 @@ console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
   const sol = approved.find((entry) => entry.id === 'rooted-but-wants-to-train');
   ok('Sam\'s exact approved Sol tape is still the first benchmark',
     sol !== undefined && sol.ownerReview.idealAnswer === ROOTED_SOL_APPROVED_ANSWER);
-  // Sam, 2026-09-10: "approve all" on the S1 tapes — ten of the twelve are
-  // recorded; the Nordic-swap tape stays pending because its answer
-  // contradicted R-394, and the next-week tape stays pending because the
-  // page showed an answer recorded before the fixture had a next week.
+  // Sam, 2026-09-10: "approve all" on the S1 tapes, then "yes to both" for
+  // the re-taped next-week answer (approved) and the Nordic answer (corrected:
+  // his words end with the door's name). Twelve S1 rows, none pending.
   const s1Approved = approved.filter((entry) => entry.id.startsWith('s1-'));
-  ok('the ten S1 tapes Sam approved are recorded exactly; the Nordic and next-week ones are not',
-    approved.length === 11
-      && s1Approved.length === 10
-      && !s1Approved.some((entry) => entry.id === 's1-nordic-swap-in-season')
-      && !s1Approved.some((entry) => entry.id === 's1-next-week')
+  const nordic = COACH_LAB_CASES.find((entry) => entry.id === 's1-nordic-swap-in-season');
+  ok('the eleven S1 tapes Sam approved are recorded exactly, and the Nordic one is his correction',
+    approved.length === 12
+      && s1Approved.length === 11
+      && nordic?.ownerReview.status === 'corrected'
+      && typeof nordic.ownerReview.correctionReason === 'string'
+      && /Something hurts/.test(nordic.ownerReview.idealAnswer ?? '')
+      && !COACH_LAB_CASES.some((entry) => entry.id.startsWith('s1-') && entry.ownerReview.status === 'pending')
       && s1Approved.every((entry) => typeof entry.ownerReview.idealAnswer === 'string'
         && entry.ownerReview.idealAnswer.length > 40
         && entry.ownerReview.approvedModel === 'gpt-5.6-terra'

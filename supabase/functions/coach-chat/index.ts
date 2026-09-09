@@ -5,6 +5,7 @@ import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.t
 import {
   coachResponseContractFailureCode,
   coachResponseGroundingFacts,
+  doorLabelsFromKnowledge,
   evaluateCoachResponseContract,
 } from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
@@ -178,7 +179,10 @@ Deno.serve(async (request) => {
     const evaluation = evaluateCoachResponseContract(payload, {
       requiresLiveProgramFacts: true,
       allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
-      facts: coachResponseGroundingFacts(modelInput.currentAthleteSnapshot),
+      facts: coachResponseGroundingFacts(
+        modelInput.currentAthleteSnapshot,
+        doorLabelsFromKnowledge(CANONICAL_COACH_KNOWLEDGE),
+      ),
     });
     const failureCode = coachResponseContractFailureCode(evaluation);
     if (failureCode !== null) {

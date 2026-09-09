@@ -7,6 +7,7 @@ import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 import type { CoachChatFailureCode } from '../../rules/coachChatFailure';
 import { validateCoachCommunicationTruth } from '../../utils/verifiedCoachCommunication';
 import { coachChatMessageWithinLimit } from '../../rules/coachChatLimits';
+import { COACH_APP_DOOR_LABELS } from '../../rules/coachAppMap';
 import {
   coachResponseGroundingFacts,
   fixtureClaimGrounded,
@@ -153,7 +154,7 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
   // F14 (2026-09-09): the words are checked against the same snapshot facts
   // the server checks, so an invented readiness tier or game day never reaches
   // the athlete even if the server's gate is behind this build.
-  const facts = coachResponseGroundingFacts(modelInput.currentAthleteSnapshot);
+  const facts = coachResponseGroundingFacts(modelInput.currentAthleteSnapshot, COACH_APP_DOOR_LABELS);
   if (!readinessClaimGrounded(message, facts)
     || !fixtureClaimGrounded(message, facts)
     || !phaseClaimGrounded(message, facts)) {

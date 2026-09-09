@@ -1,4 +1,5 @@
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import { COACH_APP_DOOR_LABELS } from '../../rules/coachAppMap';
 import { projectCoachSnapshotForModel } from '../../rules/coachModelContext';
 import {
   COACH_RESPONSE_MAX_ANSWER_WORDS,
@@ -160,7 +161,7 @@ export function runCoachLab(args: {
     const evaluation = evaluateCoachLabResponse(
       labCase,
       response,
-      coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot)),
+      coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot), COACH_APP_DOOR_LABELS),
     );
     return {
       caseId: labCase.id,
@@ -200,7 +201,7 @@ export async function runCoachLabAsync(args: {
       ...evaluateCoachLabResponse(
         labCase,
         response,
-        coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot)),
+        coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot), COACH_APP_DOOR_LABELS),
       ),
     });
   }

@@ -1,5 +1,4 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
-import { COACH_APP_DOOR_LABELS } from './coachAppMap';
 
 /** Pure automatic response boundary shared by Coach Lab and the live endpoint. */
 
@@ -90,13 +89,33 @@ export function coachResponseGroundingFacts(snapshot: {
   readonly readiness: { readonly reported: boolean };
   readonly visibleWeek: { readonly fixtures: readonly { readonly weekday: string }[] };
   readonly situation?: { readonly season: { readonly phase: string } | null };
-}, doorLabels: readonly string[] = COACH_APP_DOOR_LABELS): CoachResponseGroundingFacts {
+}, doorLabels: readonly string[]): CoachResponseGroundingFacts {
   return {
     readinessReported: snapshot.readiness.reported,
     gameWeekdays: snapshot.visibleWeek.fixtures.map((fixture) => fixture.weekday),
     seasonPhase: snapshot.situation?.season?.phase ?? null,
     doorLabels: doorLabels.map((label) => label.toLowerCase()),
   };
+}
+
+/**
+ * The door labels as the SERVER learns them: from the generated app map inside
+ * the knowledge bundle, never from `coachAppMap.ts` (which reaches the signed
+ * sheet and the app's copy modules, none of which belong in the function).
+ * The app passes `COACH_APP_DOOR_LABELS` directly; `coachAppMapTests` holds
+ * the two lists equal.
+ */
+export function doorLabelsFromKnowledge(
+  sources: readonly { readonly authority: string; readonly content: string }[],
+): readonly string[] {
+  const labels = new Set<string>();
+  for (const source of sources) {
+    if (source.authority !== 'app_map') continue;
+    const pattern = /Label: "([^"\n]+)"/g;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(source.content)) !== null) labels.add(match[1]);
+  }
+  return [...labels];
 }
 
 /**

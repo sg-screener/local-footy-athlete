@@ -50,3 +50,8 @@ the fixture carried a next week ("I can only see this week…"). The real
 answer (re-asked the same morning) is the one in the table above. Its
 approval is withdrawn to PENDING until Sam approves the real words; ten S1
 rows stay approved.
+
+**Sam, 2026-09-10, "yes to both":** row 4 approved with the real next-week
+words; row 7 recorded as CORRECTED — the post-deploy answer with its last
+clause pointed at the door ("tap Something hurts inside the session and
+it'll adapt the work"). All twelve S1 rows are now reviewed.
