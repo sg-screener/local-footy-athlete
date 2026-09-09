@@ -1,5 +1,6 @@
 import type { Workout } from '../types/domain';
 import {
+  carriesComposedGymSession,
   getSessionComponentRows,
   sessionOrderIsAuthored,
 } from './sessionComponents';
@@ -322,9 +323,14 @@ export function buildSessionTemplate(
   if (!workout) return { mode: 'badged_list', ordering: 'd2', items: [] };
   const teamState = getTeamTrainingWorkoutState(workout);
   const componentRows = getSessionComponentRows(workout);
+  // A composed gym session (Primer, Gunshow, Prehab) with conditioning
+  // attached is a combined day, whatever type the day was handed: its rows
+  // keep their own section and authored order (2026-09-09, see
+  // `carriesComposedGymSession`).
   const isConditioningOnly =
     !teamState.isTeamTrainingOnly &&
-    CONDITIONING_ONLY_TYPES.has(String(workout.workoutType ?? ''));
+    CONDITIONING_ONLY_TYPES.has(String(workout.workoutType ?? '')) &&
+    !carriesComposedGymSession(workout);
   const conditioningBlockRowIds = new Set<string>(
     (workout.conditioningBlock?.options ?? [])
       .flatMap((option) => option.exerciseIds ?? [])

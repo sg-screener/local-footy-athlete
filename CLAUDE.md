@@ -136,6 +136,31 @@ relaunch. A generation change needs the full scenario report.
 IN THE SAME TASK.** A field with no reader is not half-built, it is dead weight
 that later code will trust. `canOverride` was written nine times and read zero.
 
+**DEVELOPMENT COMPLETION AND RELEASE CERTIFICATION ARE SEPARATE (Sam,
+2026-09-10).** Thirteen hours were lost running the three-hour release gate four
+times as if it were the tool that finds problems. It is not. **A fix, or a build
+for Sam's phone, does NOT require the full release gate.** The release checks
+stay exactly as they are, for the moment they exist for: certifying a release
+candidate, once, when Sam asks.
+
+- **Per fix:** keep the root-cause and approval rules above. Once approved, fix
+  the shared cause, update the genuinely affected implementations and tests,
+  delete obsolete versions of that behaviour. No unrelated refactoring.
+- **Check the smallest set that covers the actual bug AND its plausible side
+  effects** — connected behaviour, not only the tests that mention the edited
+  file. A programming change runs the relevant rule-interaction checks; a
+  display change runs the relevant display checks. Neither automatically means
+  generating a whole year. If a year is genuinely needed, one athlete
+  (`--only <archetype>`) is minutes; eight is an hour.
+- **Never run `test:release`, the 44-group gate, `test:bible`, or a year-long
+  audit without Sam's explicit approval.** "Finish it", "build it" and "put it on
+  my phone" are NOT that approval.
+- **Never weaken a test to get green, never claim an unrun check passed.** Fix
+  regressions your change causes; report unrelated failures without repairing
+  them; flag genuine safety or build blockers.
+- **Report per fix:** what changed, checks passed/failed, checks not run, and
+  phone status. Short.
+
 **THREE WORDS, AND ONLY THESE THREE.** **WORKING** — name the test that fails if
 it breaks. **BUILT** — the code exists, nothing checks it. **WRITTEN** — a doc
 says so, no code. **Banned: done, shipped, wired, handled, sorted, passing.**

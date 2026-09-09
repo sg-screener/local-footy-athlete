@@ -38,6 +38,7 @@ import {
 } from '../rules/section18WorkoutEvidence';
 import { canonicalConditioningLabel, canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
+import { carriesComposedGymSession } from './sessionComponents';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from './workoutContent';
 import {
   countingIndices,
@@ -1095,11 +1096,15 @@ function finaliseWorkoutAfterMutationUnchecked(
 
   let workoutType: WorkoutType = workout.workoutType;
   if (!isAnchor && !isRecovery) {
-    workoutType = hasStrength && hasConditioning
+    // A composed gym session (Primer, Gunshow, Prehab) is gym work with no
+    // strength pattern; it types the day like strength does (2026-09-09, see
+    // `carriesComposedGymSession`).
+    const hasGymContent = hasStrength || carriesComposedGymSession(workout);
+    workoutType = hasGymContent && hasConditioning
       ? 'Mixed'
       : hasConditioning
         ? 'Conditioning'
-        : hasStrength
+        : hasGymContent
           ? 'Strength'
           : workoutType;
   }

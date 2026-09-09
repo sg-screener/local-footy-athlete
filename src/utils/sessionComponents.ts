@@ -586,6 +586,26 @@ export function sessionOrderIsAuthored(
   return (workout as Workout)?.composedOptionalKind === 'primer';
 }
 
+/**
+ * A COMPOSED GYM SESSION — Primer, Gunshow, Prehab — IS GYM WORK WHATEVER ITS
+ * ROWS ARE TYPED (2026-09-09). Its identity is `composedOptionalKind`, on the
+ * day or on its rows once another session stacks beside it. A Primer is four
+ * mobility drills and three jumps; none is a strength pattern, so the two
+ * owners that derive a day's type from "strength patterns present" read a
+ * Primer with a bike flush attached as conditioning-only and re-typed it.
+ * Measured the moment the Primer's Pogo Hops became a typed power row: until
+ * then an untyped accessory was the only thing keeping the day a gym session.
+ */
+const COMPOSED_GYM_KINDS: ReadonlySet<string> = new Set(['primer', 'gunshow', 'prehab']);
+export function carriesComposedGymSession(
+  workout: Partial<Workout> | null | undefined,
+): boolean {
+  if (!workout) return false;
+  if (COMPOSED_GYM_KINDS.has(String((workout as Workout).composedOptionalKind ?? ''))) return true;
+  return (workout.exercises ?? []).some((row) =>
+    COMPOSED_GYM_KINDS.has(String((row as { composedOptionalKind?: string }).composedOptionalKind ?? '')));
+}
+
 export function standaloneLowLoadSessionKind(
   workout: Partial<Workout> | null | undefined,
 ): 'mobility' | 'recovery' | null {
@@ -607,7 +627,10 @@ function isStandaloneConditioningWorkout(workout: Partial<Workout>): boolean {
   // container. Its typed rows outrank the container's historical workoutType.
   const hasTypedStrength = workout.exercises?.some(row =>
     row.section18Evidence?.role === 'main_strength' || row.section18Evidence?.role === 'strength_accessory');
-  return workoutTypeHasConditioning(workout) && !isRecoveryWorkout(workout) && !hasTypedStrength;
+  // A composed gym session's typed identity outranks the container's type the
+  // same way typed strength rows do (2026-09-09, see `carriesComposedGymSession`).
+  return workoutTypeHasConditioning(workout) && !isRecoveryWorkout(workout) && !hasTypedStrength
+    && !carriesComposedGymSession(workout);
 }
 
 function hasSpeedBlock(workout: Partial<Workout>): boolean {

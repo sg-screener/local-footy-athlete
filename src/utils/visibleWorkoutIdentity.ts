@@ -1,7 +1,7 @@
 import type { Workout, WorkoutType } from '../types/domain';
 import { classifyExerciseExposures, type Exposure } from './exposureEngine';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
-import { getSessionComponentRows } from './sessionComponents';
+import { carriesComposedGymSession, getSessionComponentRows } from './sessionComponents';
 
 export interface VisibleWorkoutIdentity {
   title: string;
@@ -104,6 +104,9 @@ export function isConditioningOnlyWorkout(workout: Workout): boolean {
   ) {
     return false;
   }
+  // A composed gym session (Primer, Gunshow, Prehab) is never conditioning-only;
+  // see `carriesComposedGymSession` for the measured case (2026-09-09).
+  if (carriesComposedGymSession(workout)) return false;
 
   const names = exerciseNames(workout);
   const hasConditioningType = isConditioningTypedWorkout(workout);
