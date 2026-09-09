@@ -412,6 +412,26 @@ export async function commitSessionOutcomeTransaction(
   }
 }
 
+/** The athlete's earlier answer for a half this intent does not name, if any. */
+function carriedComponentOutcome(
+  component: SessionComponent,
+  saved: readonly SessionFeedbackComponent[],
+): RecordSessionOutcomeComponentIntent | null {
+  const entry = saved.find((candidate) => candidate.componentId === component.id);
+  if (!entry || entry.kind !== component.kind) return null;
+  return {
+    componentId: component.id,
+    kind: component.kind,
+    label: component.label,
+    completion: entry.completion,
+    reason: entry.completion === 'partial'
+      ? entry.partialReason ?? null
+      : entry.completion === 'skipped'
+        ? entry.skipReason ?? null
+        : null,
+  };
+}
+
 function normalizeIntent(
   intent: RecordSessionOutcomeIntent,
   target: ResolvedSessionOutcomeTarget,
@@ -446,13 +466,25 @@ function normalizeIntent(
       reason: supplied.completion === 'full' ? null : supplied.reason,
     });
   }
+  // A DAY IS ANSWERED HALF BY HALF (Sam, 2026-09-09). A club night has two
+  // doors — the gym's and the club's — and each answers only its own half:
+  // "No, skip it" on the strength prompt, the club-training panel, a gym save.
+  // This check used to demand an outcome for EVERY component, so the first
+  // answer on a virgin club night was refused (`incomplete_component_outcomes`)
+  // and swallowed by a warn — Sam's inert "No, skip it". Now: a half the intent
+  // does not name is carried from the athlete's SAVED record when they have
+  // answered it before, and otherwise stays unanswered — which is exactly what
+  // the missed-session prompt and the day card read (`componentAnswered`,
+  // `dayTimeline`). What the door still refuses is an intent naming nothing.
+  const savedComponents = ((useProgramStore.getState().sessionFeedback?.[intent.date] as
+    { components?: readonly SessionFeedbackComponent[] } | undefined)?.components ?? []);
   const componentOutcomes = target.components
-    .map((component) => suppliedById.get(component.id))
+    .map((component) => suppliedById.get(component.id) ?? carriedComponentOutcome(component, savedComponents))
     .filter((component): component is RecordSessionOutcomeComponentIntent => !!component);
-  if (componentOutcomes.length !== target.components.length) {
+  if (componentOutcomes.length === 0 && target.components.length > 0) {
     throw new SessionOutcomeValidationError(
       'incomplete_component_outcomes',
-      'Every visible session component must have an outcome before feedback is recorded.',
+      'At least one visible session component must have an outcome before feedback is recorded.',
     );
   }
   const componentAggregate = deriveAggregateCompletion(
