@@ -255,3 +255,52 @@ client gate; the deployed v10 accepts the extra fields — 12 live tapes prove
 it). **Tapes:** `docs/COACH_LAB_S1_TAPES_2026-09-10.md` + review page for
 Sam; row 7 (Nordic swap) still wrong on one of two runs — retrieval, S2.
 Not run: gates, audits, `test:bible`.
+
+**08:55 — Coach slice S2a BUILT (Rock 2: the rule book, fresh and findable).**
+Commit 077bd39d. Measured first: the registry was cut into 72-line sliding
+windows, two windows allowed per question, ranked by word overlap with the
+question plus the readiness words (weight 12) — so "can i do leg curls
+instead of nordics" reached R-394 on one run in two, and the readiness rows
+(R-127, R-350) sat in every answer. Now: (1) the registry is ONE CHUNK PER
+RULING (`chunkRulings`, boundaries `**R-nnn**` / `## R-nnn` / section /
+`---`; id keeps the exact line-slice form, `ruling` names the row; rows over
+1,500 chars are length-normalised so bulk cannot win); (2) the athlete's own
+words seat SIX rulings first (`QUESTION_RULING_SLOTS`), ranked title-match
+first — the sum of the rarity of each question term found in the row's
+title, so "sprint" beats "every … week" — then the full context fills to
+eight (was two); (3) the query also carries today's/the named day's session
+words and the phase words, and a row naming the athlete's phase gets ×1.3
+(no demotion — R-003's COD gate names all three phases). Bible and data
+sources keep their overlapping windows (the readiness-adjacency cell needs
+them). **WORKING:** `test:coach-retrieval-regression` (new, 18/0: eighteen
+question→owning-ruling pairs, e.g. nordics→R-394, deload→R-310/R-063,
+sick→R-037, away→R-018, missed→R-275, no barbell→R-212, gunshow→R-052,
+starting load→R-026, sprint→R-062, cod→R-003/R-329/R-331, Christmas→R-002,
+gym twice→R-235/R-237, RDL+nordic→R-233, harder Wednesday→R-395, and the
+soreness question shows the Bible's soreness excerpt) — registered as a
+current_contract witness (decision 210, current_contract 48);
+`coachLabRetrievalTests` 22/0 unchanged; `test:compile` 0.
+**Known misses, recorded not asserted:** "change of direction" in words does
+not reach R-003 (the row says COD) and "two sessions a week" does not reach
+the gym-days rows — vocabulary gaps keyword retrieval cannot close and the
+retrieval suite forbids a phrase table; embeddings (plan 2a) are the
+principled fix, deferred.
+**Correction to the plan:** `test:coach-chat-integration` (the bundle
+freshness cell) was ALREADY a current_contract witness in
+`scripts/test-truth-decisions.json` — the audit read `release-gate.js` for a
+"coach" entry, but the gate's units come from the decisions file. Nothing to
+wire; the plan's §2 row is wrong on that point.
+**2b/2c:** `npm run coach:deploy` (`scripts/coach-deploy.sh`) = rebuild bundle
+→ `test:coach-chat-integration` + `test:coach-retrieval-regression` must be
+green → `supabase functions deploy coach-chat` → receipt row in
+`docs/COACH_DEPLOY_RECEIPTS.md` (sha, version, highest R, dirty count).
+`COACH_CHAT_CONTRACT_VERSION = 2` (`coachChatLimits.ts`) travels inside
+`modelInput`; the server answers 409 `coach_chat_contract_mismatch` on a
+different number and the app shows the unavailable sentence (R-140 words
+unchanged) and logs both numbers. **Consequence:** the server deploy and the
+phone build must go together — the S1 phone build sends no version and the
+new server would refuse it; the deployed v10 ignores the field, so the new
+app works against it meanwhile.
+**Not done in S2a:** Rock 3 (app map) moves to S3; the Lab tape for the
+Nordic case cannot be re-run locally (`COACH_LAB_SECRET` is not on this
+machine) — it is re-taped through `coach:chat:smoke` after the deploy.
