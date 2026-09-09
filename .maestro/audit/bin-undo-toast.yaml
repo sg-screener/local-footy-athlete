@@ -53,6 +53,12 @@ tags:
       visible:
         id: "plan-change-done"
     commands:
+      # AT HUMAN SPEED (everyday acceptance F5, 2026-09-09): the athlete reads
+      # the "… was removed" sheet for longer than the toast's six seconds. The
+      # toast's clock now waits for the sheet to close, so a deliberate pause
+      # BEFORE Done is the case this flow must hold — it was the one that
+      # failed on the simulator while the fast tap stayed green.
+      - evalScript: ${(function () { var t = Date.now(); while (Date.now() - t < 8000) {} })()}
       - tapOn:
           id: "plan-change-done"
 

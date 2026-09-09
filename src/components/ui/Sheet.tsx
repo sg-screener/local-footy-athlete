@@ -134,6 +134,39 @@ export function SheetDescription({
   );
 }
 
+/**
+ * "A SHEET IS OPEN" — one signal, owned by the one sheet primitive.
+ *
+ * The undo toast (`components/UndoToast.tsx`) must not run its clock while a
+ * sheet stands over it (everyday acceptance F5, 2026-09-09). Every sheet in the
+ * app is this component, so the count lives here: `Sheet` registers itself
+ * while `visible`, and `useAnySheetOpen()` reads the count through
+ * `useSyncExternalStore`. No context, no prop drilling, no second modal type.
+ */
+let openSheetCount = 0;
+const openSheetListeners = new Set<() => void>();
+function publishOpenSheetCount(delta: number): void {
+  openSheetCount += delta;
+  openSheetListeners.forEach((listener) => listener());
+}
+function subscribeOpenSheets(listener: () => void): () => void {
+  openSheetListeners.add(listener);
+  return () => { openSheetListeners.delete(listener); };
+}
+function readOpenSheetCount(): number {
+  return openSheetCount;
+}
+export function useAnySheetOpen(): boolean {
+  return React.useSyncExternalStore(subscribeOpenSheets, readOpenSheetCount, readOpenSheetCount) > 0;
+}
+function useRegisterOpenSheet(visible: boolean): void {
+  React.useEffect(() => {
+    if (!visible) return undefined;
+    publishOpenSheetCount(1);
+    return () => publishOpenSheetCount(-1);
+  }, [visible]);
+}
+
 export function Sheet({
   visible,
   onClose,
@@ -162,6 +195,7 @@ export function Sheet({
    * already required to be `flexShrink: 1` — see `cappedBody`). Keyboard
    * closed → padding 0 → nothing changes.
    */
+  useRegisterOpenSheet(visible);
   const { reanimated } = useKeyboardContext();
   const keyboardInset = useAnimatedStyle(() => ({
     paddingBottom: Math.abs(reanimated.height.value),

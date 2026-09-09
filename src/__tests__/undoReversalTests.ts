@@ -49,7 +49,7 @@ import {
   lastUndoableEntry,
   unreadableEntryCount,
 } from '../rules/decisionLedgerReplay';
-import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
+import { undoToastFor, undoToastSeenMarker, undoToastCountdownArmed } from '../rules/undoToast';
 import type { AthleteDecision, DecisionLedgerEntry } from '../types/decisionLedger';
 
 let passed = 0;
@@ -290,6 +290,41 @@ run('11b a board bin raises its toast in the door’s own vocabulary', () => {
   assert(toast?.sentence === 'removed a session',
     `the toast did not use the phrase owner's words: ${toast?.sentence}`);
 });
+
+
+/* ── F5 (everyday acceptance, 2026-09-09): THE TOAST'S CLOCK MUST NOT RUN
+ * WHILE A SHEET COVERS IT. A Day-card removal lands its ledger entry while the
+ * confirmation sheet ("… was removed … Done") is still up. The sheet is an RN
+ * Modal — a separate window — so the toast is born behind it, its 6 s run out
+ * before Done, and `undoToastFor` then returns null for that entry for good.
+ * Measured on the simulator three times (3/5/7 s captures, no toast). The
+ * decision "is the countdown armed?" is a pure function with three inputs,
+ * and the covered signal is a THIRD state, never the unfocused one: the
+ * unfocused branch advances the seen marker and would make the bug permanent. */
+run('F5 the countdown is armed only with a model, focus, and no sheet covering it', () => {
+  assert(undoToastCountdownArmed({ hasModel: true, isFocused: true, covered: false }) === true, 'the plain case must arm');
+  assert(undoToastCountdownArmed({ hasModel: true, isFocused: true, covered: true }) === false, 'a covering sheet must NOT arm the clock');
+  assert(undoToastCountdownArmed({ hasModel: true, isFocused: false, covered: false }) === false, 'unfocused must not arm');
+  assert(undoToastCountdownArmed({ hasModel: false, isFocused: true, covered: false }) === false, 'no model, no clock');
+});
+{
+  const readSource = (...parts: string[]): string =>
+    fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+  const toast = readSource('components', 'UndoToast.tsx');
+  const sheet = readSource('components', 'ui', 'Sheet.tsx');
+  run('F5 the one sheet primitive publishes "a sheet is open"', () => {
+    assert(/export function useAnySheetOpen\(/.test(sheet), 'Sheet.tsx must export useAnySheetOpen');
+  });
+  run('F5 UndoToast waits for the sheet to close, and does not mark the entry seen while covered', () => {
+    assert(/const covered = useAnySheetOpen\(\);/.test(toast), 'UndoToast must read useAnySheetOpen');
+    assert(/undoToastCountdownArmed\(\{ hasModel: !!model, isFocused, covered \}\)/.test(toast),
+      'the timer effect must decide through undoToastCountdownArmed');
+    assert(/if \(!model \|\| !isFocused \|\| covered\) return null;/.test(toast),
+      'the render bail-out must include covered');
+    assert(/if \(isFocused\) return;\s*\n\s*setSeenEntryId\(undoToastSeenMarker\(entries\)\);/.test(toast),
+      'the unfocused branch must stay exactly focus-keyed — covered must not advance the seen marker');
+  });
+}
 
 run('12 a toast appears only when the newest decision CHANGES', () => {
   // Transience without a clock. A timestamp window would raise a toast for a
@@ -555,7 +590,9 @@ run('20 mutation: a missing exclusion reversal is caught after awaited Undo', as
   run('R-107 — at most one is visible, and the guard is in the COMPONENT', () => {
     assert(/useIsFocused/.test(toast),
       'UndoToast does not read focus, so two mounts can both draw');
-    assert(/if \(!model \|\| !isFocused\) return null;/.test(toast),
+    // `covered` (a sheet over the toast) joined the guard on 2026-09-09 (F5);
+    // focus is still checked in the same expression.
+    assert(/if \(!model \|\| !isFocused \|\| covered\) return null;/.test(toast),
       'UndoToast renders without checking focus — two toasts on one screen');
     // THE RULE LIVES WITH THE COMPONENT, NOT AT THE CALL SITES. A guard each
     // screen has to remember is a guard one screen will forget.
