@@ -368,3 +368,35 @@ new words). **WORKING:** `coachAppMapTests` 22/0, `coachSnapshotTests` 55/0,
 (control = original folder @ 556e2ac8):** `profileResetUITests` "LFA Days row
 present" and "no Sheet hosts a flexing body" — not mine. **Phone:** Release at
 d5dbfd50 building (build-release-6.log); install follows.
+
+**10:20 — R-399 streaming BUILT and live (coach-chat v18, commit d6e21625).**
+Sam: *"show the words as they arrive"*, then "1" for real streaming with
+withdrawal. Wire: a 200 `application/x-ndjson` stream — `{"t":"open"}`,
+`{"t":"m","text":<message so far>}` per update, then `final` / `refused` /
+`error`; pre-model failures stay plain JSON with their status.
+`src/rules/coachChatStream.ts` (shared): the NDJSON parser and the
+`createMessageExtractor` that reads the `message` string out of the model's
+JSON as it streams (escapes, split `\uXXXX`, torn chunks). Server:
+`OpenAIResponsesClient.stream` (SSE `response.output_text.delta`), and every
+forwarded update has passed `wordGatesHold` (readiness, fixture, phase,
+quoted door, false change) on the text so far; the whole-answer contract
+decides at the end. Phone: `coachChatTransport.ts` (XHR `onprogress` on the
+device — RN 0.81 incremental `responseText` — a body reader in node), the
+client forwards only the newest line and only while the same word gates
+hold, `CoachTabScreen` shows a provisional bubble (`coach-tab-streaming`)
+that `say` replaces with the checked answer or the signed refusal.
+**Found on the way, and the bigger fix:** the model's strict JSON schema in
+`openAIResponsesClient.ts` still listed the OLD basis / snapshot-field /
+authority enums — the model literally could not say `app_door`, `app_map`,
+`situation`, `athlete`… — which explains the mislabelled DOOR citations and
+the receipt/word mismatches from v12–v17. One list now, message first.
+Contract version 3 (app and server deployed together).
+**WORKING:** `test:coach-chat-streaming` (new, 15/0; release-gate witness,
+decision 212, current_contract 50), `coachChatIntegrationTests` 92/0 (three
+cells re-pinned to the stream shape), `coachTabSlice1Tests` 75/75,
+`openAICoachLabTests` 61/0, `test:compile` 0.
+**Measured live (v18, `coach:chat:smoke` timing):** first word at 1.7 s and
+2.2 s, whole answer 3.0–3.8 s (a cold-start call: 7.6 s / 8.3 s). Before:
+nothing until 4–7 s from the desk, 10–15 s on the phone.
+**Phone:** Release at d6e21625 building (build-release-7.log); install follows.
+Not run: gates, audits.
