@@ -27,3 +27,9 @@ review (LAW-coach-lab-before-provider-or-release). Raw log:
 **What Sam decides:** approve / correct each row. A corrected row's ideal
 answer becomes its `ownerReview.idealAnswer`. Row 7 is a known S2 defect,
 not a review question.
+
+**Sam, 2026-09-10: "approve all".** Recorded in `coachLabCases.ts` as
+`ownerReview.status: 'approved'` for rows 1–6 and 8–12, `idealAnswer` = the
+exact words above, model `gpt-5.6-terra`, prompt `coach-lab-openai-v4-situation`.
+Row 7 stays PENDING: its answer contradicts R-394, so it cannot be the
+benchmark; it is re-taped after S2 and reviewed then.

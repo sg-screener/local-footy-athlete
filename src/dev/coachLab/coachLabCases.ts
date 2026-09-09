@@ -123,7 +123,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'You’re in-season: build week, week 6 of the phase and week 2 of block 2. You’ve got a game this Saturday, so the priority is maintaining strength and fitness while staying fresh for it.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-block-week',
@@ -131,7 +138,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'This is In-season, build week: Block 2, Week 2. It’s Phase Week 6 and not a deload week.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-deload',
@@ -139,7 +153,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'lfa_consistency'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'No — this is not a deload week. It’s marked as an in-season build week, with the deload flag off. Today’s quick check shows low energy, but there’s no active program modifier visible. Use that as a cue to keep today’s lower session controlled; if you feel flatter once you start, back off volume or intensity rather than forcing it.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-next-week',
@@ -147,7 +168,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'I can only see this week, not next week’s programmed sessions. This week runs: Lower Squat today, team training Tuesday, rest Wednesday, Upper Push plus conditioning Thursday, rest Friday, game Saturday, then rest Sunday. Next week’s Saturday game is listed ahead, but its sessions are not yet visible.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-next-game',
@@ -155,7 +183,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'After this Saturday’s game, your next game is Saturday 5 September.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-club-nights',
@@ -163,7 +198,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'You train with the club on Tuesday nights. This week’s Tuesday session is Team Training.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-nordic-swap-in-season',
@@ -171,6 +213,9 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['lfa_consistency', 'coaching_quality', 'program_factuality'],
+    // Left PENDING on 2026-09-10: the recorded answer ("yes") contradicts
+    // R-394 (in season a curl does not replace the Nordic), so it cannot be
+    // the ideal. Re-taped after slice S2 (retrieval), then reviewed.
     ownerReview: PENDING,
   },
   {
@@ -179,7 +224,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['coaching_quality', 'program_factuality', 'medical_safety'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'You’ve recorded low energy and moderate soreness today, so being flat may reflect normal accumulated load rather than anything specific we can pin down. Your measured load is still in the target band (1.08), and you completed Thursday’s session and Saturday’s game. For today’s Lower Squat, keep the main work only if you’re moving well; trim volume and skip any finisher. If the flatness persists or worsens through the week, use the readiness check so the week can be reduced.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-last-week',
@@ -187,7 +239,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'I can see two full sessions from last week: Thursday felt good, then Saturday was hard. That’s solid work, but there’s no full weekly completion or load summary here, so I can’t fairly score the whole week. Your load is currently in the target range, and your Back Squat has moved from 95 kg to 100 kg for 5 reps this week.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-why-changed',
@@ -195,7 +254,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'Nothing in the current snapshot shows a recorded program change or a visible modifier. Your week is set around Tuesday team training and the Saturday game: lower today, upper plus conditioning Thursday, with rest Wednesday, Friday and Sunday to protect freshness. Today’s quick check recorded low energy and moderate soreness, but it is a today-only observation and hasn’t produced a visible change. If you meant a specific session or exercise, which one changed?',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-one-rm',
@@ -203,7 +269,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'Your current estimated Back Squat 1RM is about 117 kg, based on 100 kg for 5 reps this week (Brzycki estimate). That’s up from roughly 111 kg off 95 kg for 5 last week.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
   {
     id: 's1-mas-pace',
@@ -211,7 +284,14 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     source: 'coach-90-plan-slice-s1-2026-09-10',
     requiresLiveProgramFacts: true,
     reviewFocus: ['lfa_consistency', 'program_factuality', 'judgement_transparency'],
-    ownerReview: PENDING,
+    // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'For 4-minute efforts, use about 90–100% of your MAS: roughly 15.4–17.1 km/h from your measured 17.1 MAS. Start nearer 15.5–16 km/h and aim to hold the same pace across all reps rather than blasting the first one. You’ve recorded low energy today, so keep it controlled if you’re doing them today; if you fade badly, stop the hard work rather than forcing the pace.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v4-situation',
+    },
   },
 ];
 

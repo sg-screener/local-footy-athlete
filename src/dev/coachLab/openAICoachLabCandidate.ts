@@ -10,7 +10,12 @@ import type { OpenAIResponseRequest, OpenAIResponseResult } from './openAIRespon
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 
 export const OPENAI_COACH_LAB_MODEL = 'gpt-5.6-terra';
-export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v3-context';
+/**
+ * v4 (2026-09-10, slice S1): the contract text gained the situation, history,
+ * injuries, estimates and MAS paragraphs (R-397). An approval never transfers
+ * across prompt versions (R-136), so the S1 tapes are bound to v4.
+ */
+export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v4-situation';
 
 export interface OpenAICoachLabClient {
   create(request: OpenAIResponseRequest): Promise<OpenAIResponseResult>;

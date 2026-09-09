@@ -54,13 +54,20 @@ console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
   ok('messy spelling and shorthand survive unchanged',
     COACH_LAB_CASES.some((entry) => entry.athleteMessage === 'legs are rooted but dont wanna skip'));
   const approved = COACH_LAB_CASES.filter((entry) => entry.ownerReview.status === 'approved');
-  ok('only Sam\'s exact approved Sol tape leaves pending review',
-    approved.length === 1
-      && approved[0].id === 'rooted-but-wants-to-train'
-      && approved[0].ownerReview.idealAnswer === ROOTED_SOL_APPROVED_ANSWER
-      && approved[0].ownerReview.approvedModel === 'gpt-5.6-sol'
-      && approved[0].ownerReview.approvedPromptVersion === 'coach-lab-openai-v2-retrieval'
-      && COACH_LAB_CASES.filter((entry) => entry.ownerReview.status === 'pending').length === 9);
+  const sol = approved.find((entry) => entry.id === 'rooted-but-wants-to-train');
+  ok('Sam\'s exact approved Sol tape is still the first benchmark',
+    sol !== undefined && sol.ownerReview.idealAnswer === ROOTED_SOL_APPROVED_ANSWER);
+  // Sam, 2026-09-10: "approve all" on the S1 tapes — eleven of the twelve;
+  // the Nordic-swap tape stays pending because its answer contradicts R-394.
+  const s1Approved = approved.filter((entry) => entry.id.startsWith('s1-'));
+  ok('the eleven S1 tapes Sam approved are recorded exactly, and the Nordic one is not',
+    approved.length === 12
+      && s1Approved.length === 11
+      && !s1Approved.some((entry) => entry.id === 's1-nordic-swap-in-season')
+      && s1Approved.every((entry) => typeof entry.ownerReview.idealAnswer === 'string'
+        && entry.ownerReview.idealAnswer.length > 40
+        && entry.ownerReview.approvedModel === 'gpt-5.6-terra'
+        && entry.ownerReview.approvedPromptVersion === 'coach-lab-openai-v4-situation'));
   ok('every case declares whether live program facts are required',
     COACH_LAB_CASES.every((entry) => typeof entry.requiresLiveProgramFacts === 'boolean'));
 }
