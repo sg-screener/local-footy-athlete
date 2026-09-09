@@ -10111,3 +10111,15 @@ Held for every future athlete by the annual verdict: `weekly_inseason_conditioni
 ## R-396 — Tier badges (CORE, RECOVERY…) sit at 75% opacity (Sam, 2026-09-10)
 
 Owner: phonebuild. Sam, looking at the CORE chip on his phone: *"the badges need to have opacity boosted 25% or so."* Supersedes the 2026-09-04 chat ruling that dropped them to 50% (*"they're taking up too much attention - drop their opacity down to 50%"*), which lived only in the component comment. Read as an absolute step: 50% → 75%. One number, `BADGE_DE_EMPHASIS` in `SessionTierBadge`, fades the whole chip so the four tier colours keep their relation; the session name beside it stays at full contrast. If Sam wants it fainter or louder, that one number moves again. · `BUILT` — no cell asserts the value; the proof is the chip on Sam's phone.
+
+---
+
+## R-397 — The coach receives the full profile (Sam, 2026-09-10)
+
+Owner: phonebuild. Sam, answering `docs/COACH_90_PLAN_2026-09-10.md` Q1: *"yes full profile"*. Supersedes the Privacy-screen promise recorded under R-140 that the coach never sees "the full saved profile" or body measurements. The coach model input may carry every profile fact the app holds — season phase, sub-phase, block and week-in-block, deload, position, goals, experience and conditioning level, age band, equipment answer and training location, availability constraints, gym days, club nights, usual game day, fixtures ahead, injuries in detail, exclusions and pins, main-lift estimates, MAS, height and weight, this week and next — as concise derived summaries through the one projection `projectCoachSnapshotForModel`. Still excluded, not asked and not granted: the athlete's name, any internal id, email or account field (the server regex stays). The Privacy screen sentence is rewritten in the same slice to list exactly what travels (R-140's exact-words rule still holds; the words change once, with this row as the receipt). · `WRITTEN` — built in plan slices S1/S4.
+
+---
+
+## R-398 — Coach memory is the current app session, on the phone, nothing stored (Sam, 2026-09-10)
+
+Owner: phonebuild. Sam, answering Q2: *"i don't need him storing heaps of information because when we have thousands of athletes using it that could get expensive - just need him to be able to remember that conversation until the app is exited maybe?"* The conversation lives in app memory for the life of the app process: it survives leaving and returning to the Coach tab and is gone when the app is exited. Nothing is written to disk, nothing to a server, nothing to the provider. The turns sent with each question rise from 6 to 10 in app and server together. History the app already records (readiness, outcomes, changes, injuries) reaches the coach as derived snapshot fields, not as stored memory. The "want me to remember that?" offer from the plan is NOT built. `LAW-live-athlete-snapshot-is-live-and-shared` (never persisted) stands unchanged. · `WRITTEN` — built in plan slice S5.

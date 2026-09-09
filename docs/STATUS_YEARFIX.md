@@ -209,3 +209,11 @@ three layers, proof loop), five slices, three questions for Sam (profile vs
 Privacy screen, on-device memory, deploy). Inputs: 24 live probes + four
 read-only audits (rulings, profile gap, app map, knowledge pipeline). No code
 changed.
+
+**08:10 — Sam ruled on the plan and the coach is deployed.** R-397 (full
+profile to the coach; name/ids never), R-398 (memory = app session, in memory,
+10 turns, nothing stored; the remember-offer dropped). Bundle rebuilt
+(R-393 → R-396), `test:coach-chat-integration` 87/0, `supabase functions
+deploy coach-chat` exit 0 → **v10 ACTIVE**. Live smoke: the Nordic question
+now cites the in-season rule. Receipt: `docs/COACH_DEPLOY_RECEIPTS.md`.
+Plan §7 and Rock 4 updated. Next: slice S1 (Snapshot v2) on Sam's word.
