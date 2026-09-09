@@ -59,6 +59,16 @@ export function coachChatFailureCode(error: unknown): CoachChatFailureCode {
   return error instanceof CoachChatError ? error.code : 'unavailable';
 }
 
+/** The refused checks' NAMES, for the log; never the athlete's words. */
+function serverViolations(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as { violations?: unknown };
+    return Array.isArray(parsed.violations) ? parsed.violations.map(String).join(', ') : 'unnamed';
+  } catch {
+    return 'unnamed';
+  }
+}
+
 function serverFailureCode(raw: string): string | null {
   try {
     const parsed = JSON.parse(raw) as { error?: unknown };
@@ -111,7 +121,7 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
   if (!response.ok) {
     const serverCode = serverFailureCode(raw);
     if (serverCode === 'coach_chat_response_refused') {
-      throw new CoachChatError('refused', 'Coach chat refused an unsafe answer.');
+      throw new CoachChatError('refused', `Coach chat refused an unsafe answer (${serverViolations(raw)}).`);
     }
     if (serverCode === 'coach_chat_invalid_answer') {
       throw new CoachChatError('no_answer', 'Coach chat returned no usable answer.');

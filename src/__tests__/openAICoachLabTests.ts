@@ -185,12 +185,13 @@ async function main(): Promise<void> {
         })),
       },
     });
-    ok('the active target is carried and recent chat is bounded to the last six turns',
+    // R-398 (2026-09-10): ten turns travel, so seven built turns all arrive.
+    ok('the active target is carried and recent chat is bounded to the last ten turns',
       contextual.conversationContext.activeProgramTarget?.label === 'Upper Push'
         && !('partId' in contextual.conversationContext.activeProgramTarget)
-        && contextual.conversationContext.recentTurns.length === 6
-        && contextual.conversationContext.recentTurns[0]?.text === 'turn 1'
-        && contextual.conversationContext.recentTurns[5]?.text === 'turn 6',
+        && contextual.conversationContext.recentTurns.length === 7
+        && contextual.conversationContext.recentTurns[0]?.text === 'turn 0'
+        && contextual.conversationContext.recentTurns[6]?.text === 'turn 6',
       contextual.conversationContext);
     const internalSnapshot = {
       ...coachLabFixtureSnapshot(),

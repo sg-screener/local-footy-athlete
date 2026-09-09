@@ -9,7 +9,7 @@ import {
   evaluateCoachResponseContract,
 } from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
-import { COACH_CHAT_CONTRACT_VERSION, COACH_CHAT_MAX_MESSAGE_CHARACTERS } from '../../../src/rules/coachChatLimits.ts';
+import { COACH_CHAT_CONTRACT_VERSION, COACH_CHAT_MAX_MESSAGE_CHARACTERS, MAX_RECENT_TURNS } from '../../../src/rules/coachChatLimits.ts';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -86,7 +86,7 @@ function validModelInput(value: unknown): value is {
     && validSnapshot(snapshot)
     && record(conversation)
     && Array.isArray(conversation.recentTurns)
-    && conversation.recentTurns.length <= 6
+    && conversation.recentTurns.length <= MAX_RECENT_TURNS
     && conversation.recentTurns.every((turn) => record(turn)
       && (turn.speaker === 'coach' || turn.speaker === 'athlete')
       && typeof turn.text === 'string'
@@ -187,10 +187,12 @@ Deno.serve(async (request) => {
     const failureCode = coachResponseContractFailureCode(evaluation);
     if (failureCode !== null) {
       console.warn('coach-chat response rejected by contract', evaluation.violations);
+      // Violation NAMES travel back, never the words (v12/v13 were undiagnosable).
       return json(502, {
         error: failureCode === 'invalid_answer'
           ? 'coach_chat_invalid_answer'
           : 'coach_chat_response_refused',
+        violations: evaluation.violations,
       });
     }
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));

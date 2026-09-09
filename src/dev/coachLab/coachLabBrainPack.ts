@@ -57,6 +57,7 @@ OUTPUT CONTRACT
 - Mark athlete facts with athlete_snapshot and list only snapshot fields actually used.
 - Mark LFA rules with lfa_rule and cite the supporting active_rule, lfa_bible or canonical_source chunk.
 - Mark judgement with coaching_judgement and set judgementLabel to labelled.
+- Mark a door of the app with app_door and cite its DOOR chunk from APP DOORS with authority app_map and the exact supplied chunk id.
 - A useful honest limit or focused question is better than a generic refusal.`;
 
 /**

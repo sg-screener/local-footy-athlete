@@ -33,6 +33,7 @@ import {
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
+import { clearCoachConversation } from './coachConversationSession';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useJournalNoteStore } from '../store/journalNoteStore';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
@@ -298,6 +299,9 @@ function runFullReset(
     athletePrefInjuriesCleared: useAthletePreferencesStore.getState().prefs.activeInjuries?.length ?? 0,
   };
   deps.coachUpdatesStore.clearAllCoachUpdates();
+  // R-398: the in-memory coach conversation is app-session memory; Full reset
+  // ends the session's history too ("wipes … coach history").
+  clearCoachConversation();
   useReadinessStore.getState().clear();
   useCoachPreferencesStore.getState().clearAllModalityPreferences();
 

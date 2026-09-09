@@ -415,8 +415,13 @@ export function evaluateCoachResponseContract(
   // athlete's week. It counts as live-program grounding only when it cites
   // the DOOR chunk it read (v12's first tapes refused nine of ten door
   // answers because they carried no snapshot basis).
-  const usesDoor = basis.includes('app_door')
-    && sources.some((source) => source.authority === 'app_map');
+  // The model labels a DOOR chunk by whatever authority it guesses (v13
+  // refused every door answer because it wrote active_rule); the chunk's own
+  // path is the truth, so a citation of the generated map counts as a door.
+  const citesDoor = sources.some((source) => source.authority === 'app_map'
+    || /COACH_APP_MAP\.md/.test(source.id)
+    || /COACH_APP_MAP\.md/.test(source.sourceReference ?? ''));
+  const usesDoor = basis.includes('app_door') && citesDoor;
   const focusedQuestionWithoutFacts = payload?.answerMode === 'focused_question'
     && !usesSnapshot
     && snapshotFields.length === 0;
@@ -438,7 +443,7 @@ export function evaluateCoachResponseContract(
     lfaClaimsGrounded: payload !== null
       && sourcesWereRetrieved
       // A door named as a basis must be receipted by a DOOR chunk.
-      && (!basis.includes('app_door') || sources.some((source) => source.authority === 'app_map'))
+      && (!basis.includes('app_door') || citesDoor)
       && (!claimsLfaRule || sources.some(
         (source) => source.authority === 'lfa_bible' || source.authority === 'active_rule',
       )),

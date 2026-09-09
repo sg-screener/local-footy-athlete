@@ -18,3 +18,10 @@ export function coachChatMessageWithinLimit(message: string): boolean {
  * 2 — R-397 situation/history/injuries/estimates/mas + phase gate (2026-09-10).
  */
 export const COACH_CHAT_CONTRACT_VERSION = 2;
+
+/**
+ * How many recent turns travel with each question — the app slices to it and
+ * the server refuses more. R-398 (Sam, 2026-09-10): the conversation is the
+ * app session and ten turns go with each question (was six).
+ */
+export const MAX_RECENT_TURNS = 10;

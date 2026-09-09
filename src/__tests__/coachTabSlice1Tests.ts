@@ -32,10 +32,14 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import fs from 'fs';
+// The opener reads the signed sheet; register it first (an import-order
+// crash, `UnsignedCopyError "part.headline.strength"`, not a product defect).
+import { registerProjectionCopy } from '../rules/projectionCopy';
 import path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
+registerProjectionCopy();
 import { coachOpener, coachOpenerGrounds } from '../rules/coachOpener';
 import {
   COACH_GREETING_COPY_ID,
@@ -149,11 +153,18 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
   );
 
   // NO STATE LEAVES THE COMPONENT. `useState` is the whole store.
+  // R-398 (Sam, 2026-09-10): the conversation is the app session. It lives
+  // in the in-memory holder `coachConversationSession` — not component state
+  // (which died with the tab), not a store, not persisted.
+  const holder = stripComments(read('utils', 'coachConversationSession.ts'));
   ok(
-    'the conversation lives in component state and nowhere else',
-    /useState<readonly CoachTurn\[\]>/.test(screenCode)
-      && !/useEffect\([^)]*\)[\s\S]{0,200}(save|persist|write|append)/i.test(screenCode),
-    'zero new stored state — the slice is read-only in the north-star sense too',
+    'the conversation lives in the in-memory session holder and nowhere else',
+    /useCoachConversation\(\)/.test(screenCode)
+      && !/useState<readonly CoachTurn\[\]>/.test(screenCode)
+      && !/from '[^']*\/store\/|AsyncStorage|persist|zustand/.test(holder)
+      && /let turns: readonly CoachConversationTurn\[\] = \[\];/.test(holder)
+      && /export function clearCoachConversation/.test(holder),
+    'zero stored state — R-398 memory is the process, nothing more',
   );
 
   // ── AND THE BAN GOES ONE HOP FURTHER, BECAUSE IT HAD TO ────────────────────
@@ -498,7 +509,7 @@ console.log('\n[5] STYLE LAW + COPY — the screen authors neither colours nor w
     .exec(screenCode)?.[0] ?? '';
   ok(
     'the coach-turn appender was located and is substantial',
-    sayBody.length > 100 && /setTurns\(/.test(sayBody)
+    sayBody.length > 100 && /appendCoachConversation\(/.test(sayBody)
       && /\}, \[\]\);\s*$/.test(sayBody),
     `${sayBody.length} chars`,
   );

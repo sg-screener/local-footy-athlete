@@ -113,6 +113,15 @@ console.log('\n[3] THE DOOR GATE: A QUOTED CONTROL MUST BE A DOOR');
   }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['docs/generated/COACH_APP_MAP.md:L20-L20'], facts });
   ok('a "how do I" answer grounded only in a cited door passes the live-facts requirement',
     doorOnly.ok, doorOnly.violations);
+  const doorMislabelled = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'On the Program tab, under Not feeling 100%?, tap "Sick".',
+    basis: ['app_door'],
+    snapshotFieldsUsed: [],
+    knowledgeSources: [{ id: 'docs/generated/COACH_APP_MAP.md:L20-L20', authority: 'active_rule', sourceReference: 'docs/generated/COACH_APP_MAP.md:L20-L20' }],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['docs/generated/COACH_APP_MAP.md:L20-L20'], facts });
+  ok('a DOOR chunk cited under the wrong authority label still counts as the door (the path is the truth)',
+    doorMislabelled.ok, doorMislabelled.violations);
   const doorUnreceipted = evaluateCoachResponseContract({
     ...grounded,
     message: 'On the Program tab, under Not feeling 100%?, tap "Sick".',

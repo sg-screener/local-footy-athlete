@@ -36,6 +36,12 @@ import {
 import { useLiveAthleteSnapshot } from './useLiveAthleteSnapshot';
 import { askCoachReadOnly, coachChatFailureCode } from '../../services/api/coachChat';
 import {
+  appendCoachConversation,
+  readCoachConversation,
+  useCoachConversation,
+  type CoachConversationTurn,
+} from '../../utils/coachConversationSession';
+import {
   COACH_CHAT_MAX_MESSAGE_CHARACTERS,
   coachChatMessageWithinLimit,
 } from '../../rules/coachChatLimits';
@@ -121,11 +127,7 @@ import {
  */
 
 /** One line of the conversation. Not persisted, not a decision, not a record. */
-interface CoachTurn {
-  readonly id: string;
-  readonly speaker: 'coach' | 'athlete';
-  readonly text: string;
-}
+type CoachTurn = CoachConversationTurn;
 
 function SendIcon({ color }: { color: string }) {
   return (
@@ -171,7 +173,9 @@ export default function CoachTabScreen() {
   const weeklyCommitment = useCoachWeeklyCommitment();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
-  const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
+  // R-398: the conversation is the app session — it lives in the in-memory
+  // holder, survives leaving the tab, and dies with the process.
+  const turns = useCoachConversation();
   const [isSending, setIsSending] = useState(false);
 
   // ── THE CONVERSATION FOLLOWS THE ATHLETE, NOT THE OTHER WAY ROUND ──────────
@@ -212,10 +216,7 @@ export default function CoachTabScreen() {
 
   /** One coach sentence appended to the conversation. No wording happens here. */
   const say = useCallback((text: string) => {
-    setTurns((previous) => [
-      ...previous,
-      { id: `coach-${previous.length}`, speaker: 'coach', text },
-    ]);
+    appendCoachConversation({ id: `coach-${readCoachConversation().length}`, speaker: 'coach', text });
   }, []);
 
   const send = useCallback(async (message: string) => {
@@ -225,10 +226,7 @@ export default function CoachTabScreen() {
       text: turn.text,
     }));
     atBottomRef.current = true;
-    setTurns((previous) => [
-      ...previous,
-      { id: `athlete-${previous.length}`, speaker: 'athlete', text: message },
-    ]);
+    appendCoachConversation({ id: `athlete-${readCoachConversation().length}`, speaker: 'athlete', text: message });
     setDraft('');
     setIsSending(true);
     try {

@@ -1,5 +1,5 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
-import { COACH_CHAT_CONTRACT_VERSION, coachChatMessageWithinLimit } from './coachChatLimits';
+import { COACH_CHAT_CONTRACT_VERSION, MAX_RECENT_TURNS, coachChatMessageWithinLimit } from './coachChatLimits';
 import { weekdayName } from '../utils/appDate';
 
 export type CoachModelSpeaker = 'coach' | 'athlete';
@@ -38,7 +38,6 @@ export const EMPTY_COACH_MODEL_CONVERSATION: CoachModelConversationContext = {
 export type CoachModelDayRelation = 'past' | 'today' | 'future';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_RECENT_TURNS = 6;
 
 function dateValue(dateISO: string): number {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateISO.slice(0, 10));
