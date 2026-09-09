@@ -3645,3 +3645,13 @@ Seat: audit (Fable). Candidate worktree `/private/tmp/lfa-ui-programming-integra
 **WORKING:** R-354 earlier-days case (`test:rest-day-reason`), leg-programming case 37, `test:annual-audit-repairs`, fresh canonical 10753/0, annual 416/416. **NOT COVERED:** fresh Release build, simulator/phone acceptance, mail delivery, cloud sync, OS process death. Original folder, its server and simulator untouched by this seat; scratch worktrees removed.
 
 **Loop-audit findings recorded (memory):** a 66-min witness with no checkpoints; a horizon skip that returns the raw input; census witnesses are global.
+
+### 2026-09-09 14:05 — original folder switched to the verified candidate
+
+Sam: "switch it". Pre-switch checks in the original (`/Users/samgeurts/Documents/local-footy-athlete`, `integrate/2026-09-04-morning` @ 8d06bbde, 302 status entries): every untracked file (72 outside output dirs) byte-identical to snapshot 1e90ed5f; every modified tracked file identical to the snapshot (`git diff 1e90ed5f`: 0 insertions); no file modified in the previous 60 min; no other agent process; package-lock, Podfile.lock and the Xcode project unchanged between 8d06bbde and 017818cc (package.json scripts only) so no install. Fresh safety copy: `/private/tmp/lfa-original-preswitch-20260909/` (13,333 files + HEAD + status-before.txt); the 01:58 backup under the combined-verify evidence also stands.
+
+Switch: `git checkout -f -b integrate/2026-09-09-combined 017818cc` (the candidate branch itself is checked out in the worktree, so a new branch name). After: HEAD 017818cc, zero tracked differences, zero status entries outside output/outputs/tmp, old branch untouched at 8d06bbde, the folder's three Metro servers left running (Sam's rule: no restarts). Rollback = `git checkout integrate/2026-09-04-morning` then restore the working tree from the preswitch copy.
+
+Release build of 017818cc: `/private/tmp/lfa-combined-build-20260909/` (build.log, artifact.json), 0 errors, installed on Sam's iPhone 16 Pro Max via devicectl in-place upgrade (install.json). Remote launch was blocked by the auto-mode classifier; Sam opens it by hand.
+
+Known leftover: the snapshot commit 1e90ed5f carried two junk `.fuse_hidden*` files into the branch; harmless, remove in a later tidy-up commit. NOT COVERED: Sam's own phone walkthrough; mail delivery; cloud sync; OS process death.
