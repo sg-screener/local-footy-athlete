@@ -202,3 +202,10 @@ fixture had `rows: []` — the live projection does send rows (exercise,
 prescription, dose, cue), verified in `projectCoachSnapshotForModel`.
 **WRITTEN** — findings only; nothing changed in code. Not run: Coach Lab
 suites, gates.
+
+**07:40 — Coach 90% plan WRITTEN:** `docs/COACH_90_PLAN_2026-09-10.md` — five
+rocks (Snapshot v2, rule book fresh/findable/deployed, app map, memory in
+three layers, proof loop), five slices, three questions for Sam (profile vs
+Privacy screen, on-device memory, deploy). Inputs: 24 live probes + four
+read-only audits (rulings, profile gap, app map, knowledge pipeline). No code
+changed.
