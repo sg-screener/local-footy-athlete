@@ -3631,3 +3631,17 @@ dedicated suites are parked). `src/__tests__/modifierLifecycleTests.ts`
 appeared untracked at 06:57 during this audit — another seat's in-progress
 work, not touched, not part of this audit's evidence. Probes rerunnable:
 scratchpad `probes/` via `TZ=Australia/Melbourne sucrase-node <probe>`.
+
+## 2026-09-09 — combined candidate: group 35 diagnosis, annual run, register repair
+
+Seat: audit (Fable). Candidate worktree `/private/tmp/lfa-ui-programming-integration-20260909`, branch `codex/ui-programming-integration-20260909`. Evidence `/private/tmp/lfa-combined-verify-20260909/` (findings `group35-FINDINGS.md`, patch, probe + control logs) and `release-after-group35/` (annual log, receipts).
+
+**Group 35 `test:rest-day-reason`** — failed 143/144 on `completed and earlier days survive the forward-only report`: shoulder reported Monday, Monday adjusted and completed, hamstring reported Wednesday → Monday and Tuesday reverted to the un-adjusted sessions (R-354 broken). Controls: main tip 8d06bbde 19/19; UI snapshot 1e90ed5f 143/144 failing only the travel case (same as the original folder today); candidate a75a2587 143/144 failing only earlier-days. One-at-a-time revert sweep over the 31 modified files → `src/rules/canonicalWeeklyInjuryCompiler.ts` (caf275c2); hunk sweep → the fold skip plus the raw-input return on history days, together. Naive undo breaks leg-programming case 37 and `test:annual-audit-repairs`. Verified 2-line shape: skip a stage on a history day only when `stage.startDate >= historyBeforeISO`; return the post-fold day. Codex (combinedverify) built it as 296b3478 + guard b3e2a08a; re-ran the four witnesses mapped to the file and groups 35–44 fresh: 43/44 green on 865a5a4f.
+
+**Annual `test:compiler-year` on 865a5a4f** (started 11:33, finished 13:25): 416 green / 416 reached / 416 required, 8 distinct profiles, 416 exact reopens, 416 calf/hamstring weeks, all six fault controls caught, zero failed checks, zero missing, zero not-reached. Process exit 1 solely on `canonical_only: 1/1192 unresolved` — the register fingerprint for `compileCanonicalInjuryWeek` predated 296b3478 (reviewStatus `changed`). Group 3 had been REUSED from before the fix; the census scans every source file, so it must always re-run after any code change regardless of listed production paths — my reuse rule was wrong for census-type witnesses.
+
+**Register repair** dd081aff: fingerprint + appended review reason for that one entry, no app code. `test:weekly-writer-zero` fresh before repair exit 1 (1 unresolved); after repair exit 0. Composed annual receipt: `release-after-group35/annual-composed-receipt.json`. Sam chose option 1 (no second annual run); option 2 (a single fresh run showing the prerequisite green on dd081aff, ~2 h) was NOT run.
+
+**WORKING:** R-354 earlier-days case (`test:rest-day-reason`), leg-programming case 37, `test:annual-audit-repairs`, fresh canonical 10753/0, annual 416/416. **NOT COVERED:** fresh Release build, simulator/phone acceptance, mail delivery, cloud sync, OS process death. Original folder, its server and simulator untouched by this seat; scratch worktrees removed.
+
+**Loop-audit findings recorded (memory):** a 66-min witness with no checkpoints; a horizon skip that returns the raw input; census witnesses are global.
