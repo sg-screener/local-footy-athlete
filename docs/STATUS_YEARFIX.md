@@ -217,3 +217,41 @@ profile to the coach; name/ids never), R-398 (memory = app session, in memory,
 deploy coach-chat` exit 0 → **v10 ACTIVE**. Live smoke: the Nordic question
 now cites the in-season rule. Receipt: `docs/COACH_DEPLOY_RECEIPTS.md`.
 Plan §7 and Rock 4 updated. Next: slice S1 (Snapshot v2) on Sam's word.
+
+**08:40 — Coach slice S1 BUILT and on the phone (R-397).** Commits bbc3861c
+(code) and 1de68e6e (Lab bench + tapes). The one projection
+(`projectCoachSnapshotForModel`) now carries `situation` (season: phase,
+subphase, phase week, week kind, block, week-in-block, deload; standing:
+usual game day, club nights, gym days, sessions/week, Christmas break;
+fixtures ahead 28 days; next week through the same projection via the new
+`useProjectedWeekFor`), `history` (14 days of readiness signals, session
+outcomes with components, ledger decisions with ids and `name` keys stripped —
+`projectRecentChange`), `injuries` (active/improving episodes), `mas`,
+`estimates`, `load.weeklyCompletedLoadAU` and `load.isDeloadWeek`. The
+adapter reads the owned phase (`ownSeasonPhase`) and the block clock
+(`getStoredBlockStateForDate`), never the day kinds. Two refusals in the pure
+owner: a next week that is not the week after the visible week; season and
+load disagreeing about a deload. `phaseClaimGrounded` holds the words to the
+owned phase in the contract, the client (`coachChat.ts`) and the server
+(`index.ts` also now requires `situation`). Contract `snapshotFieldsUsed`
+whitelist gained the five new blocks — without it a model citing
+`situation` would have been an "invalid answer".
+**WORKING:** `coachSnapshotTests` 53/0 (new §5: present, unknown-not-guessed,
+both refusals, no refused key, ledger projection), `coachChatIntegrationTests`
+91/0 (four R-397 cells incl. conditional escape), `coachLabRetrievalTests`
+22/0, `openAICoachLabTests` 61/0, `coachSnapshotPopulatedTests` 18/0,
+`progressTabOwnershipTests` 84/0, `test:compile` 0 errors.
+**Baseline reds, reproduced on an untouched control worktree at HEAD:**
+`test:coach-lab` dies at `UnsignedCopyError "part.headline.strength"` in the
+old local candidate (`currentReadOnlyCoachCandidate` → `coachOpener`);
+`test:coach-phrase-ratchet` red on 10 files (control: same 10; my change adds
+two regex literals to `coachResponseContract.ts`, 28→30, the same class as
+the F14 gates; not re-baselined — owner's call).
+**Phone:** Release at bbc3861c, codesign OK, installed in place on AFA21856…
+(container 7932FC7B…), launch refused: Locked. **Server:** NOT redeployed —
+the repo's `index.ts` now requires `situation` and carries the phase gate +
+bundle R-398; deploying is Sam's call (the phone build already runs the
+client gate; the deployed v10 accepts the extra fields — 12 live tapes prove
+it). **Tapes:** `docs/COACH_LAB_S1_TAPES_2026-09-10.md` + review page for
+Sam; row 7 (Nordic swap) still wrong on one of two runs — retrieval, S2.
+Not run: gates, audits, `test:bible`.
