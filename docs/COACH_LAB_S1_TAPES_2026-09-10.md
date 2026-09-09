@@ -44,3 +44,9 @@ runs of "can i do leg curls instead of nordics", log
 Three of three apply R-394. Pending Sam's word on which of the three is the
 ideal (the first is proposed). "The app's injury/equipment pathway" is not a
 door's name — slice S3.
+
+**Correction, 2026-09-10:** row 4's page text was the answer recorded BEFORE
+the fixture carried a next week ("I can only see this week…"). The real
+answer (re-asked the same morning) is the one in the table above. Its
+approval is withdrawn to PENDING until Sam approves the real words; ten S1
+rows stay approved.

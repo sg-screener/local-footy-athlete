@@ -169,13 +169,13 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
     requiresLiveProgramFacts: true,
     reviewFocus: ['program_factuality', 'voice'],
     // Sam, 2026-09-10: "approve all" on the S1 tapes (docs/COACH_LAB_S1_TAPES_2026-09-10.md).
-    ownerReview: {
-      status: 'approved',
-      idealAnswer: 'I can only see this week, not next week’s programmed sessions. This week runs: Lower Squat today, team training Tuesday, rest Wednesday, Upper Push plus conditioning Thursday, rest Friday, game Saturday, then rest Sunday. Next week’s Saturday game is listed ahead, but its sessions are not yet visible.',
-      correctionReason: null,
-      approvedModel: 'gpt-5.6-terra',
-      approvedPromptVersion: 'coach-lab-openai-v4-situation',
-    },
+    // 2026-09-10: the tape Sam approved for this row was recorded BEFORE the
+    // fixture had a next week ("I can only see this week…"), so it is not the
+    // ideal. Real answer, same day: "Next week is set around your Saturday
+    // game: Lower Hinge on Monday, team training Tuesday, rest Wednesday,
+    // Upper Pull plus conditioning Thursday, rest Friday, game Saturday, then
+    // rest Sunday…" — PENDING until Sam approves those words.
+    ownerReview: PENDING,
   },
   {
     id: 's1-next-game',

@@ -57,13 +57,16 @@ console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
   const sol = approved.find((entry) => entry.id === 'rooted-but-wants-to-train');
   ok('Sam\'s exact approved Sol tape is still the first benchmark',
     sol !== undefined && sol.ownerReview.idealAnswer === ROOTED_SOL_APPROVED_ANSWER);
-  // Sam, 2026-09-10: "approve all" on the S1 tapes — eleven of the twelve;
-  // the Nordic-swap tape stays pending because its answer contradicts R-394.
+  // Sam, 2026-09-10: "approve all" on the S1 tapes — ten of the twelve are
+  // recorded; the Nordic-swap tape stays pending because its answer
+  // contradicted R-394, and the next-week tape stays pending because the
+  // page showed an answer recorded before the fixture had a next week.
   const s1Approved = approved.filter((entry) => entry.id.startsWith('s1-'));
-  ok('the eleven S1 tapes Sam approved are recorded exactly, and the Nordic one is not',
-    approved.length === 12
-      && s1Approved.length === 11
+  ok('the ten S1 tapes Sam approved are recorded exactly; the Nordic and next-week ones are not',
+    approved.length === 11
+      && s1Approved.length === 10
       && !s1Approved.some((entry) => entry.id === 's1-nordic-swap-in-season')
+      && !s1Approved.some((entry) => entry.id === 's1-next-week')
       && s1Approved.every((entry) => typeof entry.ownerReview.idealAnswer === 'string'
         && entry.ownerReview.idealAnswer.length > 40
         && entry.ownerReview.approvedModel === 'gpt-5.6-terra'
