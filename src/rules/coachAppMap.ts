@@ -39,6 +39,8 @@ export type CoachAppDoorSource =
 export interface CoachAppDoor {
   readonly id: `DOOR-${string}`;
   readonly label: string;
+  /** The choices the door offers, by their exact labels (tiers, Yes/No, chips). */
+  readonly options?: readonly string[];
   /** Tab → screen → control, in the athlete's words. */
   readonly path: readonly string[];
   readonly does: string;
@@ -80,7 +82,7 @@ export const COACH_APP_MAP: readonly CoachAppDoor[] = [
   { id: 'DOOR-day-week-toggle', label: 'Week', path: [TAB_PROGRAM, 'Day / Week'], source: { kind: 'literal', file: HOME },
     does: 'Switches the Program tab between one day and the seven-day week.',
     when: 'The athlete wants to see or change the whole week.' },
-  { id: 'DOOR-plan-options', label: sessionOptions, path: [TAB_PROGRAM, "TODAY'S FOCUS card", '•••'], source: { kind: 'signed', id: 'plan_change.session_options' },
+  { id: 'DOOR-plan-options', label: sessionOptions, path: [TAB_PROGRAM, "TODAY'S FOCUS card", '•••'], options: [signed('plan_change.add_to_session'), signed('plan_change.remove_session'), 'Move this session'], source: { kind: 'signed', id: 'plan_change.session_options' },
     does: `Opens ${sessionOptions}: ${signed('plan_change.add_to_session')}, ${signed('plan_change.remove_session')}, and from the Week view, Move this session.`,
     when: 'The athlete wants to add to, remove or move the day\'s session.' },
   { id: 'DOOR-add-to-session', label: signed('plan_change.add_to_session'), path: [TAB_PROGRAM, "TODAY'S FOCUS card", '•••', sessionOptions], source: { kind: 'signed', id: 'plan_change.add_to_session' },
@@ -113,52 +115,52 @@ export const COACH_APP_MAP: readonly CoachAppDoor[] = [
   { id: 'DOOR-not-feeling-100', label: notFeeling, path: [TAB_PROGRAM], source: { kind: 'signed', id: 'day.change_card.heading' },
     does: signed('day.change_card.subline'),
     when: 'The athlete is tired, sick or injured.' },
-  { id: 'DOOR-tired', label: CHANGE_ACTION_LABEL.tired, path: [TAB_PROGRAM, notFeeling], source: { kind: 'literal', file: CHANGE_HUB },
+  { id: 'DOOR-tired', label: CHANGE_ACTION_LABEL.tired, path: [TAB_PROGRAM, notFeeling], options: ['Bit tired today', 'Pretty flat', 'Totally cooked', 'Yes — make today lighter', 'No thanks — keep it as planned'], source: { kind: 'literal', file: CHANGE_HUB },
     does: `${signed('day.change_card.tired_detail')} Asks What's closest?: Bit tired today, Pretty flat, Totally cooked. Then offers Make today lighter?`,
     when: 'Low energy, flat, cooked — ordinary fatigue, no illness or pain.' },
-  { id: 'DOOR-sick', label: CHANGE_ACTION_LABEL.sick, path: [TAB_PROGRAM, notFeeling], source: { kind: 'literal', file: CHANGE_HUB },
+  { id: 'DOOR-sick', label: CHANGE_ACTION_LABEL.sick, path: [TAB_PROGRAM, notFeeling], options: ['A bit off', 'Properly sick', "Can't get out of bed", 'Yes — make today lighter', 'No thanks — keep it as planned'], source: { kind: 'literal', file: CHANGE_HUB },
     does: `${signed('day.change_card.sick_detail')} Asks How bad?: A bit off (logged only), Properly sick (the week is lightened while it is active), Can't get out of bed (nothing is required this week).`,
     when: 'Illness of any degree.' },
   { id: 'DOOR-injured', label: CHANGE_ACTION_LABEL.injured, path: [TAB_PROGRAM, notFeeling], source: { kind: 'literal', file: CHANGE_HUB },
     does: `${signed('day.change_card.injured_detail')} Asks Where is the issue?, how bad it is and what hurts, then adapts the affected work.`,
     when: 'Pain, a niggle or an injury — anything that changes movement.' },
-  { id: 'DOOR-missed-session', label: signed('missed.prompt.yes'), path: [TAB_PROGRAM, 'Did you do … ? notice'], source: { kind: 'signed', id: 'missed.prompt.yes' },
+  { id: 'DOOR-missed-session', label: signed('missed.prompt.yes'), path: [TAB_PROGRAM, 'Did you do … ? notice'], options: [signed('missed.prompt.yes'), signed('missed.prompt.no'), signed('missed.prompt.move')], source: { kind: 'signed', id: 'missed.prompt.yes' },
     does: `The notice asks about a session that was not logged: ${signed('missed.prompt.yes')}, ${signed('missed.prompt.no')}, ${signed('missed.prompt.move')}.`,
     when: 'A past session has no answer yet.' },
-  { id: 'DOOR-adjust-this-week', label: adjustWeek, path: [TAB_PROGRAM, 'Week', 'pen'], source: { kind: 'signed', id: 'week.edit_sheet.title' },
+  { id: 'DOOR-adjust-this-week', label: adjustWeek, path: [TAB_PROGRAM, 'Week', 'pen'], options: [signed('week.edit_sheet.away.label'), manageWeek], source: { kind: 'signed', id: 'week.edit_sheet.title' },
     does: `Asks ${signed('week.edit_sheet.question')}: ${signed('week.edit_sheet.away.label')} or ${manageWeek}.`,
     when: 'The athlete is going away or wants to rearrange the week.' },
   { id: 'DOOR-going-away', label: signed('week.edit_sheet.away.label'), path: [TAB_PROGRAM, 'Week', 'pen', adjustWeek], source: { kind: 'signed', id: 'week.edit_sheet.away.label' },
     does: `${signed('week.edit_sheet.away.subline')} Asks the leave and return dates and what gear is there (same gear, some gear, bodyweight only).`,
     when: 'Travel, holidays, time away from the usual gym.' },
-  { id: 'DOOR-manage-week', label: manageWeek, path: [TAB_PROGRAM, 'Week', 'pen', adjustWeek], source: { kind: 'signed', id: 'week.edit_sheet.manage_sessions.label' },
+  { id: 'DOOR-manage-week', label: manageWeek, path: [TAB_PROGRAM, 'Week', 'pen', adjustWeek], options: [signed('week.board.add.training.label'), signed('week.board.add.game.label'), signed('week.board.save')], source: { kind: 'signed', id: 'week.edit_sheet.manage_sessions.label' },
     does: `${signed('week.edit_sheet.manage_sessions.subline')} Drag a session to another day, add to an empty day (${signed('week.board.add.training.label')} or ${signed('week.board.add.game.label')}), remove one, then ${signed('week.board.save')}.`,
     when: 'The athlete wants to move, add or remove sessions across the week.' },
   // ── Session screen ───────────────────────────────────────────────────────
-  { id: 'DOOR-session-options', label: sessionOptions, path: [TAB_PROGRAM, 'Start Session', '•••'], source: { kind: 'signed', id: 'plan_change.session_options' },
+  { id: 'DOOR-session-options', label: sessionOptions, path: [TAB_PROGRAM, 'Start Session', '•••'], options: [signed('session.options.injury.label'), signed('session.options.equipment.label')], source: { kind: 'signed', id: 'plan_change.session_options' },
     does: `Inside a session: ${signed('session.options.injury.label')} (${signed('session.options.injury.subline')}) and ${signed('session.options.equipment.label')} (${signed('session.options.equipment.subline')}).`,
     when: 'Something hurts mid-session, or the gear is not there.' },
   { id: 'DOOR-something-hurts', label: signed('session.options.injury.label'), path: [TAB_PROGRAM, 'Start Session', '•••', sessionOptions], source: { kind: 'signed', id: 'session.options.injury.label' },
     does: signed('session.options.injury.subline'),
     when: 'Pain during the session.' },
-  { id: 'DOOR-equipment-changed', label: signed('session.options.equipment.label'), path: [TAB_PROGRAM, 'Start Session', '•••', sessionOptions], source: { kind: 'signed', id: 'session.options.equipment.label' },
+  { id: 'DOOR-equipment-changed', label: signed('session.options.equipment.label'), path: [TAB_PROGRAM, 'Start Session', '•••', sessionOptions], options: [signed('session.equipment.update_action')], source: { kind: 'signed', id: 'session.options.equipment.label' },
     does: `${signed('session.options.equipment.subline')} ${signed('session.equipment.description')} Then ${signed('session.equipment.update_action')}.`,
     when: 'A machine, bar or rack is missing today.' },
-  { id: 'DOOR-log-session', label: signed('session.log_action'), path: [TAB_PROGRAM, 'Start Session'], source: { kind: 'signed', id: 'session.log_action' },
+  { id: 'DOOR-log-session', label: signed('session.log_action'), path: [TAB_PROGRAM, 'Start Session'], options: [FEEDBACK_FORM_SECTION_LABELS.completion, FEEDBACK_FORM_SECTION_LABELS.feeling, signed('feedback.save_action')], source: { kind: 'signed', id: 'session.log_action' },
     does: `Asks ${FEEDBACK_FORM_SECTION_LABELS.completion} and ${FEEDBACK_FORM_SECTION_LABELS.feeling}, lets the athlete add a note, then ${signed('feedback.save_action')}.`,
     when: 'The session is finished, partly done, or skipped.' },
   // ── My Status (from the Program header) ──────────────────────────────────
   { id: 'DOOR-my-status', label: myStatus, path: [TAB_PROGRAM, myStatus], source: { kind: 'signed', id: 'coach.status.title' },
     does: 'Shows the season phase with a Review control, and every active adjustment (injury, sickness, fatigue, equipment) with Keep active or Clear adjustment, and How are you feeling now?',
     when: 'The athlete wants to see or clear what is currently changing their program, or review the season phase.' },
-  { id: 'DOOR-clear-adjustment', label: 'Clear adjustment', path: [TAB_PROGRAM, myStatus, 'an active adjustment'], source: { kind: 'literal', file: NOTE_SHEET },
+  { id: 'DOOR-clear-adjustment', label: 'Clear adjustment', path: [TAB_PROGRAM, myStatus, 'an active adjustment'], options: ['Keep active', signed('status_update.good_now'), signed('status_update.still_not_right'), signed('status_update.still_pretty_sick'), signed('status_update.still_cooked'), signed('status_update.worse')], source: { kind: 'literal', file: NOTE_SHEET },
     does: `Ends the adjustment; the week returns to normal. The sheet also asks How are you feeling now?: ${signed('status_update.good_now')}, ${signed('status_update.still_not_right')}, ${signed('status_update.worse')}.`,
     when: 'The athlete is better and wants the program back.' },
   { id: 'DOOR-season-phase-review', label: 'REVIEW', path: [TAB_PROGRAM, myStatus, 'SEASON PHASE'], source: { kind: 'literal', file: STATUS },
     does: 'Changes the season phase (Off-season, Pre-season, In-season) and rebuilds the program for it.',
     when: 'The season moved on and the app still shows the old phase.' },
   // ── Coach tab ────────────────────────────────────────────────────────────
-  { id: 'DOOR-coach-tab', label: TAB_COACH, path: [TAB_COACH], source: { kind: 'literal', file: NAVIGATOR },
+  { id: 'DOOR-coach-tab', label: TAB_COACH, path: [TAB_COACH], options: ['Keep it as is'], source: { kind: 'literal', file: NAVIGATOR },
     does: `This conversation. Placeholder: "${COACH_TAB_COPY.placeholder}". When the app has a question about how many sessions a week, it asks here with chips to answer.`,
     when: 'Any question; the weekly sessions question.' },
   // ── Progress tab ─────────────────────────────────────────────────────────
@@ -197,5 +199,5 @@ export const COACH_APP_MAP: readonly CoachAppDoor[] = [
 
 /** Every label the coach may send the athlete to, for the response contract's door gate. */
 export const COACH_APP_DOOR_LABELS: readonly string[] = Array.from(
-  new Set(COACH_APP_MAP.map((door) => door.label)),
+  new Set(COACH_APP_MAP.flatMap((door) => [door.label, ...(door.options ?? [])])),
 );

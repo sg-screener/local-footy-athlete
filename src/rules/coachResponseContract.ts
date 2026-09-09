@@ -14,7 +14,7 @@ export type CoachResponseSnapshotField = keyof Pick<
   CoachSnapshot,
   | 'visibleWeek' | 'thisWeek' | 'readiness' | 'load' | 'progress' | 'restrictions'
   // R-397 (slice S1): the projection's new top-level blocks.
-  | 'situation' | 'history' | 'injuries' | 'mas'
+  | 'situation' | 'history' | 'injuries' | 'mas' | 'athlete'
 > | 'estimates';
 
 export interface CoachResponseKnowledgeSource {
@@ -111,9 +111,12 @@ export function doorLabelsFromKnowledge(
   const labels = new Set<string>();
   for (const source of sources) {
     if (source.authority !== 'app_map') continue;
-    const pattern = /Label: "([^"\n]+)"/g;
+    // `Label: "…"` and `Options: "…" | "…"` — every quoted control on the row.
+    const pattern = /(?:Label|Options): ((?:"[^"\n]+"(?:\s*\|\s*)?)+)/g;
     let match: RegExpExecArray | null;
-    while ((match = pattern.exec(source.content)) !== null) labels.add(match[1]);
+    while ((match = pattern.exec(source.content)) !== null) {
+      for (const quoted of match[1].matchAll(/"([^"\n]+)"/g)) labels.add(quoted[1]);
+    }
   }
   return [...labels];
 }
@@ -129,8 +132,17 @@ export function doorLabelsFromKnowledge(
  */
 const DOOR_CLAIM = /\b(?:[Tt]ap|[Pp]ress|[Hh]it|[Oo]pen|[Uu]se|[Ss]elect|[Cc]hoose)\s+(?:on\s+)?(?:the\s+)?(?:["“']([^"”'\n]{2,60})["”']|((?:[A-Z][\w'’%?]*)(?:\s+(?:[A-Z][\w'’%?]*|100%\?|a|an|the|of|to|this|my|it|as|is)){1,5}))/g;
 
+/** Curly quotes and doubled spaces are not a different button. */
+function doorKey(text: string): string {
+  return text.toLowerCase().replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+}
+
 function doorMatches(named: string, labels: readonly string[]): boolean {
-  return labels.some((label) => label === named || named.startsWith(label) || label.startsWith(named));
+  const key = doorKey(named);
+  return labels.some((label) => {
+    const known = doorKey(label);
+    return known === key || key.startsWith(known) || known.startsWith(key);
+  });
 }
 
 /** The first quoted control the words send the athlete to that is not a door, or null. */
@@ -281,6 +293,8 @@ const SNAPSHOT_FIELDS = new Set<string>([
   'injuries',
   'mas',
   'estimates',
+  // R-397 / slice S5: who the athlete is.
+  'athlete',
 ]);
 const ANSWER_MODES = new Set<string>([
   'answer',
@@ -449,7 +463,10 @@ export function evaluateCoachResponseContract(
       && sourcesWereRetrieved
       // A door named as a basis must be receipted by a DOOR chunk.
       && (!basis.includes('app_door') || citesDoor)
-      && (!claimsLfaRule || sources.some(
+      // The app map is generated from the app's own signed words, so a door
+      // row is an LFA source too (v15 refused "how do I tell the app I'm
+      // sick" for citing only DOOR-sick under lfa_rule).
+      && (!claimsLfaRule || citesDoor || sources.some(
         (source) => source.authority === 'lfa_bible' || source.authority === 'active_rule',
       )),
     judgementTransparent: payload !== null

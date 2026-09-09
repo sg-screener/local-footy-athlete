@@ -52,7 +52,7 @@ export const PrivacyScreen: React.FC = () => {
         Coach messages and concise, whitelisted summaries of your program, readiness, training load, progress and restrictions may be sent to backend and AI services so the app can return a Coach response. The Coach is completely read-only and cannot change your program.
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        The Coach AI is not sent your name, body measurements, internal IDs, buttons or full saved profile. Coach conversations are not saved by the app, and AI responses are requested with provider storage off.
+        The Coach AI is sent your training profile — footy role, goals, experience, age range, height and weight, gym and equipment, schedule, injuries, lifts and running speed — but never your name or any account or internal ID. Coach conversations are kept only while the app is open and are never saved by the app, and AI responses are requested with provider storage off.
       </Text>
 
       <Text variant="h4" style={styles.sectionTitle}>

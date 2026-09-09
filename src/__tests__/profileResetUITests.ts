@@ -684,10 +684,12 @@ section('[9b] Legal copy is MVP-safe');
   ok('Privacy names every approved concise whitelisted Coach summary category',
     /concise, whitelisted summaries of your program, readiness, training load, progress and restrictions/.test(privacy)
       && /Coach is completely read-only and cannot change your program/.test(privacy));
-  ok('Privacy says identity, internals and the full profile stay out of the Coach payload',
-    /not sent your name, body measurements, internal IDs, buttons or full saved profile/.test(privacy));
-  ok('Privacy says conversations are not app-stored and provider storage is off',
-    /Coach conversations are not saved by the app/.test(privacy)
+  // R-397 (Sam, 2026-09-10, "yes full profile") and R-398 (session memory):
+  // the sentence now lists what travels and what never does.
+  ok('Privacy says the training profile travels and identity never does (R-397)',
+    /sent your training profile — footy role, goals, experience, age range, height and weight, gym and equipment, schedule, injuries, lifts and running speed — but never your name or any account or internal ID/.test(privacy));
+  ok('Privacy says conversations live only while the app is open, are never saved, and provider storage is off (R-398)',
+    /kept only while the app is open and are never saved by the app/.test(privacy)
       && /provider storage off/.test(privacy));
   ok('Privacy no longer describes persisted coach state', !/coach state can persist/.test(privacy));
   ok('Privacy says not medical diagnosis/treatment/rehab', /not medical diagnosis, treatment or rehab/.test(privacy));

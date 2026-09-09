@@ -454,6 +454,25 @@ console.log('\n[5] WHERE THE ATHLETE IS IN THE YEAR CROSSES THE SAME BOUNDARY (R
       && projected.injuries[0]?.triggers[0] === 'deep squat'
       && projected.mas?.masKmh === 17.1
       && projected.mas?.source === 'measured');
+  const withAthlete = projectCoachSnapshotForModel(buildCoachSnapshot({
+    ...baseInput,
+    athlete: {
+      position: 'inside_mid', goals: ['stay_injury_free'], biggestLimitation: 'Mobility',
+      experienceLevel: '2-5 years', conditioningLevel: 'Good', ageRange: '26-30', heightCm: 180, weightKg: 82,
+      trainingLocation: 'Home gym', equipment: ['barbell', 'rack'], equipmentAnsweredOn: '2026-08-01',
+      availabilityConstraints: [{ kind: 'unavailable_day', scope: 'permanent', dayOfWeek: 'Friday', startDate: null, endDate: null, maxSessionMinutes: null }],
+      exclusions: [{ exercise: 'Burpee', scope: 'until_changed', since: '2026-08-10' }], pinned: ['Nordic Curl'],
+    },
+  }));
+  ok('who the athlete is crosses as set (R-397, S5), and absent stays null',
+    withAthlete.athlete?.position === 'inside_mid'
+      && withAthlete.athlete?.weightKg === 82
+      && withAthlete.athlete?.equipment.includes('rack')
+      && withAthlete.athlete?.availabilityConstraints[0]?.dayOfWeek === 'Friday'
+      && withAthlete.athlete?.exclusions[0]?.exercise === 'Burpee'
+      && projected.athlete === null);
+  ok('the athlete block carries no name and no id key',
+    !/"(?:name|firstName|email|userId|athleteId|accountId)"\s*:/i.test(JSON.stringify(withAthlete.athlete)));
   ok('the projection carries no key the server refuses (name, ids, email)',
     !/"(?:email|userId|athleteId|accountId|name)"\s*:/i.test(JSON.stringify(projected)));
   ok('the grounding facts read the owned phase from the projection',

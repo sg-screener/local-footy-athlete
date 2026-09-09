@@ -276,6 +276,23 @@ export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
         details: { ...change.details },
       })),
     },
+    /** Who the athlete is (R-397, slice S5); null before onboarding. Never a name or an id. */
+    athlete: snapshot.athlete ? {
+      position: snapshot.athlete.position,
+      goals: [...snapshot.athlete.goals],
+      biggestLimitation: snapshot.athlete.biggestLimitation,
+      experienceLevel: snapshot.athlete.experienceLevel,
+      conditioningLevel: snapshot.athlete.conditioningLevel,
+      ageRange: snapshot.athlete.ageRange,
+      heightCm: snapshot.athlete.heightCm,
+      weightKg: snapshot.athlete.weightKg,
+      trainingLocation: snapshot.athlete.trainingLocation,
+      equipment: [...snapshot.athlete.equipment],
+      equipmentAnsweredOn: snapshot.athlete.equipmentAnsweredOn,
+      availabilityConstraints: snapshot.athlete.availabilityConstraints.map((constraint) => ({ ...constraint })),
+      exclusions: snapshot.athlete.exclusions.map((exclusion) => ({ ...exclusion })),
+      pinned: [...snapshot.athlete.pinned],
+    } : null,
     injuries: snapshot.injuries.map((injury) => ({
       bodyPart: injury.bodyPart,
       region: injury.region,

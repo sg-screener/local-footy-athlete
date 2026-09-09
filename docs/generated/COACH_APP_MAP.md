@@ -7,7 +7,7 @@ Each row: the door id, its exact on-screen label, where it is (tab → screen �
 
 **DOOR-day-week-toggle** · Label: "Week" · Where: Program → Day / Week · Does: Switches the Program tab between one day and the seven-day week. · When: The athlete wants to see or change the whole week.
 
-**DOOR-plan-options** · Label: "Session options" · Where: Program → TODAY'S FOCUS card → ••• · Does: Opens Session options: Add to this session, Remove session, and from the Week view, Move this session. · When: The athlete wants to add to, remove or move the day's session.
+**DOOR-plan-options** · Label: "Session options" · Where: Program → TODAY'S FOCUS card → ••• · Options: "Add to this session" | "Remove session" | "Move this session" · Does: Opens Session options: Add to this session, Remove session, and from the Week view, Move this session. · When: The athlete wants to add to, remove or move the day's session.
 
 **DOOR-add-to-session** · Label: "Add to this session" · Where: Program → TODAY'S FOCUS card → ••• → Session options · Does: Adds a session of a chosen kind (Strength, Conditioning, Gunshow, Primer, Mobility, Recovery, Accessories) to this day. · When: The athlete wants more work on a day.
 
@@ -29,35 +29,35 @@ Each row: the door id, its exact on-screen label, where it is (tab → screen �
 
 **DOOR-not-feeling-100** · Label: "Not feeling 100%?" · Where: Program · Does: Tell us what’s changed and we’ll adjust today. · When: The athlete is tired, sick or injured.
 
-**DOOR-tired** · Label: "Tired" · Where: Program → Not feeling 100%? · Does: Take it easier while you improve Asks What's closest?: Bit tired today, Pretty flat, Totally cooked. Then offers Make today lighter? · When: Low energy, flat, cooked — ordinary fatigue, no illness or pain.
+**DOOR-tired** · Label: "Tired" · Where: Program → Not feeling 100%? · Options: "Bit tired today" | "Pretty flat" | "Totally cooked" | "Yes — make today lighter" | "No thanks — keep it as planned" · Does: Take it easier while you improve Asks What's closest?: Bit tired today, Pretty flat, Totally cooked. Then offers Make today lighter? · When: Low energy, flat, cooked — ordinary fatigue, no illness or pain.
 
-**DOOR-sick** · Label: "Sick" · Where: Program → Not feeling 100%? · Does: Adjust training while you recover Asks How bad?: A bit off (logged only), Properly sick (the week is lightened while it is active), Can't get out of bed (nothing is required this week). · When: Illness of any degree.
+**DOOR-sick** · Label: "Sick" · Where: Program → Not feeling 100%? · Options: "A bit off" | "Properly sick" | "Can't get out of bed" | "Yes — make today lighter" | "No thanks — keep it as planned" · Does: Adjust training while you recover Asks How bad?: A bit off (logged only), Properly sick (the week is lightened while it is active), Can't get out of bed (nothing is required this week). · When: Illness of any degree.
 
 **DOOR-injured** · Label: "Injured" · Where: Program → Not feeling 100%? · Does: Adapt training around your injury Asks Where is the issue?, how bad it is and what hurts, then adapts the affected work. · When: Pain, a niggle or an injury — anything that changes movement.
 
-**DOOR-missed-session** · Label: "Yes, log it" · Where: Program → Did you do … ? notice · Does: The notice asks about a session that was not logged: Yes, log it, No, skip it, No, move it. · When: A past session has no answer yet.
+**DOOR-missed-session** · Label: "Yes, log it" · Where: Program → Did you do … ? notice · Options: "Yes, log it" | "No, skip it" | "No, move it" · Does: The notice asks about a session that was not logged: Yes, log it, No, skip it, No, move it. · When: A past session has no answer yet.
 
-**DOOR-adjust-this-week** · Label: "Adjust this week" · Where: Program → Week → pen · Does: Asks What do you want to change?: I’m going away or Manage week. · When: The athlete is going away or wants to rearrange the week.
+**DOOR-adjust-this-week** · Label: "Adjust this week" · Where: Program → Week → pen · Options: "I’m going away" | "Manage week" · Does: Asks What do you want to change?: I’m going away or Manage week. · When: The athlete is going away or wants to rearrange the week.
 
 **DOOR-going-away** · Label: "I’m going away" · Where: Program → Week → pen → Adjust this week · Does: Adjust around travel or time away Asks the leave and return dates and what gear is there (same gear, some gear, bodyweight only). · When: Travel, holidays, time away from the usual gym.
 
-**DOOR-manage-week** · Label: "Manage week" · Where: Program → Week → pen → Adjust this week · Does: Add, move or remove what’s planned Drag a session to another day, add to an empty day (Training session or Game), remove one, then Save changes. · When: The athlete wants to move, add or remove sessions across the week.
+**DOOR-manage-week** · Label: "Manage week" · Where: Program → Week → pen → Adjust this week · Options: "Training session" | "Game" | "Save changes" · Does: Add, move or remove what’s planned Drag a session to another day, add to an empty day (Training session or Game), remove one, then Save changes. · When: The athlete wants to move, add or remove sessions across the week.
 
-**DOOR-session-options** · Label: "Session options" · Where: Program → Start Session → ••• · Does: Inside a session: Something hurts (Adjust around pain or a niggle) and Equipment changed (Tell us what’s missing). · When: Something hurts mid-session, or the gear is not there.
+**DOOR-session-options** · Label: "Session options" · Where: Program → Start Session → ••• · Options: "Something hurts" | "Equipment changed" · Does: Inside a session: Something hurts (Adjust around pain or a niggle) and Equipment changed (Tell us what’s missing). · When: Something hurts mid-session, or the gear is not there.
 
 **DOOR-something-hurts** · Label: "Something hurts" · Where: Program → Start Session → ••• → Session options · Does: Adjust around pain or a niggle · When: Pain during the session.
 
-**DOOR-equipment-changed** · Label: "Equipment changed" · Where: Program → Start Session → ••• → Session options · Does: Tell us what’s missing Untick anything you don’t have. We’ll adjust affected exercises around what’s available. Then Update session. · When: A machine, bar or rack is missing today.
+**DOOR-equipment-changed** · Label: "Equipment changed" · Where: Program → Start Session → ••• → Session options · Options: "Update session" · Does: Tell us what’s missing Untick anything you don’t have. We’ll adjust affected exercises around what’s available. Then Update session. · When: A machine, bar or rack is missing today.
 
-**DOOR-log-session** · Label: "Log session" · Where: Program → Start Session · Does: Asks Did you complete it? and How did the session feel?, lets the athlete add a note, then Save & Finish. · When: The session is finished, partly done, or skipped.
+**DOOR-log-session** · Label: "Log session" · Where: Program → Start Session · Options: "Did you complete it?" | "How did the session feel?" | "Save & Finish" · Does: Asks Did you complete it? and How did the session feel?, lets the athlete add a note, then Save & Finish. · When: The session is finished, partly done, or skipped.
 
 **DOOR-my-status** · Label: "My status" · Where: Program → My status · Does: Shows the season phase with a Review control, and every active adjustment (injury, sickness, fatigue, equipment) with Keep active or Clear adjustment, and How are you feeling now? · When: The athlete wants to see or clear what is currently changing their program, or review the season phase.
 
-**DOOR-clear-adjustment** · Label: "Clear adjustment" · Where: Program → My status → an active adjustment · Does: Ends the adjustment; the week returns to normal. The sheet also asks How are you feeling now?: I'm good now, Still not right, Worse. · When: The athlete is better and wants the program back.
+**DOOR-clear-adjustment** · Label: "Clear adjustment" · Where: Program → My status → an active adjustment · Options: "Keep active" | "I'm good now" | "Still not right" | "Still pretty sick" | "Still cooked" | "Worse" · Does: Ends the adjustment; the week returns to normal. The sheet also asks How are you feeling now?: I'm good now, Still not right, Worse. · When: The athlete is better and wants the program back.
 
 **DOOR-season-phase-review** · Label: "REVIEW" · Where: Program → My status → SEASON PHASE · Does: Changes the season phase (Off-season, Pre-season, In-season) and rebuilds the program for it. · When: The season moved on and the app still shows the old phase.
 
-**DOOR-coach-tab** · Label: "Coach" · Where: Coach · Does: This conversation. Placeholder: "Ask your coach anything…". When the app has a question about how many sessions a week, it asks here with chips to answer. · When: Any question; the weekly sessions question.
+**DOOR-coach-tab** · Label: "Coach" · Where: Coach · Options: "Keep it as is" · Does: This conversation. Placeholder: "Ask your coach anything…". When the app has a question about how many sessions a week, it asks here with chips to answer. · When: Any question; the weekly sessions question.
 
 **DOOR-progress-tab** · Label: "Progress" · Where: Progress · Does: Training load with its history, Main lifts (Estimated 1 rep max), Performance tests (Save result) and Measurements (Save measurements). · When: Load, lifts, a new 2 km or sprint time, bodyweight.
 

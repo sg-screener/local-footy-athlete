@@ -42,7 +42,18 @@ import {
   buildProgressMainLiftHistories,
   type ProgressMainLiftHistory,
 } from './progressMainLiftStrength';
-import type { DayOfWeek, PerformanceTesting, SeasonPhase, WeekKind } from '../types/domain';
+import type {
+  AgeRange,
+  ConditioningLevel,
+  DayOfWeek,
+  ExperienceLevel,
+  MotivationGoal,
+  PerformanceTesting,
+  Position,
+  SeasonPhase,
+  TrainingLocation,
+  WeekKind,
+} from '../types/domain';
 import { addDaysISO } from '../utils/programBlockState';
 import { deriveMasFromPerformanceTesting } from '../data/performanceTests';
 import type { DerivedMas } from '../data/twoKmTimeTrial';
@@ -161,6 +172,40 @@ export interface CoachSnapshotHistory {
   readonly recentChanges: readonly CoachSnapshotRecentChange[];
 }
 
+/**
+ * WHO THE ATHLETE IS (R-397, Sam 2026-09-10: "yes full profile"; plan slice
+ * S5). The standing facts the program is built from, as the athlete set
+ * them. Never the name, never an id: those are the Privacy screen's
+ * exclusions and the server refuses a payload carrying them. Height and
+ * weight travel as numbers because Sam granted the full profile; the Privacy
+ * sentence is rewritten in the same slice to say exactly this.
+ */
+export interface CoachSnapshotAthlete {
+  readonly position: Position | null;
+  readonly goals: readonly MotivationGoal[];
+  readonly biggestLimitation: string | null;
+  readonly experienceLevel: ExperienceLevel | null;
+  readonly conditioningLevel: ConditioningLevel | null;
+  readonly ageRange: AgeRange | null;
+  readonly heightCm: number | null;
+  readonly weightKg: number | null;
+  readonly trainingLocation: TrainingLocation | null;
+  /** Equipment tags and conditioning machines the athlete said they have. */
+  readonly equipment: readonly string[];
+  readonly equipmentAnsweredOn: string | null;
+  readonly availabilityConstraints: readonly {
+    readonly kind: string;
+    readonly scope: string;
+    readonly dayOfWeek: DayOfWeek | null;
+    readonly startDate: string | null;
+    readonly endDate: string | null;
+    readonly maxSessionMinutes: number | null;
+  }[];
+  /** Exercises the athlete has excluded, with the scope they chose. */
+  readonly exclusions: readonly { readonly exercise: string; readonly scope: string; readonly since: string }[];
+  readonly pinned: readonly string[];
+}
+
 export const COACH_SNAPSHOT_HISTORY_DAYS = 14;
 
 export const EMPTY_COACH_SNAPSHOT_SITUATION: CoachSnapshotSituation = {
@@ -195,6 +240,8 @@ export interface CoachSnapshot {
   readonly restrictions: readonly ActiveCoachNote[];
   readonly situation: CoachSnapshotSituation;
   readonly history: CoachSnapshotHistory;
+  /** Who the athlete is; null when no profile exists yet. */
+  readonly athlete: CoachSnapshotAthlete | null;
   /** Active or improving injury episodes, in the athlete's own facts (body part, since, triggers). */
   readonly injuries: readonly CoachSnapshotInjury[];
   readonly mas: DerivedMas | null;
@@ -216,6 +263,7 @@ export interface BuildCoachSnapshotInput {
   readonly history?: CoachSnapshotHistory;
   readonly injuries?: readonly CoachSnapshotInjury[];
   readonly mas?: DerivedMas | null;
+  readonly athlete?: CoachSnapshotAthlete | null;
 }
 
 /**
@@ -281,6 +329,7 @@ export interface DeriveCoachSnapshotInput {
   readonly recentDecisions?: readonly CoachSnapshotDecisionRecord[];
   readonly injuryEpisodes?: readonly CoachSnapshotInjuryEpisodeRecord[];
   readonly performanceTesting?: PerformanceTesting;
+  readonly athlete?: CoachSnapshotAthlete | null;
 }
 
 const RECENT_CHANGE_LIMIT = 20;
@@ -488,6 +537,7 @@ export function deriveCoachSnapshot(input: DeriveCoachSnapshotInput): CoachSnaps
       nextWeek: input.nextWeek ?? null,
     },
     history: deriveHistory(input),
+    athlete: input.athlete ?? null,
     injuries: deriveInjuries(input.injuryEpisodes),
     mas: input.experienceLevel
       ? deriveMasFromPerformanceTesting(
@@ -564,6 +614,7 @@ export function buildCoachSnapshot(input: BuildCoachSnapshotInput): CoachSnapsho
     restrictions: [...input.activeModifiers],
     situation,
     history: input.history ?? EMPTY_COACH_SNAPSHOT_HISTORY,
+    athlete: input.athlete ?? null,
     injuries: [...(input.injuries ?? [])],
     mas: input.mas ?? null,
   };

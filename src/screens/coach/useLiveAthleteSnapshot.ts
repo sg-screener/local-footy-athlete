@@ -20,6 +20,7 @@ import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
+import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import type { ActiveCoachNote } from '../../utils/activeCoachNotes';
 import { todayISOLocal } from '../../utils/appDate';
 import { addDaysISO, getStoredBlockStateForDate } from '../../utils/programBlockState';
@@ -29,6 +30,7 @@ import { storedGameAnchor } from '../../rules/gameAnchor';
 import {
   deriveCoachSnapshot,
   type CoachSnapshot,
+  type CoachSnapshotAthlete,
   type CoachSnapshotInjuryEpisodeRecord,
   type CoachSnapshotSeason,
   type CoachSnapshotStanding,
@@ -54,6 +56,7 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
   const readinessSignalsByDate = useReadinessStore((state) => state.signalsByDate);
   const markedDays = useCalendarStore((state) => state.markedDays);
   const decisions = useDecisionLedgerStore((state) => state.entries);
+  const prefs = useAthletePreferencesStore((state) => state.prefs);
   const athlete = useAthleteContext();
   const asOfDateISO = todayISOLocal();
   const nextWeekStart = addDaysISO(input.visibleWeek.weekStart, 7);
@@ -130,6 +133,47 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     [decisions],
   );
 
+  // R-397 / slice S5: who the athlete is, as they set it. Name and ids never.
+  const athleteProfile = useMemo((): CoachSnapshotAthlete | null => {
+    if (!onboardingData) return null;
+    const answer = onboardingData.equipmentAnswer;
+    const owned = (record: Readonly<Record<string, unknown>> | undefined): string[] => Object.entries(record ?? {})
+      .filter(([, possession]) => possession === 'have')
+      .map(([tag]) => tag);
+    const equipment = answer
+      ? [...owned(answer.tags as Readonly<Record<string, unknown>>), ...owned(answer.modalities as Readonly<Record<string, unknown>>)]
+      : [...(onboardingData.equipment ?? [])];
+    return {
+      position: onboardingData.position ?? null,
+      goals: [...(onboardingData.goals ?? [])],
+      biggestLimitation: onboardingData.biggestLimitation ?? null,
+      experienceLevel: onboardingData.experienceLevel ?? null,
+      conditioningLevel: onboardingData.conditioningLevel ?? null,
+      ageRange: onboardingData.ageRange ?? null,
+      heightCm: onboardingData.heightCm ?? null,
+      weightKg: onboardingData.weightKg ?? null,
+      trainingLocation: onboardingData.trainingLocation ?? null,
+      equipment,
+      equipmentAnsweredOn: answer?.answeredOn ?? null,
+      availabilityConstraints: (onboardingData.availabilityConstraints ?? [])
+        .filter((constraint) => constraint.active !== false)
+        .map((constraint) => ({
+          kind: constraint.kind,
+          scope: constraint.scope,
+          dayOfWeek: constraint.dayOfWeek ?? null,
+          startDate: constraint.startDate ?? null,
+          endDate: constraint.endDate ?? null,
+          maxSessionMinutes: constraint.maxSessionMinutes ?? null,
+        })),
+      exclusions: (prefs?.exclusions ?? []).map((exclusion) => ({
+        exercise: exclusion.exercise,
+        scope: exclusion.scope,
+        since: exclusion.decidedOnISO,
+      })),
+      pinned: [...(prefs?.pinned ?? [])],
+    };
+  }, [onboardingData, prefs]);
+
   const readinessHistory = useMemo(
     () => Object.values(readinessSignalsByDate ?? {}),
     [readinessSignalsByDate],
@@ -156,6 +200,7 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     recentDecisions,
     injuryEpisodes,
     performanceTesting: onboardingData?.performanceTesting,
+    athlete: athleteProfile,
   }), [
     asOfDateISO,
     input.weekDays,
@@ -178,5 +223,6 @@ export function useLiveAthleteSnapshot(input: UseLiveAthleteSnapshotInput): Coac
     recentDecisions,
     injuryEpisodes,
     onboardingData?.performanceTesting,
+    athleteProfile,
   ]);
 }

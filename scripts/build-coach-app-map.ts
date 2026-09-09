@@ -23,7 +23,9 @@ const lines: string[] = [
 ];
 for (const door of COACH_APP_MAP) {
   lines.push(
-    `**${door.id}** · Label: "${door.label}" · Where: ${door.path.join(' → ')} · Does: ${door.does} · When: ${door.when}`,
+    `**${door.id}** · Label: "${door.label}" · Where: ${door.path.join(' → ')}`
+      + (door.options && door.options.length > 0 ? ` · Options: ${door.options.map((option) => `"${option}"`).join(' | ')}` : '')
+      + ` · Does: ${door.does} · When: ${door.when}`,
   );
   lines.push('');
 }

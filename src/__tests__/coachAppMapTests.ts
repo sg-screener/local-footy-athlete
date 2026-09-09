@@ -87,6 +87,10 @@ console.log('\n[3] THE DOOR GATE: A QUOTED CONTROL MUST BE A DOOR');
     !doorClaimGrounded('Open the app and tap "Reduce this week" to soften it.', facts));
   ok('an unquoted Title-Case phrase is prose, never refused (v14 refused real answers on it)',
     doorClaimGrounded('Tap Log Injury on the session screen.', facts));
+  ok('a door\'s options are doors too: a quoted tier or status choice passes, curly quotes and all',
+    doorClaimGrounded('Tap "Pretty flat", then choose "Yes — make today lighter".', facts)
+      && doorClaimGrounded('Under My status, tap "I’m good now" to clear it.', facts)
+      && facts.doorLabels.includes('pretty flat') && facts.doorLabels.includes("i'm good now"));
   ok('a quoted control that is not a door is named in the violation detail',
     doorClaimViolation('Tap "Log Injury" on the session screen.', facts) === 'Log Injury');
   ok('ordinary prose after the same verbs is not a claim',

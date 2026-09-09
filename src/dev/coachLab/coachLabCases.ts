@@ -481,5 +481,22 @@ export function coachLabFixtureSnapshot(
     },
     injuries: [],
     mas: { masKmh: 17.1, source: 'measured', seconds: 420 },
+    // R-397 / slice S5: who the Lab athlete is.
+    athlete: {
+      position: 'inside_mid',
+      goals: ['fresh_on_game_day', 'stronger_and_fitter'],
+      biggestLimitation: 'Endurance',
+      experienceLevel: '2-5 years',
+      conditioningLevel: 'Average',
+      ageRange: '22-26',
+      heightCm: 182,
+      weightKg: 84,
+      trainingLocation: 'Commercial gym',
+      equipment: ['barbell', 'rack', 'dumbbells', 'cable', 'assault_bike', 'rower'],
+      equipmentAnsweredOn: '2026-08-01',
+      availabilityConstraints: [],
+      exclusions: [{ exercise: 'Burpee', scope: 'until_changed', since: '2026-08-10' }],
+      pinned: ['Nordic Curl'],
+    },
   });
 }
