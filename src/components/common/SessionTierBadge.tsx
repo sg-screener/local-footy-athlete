@@ -72,7 +72,10 @@ export const SessionTierBadge: React.FC<SessionTierBadgeProps> = ({ tier, style,
 /**
  * ⚠ **ONE NUMBER, NOT EIGHT REPAINTED COLOURS** (Sam, 2026-09-04: *"these
  * badges i.e. core, recovery, etc - they're taking up too much attention - drop
- * their opacity down to 50%"*).
+ * their opacity down to 50%"*; then Sam, 2026-09-10, looking at the CORE chip
+ * on his phone: *"the badges need to have opacity boosted 25% or so"* — so
+ * 50% became 75%. Read as an absolute step, not a ratio; if it is still too
+ * faint or too loud the one number below moves again).
  *
  * The chip competes because it is a saturated fill AND a bright bold word in the
  * same 14pt slot. Fading the whole `View` halves both at once and keeps the four
@@ -84,7 +87,7 @@ export const SessionTierBadge: React.FC<SessionTierBadgeProps> = ({ tier, style,
  * Applied to the badge, never to the row: the session NAME beside it keeps its
  * full contrast, which is the point — the badge recedes so the name reads first.
  */
-const BADGE_DE_EMPHASIS = 0.5;
+const BADGE_DE_EMPHASIS = 0.75;
 
 const styles = StyleSheet.create({
   badge: {
