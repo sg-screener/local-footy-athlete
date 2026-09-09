@@ -741,6 +741,42 @@ console.log('\n[13] Training availability asks about gym access, not total train
       && reviewRows.includes("label: 'Usual Gym Days'"));
 }
 
+
+/* ── F1 (everyday acceptance, 2026-09-09): SEVEN COLUMNS BY CONSTRUCTION.
+ * The one month grid (`components/calendar/DateCalendarPicker.tsx`) laid its
+ * cells out with `width: '14.285714…%'` under flexWrap. Yoga keeps that
+ * percentage as float32 and breaks a line on a strict `>`, so at the
+ * onboarding grid width (402 − 2×20 = 362 pt) seven cells summed to
+ * 362.00003 > 362 and "Sun" wrapped onto a second row with the dates flowing
+ * six per row under the wrong weekday names — measured on an iPhone 17 Pro
+ * simulator. The away sheet (402 − 2×24 = 354 pt) happened to fit. Any width
+ * ≡ 3, 5 or 6 (mod 7) wraps. The grid now builds explicit rows of seven
+ * `flex: 1` cells, so no width can break it, and this pins both halves. */
+{
+  const calendar = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'calendar', 'DateCalendarPicker.tsx'), 'utf8');
+  ok('F1 the month grid no longer relies on a one-seventh percentage width',
+    !/100\s*\/\s*7/.test(calendar) && !/14\.28/.test(calendar),
+    'a percentage width is a float32 line-break decision on every device width');
+  ok('F1 the month grid renders explicit rows of seven flex:1 cells',
+    /calendarWeekRows\(/.test(calendar) && /cell:\s*\{[^}]*flex:\s*1/.test(calendar) && /week:\s*\{[^}]*flexDirection:\s*'row'/.test(calendar),
+    'rows must be explicit so a seventh cell cannot wrap');
+  const { calendarWeekRows } = require('../components/calendar/calendarWeekRows') as { calendarWeekRows: <T>(cells: readonly T[]) => (T | null)[][] };
+  const months = ['2026-01', '2026-02', '2026-03', '2026-05', '2026-08', '2026-09', '2026-11', '2027-02', '2028-02'];
+  let sevenEverywhere = true;
+  for (const month of months) {
+    const first = `${month}-01`;
+    const [y, m] = month.split('-').map(Number);
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const leading = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7;
+    const cells = [...Array.from({ length: leading }, () => null), ...Array.from({ length: daysInMonth }, (_u, i) => i + 1)];
+    const rows = calendarWeekRows(cells);
+    if (rows.some((row) => row.length !== 7)) sevenEverywhere = false;
+    if (rows.flat().filter((c) => c !== null).length !== daysInMonth) sevenEverywhere = false;
+  }
+  ok('F1 calendarWeekRows yields rows of exactly seven cells for every month shape, keeping every date',
+    sevenEverywhere);
+}
+
 const total = passed + failures.length;
 console.log(`\nOnboarding answer presentation: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

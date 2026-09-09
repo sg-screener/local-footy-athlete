@@ -10,6 +10,7 @@ import {
 } from '../../utils/appDate';
 import { addDaysISO } from '../../utils/programBlockState';
 import { DAY_SHORT, WEEK_DAYS } from '../../screens/home/homeScreenConstants';
+import { calendarWeekRows } from './calendarWeekRows';
 
 export interface DateCalendarPickerProps {
   onPick: (dateISO: string) => void;
@@ -102,43 +103,52 @@ export function DateCalendarPicker({
           <Text style={styles.navLabel}>›</Text>
         </Pressable>
       </View>
+      {/* EXPLICIT ROWS OF SEVEN (everyday acceptance F1): a percentage width
+          under flexWrap let the seventh cell wrap at some container widths, so
+          "Sun" sat on its own line and the dates slid under the wrong names. */}
       <View style={styles.grid}>
-        {WEEK_DAYS.map((day) => (
-          <View key={`head-${day}`} style={styles.cell}>
-            <Text style={styles.weekday}>{DAY_SHORT[day]}</Text>
+        <View style={styles.week}>
+          {WEEK_DAYS.map((day) => (
+            <View key={`head-${day}`} style={styles.cell}>
+              <Text style={styles.weekday}>{DAY_SHORT[day]}</Text>
+            </View>
+          ))}
+        </View>
+        {calendarWeekRows(cells).map((week, weekIndex) => (
+          <View key={`week-${weekIndex}`} style={styles.week}>
+            {week.map((dateISO, index) => {
+              if (dateISO === null) {
+                return <View key={`blank-${weekIndex}-${index}`} style={styles.cell} />;
+              }
+              const selectable = (!minISO || dateISO >= minISO) && (!maxISO || dateISO <= maxISO);
+              const selected = dateISO === selectedISO;
+              return (
+                <Pressable
+                  key={dateISO}
+                  disabled={!selectable}
+                  onPress={() => onPick(dateISO)}
+                  testID={`${testIDPrefix}-${dateISO}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={shortDayMonthLabel(dateISO)}
+                  accessibilityState={{ disabled: !selectable, selected }}
+                  style={({ pressed }) => [
+                    styles.cell,
+                    selected && styles.cellSelected,
+                    pressed && selectable && styles.pressed,
+                  ]}
+                >
+                  <Text style={[
+                    styles.day,
+                    !selectable && styles.dayDisabled,
+                    selected && styles.daySelected,
+                  ]}>
+                    {Number(dateISO.slice(8, 10))}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         ))}
-        {cells.map((dateISO, index) => {
-          if (dateISO === null) {
-            return <View key={`blank-${index}`} style={styles.cell} />;
-          }
-          const selectable = (!minISO || dateISO >= minISO) && (!maxISO || dateISO <= maxISO);
-          const selected = dateISO === selectedISO;
-          return (
-            <Pressable
-              key={dateISO}
-              disabled={!selectable}
-              onPress={() => onPick(dateISO)}
-              testID={`${testIDPrefix}-${dateISO}`}
-              accessibilityRole="button"
-              accessibilityLabel={shortDayMonthLabel(dateISO)}
-              accessibilityState={{ disabled: !selectable, selected }}
-              style={({ pressed }) => [
-                styles.cell,
-                selected && styles.cellSelected,
-                pressed && selectable && styles.pressed,
-              ]}
-            >
-              <Text style={[
-                styles.day,
-                !selectable && styles.dayDisabled,
-                selected && styles.daySelected,
-              ]}>
-                {Number(dateISO.slice(8, 10))}
-              </Text>
-            </Pressable>
-          );
-        })}
       </View>
     </View>
   );
@@ -157,9 +167,10 @@ const styles = StyleSheet.create({
   navDisabled: { opacity: 0.3 },
   navLabel: { color: '#FFFFFF', fontSize: 22, lineHeight: 24 },
   month: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: {},
+  week: { flexDirection: 'row' },
   cell: {
-    width: `${100 / 7}%`, height: 40,
+    flex: 1, height: 40,
     alignItems: 'center', justifyContent: 'center',
   },
   cellSelected: { backgroundColor: '#D8D800', borderRadius: 20 },
