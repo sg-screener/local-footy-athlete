@@ -183,3 +183,22 @@ missing file, 9 UNENFORCED above the ceiling of 4, 18 inbox re-asks); cell
 `ip.txt`, installed in place on AFA21856… (container C7A796EB…); launch
 refused again: Locked. No simulator proof taken — Sam judges the chip on his
 phone. Not run: `test:compile`, gates, audits.
+
+**07:05 — Coach probe (Sam: "give him 10 questions, tell me what he can and
+can't do").** Real path: `askCoachReadOnly` from this tree → the DEPLOYED
+`coach-chat` function (gpt-5.6-terra), i.e. exactly what the phone build calls;
+only the athlete differs (Coach Lab fixture week of 2026-08-24, Saturday game,
+flat quick check, squat 95→100). 10 answers + 3 with exercise rows filled in,
+all accepted by both truth gates: `/private/tmp/lfa-yearfix-evidence/coach-10-questions.log`.
+Findings, in order of weight: (1) the model snapshot carries no season phase /
+block, so the coach cannot apply a pre-season vs in-season ruling — it
+approved "leg curls instead of Nordics" without knowing the phase (R-394 says a
+curl does not replace the Nordic in season); (2) the repo's knowledge bundle
+stops at R-393 (built 2026-09-09 01:26), R-394/395/396 absent, and the
+deployed bundle is at best that old; (3) it never points the athlete at the
+app's own doors (Tired / Sick / Injured, the move option was named once);
+(4) conversation is not persisted and only 6 turns travel; (5) the Debug
+fixture had `rows: []` — the live projection does send rows (exercise,
+prescription, dose, cue), verified in `projectCoachSnapshotForModel`.
+**WRITTEN** — findings only; nothing changed in code. Not run: Coach Lab
+suites, gates.
