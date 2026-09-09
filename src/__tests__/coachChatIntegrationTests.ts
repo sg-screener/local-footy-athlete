@@ -16,6 +16,7 @@ import {
 } from '../rules/coachResponseContract';
 import { coachFailureReply } from '../rules/coachTabCopy';
 import { buildCoachModelInput } from '../rules/coachModelContext';
+import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -109,6 +110,24 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
         read('supabase/migrations/007_coach_rate_limits.sql'),
       )
       && /global:coach-chat/.test(read('supabase/migrations/007_coach_rate_limits.sql')));
+  // F14 (Sam, 2026-09-09): the contract used to accept a self-declared
+  // grounding receipt and never read a snapshot value. Every door that shows
+  // an answer now hands the contract the facts to check the words against.
+  ok('production hands the contract the snapshot facts the answer must agree with',
+    /facts:\s*coachResponseGroundingFacts\(modelInput\.currentAthleteSnapshot\)/.test(edge));
+  ok('Coach Lab hands the same facts, read from the same projection',
+    /coachResponseGroundingFacts\(projectCoachSnapshotForModel\(args\.snapshot\)\)/.test(
+      read('src/dev/coachLab/coachLab.ts'),
+    ));
+  ok('the app client checks the returned words against the same facts before showing them',
+    /coachResponseGroundingFacts\(/.test(read('src/services/api/coachChat.ts'))
+      && /readinessClaimGrounded\(/.test(read('src/services/api/coachChat.ts'))
+      && /fixtureClaimGrounded\(/.test(read('src/services/api/coachChat.ts')));
+  const pack = read('src/dev/coachLab/coachLabBrainPack.ts');
+  ok('the prompt says what an unreported readiness, the fixture list and earlier turns mean',
+    /readiness\.reported is false/.test(pack)
+      && /visibleWeek\.fixtures is the complete list/.test(pack)
+      && /earlier wording, not athlete facts/.test(pack));
 }
 
 console.log('\n[2] THE BUNDLED KNOWLEDGE IS AN EXACT GUARDED BUILD ARTIFACT');
@@ -305,6 +324,60 @@ async function finish(): Promise<void> {
   ok('the live app refuses a false change claim even with an empty action list',
     falseChangeRejected);
 
+  // F14 (Sam's 2026-09-09 walkthrough): with nothing recorded the Coach said
+  // "readiness recorded as flat", and with one Saturday game it said "Game Day
+  // Saturday and Sunday". The snapshot sent was right both times; only the
+  // words were free. These stubs replay those two answers.
+  const stubReply = (message: string) => async () => ({
+    ok: true,
+    status: 200,
+    async text() {
+      return JSON.stringify({ message, programActions: [] });
+    },
+  });
+  let inventedReadinessCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'how am I looking today',
+      snapshot: coachLabFixtureSnapshot({ readiness: 'not_recorded' }),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: stubReply('Your readiness is recorded as flat today, so keep the session easy.'),
+    });
+    inventedReadinessCode = 'answered';
+  } catch (error) {
+    inventedReadinessCode = coachChatFailureCode(error);
+  }
+  ok('F14: the live app refuses a readiness tier when the athlete recorded nothing',
+    inventedReadinessCode === 'refused', inventedReadinessCode);
+  let inventedFixtureCode = '';
+  try {
+    await askCoachReadOnly({
+      message: 'what is on this weekend',
+      snapshot: coachLabFixtureSnapshot(),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: stubReply('Game Day Saturday and Sunday, so Friday stays light.'),
+    });
+    inventedFixtureCode = 'answered';
+  } catch (error) {
+    inventedFixtureCode = coachChatFailureCode(error);
+  }
+  ok('F14: the live app refuses a game named on a day the week has no game',
+    inventedFixtureCode === 'refused', inventedFixtureCode);
+  const groundedWords = 'Your game is Saturday. Nothing is recorded for readiness today, so tell me how you feel before Thursday\'s session.';
+  let groundedAnswer = '';
+  try {
+    groundedAnswer = await askCoachReadOnly({
+      message: 'what is on this weekend',
+      snapshot: coachLabFixtureSnapshot({ readiness: 'not_recorded' }),
+      conversationContext: { recentTurns: [], activeProgramTarget: null },
+      fetch: stubReply(groundedWords),
+    });
+  } catch (error) {
+    groundedAnswer = `refused:${coachChatFailureCode(error)}`;
+  }
+  ok('and an answer that names the real game and admits the absence reaches the athlete unchanged',
+    groundedAnswer === groundedWords, groundedAnswer);
+
   let emptyAnswerCode = '';
   try {
     await askCoachReadOnly({
@@ -401,16 +474,18 @@ async function finish(): Promise<void> {
     judgementLabel: 'not_needed',
     programActions: [],
   };
+  const FIXTURE_FACTS = { readinessReported: true, gameWeekdays: ['Saturday'] } as const;
   const sound = evaluateCoachResponseContract(grounded, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
+    facts: FIXTURE_FACTS,
   });
   ok('a concise read-only answer with real Snapshot and source receipts passes',
     sound.ok && Object.values(sound.automaticChecks).every(Boolean), sound);
   const noSnapshotReceipt = evaluateCoachResponseContract({
     ...grounded,
     snapshotFieldsUsed: [],
-  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
   ok('a live program answer without a Snapshot receipt fails closed',
     !noSnapshotReceipt.ok && !noSnapshotReceipt.automaticChecks.programFactsGrounded);
   const unknownSource = evaluateCoachResponseContract({
@@ -420,7 +495,7 @@ async function finish(): Promise<void> {
       authority: 'lfa_bible',
       sourceReference: 'invented',
     }],
-  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
   ok('a citation outside the retrieved knowledge fails closed',
     !unknownSource.ok && !unknownSource.automaticChecks.lfaClaimsGrounded);
   const hiddenJudgement = evaluateCoachResponseContract({
@@ -429,13 +504,13 @@ async function finish(): Promise<void> {
     snapshotFieldsUsed: [],
     knowledgeSources: [],
     judgementLabel: 'missing',
-  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: [] });
+  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: [], facts: FIXTURE_FACTS });
   ok('unlabelled coaching judgement fails closed',
     !hiddenJudgement.ok && !hiddenJudgement.automaticChecks.judgementTransparent);
   const falseChange = evaluateCoachResponseContract({
     ...grounded,
     message: 'I moved your session to Friday.',
-  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: false, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
   ok('a read-only answer claiming it changed the program fails closed',
     !falseChange.ok
       && !falseChange.automaticChecks.changeClaimsTruthful
@@ -443,7 +518,7 @@ async function finish(): Promise<void> {
   const tooLong = evaluateCoachResponseContract({
     ...grounded,
     message: Array.from({ length: 101 }, () => 'word').join(' '),
-  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
   ok('a grounded 101-word answer is unusable rather than a safety refusal',
     !tooLong.ok
       && !tooLong.automaticChecks.concise
@@ -451,6 +526,7 @@ async function finish(): Promise<void> {
   const wrongShape = evaluateCoachResponseContract({ message: 'Safe words, wrong envelope.' }, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
+    facts: FIXTURE_FACTS,
   });
   ok('a wrong response shape is unusable rather than a claim about athlete safety',
     !wrongShape.ok
@@ -459,13 +535,76 @@ async function finish(): Promise<void> {
   const readOnlyViolation = evaluateCoachResponseContract({
     ...grounded,
     programActions: [{ kind: 'move', label: 'Move it' }],
-  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'] });
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  // F14 (2026-09-09): the two invented facts Sam read on the device.
+  const inventedReadiness = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'Your readiness is recorded as flat today, so keep it easy.',
+    snapshotFieldsUsed: ['readiness'],
+  }, {
+    requiresLiveProgramFacts: true,
+    allowedKnowledgeSourceIds: ['bible:L1-L2'],
+    facts: { readinessReported: false, gameWeekdays: ['Saturday'] },
+  });
+  ok('F14: a readiness tier asserted when nothing was recorded fails closed as a refusal',
+    !inventedReadiness.ok
+      && inventedReadiness.automaticChecks.readinessClaimsGrounded === false
+      && coachResponseContractFailureCode(inventedReadiness) === 'refused',
+    inventedReadiness);
+  const sameWordsReported = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'Your readiness is recorded as flat today, so keep it easy.',
+    snapshotFieldsUsed: ['readiness'],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('the same words pass once a readiness answer actually exists',
+    sameWordsReported.ok, sameWordsReported.violations);
+  const inventedFixture = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'Game Day Saturday and Sunday, so Friday stays light.',
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('F14: a game named on a day the week has no game fails closed as a refusal',
+    !inventedFixture.ok
+      && inventedFixture.automaticChecks.fixtureClaimsGrounded === false
+      && coachResponseContractFailureCode(inventedFixture) === 'refused',
+    inventedFixture);
+  const deniedFixture = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'There is no game this week, so push the lifts.',
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('denying the real game fails the same check',
+    !deniedFixture.ok && deniedFixture.automaticChecks.fixtureClaimsGrounded === false);
+  const gameInAnEmptyWeek = evaluateCoachResponseContract(grounded, {
+    requiresLiveProgramFacts: true,
+    allowedKnowledgeSourceIds: ['bible:L1-L2'],
+    facts: { readinessReported: true, gameWeekdays: [] },
+  });
+  ok('naming a Saturday game in a week with no fixture fails the same check',
+    !gameInAnEmptyWeek.ok && gameInAnEmptyWeek.automaticChecks.fixtureClaimsGrounded === false);
+  const otherDayNearGame = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'Saturday\'s game is the anchor, so Thursday is your last hard session and Friday is light.',
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['bible:L1-L2'], facts: FIXTURE_FACTS });
+  ok('other weekdays in the same sentence are not read as game claims',
+    otherDayNearGame.ok, otherDayNearGame.violations);
+  let derivedFacts: unknown = 'threw';
+  try {
+    derivedFacts = coachResponseGroundingFacts(buildCoachModelInput({
+      athleteMessage: 'x',
+      snapshot: coachLabFixtureSnapshot(),
+    }).currentAthleteSnapshot);
+  } catch (error) {
+    derivedFacts = `threw: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  ok('the facts the contract checks are read from the projection, never re-derived',
+    JSON.stringify(derivedFacts) === JSON.stringify(FIXTURE_FACTS), derivedFacts);
   const refusalMatrix = [
     ['readOnly', readOnlyViolation],
     ['programFactsGrounded', noSnapshotReceipt],
     ['lfaClaimsGrounded', unknownSource],
     ['judgementTransparent', hiddenJudgement],
     ['changeClaimsTruthful', falseChange],
+    ['readinessClaimsGrounded', inventedReadiness],
+    ['fixtureClaimsGrounded', inventedFixture],
   ] as const;
   ok('every truth and read-only contract member independently remains a refusal',
     refusalMatrix.every(([check, evaluation]) =>

@@ -29,6 +29,7 @@ process.env.TZ = 'Australia/Melbourne';
 
 import type { OnboardingData } from '../types/domain';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
 import {
   coldStartThroughOnboarding,
   followTheWeek,
@@ -267,6 +268,12 @@ async function main(): Promise<void> {
     beforeCheckIn.twoKmTimeTrial);
   ok('the initial live picture honestly has no current-day check-in',
     beforeCheckIn.readiness.state === 'not_recorded');
+  ok('and the model projection of that live picture says reported:false, never a tier (F14)',
+    projectCoachSnapshotForModel(beforeCheckIn).readiness.reported === false
+      && !/\b(flat|good|wrecked|cooked)\b/i.test(
+        JSON.stringify(projectCoachSnapshotForModel(beforeCheckIn).readiness),
+      ),
+    projectCoachSnapshotForModel(beforeCheckIn).readiness);
   ok('the durable exclusion populates the active restriction tile',
     beforeCheckIn.restrictions.length > 0,
     beforeCheckIn.restrictions.map((note) => note.title));

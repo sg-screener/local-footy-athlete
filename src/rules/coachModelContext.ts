@@ -1,5 +1,6 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
 import { coachChatMessageWithinLimit } from './coachChatLimits';
+import { weekdayName } from '../utils/appDate';
 
 export type CoachModelSpeaker = 'coach' | 'athlete';
 
@@ -100,6 +101,13 @@ function boundedConversation(
 function modelReadiness(snapshot: CoachSnapshot) {
   const signal = snapshot.readiness.signal;
   return {
+    /**
+     * false = the athlete has recorded nothing for today. Said out loud
+     * because a null signal was read as "flat" on a device (Sam, 2026-09-09):
+     * when nothing is reported there is no tier for the model to name, and
+     * the response contract refuses one (`readinessClaimGrounded`).
+     */
+    reported: signal !== null,
     state: snapshot.readiness.state,
     signal: signal ? {
       date: signal.date,
@@ -162,12 +170,22 @@ function modelProgress(snapshot: CoachSnapshot) {
  * summaries are selected.
  */
 export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
+  // The model used to receive bare ISO dates and no fixture list, so
+  // "2026-07-18" became "Saturday and Sunday" in its mouth (Sam, 2026-09-09).
+  // The app already owns both facts: every day carries its weekday name and
+  // the fixture list is exhaustive. The response contract reads these same
+  // fields back (`coachResponseGroundingFacts`) to refuse an answer that
+  // names a game on any other day.
+  const fixtures = snapshot.visibleWeek.days
+    .filter((day) => day.kind === 'game')
+    .map((day) => ({ date: day.date, weekday: weekdayName(day.date) }));
   return {
     asOfDateISO: snapshot.asOfDateISO,
     visibleWeek: {
       weekStart: snapshot.visibleWeek.weekStart,
       days: snapshot.visibleWeek.days.map((day) => ({
         date: day.date,
+        weekday: weekdayName(day.date),
         kind: day.kind,
         headline: day.headline,
         timing: coachModelDayTiming(day.date, snapshot.asOfDateISO),
@@ -184,6 +202,9 @@ export function projectCoachSnapshotForModel(snapshot: CoachSnapshot) {
         })),
         gaps: [...day.gaps],
       })),
+      /** Every game this week, each with its weekday. Empty means no game. */
+      fixtures,
+      fixtureCount: fixtures.length,
       explanations: [...snapshot.visibleWeek.explanations],
     },
     thisWeek: {

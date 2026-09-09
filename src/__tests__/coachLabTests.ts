@@ -16,13 +16,22 @@ import {
   coachLabFixtureSnapshot,
 } from '../dev/coachLab/coachLabCases';
 import {
-  evaluateCoachLabResponse,
+  evaluateCoachLabResponse as evaluateCoachLabResponseWithFacts,
   runCoachLab,
+  type CoachLabCase,
   type CoachLabResponseV1,
 } from '../dev/coachLab/coachLab';
 import { currentReadOnlyCoachCandidate } from '../dev/coachLab/currentReadOnlyCoachCandidate';
+import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
+import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
 
 armTotalsOrRed();
+
+/** The fixture's own facts (one Saturday game, readiness recorded), read from the projection. */
+const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()));
+function evaluateCoachLabResponse(labCase: CoachLabCase, response: CoachLabResponseV1) {
+  return evaluateCoachLabResponseWithFacts(labCase, response, LAB_FACTS);
+}
 
 let passed = 0;
 let failed = 0;

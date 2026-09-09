@@ -43,6 +43,103 @@ export interface CoachResponseAutomaticChecks {
   readonly judgementTransparent: boolean;
   readonly concise: boolean;
   readonly changeClaimsTruthful: boolean;
+  /** The words do not name a readiness tier when nothing was recorded. */
+  readonly readinessClaimsGrounded: boolean;
+  /** The words do not put a game on a day the visible week has no game. */
+  readonly fixtureClaimsGrounded: boolean;
+}
+
+/**
+ * The snapshot facts an answer's WORDS are checked against — F14 of Sam's
+ * 2026-09-09 walkthrough, where the Coach said "readiness recorded as flat"
+ * with nothing recorded and "Game Day Saturday and Sunday" with one Saturday
+ * game. Until then the contract accepted a self-declared grounding receipt and
+ * never compared a claim with a snapshot value. The facts are READ from the
+ * model projection (`projectCoachSnapshotForModel`), the one owner of weekday
+ * names and the fixture list; nothing here re-derives a weekday from a date.
+ */
+export interface CoachResponseGroundingFacts {
+  readonly readinessReported: boolean;
+  /** Weekday names ("Saturday") of every game in the visible week. */
+  readonly gameWeekdays: readonly string[];
+}
+
+export function coachResponseGroundingFacts(snapshot: {
+  readonly readiness: { readonly reported: boolean };
+  readonly visibleWeek: { readonly fixtures: readonly { readonly weekday: string }[] };
+}): CoachResponseGroundingFacts {
+  return {
+    readinessReported: snapshot.readiness.reported,
+    gameWeekdays: snapshot.visibleWeek.fixtures.map((fixture) => fixture.weekday),
+  };
+}
+
+/**
+ * A readiness tier attributed to the athlete as something recorded:
+ * "readiness is recorded as flat", "your check-in says you're good".
+ * Advice that merely uses a tier word ("if you feel flat, log it") does not
+ * match; the claim needs a readiness noun, a stating verb and a tier.
+ */
+const READINESS_TIER_CLAIM = /\b(?:readiness|check-?in|quick check)\b[^.!?\n]*?\b(?:is|was|as|reads?|shows?|says?|at)\s+(?:\w+['’]?\w*\s+){0,2}['"“]?(?:flat|good|wrecked|cooked)\b/i;
+
+export function readinessClaimGrounded(
+  message: string,
+  facts: CoachResponseGroundingFacts,
+): boolean {
+  return facts.readinessReported || !READINESS_TIER_CLAIM.test(message);
+}
+
+const GAME_WORD = /^(?:game|games|match|matches|fixture|fixtures)$/i;
+const WEEKDAY_WORD = /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|weds|thu|thur|thurs|fri|sat|sun)$/i;
+/** A weekday next to one of these is being described as something other than a game. */
+const NON_GAME_ACTIVITY_WORD = /^(?:rest|off|recovery|training|session|sessions|light|easy|lift|lifts|lifting|strength|conditioning|gym|run|running|sprint|sprints|mobility|primer|gunshow|deload|hard)$/i;
+const NO_GAME_THIS_WEEK = /\bno\s+(?:game|match|fixture)s?\s+this\s+week(?:end)?\b/i;
+const GAME_CLAIM_WINDOW_WORDS = 4;
+const ACTIVITY_NEIGHBOUR_WORDS = 2;
+
+function weekdayKey(word: string): string | null {
+  const bare = word.replace(/['’]s$/i, '');
+  return WEEKDAY_WORD.test(bare) ? bare.slice(0, 3).toLowerCase() : null;
+}
+
+function sentenceWords(sentence: string): readonly string[] {
+  return sentence
+    .split(/\s+/)
+    .map((word) => word.replace(/^[^A-Za-z]+|[^A-Za-z'’]+$/g, ''))
+    .filter(Boolean);
+}
+
+/**
+ * A weekday named within a few words of "game" is a claim that the week has a
+ * game on that day, unless the weekday is itself described as another
+ * activity ("Saturday's game and Sunday is rest"). Every such day must be in
+ * the fixture list, and the real game may not be denied.
+ */
+export function fixtureClaimGrounded(
+  message: string,
+  facts: CoachResponseGroundingFacts,
+): boolean {
+  if (facts.gameWeekdays.length > 0 && NO_GAME_THIS_WEEK.test(message)) return false;
+  const allowed = new Set(facts.gameWeekdays.map((day) => day.slice(0, 3).toLowerCase()));
+  for (const sentence of message.split(/(?<=[.!?;])\s+/)) {
+    const words = sentenceWords(sentence);
+    for (let index = 0; index < words.length; index += 1) {
+      if (!GAME_WORD.test(words[index])) continue;
+      const from = Math.max(0, index - GAME_CLAIM_WINDOW_WORDS);
+      const to = Math.min(words.length - 1, index + GAME_CLAIM_WINDOW_WORDS);
+      for (let at = from; at <= to; at += 1) {
+        const day = weekdayKey(words[at]);
+        if (!day || allowed.has(day)) continue;
+        const neighbours = words.slice(
+          Math.max(0, at - ACTIVITY_NEIGHBOUR_WORDS),
+          at + ACTIVITY_NEIGHBOUR_WORDS + 1,
+        );
+        if (neighbours.some((word) => NON_GAME_ACTIVITY_WORD.test(word))) continue;
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 export interface CoachResponseContractEvaluation {
@@ -153,6 +250,8 @@ function wordCount(message: string): number {
 export interface CoachResponseGroundingPolicy {
   readonly requiresLiveProgramFacts: boolean;
   readonly allowedKnowledgeSourceIds: readonly string[];
+  /** Required: a contract that can be evaluated without the facts can be skipped. */
+  readonly facts: CoachResponseGroundingFacts;
 }
 
 export type CoachResponseContractFailureCode = 'invalid_answer' | 'refused';
@@ -173,7 +272,9 @@ export function coachResponseContractFailureCode(
     || !checks.programFactsGrounded
     || !checks.lfaClaimsGrounded
     || !checks.judgementTransparent
-    || !checks.changeClaimsTruthful) {
+    || !checks.changeClaimsTruthful
+    || !checks.readinessClaimsGrounded
+    || !checks.fixtureClaimsGrounded) {
     return 'refused';
   }
   return 'invalid_answer';
@@ -219,6 +320,10 @@ export function evaluateCoachResponseContract(
       && wordCount(payload.message) <= COACH_RESPONSE_MAX_ANSWER_WORDS,
     changeClaimsTruthful: payload !== null
       && !READ_ONLY_FALSE_CHANGE_PATTERNS.some((pattern) => pattern.test(payload.message)),
+    readinessClaimsGrounded: payload !== null
+      && readinessClaimGrounded(payload.message, policy.facts),
+    fixtureClaimsGrounded: payload !== null
+      && fixtureClaimGrounded(payload.message, policy.facts),
   };
   const violations = (Object.keys(checks) as (keyof CoachResponseAutomaticChecks)[])
     .filter((name) => !checks[name]);

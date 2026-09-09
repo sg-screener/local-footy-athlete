@@ -6,17 +6,25 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   COACH_LAB_MAX_ANSWER_WORDS,
   COACH_LAB_RESPONSE_SCHEMA_VERSION,
-  evaluateCoachLabResponse,
+  evaluateCoachLabResponse as evaluateCoachLabResponseWithFacts,
+  type CoachLabCase,
   type CoachLabResponseV1,
 } from '../dev/coachLab/coachLab';
 import { COACH_LAB_CASES, coachLabFixtureSnapshot } from '../dev/coachLab/coachLabCases';
 import { buildRetrievedCoachLabBrainInstructions } from '../dev/coachLab/coachLabBrainPack';
+import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
+import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
 import {
   retrieveCoachLabKnowledge,
   type CanonicalCoachKnowledgeSource,
 } from '../dev/coachLab/coachLabKnowledgeRetriever';
 
 armTotalsOrRed();
+
+const LAB_FACTS = coachResponseGroundingFacts(projectCoachSnapshotForModel(coachLabFixtureSnapshot()));
+function evaluateCoachLabResponse(labCase: CoachLabCase, response: CoachLabResponseV1) {
+  return evaluateCoachLabResponseWithFacts(labCase, response, LAB_FACTS);
+}
 
 let passed = 0;
 let failed = 0;
@@ -96,6 +104,21 @@ console.log('\n[1b] STRUCTURED FACTS, NOT SLANG PATCHES, DRIVE READINESS RETRIEV
   ok('low energy and moderate soreness retrieve their canonical rules without a keyword hint',
     selected.includes('Tired today') && selected.includes('Sore')
       && selected.includes('Slight reduction'));
+}
+
+console.log('\n[1c] NOTHING REPORTED SEEDS NO READINESS TIER (F14, 2026-09-09)');
+{
+  const retrieval = retrieveCoachLabKnowledge({
+    athleteMessage: 'help',
+    snapshot: coachLabFixtureSnapshot({ readiness: 'not_recorded' }),
+    sources: SOURCES,
+  });
+  const selected = retrieval.chunks.map((chunk) => chunk.content).join('\n');
+  ok('with nothing recorded, a neutral question pulls no tired/sore reduction rows into the prompt',
+    !selected.includes('Tired today')
+      && !selected.includes('Slight reduction')
+      && !/\bwrecked\b/i.test(selected),
+    retrieval.chunks.map((chunk) => chunk.id));
 }
 
 console.log('\n[2] DIFFERENT ATHLETE QUESTIONS RETRIEVE DIFFERENT KNOWLEDGE');

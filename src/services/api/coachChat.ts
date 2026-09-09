@@ -7,6 +7,11 @@ import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
 import type { CoachChatFailureCode } from '../../rules/coachChatFailure';
 import { validateCoachCommunicationTruth } from '../../utils/verifiedCoachCommunication';
 import { coachChatMessageWithinLimit } from '../../rules/coachChatLimits';
+import {
+  coachResponseGroundingFacts,
+  fixtureClaimGrounded,
+  readinessClaimGrounded,
+} from '../../rules/coachResponseContract';
 
 interface CoachChatFetchResponse {
   readonly ok: boolean;
@@ -75,6 +80,11 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
     throw new CoachChatError('unavailable', 'Coach chat environment is unavailable.');
   }
   const fetcher = input.fetch ?? (globalThis.fetch as unknown as CoachChatFetch);
+  const modelInput = buildCoachModelInput({
+    athleteMessage: input.message,
+    snapshot: input.snapshot,
+    conversationContext: input.conversationContext,
+  });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? 45_000);
   let response: CoachChatFetchResponse;
@@ -87,13 +97,7 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
         'Content-Type': 'application/json',
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        modelInput: buildCoachModelInput({
-          athleteMessage: input.message,
-          snapshot: input.snapshot,
-          conversationContext: input.conversationContext,
-        }),
-      }),
+      body: JSON.stringify({ modelInput }),
     });
   } catch {
     throw new CoachChatError('unavailable', 'Coach chat request could not reach the server.');
@@ -137,6 +141,13 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
   });
   if (!truth.ok) {
     throw new CoachChatError('refused', 'Coach chat refused an untruthful read-only answer.');
+  }
+  // F14 (2026-09-09): the words are checked against the same snapshot facts
+  // the server checks, so an invented readiness tier or game day never reaches
+  // the athlete even if the server's gate is behind this build.
+  const facts = coachResponseGroundingFacts(modelInput.currentAthleteSnapshot);
+  if (!readinessClaimGrounded(message, facts) || !fixtureClaimGrounded(message, facts)) {
+    throw new CoachChatError('refused', 'Coach chat refused an answer that contradicts the athlete snapshot.');
   }
   return message;
 }
