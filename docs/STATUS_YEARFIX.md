@@ -171,3 +171,15 @@ Not run: `test:release`, `test:bible`, the 44-group gate, any year audit, the
 baseline reds listed above. Not done: the everyday seat's coach-server
 deploy (Sam decides). Original folder's servers, Metro :8093 and the
 everyday simulator untouched.
+
+**06:35 — badge opacity (R-396).** Sam, on the phone screenshot: *"the badges
+need to have opacity boosted 25% or so"*. `BADGE_DE_EMPHASIS` 0.5 → 0.75 in
+`SessionTierBadge.tsx` (commit 9ff283ae, with the registry row R-396 the 50%
+ruling never had). **BUILT** — no cell asserts the value. `test:ruling-registry`
+exit 1 on four pre-existing reds, none naming R-396 (R-384 no status, R-070
+missing file, 9 UNENFORCED above the ceiling of 4, 18 inbox re-asks); cell
+[1c] and [4] green with the new row. Release rebuilt at 9ff283ae
+(`build-release-2.log`, exit 0), codesign OK, bundle 8,709,521 bytes, no
+`ip.txt`, installed in place on AFA21856… (container C7A796EB…); launch
+refused again: Locked. No simulator proof taken — Sam judges the chip on his
+phone. Not run: `test:compile`, gates, audits.
