@@ -33,3 +33,14 @@ not a review question.
 exact words above, model `gpt-5.6-terra`, prompt `coach-lab-openai-v4-situation`.
 Row 7 stays PENDING: its answer contradicts R-394, so it cannot be the
 benchmark; it is re-taped after S2 and reviewed then.
+
+**Row 7 re-taped after slice S2a deployed (coach-chat v11, 2026-09-10), three
+runs of "can i do leg curls instead of nordics", log
+`/private/tmp/lfa-yearfix-evidence/s2-post-deploy-smoke.log`:**
+1. Not as a straight swap in-season: leg curls are useful, but they don't replace Nordics when Nordics are legal. The in-season minimum prioritises a Nordic, with curls able to sit alongside it. Your lower session is today, five days before Saturday's game, which is suitable spacing. You logged low energy today, so keep the Nordic dose controlled and prioritise clean reps; if you can't do them safely, use curls and flag why in the app.
+2. Not as a straight replacement by default. In-season, Nordics are prioritised weekly; hamstring curls can stay alongside them but don't replace them when Nordics are practical. If Nordics aggravate something or you can't perform them safely, use the app's injury/equipment pathway rather than forcing them. You're flat today, so keep Monday's lower work crisp and reduce volume if movement quality is off.
+3. Not as a straight swap this week. In-season, Nordics are the priority hamstring exercise; leg curls can stay alongside them but don't replace them when Nordics are available. With low energy logged today, keep the Nordic dose controlled and focus on clean reps rather than pushing fatigue. If Nordics cause pain or you can't do them safely, get clinician advice and use the app's restriction pathway.
+
+Three of three apply R-394. Pending Sam's word on which of the three is the
+ideal (the first is proposed). "The app's injury/equipment pathway" is not a
+door's name — slice S3.

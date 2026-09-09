@@ -24,9 +24,11 @@ npm run -s test:coach-retrieval-regression > /tmp/coach-deploy-retrieval.log 2>&
 
 echo "[coach-deploy] 3/4 deploying coach-chat"
 supabase functions deploy coach-chat
-VERSION=$(supabase functions list 2>/dev/null | awk -F'|' '/coach-chat/ {gsub(/ /,"",$6); print $6}')
+# columns: id | name | slug | status | version | updated — version is $5
+VERSION=$(supabase functions list 2>/dev/null | awk -F'|' '/coach-chat/ {gsub(/ /,"",$5); print $5}')
 SHA=$(git rev-parse --short HEAD)
-DIRTY=$(git status --porcelain -- src supabase docs/RULINGS_REGISTRY.md docs/LFA_PROGRAMMING_BIBLE.md | grep -v '^??' | wc -l | tr -d ' ')
+# grep exits 1 on no matches; under pipefail that would abort the receipt step.
+DIRTY=$( (git status --porcelain -- src supabase docs/RULINGS_REGISTRY.md docs/LFA_PROGRAMMING_BIBLE.md | grep -v '^??' || true) | wc -l | tr -d ' ')
 STAMP=$(date -u '+%Y-%m-%d %H:%M:%S')
 WHO=${COACH_DEPLOY_AGENT:-unknown}
 
