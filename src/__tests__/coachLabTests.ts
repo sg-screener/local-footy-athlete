@@ -48,7 +48,7 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
 
 console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
 {
-  ok('the first bench contains ten questions', COACH_LAB_CASES.length === 10);
+  ok('the first bench contains ten questions and the S1 bench twelve', COACH_LAB_CASES.length === 22);
   ok('every case has a stable unique id',
     new Set(COACH_LAB_CASES.map((entry) => entry.id)).size === COACH_LAB_CASES.length);
   ok('messy spelling and shorthand survive unchanged',
