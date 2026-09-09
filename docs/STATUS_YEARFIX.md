@@ -130,3 +130,44 @@ prepare exit 0, 0 source changes against the manifest taken before the run
 - item 5: 2027-03-05 carries one adductor isometric, Half Copenhagen 1 x 30 s.
 - item 4 (report): 2027-03-28 still five Fly 20s — ruled by R-036/R-393, see above.
 - item 6 (report): week 16 longest leg-loading run stays 4 — ruled, see above.
+
+## 2026-09-10 — phone install from this branch (seat PHONEBUILD)
+
+**WORKING** — `TZ=Australia/Melbourne npx sucrase-node
+src/__tests__/sessionSectionAddTests.ts` re-run fresh at HEAD de2e79c7 (the
+earlier log finished two minutes after the merge, so it could have started on
+pre-merge files): 250 passed, 0 failed, exit 0. The two cells red before
+cc6e687d ("male|female/primer+conditioning_light: combined session preserves
+section label, row order and typed context") are in that count. Receipt:
+`/private/tmp/lfa-yearfix-evidence/section-add-4.log`.
+
+**BUILT and on Sam's phone** — Release/iphoneos, `-allowProvisioningUpdates`,
+BUILD SUCCEEDED, exit 0 (`/private/tmp/lfa-yearfix-build/build-release.log`).
+`codesign --verify --deep --strict` OK, team 66M7FZ6G37,
+com.localfootyathlete.app 1.0.0 (1). `main.jsbundle` embedded, 8,709,517 bytes,
+Hermes bytecode, sha256 5309760937e4a0a6…; no `ip.txt` in the .app. Installed
+in place with `devicectl device install app` on AFA21856… (bundle container
+5607E5DF-C6FB-43F2-BDB0-DBE87CAA2C72); no uninstall, no data cleared. Launch
+refused twice: device Locked — Sam opens it himself.
+
+Two things the handoff got wrong, and what was done instead:
+- The handoff asked for a **Debug** build and then for `main.jsbundle` to be
+  embedded. The bundle phase forces `SKIP_BUNDLING=1` for every Debug
+  configuration and there is no `.xcode.env.updates` to lift it, so the Debug
+  build (also exit 0) produced no bundle at all. A Debug app on a phone reaches
+  for Metro. Built **Release**, as the 2026-09-04 phone install did.
+- This worktree's `node_modules` is a **symlink to the original folder**.
+  `expo/AppEntry.js` imports `../../App` relative to its REAL path, so the
+  first Release bundle failed to resolve — and had it resolved, it would have
+  bundled the ORIGINAL folder's App (integrate @ 556e2ac8), not this branch.
+  Fixed with an untracked entry file in the worktree,
+  `phone-entry.yearfix.js` (`import App from './App'`), named by
+  `ENTRY_FILE` in the gitignored `ios/.xcode.env.local`. Proof the phone
+  carries this branch: the embedded bytecode's string table holds
+  `adductor_isometric` (3 worktree source files, 0 in the original) and
+  `R-395` (absent from the original `lawRegistry.ts`).
+
+Not run: `test:release`, `test:bible`, the 44-group gate, any year audit, the
+baseline reds listed above. Not done: the everyday seat's coach-server
+deploy (Sam decides). Original folder's servers, Metro :8093 and the
+everyday simulator untouched.
