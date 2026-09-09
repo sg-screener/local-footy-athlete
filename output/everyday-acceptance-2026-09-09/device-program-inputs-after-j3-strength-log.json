@@ -1,0 +1,202 @@
+{
+ "generationAnchorISO": "2026-07-13",
+ "seasonPhaseClock": {
+  "protocolVersion": 1,
+  "selectedPhase": "In-season",
+  "phaseEntryWeekStartISO": "2026-07-13",
+  "originProvenance": "explicit_user_phase_change",
+  "persistenceProvenance": "preserved_persisted_state"
+ },
+ "sessionFeedback": {
+  "2026-07-13": {
+   "dateStr": "2026-07-13",
+   "completion": "full",
+   "components": [
+    {
+     "componentId": "power",
+     "kind": "power",
+     "label": "power work",
+     "completion": "full"
+    },
+    {
+     "componentId": "strength",
+     "kind": "strength",
+     "label": "strength work",
+     "completion": "full"
+    }
+   ],
+   "strength": [
+    {
+     "estimateCaptureVersion": 1,
+     "lastSetEstimate": {
+      "method": "nuzzo_last_set_rir_v1",
+      "liftId": "back_squat",
+      "exerciseId": "ex-squat",
+      "workoutExerciseId": "we-w-composed-mc-ai-1-1-0",
+      "setId": "2026-07-13:we-w-composed-mc-ai-1-1-0:last-working-set",
+      "setNumber": 3,
+      "source": "athlete_confirmed_last_set",
+      "actualWeightKg": 110,
+      "actualReps": 3,
+      "rir": 2,
+      "skipped": false
+     },
+     "exerciseId": "ex-squat",
+     "workoutExerciseId": "we-w-composed-mc-ai-1-1-0",
+     "exerciseName": "Back Squat",
+     "prescribedSets": 3,
+     "prescribedRepsMin": 2,
+     "prescribedRepsMax": 4,
+     "weightKg": 110,
+     "completion": "full"
+    },
+    {
+     "estimateCaptureVersion": 1,
+     "lastSetEstimate": {
+      "method": "nuzzo_last_set_rir_v1",
+      "liftId": "rdl",
+      "exerciseId": "ex-rdl",
+      "workoutExerciseId": "we-w-composed-mc-ai-1-1-1",
+      "setId": "2026-07-13:we-w-composed-mc-ai-1-1-1:last-working-set",
+      "setNumber": 3,
+      "source": "athlete_confirmed_last_set",
+      "actualWeightKg": 87.5,
+      "actualReps": 3,
+      "rir": 1,
+      "skipped": false
+     },
+     "exerciseId": "ex-rdl",
+     "workoutExerciseId": "we-w-composed-mc-ai-1-1-1",
+     "exerciseName": "RDLs",
+     "prescribedSets": 3,
+     "prescribedRepsMin": 2,
+     "prescribedRepsMax": 4,
+     "weightKg": 87.5,
+     "completion": "full"
+    },
+    {
+     "estimateCaptureVersion": 1,
+     "exerciseId": "ex-custom-cossack-squat",
+     "workoutExerciseId": "we-w-composed-mc-ai-1-1-2",
+     "exerciseName": "Cossack Squat",
+     "prescribedSets": 1,
+     "prescribedRepsMin": 8,
+     "prescribedRepsMax": 12,
+     "completion": "full"
+    }
+   ],
+   "difficulty": 7,
+   "actualMinutes": 3,
+   "executionItems": [
+    {
+     "itemId": "mobility:horse-stance-hold",
+     "sectionId": "mobility",
+     "componentId": null,
+     "completed": true
+    },
+    {
+     "itemId": "mobility:jefferson-curl",
+     "sectionId": "mobility",
+     "componentId": null,
+     "completed": true
+    },
+    {
+     "itemId": "mobility:seated-single-leg-pike-lift",
+     "sectionId": "mobility",
+     "componentId": null,
+     "completed": true
+    },
+    {
+     "itemId": "mobility:bosch-hold",
+     "sectionId": "mobility",
+     "componentId": null,
+     "completed": true
+    },
+    {
+     "itemId": "exercise:power-w-composed-mc-ai-1-1",
+     "sectionId": "strength",
+     "componentId": "power",
+     "completed": true
+    },
+    {
+     "itemId": "exercise:we-w-composed-mc-ai-1-1-0",
+     "sectionId": "strength",
+     "componentId": "strength",
+     "completed": true
+    },
+    {
+     "itemId": "exercise:we-w-composed-mc-ai-1-1-1",
+     "sectionId": "strength",
+     "componentId": "strength",
+     "completed": true
+    },
+    {
+     "itemId": "exercise:we-w-composed-mc-ai-1-1-3",
+     "sectionId": "strength",
+     "componentId": "strength",
+     "completed": true
+    },
+    {
+     "itemId": "exercise:we-w-composed-mc-ai-1-1-2",
+     "sectionId": "strength",
+     "componentId": "strength",
+     "completed": true
+    },
+    {
+     "itemId": "exercise:we-w-composed-mc-ai-1-1-4",
+     "sectionId": "strength",
+     "componentId": "strength",
+     "completed": true
+    }
+   ],
+   "strengthRequired": true,
+   "outcomeReceipt": {
+    "protocolVersion": 1,
+    "transactionId": "session-outcome:2026-07-13:sched:2026-07-13:1:lower:fnv1a-97139b29",
+    "semanticFingerprint": "fnv1a-97139b29",
+    "committedAt": "2026-07-13T02:00:00.000Z",
+    "date": "2026-07-13",
+    "sessionIdentity": {
+     "workoutId": "w-composed-mc-ai-1-1",
+     "planEntryId": "sched:2026-07-13:1:lower"
+    },
+    "componentIds": [
+     "power",
+     "strength"
+    ],
+    "source": {
+     "entryPoint": "tap",
+     "surface": "session_feedback_panel",
+     "traceId": "aa-v2-4ff10c5c19d957e92ab1903f"
+    }
+   }
+  }
+ },
+ "weightOverrides": {
+  "2026-07-13": {
+   "ex-squat": 110
+  }
+ },
+ "bandResistanceOverrides": {},
+ "acceptedBlocks": {
+  "2026-07-13": {
+   "blockNumber": 1,
+   "requiredStrengthSessions": 12,
+   "requiredStrengthDates": [
+    "2026-07-13",
+    "2026-07-14",
+    "2026-07-16",
+    "2026-07-20",
+    "2026-07-21",
+    "2026-07-23",
+    "2026-07-27",
+    "2026-07-28",
+    "2026-07-30",
+    "2026-08-03",
+    "2026-08-04",
+    "2026-08-06"
+   ]
+  }
+ },
+ "temporarySourceFacts": []
+}

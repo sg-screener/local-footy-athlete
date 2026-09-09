@@ -1,0 +1,31 @@
+
+> local-footy-athlete@1.0.0 qa:audit-flows
+> scripts/audit-flows.sh
+
+
+════ .maestro/audit/bin-undo-toast.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+════ .maestro/audit/block-rollover.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+════ .maestro/audit/full-reset-lands-clean.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+════ .maestro/audit/readiness-ack-never-silent.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+════ .maestro/audit/removal-undo-home.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+════ .maestro/audit/week-move-game.yaml ════
+Pass an explicit --device simulator UUID before native verification.
+
+AUDIT FLOWS — 0 passed, 6 failed
+FAIL  bin-undo-toast.yaml
+FAIL  block-rollover.yaml
+FAIL  full-reset-lands-clean.yaml
+FAIL  readiness-ack-never-silent.yaml
+FAIL  removal-undo-home.yaml
+FAIL  week-move-game.yaml
+EXIT=1

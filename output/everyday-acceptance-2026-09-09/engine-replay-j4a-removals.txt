@@ -1,0 +1,51 @@
+
+=== seeded
+2026-07-13 MON | Strength/lower/core [6] Vertical Jump > Back Squat > RDLs > Hamstring Curl > Cossack Squat > Seated Calf Raise ind=core
+2026-07-14 TUE | Team Training/Team Training + Upper Body Pull/core [7] Explosive Landmine Press > Bent Row > Pull-Ups > Face Pull > Shrugs > Hanging Leg Raise > Tib Raises ind=core
+2026-07-15 WED | Mobility/Mobility/optional [6] Toe Stretch > Pissing Dog Against Wall > Jefferson Curl > Sleeper Stretch > Calf Stretch > Butterfly Stretch ind=optional
+2026-07-16 THU | Team Training/Team Training + Upper Body Push/core [5] Single-Arm DB Floor Press > Seated DB Press > Tricep Pushdown > Tricep Circuit (Dirty 30) > Dragon Flag ind=core
+2026-07-17 FRI | Strength/Gunshow/optional [6] Incline Dumbbell Curl > Concentration Curl > Overhead Tricep Extension > Dumbbell Kickback > Cable Face Pull > Rear Delt Fly ind=optional
+2026-07-18 SAT | Game/Game Day/core [0]  ind=game
+2026-07-19 SUN | (no workout) ind=rest
+LOG skipped -> {"result":"recorded","sessionName":"lower"}
+
+=== after Monday logged skipped
+2026-07-13 MON | Strength/lower/core [6] Vertical Jump > Back Squat > RDLs > Hamstring Curl > Cossack Squat > Seated Calf Raise ind=core
+2026-07-14 TUE | Team Training/Team Training + Upper Body Pull/core [7] Explosive Landmine Press > Bent Row > Pull-Ups > Face Pull > Shrugs > Hanging Leg Raise > Tib Raises ind=core
+2026-07-15 WED | Mobility/Mobility/optional [6] Toe Stretch > Pissing Dog Against Wall > Jefferson Curl > Sleeper Stretch > Calf Stretch > Butterfly Stretch ind=optional
+2026-07-16 THU | Team Training/Team Training + Upper Body Push/core [5] Single-Arm DB Floor Press > Seated DB Press > Tricep Pushdown > Tricep Circuit (Dirty 30) > Dragon Flag ind=core
+2026-07-17 FRI | Strength/Gunshow/optional [6] Incline Dumbbell Curl > Concentration Curl > Overhead Tricep Extension > Dumbbell Kickback > Cable Face Pull > Rear Delt Fly ind=optional
+2026-07-18 SAT | Game/Game Day/core [0]  ind=game
+2026-07-19 SUN | (no workout) ind=rest
+REMOVE 2026-07-14 strength -> {"ok":true,"outcome":"applied","changedProgram":true,"requiresRebuild":false,"message":"Upper Body Pull was removed. This week’s strength target has been reduced at your request.","fallbackToCoach":false,"route":"guided_tap_flow"}
+
+=== after remove 2026-07-14 strength
+2026-07-13 MON | Strength/lower/core [6] Vertical Jump > Back Squat > RDLs > Hamstring Curl > Cossack Squat > Seated Calf Raise ind=core
+2026-07-14 TUE | Team Training/Team Training/core [0] Team training ind=core
+2026-07-15 WED | Mobility/Mobility/optional [6] Toe Stretch > Pissing Dog Against Wall > Jefferson Curl > Sleeper Stretch > Calf Stretch > Butterfly Stretch ind=optional
+2026-07-16 THU | Team Training/Team Training + Upper Body Push/core [5] Single-Arm DB Floor Press > Seated DB Press > Tricep Pushdown > Tricep Circuit (Dirty 30) > Dragon Flag ind=core
+2026-07-17 FRI | Strength/Gunshow/optional [6] Incline Dumbbell Curl > Concentration Curl > Overhead Tricep Extension > Dumbbell Kickback > Cable Face Pull > Rear Delt Fly ind=optional
+2026-07-18 SAT | Game/Game Day/core [0]  ind=game
+2026-07-19 SUN | (no workout) ind=rest
+REMOVE 2026-07-16 strength -> {"ok":true,"outcome":"applied","changedProgram":true,"requiresRebuild":false,"message":"Upper Body Push was removed.","fallbackToCoach":false,"route":"guided_tap_flow"}
+
+=== after remove 2026-07-16 strength
+2026-07-13 MON | Strength/lower/core [6] Vertical Jump > Back Squat > RDLs > Hamstring Curl > Cossack Squat > Seated Calf Raise ind=core
+2026-07-14 TUE | Team Training/Team Training/core [0] Team training ind=core
+2026-07-15 WED | Mobility/Mobility/optional [6] Toe Stretch > Pissing Dog Against Wall > Jefferson Curl > Sleeper Stretch > Calf Stretch > Butterfly Stretch ind=optional
+2026-07-16 THU | Team Training/Team Training/core [0] Team training ind=core
+2026-07-17 FRI | Strength/Gunshow/optional [6] Incline Dumbbell Curl > Concentration Curl > Overhead Tricep Extension > Dumbbell Kickback > Cable Face Pull > Rear Delt Fly ind=optional
+2026-07-18 SAT | Game/Game Day/core [0]  ind=game
+2026-07-19 SUN | (no workout) ind=rest
+REMOVE 2026-07-17 whole_day -> {"ok":true,"outcome":"applied","changedProgram":true,"requiresRebuild":false,"message":"Session removed. I also rebalanced Monday to keep your week balanced.","fallbackToCoach":false,"route":"guided_tap_flow"}
+
+=== after remove 2026-07-17 whole_day
+2026-07-13 MON | Strength/lower/core [7] Vertical Jump > Back Squat > RDLs > Hamstring Curl > Plank > Cossack Squat > Seated Calf Raise ind=core
+2026-07-14 TUE | Team Training/Team Training/core [0] Team training ind=core
+2026-07-15 WED | Mobility/Mobility/optional [6] Toe Stretch > Pissing Dog Against Wall > Jefferson Curl > Sleeper Stretch > Calf Stretch > Butterfly Stretch ind=optional
+2026-07-16 THU | Team Training/Team Training/core [0] Team training ind=core
+2026-07-17 FRI | (no workout) ind=rest
+2026-07-18 SAT | Game/Game Day/core [0]  ind=game
+2026-07-19 SUN | (no workout) ind=rest
+
+Mon feedback completion: skipped

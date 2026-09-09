@@ -1,0 +1,74 @@
+{
+ "state": {
+  "trackedLiftChoices": {},
+  "onboardingData": {
+   "firstName": "Everyday",
+   "gender": "female",
+   "heightCm": 168,
+   "weightKg": 66,
+   "position": "inside_mid",
+   "goals": [
+    "stronger_and_fitter"
+   ],
+   "seasonPhase": "Off-season",
+   "seasonFinishedOn": "2026-09-05",
+   "trainingDaysPerWeek": 3,
+   "trainingDaysUnsure": false,
+   "preferredTrainingDays": [
+    "Monday",
+    "Wednesday",
+    "Friday"
+   ],
+   "equipmentAnswer": {
+    "tags": {
+     "dumbbells": "have",
+     "barbell": "have",
+     "bench": "have",
+     "bands": "have",
+     "cables": "have",
+     "plyo_box": "have",
+     "pullup_bar": "have",
+     "machine": "have",
+     "rack": "have",
+     "foam_roller": "have",
+     "back_extension_bench": "have",
+     "kettlebell": "have",
+     "medicine_ball": "have",
+     "swiss_ball": "have",
+     "tib_bar": "have",
+     "trap_bar": "have",
+     "dip_bars": "have",
+     "rings_trx": "have",
+     "ab_wheel": "have",
+     "sandbag": "have"
+    },
+    "modalities": {
+     "bike_erg": "have",
+     "air_bike": "have",
+     "row": "have",
+     "ski": "have",
+     "treadmill": "have"
+    },
+    "answeredOn": "2026-09-09"
+   },
+   "trainingLocation": "Commercial gym",
+   "experienceLevel": "2-5 years",
+   "squatStrength": "Around bodyweight",
+   "benchStrength": "Less than bodyweight",
+   "twoKmTimeTrial": {
+    "seconds": 540,
+    "recordedOn": "2026-09-09",
+    "source": "onboarding"
+   },
+   "conditioningLevel": "Good",
+   "sprintExposure": "2+ times per week",
+   "recentTrainingLoad": "Pretty consistent",
+   "injuries": []
+  },
+  "isOnboardingComplete": true,
+  "signupDateISO": "2026-09-09",
+  "isLoading": false,
+  "error": null
+ },
+ "version": 0
+}
