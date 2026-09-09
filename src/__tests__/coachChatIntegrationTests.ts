@@ -87,12 +87,12 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
         read('src/dev/coachLab/coachLab.ts'),
       ));
   ok('an automatic production failure is refused before any answer is returned',
-    /if \(failureCode !== null\) \{[\s\S]{0,300}?return json\(502/.test(edge)
+    /if \(failureCode !== null\) \{[\s\S]{0,500}?send\(\{\s*t: 'refused'/.test(edge)
       && edge.indexOf('if (failureCode !== null)') < edge.indexOf('console.log(\'coach-chat token receipt\''));
   ok('a production truth refusal leaves a typed server receipt without athlete text',
     /console\.warn\('coach-chat response rejected by contract', evaluation\.violations\)/.test(edge)
       && edge.indexOf("console.warn('coach-chat response rejected by contract'")
-        < edge.indexOf('return json(502', edge.indexOf("console.warn('coach-chat response rejected by contract'")));
+        < edge.indexOf("t: 'refused'", edge.indexOf("console.warn('coach-chat response rejected by contract'")));
   ok('answer usability failures are absence while truth and read-only failures are refusals',
     /coachResponseContractFailureCode\(evaluation\)/.test(edge)
       && /failureCode === 'invalid_answer'\s*\? 'coach_chat_invalid_answer'\s*:\s*'coach_chat_response_refused'/.test(edge));
@@ -115,7 +115,7 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
   // grounding receipt and never read a snapshot value. Every door that shows
   // an answer now hands the contract the facts to check the words against.
   ok('production hands the contract the snapshot facts the answer must agree with',
-    /facts:\s*coachResponseGroundingFacts\(\s*modelInput\.currentAthleteSnapshot,\s*doorLabelsFromKnowledge\(CANONICAL_COACH_KNOWLEDGE\),?\s*\)/.test(edge));
+    /const facts = coachResponseGroundingFacts\(\s*modelInput\.currentAthleteSnapshot,\s*doorLabelsFromKnowledge\(CANONICAL_COACH_KNOWLEDGE\),?\s*\)/.test(edge) && /allowedKnowledgeSourceIds: citableCoachKnowledgeIds\(retrieval\.chunks\),\s*facts,/.test(edge));
   ok('Coach Lab hands the same facts, read from the same projection',
     /coachResponseGroundingFacts\(projectCoachSnapshotForModel\(args\.snapshot\), COACH_APP_DOOR_LABELS\)/.test(
       read('src/dev/coachLab/coachLab.ts'),

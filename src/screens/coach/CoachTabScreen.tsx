@@ -173,6 +173,9 @@ export default function CoachTabScreen() {
   const weeklyCommitment = useCoachWeeklyCommitment();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
+  // R-399: the words as they arrive. Not a turn until the checked answer
+  // lands (then `say` appends it); withdrawn if the check fails.
+  const [streaming, setStreaming] = useState<string | null>(null);
   // R-398: the conversation is the app session — it lives in the in-memory
   // holder, survives leaving the tab, and dies with the process.
   const turns = useCoachConversation();
@@ -229,6 +232,7 @@ export default function CoachTabScreen() {
     appendCoachConversation({ id: `athlete-${readCoachConversation().length}`, speaker: 'athlete', text: message });
     setDraft('');
     setIsSending(true);
+    setStreaming('');
     try {
       const answer = await askCoachReadOnly({
         message,
@@ -236,6 +240,10 @@ export default function CoachTabScreen() {
         conversationContext: {
           activeProgramTarget: null,
           recentTurns,
+        },
+        onDelta: (messageSoFar) => {
+          setStreaming(messageSoFar);
+          pinToBottom(false);
         },
       });
       say(answer);
@@ -248,9 +256,10 @@ export default function CoachTabScreen() {
       }
       say(coachFailureReply(failure));
     } finally {
+      setStreaming(null);
       setIsSending(false);
     }
-  }, [isSending, turns, snapshot, say]);
+  }, [isSending, turns, snapshot, say, pinToBottom]);
 
   const handleSend = useCallback(() => { void send(draft.trim()); }, [draft, send]);
 
@@ -396,7 +405,10 @@ export default function CoachTabScreen() {
               testID={`coach-tab-turn-${turn.id}`}
             />
           ))}
-          {isSending ? (
+          {isSending && streaming ? (
+            <Bubble speaker="coach" text={streaming} testID="coach-tab-streaming" />
+          ) : null}
+          {isSending && !streaming ? (
             <View
               style={[styles.bubble, styles.bubbleCoach, styles.thinking]}
               testID="coach-tab-thinking"

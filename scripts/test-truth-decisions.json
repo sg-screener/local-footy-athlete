@@ -1642,6 +1642,23 @@
       ],
       "witnessScript": "test:coach-app-map",
       "evidenceKind": "green_now"
+    },
+    "test:coach-chat-streaming": {
+      "kind": "current_contract",
+      "reason": "R-399 (Sam, 2026-09-10): the coach's words are shown as they arrive and withdrawn if the whole-answer check fails; every forwarded update has passed the word gates on server and phone; the receipt gates decide at the end.",
+      "productionPaths": [
+        "src/rules/coachChatStream.ts",
+        "src/services/api/coachChat.ts",
+        "src/services/api/coachChatTransport.ts",
+        "src/rules/coachResponseContract.ts"
+      ],
+      "contractRefs": [
+        "R-399",
+        "R-138",
+        "R-140"
+      ],
+      "witnessScript": "test:coach-chat-streaming",
+      "evidenceKind": "green_now"
     }
   }
 }

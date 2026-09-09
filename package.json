@@ -387,6 +387,7 @@
     "coach:app-map:build": "TZ=Australia/Melbourne sucrase-node scripts/build-coach-app-map.ts",
     "test:coach-retrieval-regression": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachRetrievalRegressionTests.ts",
     "test:coach-app-map": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachAppMapTests.ts",
+    "test:coach-chat-streaming": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachChatStreamingTests.ts",
     "test:coach-tab-slice1": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice1Tests.ts",
     "test:coach-tab-slice2": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice2Tests.ts",
     "test:weekly-plan-display": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklyPlanDisplayTests.ts",

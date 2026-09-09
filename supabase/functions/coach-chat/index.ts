@@ -7,7 +7,13 @@ import {
   coachResponseGroundingFacts,
   doorLabelsFromKnowledge,
   evaluateCoachResponseContract,
+  wordGatesHold,
 } from '../../../src/rules/coachResponseContract.ts';
+import {
+  COACH_CHAT_STREAM_CONTENT_TYPE,
+  createMessageExtractor,
+  type CoachChatStreamLine,
+} from '../../../src/rules/coachChatStream.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
 import { COACH_CHAT_CONTRACT_VERSION, COACH_CHAT_MAX_MESSAGE_CHARACTERS, MAX_RECENT_TURNS } from '../../../src/rules/coachChatLimits.ts';
 import {
@@ -168,42 +174,87 @@ Deno.serve(async (request) => {
   });
   const instructions = buildRetrievedCoachLabBrainInstructions(retrieval.chunks);
   const apiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
-  try {
-    const result = await new OpenAIResponsesClient({ apiKey }).create({
-      model: COACH_CHAT_MODEL,
-      instructions,
-      input: JSON.stringify(modelInput),
-    });
-    const payload = parseCoachPayload(result.outputText);
-    if (!payload) return json(502, { error: 'coach_chat_invalid_answer' });
-    const evaluation = evaluateCoachResponseContract(payload, {
-      requiresLiveProgramFacts: true,
-      allowedKnowledgeSourceIds: citableCoachKnowledgeIds(retrieval.chunks),
-      facts: coachResponseGroundingFacts(
-        modelInput.currentAthleteSnapshot,
-        doorLabelsFromKnowledge(CANONICAL_COACH_KNOWLEDGE),
-      ),
-    });
-    const failureCode = coachResponseContractFailureCode(evaluation);
-    if (failureCode !== null) {
-      console.warn('coach-chat response rejected by contract', evaluation.violations);
-      // Violation NAMES travel back, never the words (v12/v13 were undiagnosable).
-      return json(502, {
-        error: failureCode === 'invalid_answer'
-          ? 'coach_chat_invalid_answer'
-          : 'coach_chat_response_refused',
-        violations: evaluation.violations,
-        details: evaluation.details ?? {},
-      });
-    }
-    console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
-    return json(200, {
-      message: payload.message,
-      answerMode: payload.answerMode,
-      programActions: payload.programActions,
-    });
-  } catch (error) {
-    console.error('coach-chat provider failure', error instanceof Error ? error.message : 'unknown');
-    return json(502, { error: 'coach_chat_provider_failed' });
-  }
+  const facts = coachResponseGroundingFacts(
+    modelInput.currentAthleteSnapshot,
+    doorLabelsFromKnowledge(CANONICAL_COACH_KNOWLEDGE),
+  );
+
+  // R-399 (Sam, 2026-09-10): the words are shown as they are written, then
+  // withdrawn if the complete answer fails the contract. The response is a
+  // 200 stream of JSON lines; every word that reaches the phone has already
+  // passed the word gates on the text so far, and the receipt gates run once
+  // the whole answer exists. A refused answer ends the stream with the same
+  // typed error the plain response carried.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (line: CoachChatStreamLine): void => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+      };
+      send({ t: 'open' });
+      const extractor = createMessageExtractor();
+      let forwarding = true;
+      let lastSent = '';
+      try {
+        const result = await new OpenAIResponsesClient({ apiKey }).stream({
+          model: COACH_CHAT_MODEL,
+          instructions,
+          input: JSON.stringify(modelInput),
+        }, (delta) => {
+          const soFar = extractor.push(delta);
+          if (!forwarding || soFar === lastSent) return;
+          if (!wordGatesHold(soFar, facts)) {
+            forwarding = false;
+            return;
+          }
+          lastSent = soFar;
+          send({ t: 'm', text: soFar });
+        });
+        const payload = parseCoachPayload(result.outputText);
+        if (!payload) {
+          send({ t: 'refused', error: 'coach_chat_invalid_answer', violations: ['schemaValid'] });
+          return;
+        }
+        const evaluation = evaluateCoachResponseContract(payload, {
+          requiresLiveProgramFacts: true,
+          allowedKnowledgeSourceIds: citableCoachKnowledgeIds(retrieval.chunks),
+          facts,
+        });
+        const failureCode = coachResponseContractFailureCode(evaluation);
+        if (failureCode !== null) {
+          console.warn('coach-chat response rejected by contract', evaluation.violations);
+          // Violation NAMES travel back, never the words (v12/v13 were undiagnosable).
+          send({
+            t: 'refused',
+            error: failureCode === 'invalid_answer'
+              ? 'coach_chat_invalid_answer'
+              : 'coach_chat_response_refused',
+            violations: evaluation.violations,
+            details: evaluation.details ?? {},
+          });
+          return;
+        }
+        console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));
+        send({
+          t: 'final',
+          message: String(payload.message),
+          answerMode: payload.answerMode,
+          programActions: Array.isArray(payload.programActions) ? payload.programActions : [],
+        });
+      } catch (error) {
+        console.error('coach-chat provider failure', error instanceof Error ? error.message : 'unknown');
+        send({ t: 'error', error: 'coach_chat_provider_failed' });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...CORS_HEADERS,
+      'Content-Type': COACH_CHAT_STREAM_CONTENT_TYPE,
+      'Cache-Control': 'no-cache',
+    },
+  });
 });

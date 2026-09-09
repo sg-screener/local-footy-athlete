@@ -195,11 +195,12 @@ ok('the measured failure census has a valid decision for every reviewed label',
     // R-393 adds weekly leg coverage, whole-day dose and return-running journeys.
     // R-394 / coach slice S2 (2026-09-10) adds the coach retrieval regression witness.
     // Coach slice S3 (2026-09-10) adds the app-map witness (test:coach-app-map).
-    && Object.keys(decisionRegistry.decisions).length === 211
+    // R-399 (2026-09-10) adds the streaming witness (test:coach-chat-streaming).
+    && Object.keys(decisionRegistry.decisions).length === 212
     && decisionErrors.length === 0,
   { checkpoint: decisionRegistry.measuredCheckpoint, decisionErrors });
 ok('only witnessed contracts and the explicit ownership/year acceptance requirements can direct product work',
-  censusCounts.current_contract === 49
+  censusCounts.current_contract === 50
     && ['test:undo-reversal', 'test:injury-recomposition', 'test:deload-law',
       'test:block-two-progression', 'test:strength-progression-inputs', 'test:training-logging',
       'test:readiness-load-retention', 'test:session-change-durability',

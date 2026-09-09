@@ -16,8 +16,9 @@ export function coachChatMessageWithinLimit(message: string): boolean {
  * numbers. Bump it when the projection or the response contract changes shape.
  *
  * 2 — R-397 situation/history/injuries/estimates/mas + phase gate (2026-09-10).
+ * 3 — R-399 the answer streams as JSON lines (2026-09-10).
  */
-export const COACH_CHAT_CONTRACT_VERSION = 2;
+export const COACH_CHAT_CONTRACT_VERSION = 3;
 
 /**
  * How many recent turns travel with each question — the app slices to it and

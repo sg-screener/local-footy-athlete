@@ -500,3 +500,18 @@ export function evaluateCoachResponseContract(
     ...(Object.keys(details).length > 0 ? { details } : {}),
   };
 }
+
+/**
+ * Every gate that reads the WORDS alone, for a message still being written
+ * (R-399 streaming). The receipt gates (basis, citations, fields) need the
+ * whole payload and run once at the end. A partial message that trips one of
+ * these stops the forwarding of words; the final decision is still the
+ * complete contract's.
+ */
+export function wordGatesHold(message: string, facts: CoachResponseGroundingFacts): boolean {
+  return readinessClaimGrounded(message, facts)
+    && fixtureClaimGrounded(message, facts)
+    && phaseClaimGrounded(message, facts)
+    && doorClaimGrounded(message, facts)
+    && !READ_ONLY_FALSE_CHANGE_PATTERNS.some((pattern) => pattern.test(message));
+}
