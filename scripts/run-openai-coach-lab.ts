@@ -18,6 +18,7 @@ import { createOpenAICoachLabCandidate } from '../src/dev/coachLab/openAICoachLa
 import {
   retrieveCoachLabKnowledge,
   type CanonicalCoachKnowledgeSource,
+  citableCoachKnowledgeIds,
 } from '../src/dev/coachLab/coachLabKnowledgeRetriever';
 import { SupabaseCoachLabClient } from '../src/dev/coachLab/supabaseCoachLabClient';
 import { COACH_KNOWLEDGE_SOURCE_SPECS } from '../src/rules/coachKnowledgeManifest';
@@ -120,7 +121,7 @@ async function main(): Promise<void> {
     return {
       instructions: buildRetrievedCoachLabBrainInstructions(retrieval.chunks),
       retrievalReceipt: retrieval.receipt,
-      retrievedChunkIds: retrieval.chunks.map((chunk) => chunk.id),
+      retrievedChunkIds: citableCoachKnowledgeIds(retrieval.chunks),
     };
   };
 

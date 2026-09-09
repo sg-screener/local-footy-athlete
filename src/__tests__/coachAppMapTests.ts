@@ -16,6 +16,7 @@ import { CANONICAL_COACH_KNOWLEDGE } from '../../supabase/functions/coach-chat/c
 import {
   coachResponseGroundingFacts,
   doorClaimGrounded,
+  doorClaimViolation,
   doorLabelsFromKnowledge,
   evaluateCoachResponseContract,
   coachResponseContractFailureCode,
@@ -84,8 +85,10 @@ console.log('\n[3] THE DOOR GATE: A QUOTED CONTROL MUST BE A DOOR');
     doorClaimGrounded('On the Program tab, under Not feeling 100%?, tap "Sick" and choose Properly sick.', facts));
   ok('naming a control the app does not have is refused',
     !doorClaimGrounded('Open the app and tap "Reduce this week" to soften it.', facts));
-  ok('a Title-Case phrase that begins like a door but is not one is refused',
-    !doorClaimGrounded('Tap Log Injury on the session screen.', facts));
+  ok('an unquoted Title-Case phrase is prose, never refused (v14 refused real answers on it)',
+    doorClaimGrounded('Tap Log Injury on the session screen.', facts));
+  ok('a quoted control that is not a door is named in the violation detail',
+    doorClaimViolation('Tap "Log Injury" on the session screen.', facts) === 'Log Injury');
   ok('ordinary prose after the same verbs is not a claim',
     doorClaimGrounded("Use Monday's session as a lighter day and open with a longer warm-up.", facts));
   const grounded = {

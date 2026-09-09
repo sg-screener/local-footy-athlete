@@ -1,5 +1,5 @@
 import { buildRetrievedCoachLabBrainInstructions } from '../../../src/dev/coachLab/coachLabBrainPack.ts';
-import { retrieveCoachLabKnowledge } from '../../../src/dev/coachLab/coachLabKnowledgeRetriever.ts';
+import { citableCoachKnowledgeIds, retrieveCoachLabKnowledge } from '../../../src/dev/coachLab/coachLabKnowledgeRetriever.ts';
 import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponsesClient.ts';
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
 import {
@@ -178,7 +178,7 @@ Deno.serve(async (request) => {
     if (!payload) return json(502, { error: 'coach_chat_invalid_answer' });
     const evaluation = evaluateCoachResponseContract(payload, {
       requiresLiveProgramFacts: true,
-      allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
+      allowedKnowledgeSourceIds: citableCoachKnowledgeIds(retrieval.chunks),
       facts: coachResponseGroundingFacts(
         modelInput.currentAthleteSnapshot,
         doorLabelsFromKnowledge(CANONICAL_COACH_KNOWLEDGE),
@@ -193,6 +193,7 @@ Deno.serve(async (request) => {
           ? 'coach_chat_invalid_answer'
           : 'coach_chat_response_refused',
         violations: evaluation.violations,
+        details: evaluation.details ?? {},
       });
     }
     console.log('coach-chat token receipt', JSON.stringify(result.tokenReceipt));

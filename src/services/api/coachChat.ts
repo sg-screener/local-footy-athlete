@@ -62,8 +62,12 @@ export function coachChatFailureCode(error: unknown): CoachChatFailureCode {
 /** The refused checks' NAMES, for the log; never the athlete's words. */
 function serverViolations(raw: string): string {
   try {
-    const parsed = JSON.parse(raw) as { violations?: unknown };
-    return Array.isArray(parsed.violations) ? parsed.violations.map(String).join(', ') : 'unnamed';
+    const parsed = JSON.parse(raw) as { violations?: unknown; details?: unknown };
+    const names = Array.isArray(parsed.violations) ? parsed.violations.map(String).join(', ') : 'unnamed';
+    const details = parsed.details && typeof parsed.details === 'object'
+      ? Object.entries(parsed.details as Record<string, unknown>).map(([key, value]) => `${key}=${String(value)}`).join('; ')
+      : '';
+    return details ? `${names}: ${details}` : names;
   } catch {
     return 'unnamed';
   }

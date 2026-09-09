@@ -133,22 +133,24 @@ function doorMatches(named: string, labels: readonly string[]): boolean {
   return labels.some((label) => label === named || named.startsWith(label) || label.startsWith(named));
 }
 
-export function doorClaimGrounded(message: string, facts: CoachResponseGroundingFacts): boolean {
+/** The first quoted control the words send the athlete to that is not a door, or null. */
+export function doorClaimViolation(message: string, facts: CoachResponseGroundingFacts): string | null {
   const pattern = new RegExp(DOOR_CLAIM.source, 'g');
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(message)) !== null) {
-    const quoted = match[1] !== undefined;
-    const named = (match[1] ?? match[2] ?? '').trim().replace(/[.,;:!?]+$/, '').toLowerCase();
-    if (!named) continue;
-    if (quoted) {
-      if (!doorMatches(named, facts.doorLabels)) return false;
-      continue;
-    }
-    const firstWord = named.split(/\s+/)[0];
-    const looksLikeADoor = facts.doorLabels.some((label) => label.startsWith(firstWord));
-    if (looksLikeADoor && !doorMatches(named, facts.doorLabels)) return false;
+    // Only a QUOTED control is a claim about the app's glass; an unquoted
+    // Title-Case phrase after the same verbs is prose (v14 refused "Move
+    // Thursday's session" answers on it). The instruction already asks for
+    // the exact label, and the map keeps retrieval honest.
+    if (match[1] === undefined) continue;
+    const named = match[1].trim().replace(/[.,;:!?]+$/, '').toLowerCase();
+    if (named && !doorMatches(named, facts.doorLabels)) return match[1];
   }
-  return true;
+  return null;
+}
+
+export function doorClaimGrounded(message: string, facts: CoachResponseGroundingFacts): boolean {
+  return doorClaimViolation(message, facts) === null;
 }
 
 /**
@@ -255,6 +257,8 @@ export interface CoachResponseContractEvaluation {
   readonly ok: boolean;
   readonly automaticChecks: CoachResponseAutomaticChecks;
   readonly violations: readonly (keyof CoachResponseAutomaticChecks)[];
+  /** What a word-gate tripped on (the model's phrase, never the athlete's), for the log. */
+  readonly details?: Readonly<Record<string, string>>;
 }
 
 const BASIS = new Set<string>([
@@ -419,6 +423,7 @@ export function evaluateCoachResponseContract(
   // refused every door answer because it wrote active_rule); the chunk's own
   // path is the truth, so a citation of the generated map counts as a door.
   const citesDoor = sources.some((source) => source.authority === 'app_map'
+    || /^DOOR-/.test(source.id)
     || /COACH_APP_MAP\.md/.test(source.id)
     || /COACH_APP_MAP\.md/.test(source.sourceReference ?? ''));
   const usesDoor = basis.includes('app_door') && citesDoor;
@@ -464,5 +469,17 @@ export function evaluateCoachResponseContract(
   };
   const violations = (Object.keys(checks) as (keyof CoachResponseAutomaticChecks)[])
     .filter((name) => !checks[name]);
-  return { ok: violations.length === 0, automaticChecks: checks, violations };
+  const details: Record<string, string> = {};
+  if (payload !== null && !checks.doorClaimsGrounded) {
+    details.doorClaim = doorClaimViolation(payload.message, policy.facts) ?? '';
+  }
+  if (payload !== null && !checks.lfaClaimsGrounded) {
+    details.citedIds = sources.map((source) => source.id).join(', ');
+  }
+  return {
+    ok: violations.length === 0,
+    automaticChecks: checks,
+    violations,
+    ...(Object.keys(details).length > 0 ? { details } : {}),
+  };
 }

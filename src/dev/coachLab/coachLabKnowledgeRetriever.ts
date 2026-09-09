@@ -458,3 +458,15 @@ export function retrieveCoachLabKnowledge(args: {
     },
   };
 }
+
+/**
+ * Every id the model may cite for the chunks it was shown: the exact line
+ * slice AND, for a ruling or door row, its own name (`R-394`, `DOOR-sick`).
+ * v14 refused every door answer under `lfaClaimsGrounded` because the model
+ * cited the row's name and only the line slice was allowed (slice S3).
+ */
+export function citableCoachKnowledgeIds(
+  chunks: readonly RetrievedCoachKnowledgeChunk[],
+): readonly string[] {
+  return chunks.flatMap((chunk) => (chunk.ruling ? [chunk.id, chunk.ruling] : [chunk.id]));
+}

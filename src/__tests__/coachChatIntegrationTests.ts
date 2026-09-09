@@ -80,7 +80,7 @@ console.log('\n[1] THE LIVE ENDPOINT OWNS THE BRAIN AND THE MODEL');
       && !/const automaticChecks: CoachLabAutomaticChecks/.test(read('src/dev/coachLab/coachLab.ts')));
   ok('production supplies both live-program and retrieved-source grounding inputs',
     /requiresLiveProgramFacts:\s*true/.test(edge)
-      && /allowedKnowledgeSourceIds:\s*retrieval\.chunks/.test(edge));
+      && /allowedKnowledgeSourceIds:\s*citableCoachKnowledgeIds\(retrieval\.chunks\)/.test(edge));
   ok('Coach Lab supplies both case truth and actual retrieved-source grounding inputs',
     /requiresLiveProgramFacts:\s*labCase\.requiresLiveProgramFacts/.test(read('src/dev/coachLab/coachLab.ts'))
       && /allowedKnowledgeSourceIds:\s*response\.diagnostics\.retrievedChunkIds/.test(
