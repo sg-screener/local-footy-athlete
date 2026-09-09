@@ -18,12 +18,20 @@ export async function gPlusTwoFlushJourney(storage: Map<string,string>, ok:(labe
     return result;
   };
   const base=schedule({offLegAvailableDays:[]}), offered=schedule(), required=schedule({mildSorenessDays:[1]} as Partial<WeeklySchedulerInputs>);
+  // R-395 (2026-09-09): a machine on the Wednesday also earns that day its one
+  // moderate finisher, which IS conditioning credit. The flush is isolated by a
+  // world whose only machine day is the G+2 Monday.
+  const flushOnly=schedule({offLegAvailableDays:[1]});
   ok('G+2: optional flush attaches without replacing the existing strength session',
     offered.days[0].conditioningCategory==='recovery_flush' && offered.days[0].conditioningRole==='finisher'
     && offered.days[0].purpose===base.days[0].purpose);
   ok('G+2: retired soreness input cannot make the flush required',required.days[0].conditioningRole==='finisher');
-  ok('G+2: recovery does not manufacture conditioning credit or hard load',JSON.stringify(base.demand)===JSON.stringify(offered.demand)
-    && JSON.stringify(base.demand)===JSON.stringify(required.demand));
+  ok('G+2: recovery does not manufacture conditioning credit or hard load',flushOnly.days[0].conditioningCategory==='recovery_flush'
+    && JSON.stringify(base.demand)===JSON.stringify(flushOnly.demand)
+    && JSON.stringify(offered.demand)===JSON.stringify(required.demand));
+  ok('R-395: the machine Wednesday carries one moderate off-feet finisher beside the G+2 flush',
+    offered.days[2].clauseId==='R-395' && offered.days[2].conditioningCategory==='tempo'
+    && offered.demand.coreConditioning===base.demand.coreConditioning+1);
   const standalone=schedule({gymAccessDays:[3,5]}),standaloneCore=schedule({gymAccessDays:[3,5],mildSorenessDays:[1]} as Partial<WeeklySchedulerInputs>);
   ok('G+2: an otherwise empty day offers a standalone optional off-leg flush',standalone.days[0].conditioningCategory==='recovery_flush'
     && standalone.days[0].optional===true);
