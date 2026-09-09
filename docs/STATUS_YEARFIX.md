@@ -304,3 +304,40 @@ app works against it meanwhile.
 **Not done in S2a:** Rock 3 (app map) moves to S3; the Lab tape for the
 Nordic case cannot be re-run locally (`COACH_LAB_SECRET` is not on this
 machine) — it is re-taped through `coach:chat:smoke` after the deploy.
+
+**09:20 — Coach slice S3 BUILT (Rock 3: he knows the app's doors).** Commit
+71797b88. `src/rules/coachAppMap.ts`: 38 doors, each `{id, label, path,
+does, when, source}`; labels come from the signed sheet
+(`signedCopyEntry`, after `registerProjectionCopy()`), from exported copy
+constants (`COACH_TAB_COPY`, `PROGRESS_TAB_COPY`, `FEEDBACK_FORM_SECTION_LABELS`)
+or, where a screen still holds a literal (tab titles, Start Session, Log
+Game, the Tired/Sick/Injured tiles — their record lives in a React Native
+component this server-shared file cannot import — the PROGRAM SETUP rows,
+REVIEW, Clear adjustment, Full reset), as a literal pinned to its file and
+grepped by `coachAppMapTests`. `scripts/build-coach-app-map.ts` →
+`docs/generated/COACH_APP_MAP.md` (`**DOOR-id** · Label · Where · Does ·
+When`), a seventh manifest source of authority `app_map`; the bundle is
+rebuilt; `coach:deploy` builds the map before the bundle. Retrieval: door
+rows are one chunk each (the DOOR heading regex), a door row's whole line is
+its title, two doors are seated by the athlete's words before the context
+fills (cap 4). Instruction: name the door FIRST by its label and place, then
+advise; never a control not in APP DOORS; basis `app_door`. Gate:
+`doorClaimGrounded` — a QUOTED control after tap/press/open/use/select/choose
+must be a door label (prefix either way); a Title-Case phrase is held only
+when it begins like a door; prose never refuses. Facts carry `doorLabels`
+from the map (server and client, same list).
+**WORKING:** `test:coach-app-map` (new, 16/0: signed labels exact, literals
+present in their files, generated map fresh and complete, gate refuses
+"Reduce this week" and "Log Injury", passes "Sick" and prose) — release-gate
+witness (decision 211, current_contract 49); `test:coach-retrieval-regression`
+26/0 (eight new "how do i" → door pairs); `coachChatIntegrationTests` 92/0;
+`coachSnapshotTests` 53/0; `openAICoachLabTests` 61/0; `test:compile` 0.
+**Baseline red now green, by accident worth knowing:** `test:coach-lab` (the
+`UnsignedCopyError "part.headline.strength"` crash reproduced on the control
+tree) passes 23/0 now — the contract imports `coachAppMap`, which calls
+`registerProjectionCopy()`, so the sheet is registered before the old local
+candidate reads it. The crash was an import-order defect in that test's
+process, not in the app.
+**Not yet:** server deploy (retrieval and the APP DOORS block are server-side;
+the phone gets the gate only) — Sam's call; live tapes for S3 wait for it.
+`COACH_CHAT_CONTRACT_VERSION` stays 2: the S3 shapes are additive both ways.
