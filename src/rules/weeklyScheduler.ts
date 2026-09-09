@@ -2088,11 +2088,20 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs, search: WeeklySchedu
       const gameIdx = orderIndex(fixtureDays[0]);
       if (gameIdx <= 0) return withInSeasonModerate;
       const g1Day = WEEK_ORDER[gameIdx - 1];
+      // THE GUNSHOW IS A GYM SESSION (everyday acceptance F8, 2026-09-09). On a
+      // G−1 with no gym access the arm pools filter to nothing and the builder
+      // returned a named, optional, zero-exercise workout that the phone showed
+      // as "Gunshow — Start optional session" with no rows (every Friday of the
+      // Mon/Tue/Thu athlete, and the Saturday after a game moved to Sunday).
+      // The placer asks the day before offering. The Primer is bodyweight-legal
+      // and keeps its seat.
+      const g1Trainable = offer !== 'gunshow' || inputs.gymAccessDays.includes(g1Day);
       return withInSeasonModerate.map((entry) => (
         entry.dayOfWeek === g1Day
           && entry.owner === 'rest_or_recovery'
           && !entry.clubTraining
           && !entry.game
+          && g1Trainable
           ? { ...entry, composedOptional: offer, clauseId: 'R-130' }
           : entry
       ));

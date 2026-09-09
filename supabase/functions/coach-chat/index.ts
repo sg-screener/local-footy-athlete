@@ -4,6 +4,7 @@ import { OpenAIResponsesClient } from '../../../src/dev/coachLab/openAIResponses
 import { CANONICAL_COACH_KNOWLEDGE } from './canonicalCoachKnowledge.generated.ts';
 import {
   coachResponseContractFailureCode,
+  coachResponseGroundingFacts,
   evaluateCoachResponseContract,
 } from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
@@ -50,10 +51,16 @@ function validSnapshot(value: unknown): value is CoachModelSnapshot {
     return false;
   }
   const days = value.visibleWeek.days;
+  const fixtures = value.visibleWeek.fixtures;
   return Array.isArray(days) && days.every((day) => record(day)
     && typeof day.kind === 'string'
     && Array.isArray(day.parts)
-    && day.parts.every((part) => record(part) && typeof part.kind === 'string'));
+    && day.parts.every((part) => record(part) && typeof part.kind === 'string'))
+    // The grounding facts the answer is checked against (F14, 2026-09-09).
+    && Array.isArray(fixtures)
+    && fixtures.every((fixture) => record(fixture) && typeof fixture.weekday === 'string')
+    && record(value.readiness)
+    && typeof value.readiness.reported === 'boolean';
 }
 
 function validModelInput(value: unknown): value is {
@@ -156,6 +163,7 @@ Deno.serve(async (request) => {
     const evaluation = evaluateCoachResponseContract(payload, {
       requiresLiveProgramFacts: true,
       allowedKnowledgeSourceIds: retrieval.chunks.map((chunk) => chunk.id),
+      facts: coachResponseGroundingFacts(modelInput.currentAthleteSnapshot),
     });
     const failureCode = coachResponseContractFailureCode(evaluation);
     if (failureCode !== null) {

@@ -19,6 +19,8 @@ import {
   buildCoachSnapshot,
   type BuildCoachSnapshotInput,
 } from '../rules/liveAthleteSnapshot';
+import { projectCoachSnapshotForModel } from '../rules/coachModelContext';
+import { weekdayName } from '../utils/appDate';
 import type { VisibleWeek } from '../rules/visibleProjection';
 import type { JournalWeek } from '../rules/journalWeek';
 import type { JournalLoadModel } from '../rules/journalLoad';
@@ -277,6 +279,66 @@ function progressUsesTwoColumnLiftGrid(body: string): boolean {
     && /flexWrap:\s*'wrap'/.test(grid)
     && /flexBasis:\s*'47%'/.test(card)
     && /flexGrow:\s*1/.test(card);
+}
+
+console.log('\n[2b] THE MODEL PROJECTION SAYS WHAT IS ABSENT AND NAMES THE WEEK (F14, 2026-09-09)');
+{
+  // Sam's 2026-09-09 walkthrough: the Coach answered "readiness recorded as
+  // flat" with nothing recorded, and "Game Day Saturday and Sunday" with one
+  // Saturday game. The projection is the only thing the model reads, so it
+  // must say absence out loud and hand over the weekday and fixture facts
+  // instead of leaving the model to derive them from bare ISO dates.
+  const projectedDay = (date: string, kind: 'training' | 'rest' | 'game') => ({
+    date, kind, headline: `${kind} day`, parts: [], gaps: [],
+  });
+  const weekWithOneGame = {
+    weekStart: WEEK_START,
+    days: [
+      projectedDay('2026-08-24', 'training'),
+      projectedDay('2026-08-25', 'training'),
+      projectedDay('2026-08-26', 'rest'),
+      projectedDay('2026-08-27', 'training'),
+      projectedDay('2026-08-28', 'rest'),
+      projectedDay('2026-08-29', 'game'),
+      projectedDay('2026-08-30', 'rest'),
+    ],
+    explanations: [],
+  } as unknown as VisibleWeek;
+  const quiet = projectCoachSnapshotForModel(
+    buildCoachSnapshot({ ...baseInput, visibleWeek: weekWithOneGame, readinessSignal: null }),
+  );
+  const quietText = JSON.stringify(quiet.readiness);
+  ok('a null readiness signal crosses as reported:false, state not_recorded',
+    quiet.readiness.reported === false && quiet.readiness.state === 'not_recorded',
+    quiet.readiness);
+  ok('and carries no readiness tier word for the model to repeat',
+    !/\b(flat|good|wrecked|cooked)\b/i.test(quietText), quietText);
+  const reported = projectCoachSnapshotForModel(
+    buildCoachSnapshot({ ...baseInput, visibleWeek: weekWithOneGame }),
+  );
+  ok('a recorded quick check crosses as reported:true', reported.readiness.reported === true);
+  ok('every visible day carries its weekday name, so the model never derives one from a date',
+    reported.visibleWeek.days.length === 7
+      && reported.visibleWeek.days.every((day) => day.weekday === weekdayName(day.date))
+      && reported.visibleWeek.days[0]?.weekday === 'Monday'
+      && reported.visibleWeek.days[6]?.weekday === 'Sunday',
+    reported.visibleWeek.days.map((day) => [day.date, day.weekday]));
+  ok('the fixture list is exhaustive: exactly the game-kind days, each with its weekday',
+    reported.visibleWeek.fixtureCount === 1
+      && reported.visibleWeek.fixtures.length === 1
+      && reported.visibleWeek.fixtures[0]?.date === '2026-08-29'
+      && reported.visibleWeek.fixtures[0]?.weekday === 'Saturday',
+    reported.visibleWeek.fixtures);
+  const noGame = projectCoachSnapshotForModel(buildCoachSnapshot({
+    ...baseInput,
+    visibleWeek: {
+      ...weekWithOneGame,
+      days: weekWithOneGame.days.map((day) => (day.kind === 'game' ? { ...day, kind: 'rest' } : day)),
+    } as unknown as VisibleWeek,
+  }));
+  ok('a week with no game says so with an empty list and a zero count',
+    noGame.visibleWeek.fixtureCount === 0 && noGame.visibleWeek.fixtures.length === 0,
+    noGame.visibleWeek.fixtures);
 }
 
 console.log('\n[3] STORE READS STOP AT ONE ADAPTER; BOTH SURFACES READ ITS VALUE');

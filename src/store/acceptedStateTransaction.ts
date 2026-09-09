@@ -49,6 +49,7 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import { isStructuralGenerationConstraint } from '../utils/generationConstraints';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { addDaysISO } from '../utils/programBlockState';
+import { deliveredHistoryBoundaryISO } from '../rules/weeklyExposureContractV2';
 import { appDateNow, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../rules/gameAnchor';
@@ -2048,6 +2049,14 @@ export function buildFixtureProjection(args: {
     activeFixtureDates,
     surfaces: evaluationSurfaces,
     mutationIntent: args.mutationIntent ?? 'fixture_transition',
+    // A LOGGED DAY IS HISTORY (everyday acceptance F6, 2026-09-09): the repair
+    // may not re-seat a row on a day the athlete has already saved an outcome
+    // for. Derived from the saved outcomes, the same way the injury compiler
+    // and the generator receive their boundary.
+    historyBeforeISO: deliveredHistoryBoundaryISO({
+      weekStartISO: args.weekStart,
+      loggedDates: Object.keys(useProgramStore.getState().sessionFeedback ?? {}),
+    }) ?? undefined,
   });
   // Dynamic loading avoids an initialisation cycle: weekRebuild itself uses
   // this transaction owner for its final publication.

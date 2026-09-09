@@ -5,6 +5,20 @@
  * Run: npx sucrase-node src/__tests__/missedSessionsTests.ts
  */
 
+// The door cells below install a real seed through the app's own stores, so the
+// storage the stores persist to must exist before any store module loads.
+(globalThis as unknown as { __DEV__: boolean }).__DEV__ = true;
+{
+  const storage = new Map<string, string>();
+  (globalThis as unknown as { window: unknown }).window = { localStorage: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => { storage.set(key, value); },
+    removeItem: (key: string) => { storage.delete(key); },
+    clear: () => { storage.clear(); },
+  } };
+  (globalThis as unknown as { fetch: () => never }).fetch = () => { throw new Error('NETWORK DISABLED'); };
+}
+process.env.TZ = 'Australia/Melbourne';
 import {
   detectMissedSessions,
   mostRecentMissedSession,
@@ -168,6 +182,64 @@ console.log('[6] a skip answers ONE half and carries the other through');
   ok('a club skip names only the club', clubEntries.length === 1 && clubEntries[0].componentId === 'team_training');
 }
 
-console.log(`\nmissedSessionsTests: ${pass} passed, ${fail} failed`);
-totalsPrinted(fail);
-if (fail > 0) process.exit(1);
+
+console.log('[7] "No, skip it" on a club night writes its half through the real door (Sam, 2026-09-09)');
+(async () => {
+  // Sam's phone: "No, skip it" on 'Did you do Thursday strength?' did nothing.
+  // Verified headlessly: on a club night the day has two halves (strength +
+  // team training); the helper answers ONE half, and the door demanded an
+  // outcome for EVERY half — `incomplete_component_outcomes`, swallowed by a
+  // logger.warn. Both chips were inert on exactly the days that show two
+  // prompts. The door now accepts a per-half answer.
+  const { createDefaultDevE2ESeedCoordinator } = require('../dev/e2e/defaultDevE2ESeedCoordinator') as typeof import('../dev/e2e/defaultDevE2ESeedCoordinator');
+  const { deriveVisibleWeekLive } = require('../utils/deriveVisibleWeek') as typeof import('../utils/deriveVisibleWeek');
+  const journey = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+  const { getSessionComponents } = require('../utils/sessionComponents') as typeof import('../utils/sessionComponents');
+  const { createRecordSessionOutcomeIntentFromFeedback, commitSessionOutcomeTransaction } =
+    require('../store/sessionOutcomeTransaction') as typeof import('../store/sessionOutcomeTransaction');
+  const { useProgramStore } = require('../store/programStore') as typeof import('../store/programStore');
+  const coordinator = createDefaultDevE2ESeedCoordinator(true);
+  const seeded = await journey.quietAsync(() => coordinator.reset('standard-in-season-week'));
+  ok('CONTROL: the standard seed installs', seeded === true);
+  const TODAY = '2026-07-15'; const TUE = '2026-07-14';
+  journey.setJourneyClock(TODAY);
+  const days = () => journey.quiet(() => deriveVisibleWeekLive('2026-07-13', TODAY)) as unknown as ResolvedDay[];
+  const feedback = () => (useProgramStore.getState().sessionFeedback ?? {}) as Record<string, SessionFeedback>;
+  const skip = async (kind: 'session' | 'team_training') => {
+    const workout = days().find((day) => day.date === TUE)!.workout!;
+    const components = journey.quiet(() => getSessionComponents(workout as never));
+    const fb = missedSessionSkippedFeedback(TUE, { kind, components, existing: feedback()[TUE] ?? null });
+    const intent = createRecordSessionOutcomeIntentFromFeedback({
+      date: TUE, feedback: fb, workout: workout as never, todayISO: TODAY,
+      source: { entryPoint: 'tap', surface: 'missed_session_prompt' },
+    });
+    return journey.quietAsync(() => commitSessionOutcomeTransaction(intent, TODAY));
+  };
+  const before = detectMissedSessions({ weekDays: days(), todayISO: TODAY, sessionFeedback: feedback() });
+  ok('CONTROL: Tuesday (club night + upper pull) raises both prompts',
+    before.filter((m) => m.date === TUE).map((m) => m.kind).sort().join(',') === 'session,team_training', before);
+  const gym = await skip('session');
+  ok('7a the gym half is skipped through the door (was incomplete_component_outcomes)', gym.ok === true, gym);
+  const afterGym = detectMissedSessions({ weekDays: days(), todayISO: TODAY, sessionFeedback: feedback() });
+  ok('7b only the club-night prompt remains for Tuesday',
+    afterGym.filter((m) => m.date === TUE).map((m) => m.kind).join(',') === 'team_training', afterGym);
+  const stored = feedback()[TUE];
+  ok('7b the stored record holds the gym halves skipped and the club half unanswered',
+    !!stored && (stored.components ?? []).some((c) => c.kind === 'strength' && c.completion === 'skipped')
+      && !(stored.components ?? []).some((c) => c.kind === 'team_training'), stored);
+  const club = await skip('team_training');
+  ok('7c the club half is skipped through the door afterwards', club.ok === true, club);
+  const afterClub = detectMissedSessions({ weekDays: days(), todayISO: TODAY, sessionFeedback: feedback() });
+  ok('7c Tuesday raises no prompt once both halves are answered',
+    afterClub.every((m) => m.date !== TUE), afterClub);
+  const both = feedback()[TUE];
+  ok('7c the earlier gym answer survives the club answer',
+    !!both && (both.components ?? []).some((c) => c.kind === 'strength' && c.completion === 'skipped')
+      && (both.components ?? []).some((c) => c.kind === 'team_training' && c.completion === 'skipped'), both);
+  const hook = require('fs').readFileSync(require('path').join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8') as string;
+  ok('7d the skip handler re-reads the saved feedback (deps carry sessionFeedback)',
+    /handleSkipMissedSession[\s\S]{0,1600}\}, \[weekDays, sessionFeedback\]\);/.test(hook));
+  console.log(`\nmissedSessionsTests: ${pass} passed, ${fail} failed`);
+  totalsPrinted(fail);
+  if (fail > 0) process.exit(1);
+})().catch((error) => { console.error(error); fail += 1; totalsPrinted(fail); process.exit(1); });

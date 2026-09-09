@@ -1,0 +1,1739 @@
+{
+ "id": "standard-in-season-week",
+ "anchorDate": "2026-07-13",
+ "profileSummary": {
+  "firstName": "Sam",
+  "gender": "male",
+  "heightCm": 184,
+  "weightKg": 90,
+  "position": "inside_mid",
+  "goals": [
+   "stay_injury_free"
+  ],
+  "seasonPhase": "In-season",
+  "gameDay": "Saturday",
+  "usualGameDay": "Saturday",
+  "teamTrainingDaysPerWeek": 2,
+  "teamTrainingDays": [
+   "Tuesday",
+   "Thursday"
+  ],
+  "teamTrainingDuration": "90 minutes",
+  "teamTrainingIntensity": "Moderate",
+  "trainingDaysPerWeek": 5,
+  "preferredTrainingDays": [
+   "Monday",
+   "Tuesday",
+   "Wednesday",
+   "Thursday",
+   "Friday"
+  ],
+  "trainingLocation": "Commercial gym",
+  "equipmentSelectionCompleteness": "complete",
+  "equipment": [
+   "barbell",
+   "dumbbells",
+   "squat_rack",
+   "pullup_bar",
+   "cable_machine",
+   "hamstring_curl",
+   "knee_extension",
+   "bands"
+  ],
+  "experienceLevel": "5+ years",
+  "squatStrength": "1.5x bodyweight",
+  "benchStrength": "1.5x bodyweight+",
+  "twoKmTimeTrial": {
+   "seconds": 480,
+   "recordedOn": "2026-07-01",
+   "source": "onboarding"
+  },
+  "conditioningLevel": "Elite",
+  "sprintExposure": "2+ times per week",
+  "recentTrainingLoad": "Very consistent",
+  "injuries": [],
+  "biggestLimitation": "Power & explosiveness",
+  "biggestFrustration": "Getting a week that respects team training and game day.",
+  "successVision": "A durable in-season week that keeps strength and conditioning ticking over without cooking the legs."
+ },
+ "microcycle0": {
+  "id": "mc-ai-1",
+  "programId": "prog-ai-1",
+  "weekNumber": 1,
+  "startDate": "2026-07-13T02:00:00.000Z",
+  "endDate": "2026-07-19T02:00:00.000Z",
+  "miniCycleNumber": 1,
+  "weekKind": "build",
+  "dosePolicyByDay": {},
+  "restDayReasonByDay": {},
+  "exposureContract": {
+   "protocolVersion": 1,
+   "identity": {
+    "phase": "In-season",
+    "subphase": "game_week",
+    "mode": "in_season_game_week",
+    "weekKind": "build"
+   },
+   "strength": {
+    "requiredPatterns": [
+     "squat",
+     "hinge",
+     "push",
+     "pull"
+    ],
+    "targetCount": 3,
+    "required": 2,
+    "preferred": {
+     "min": 2,
+     "max": 3
+    }
+   },
+   "conditioning": {
+    "targetCount": 3,
+    "required": 3,
+    "preferred": {
+     "min": 3,
+     "max": 3
+    },
+    "creditedTeamTrainingCount": 2,
+    "creditedGameOrPracticeMatchCount": 1,
+    "additionalRequiredCount": 0,
+    "allowCombinedStrengthConditioning": true
+   },
+   "sprintCod": {
+    "targetCount": 1,
+    "required": 1,
+    "preferred": {
+     "min": 1,
+     "max": 3
+    },
+    "creditedTeamTrainingCount": 2,
+    "creditedGameOrPracticeMatchCount": 1,
+    "additionalRequiredCount": 0
+   },
+   "anchors": {
+    "teamTrainingDays": [
+     2,
+     4
+    ],
+    "gameDay": 6,
+    "gameOrPracticeMatchCredit": 1
+   },
+   "fullRest": {
+    "required": 1,
+    "preferred": {
+     "min": 1,
+     "max": 2
+    }
+   },
+   "recovery": {
+    "minimumFullRestDays": 1
+   },
+   "hardDays": {
+    "preferredCount": 4,
+    "permittedCount": 5,
+    "isHardMaximum": false
+   },
+   "reductions": []
+  },
+  "exposureContractV2": {
+   "protocolVersion": 2,
+   "authority": "LFA_PROGRAMMING_BIBLE_SECTION_18",
+   "source": "section18_resolver",
+   "authorisedReductions": [],
+   "safety": {
+    "requiredSafePatterns": [
+     "squat",
+     "hinge",
+     "push",
+     "pull"
+    ],
+    "prohibitedPatterns": [],
+    "prohibitedSprintHighSpeed": false,
+    "prohibitedPower": false,
+    "prohibitedPowerFamilies": [],
+    "affectedDomains": [],
+    "unaffectedDomains": [
+     "main_strength",
+     "conditioning",
+     "sprint_high_speed",
+     "power",
+     "anchor_participation",
+     "session_dose"
+    ],
+    "trainingPaused": false,
+    "mainStrengthFrequencyCeiling": null,
+    "conditioningFrequencyCeiling": null,
+    "sprintHighSpeedFrequencyCeiling": null,
+    "lighterStrengthRequired": false,
+    "strengthIntensityCeiling": null,
+    "meaningfulMainLiftSetCeiling": null,
+    "reasons": []
+   },
+   "identity": {
+    "seasonPhase": "In-season",
+    "declaredSubphase": "game_week",
+    "expectedSubphase": "game_week",
+    "mode": "in_season_game_week",
+    "blockNumber": 1,
+    "weekInBlock": 1,
+    "globalWeek": 1,
+    "phaseWeek": 1,
+    "phaseEntryWeekStartISO": "2026-07-13",
+    "phaseClockSelectedPhase": "In-season",
+    "phaseWeekProvenance": "preserved_persisted_state",
+    "weekKind": "build",
+    "anchorState": "game"
+   },
+   "mainStrength": {
+    "exposure": {
+     "requiredMinimum": 2,
+     "defaultTarget": 3,
+     "preferredRange": {
+      "min": 2,
+      "max": 3
+     },
+     "permittedMaximum": 4,
+     "plannerSelectedTarget": 3,
+     "plannerSelectionKind": "core",
+     "achievedCount": null,
+     "unresolvedMinimumShortfall": null,
+     "unresolvedPlannerSelectedShortfall": null,
+     "maximumBreach": null
+    },
+    "optionalMainStrengthSelected": 0,
+    "accessoriesRemainNonCore": true,
+    "reductions": []
+   },
+   "strengthPatterns": {
+    "requiredSafePatterns": [
+     "squat",
+     "hinge",
+     "push",
+     "pull"
+    ],
+    "prohibitedPatterns": [],
+    "prohibitedPatternProvenance": "explicit_none",
+    "achievedMeaningfulMainLifts": {
+     "squat": null,
+     "hinge": null,
+     "single_leg_knee": null,
+     "single_leg_hip": null,
+     "push": null,
+     "pull": null
+    },
+    "balanceExpectation": "not_applicable",
+    "permittedCountDifference": 0,
+    "intentionalImbalanceReason": null,
+    "laterSessionRestorationRequired": true
+   },
+   "conditioning": {
+    "core": {
+     "requiredMinimum": 3,
+     "defaultTarget": 3,
+     "preferredRange": {
+      "min": 3,
+      "max": 3
+     },
+     "permittedMaximum": 3,
+     "plannerSelectedTarget": 3,
+     "plannerSelectionKind": "core",
+     "achievedCount": null,
+     "unresolvedMinimumShortfall": null,
+     "unresolvedPlannerSelectedShortfall": null,
+     "maximumBreach": null
+    },
+    "optionalFlush": {
+     "permitted": true,
+     "preferredRange": {
+      "min": 1,
+      "max": 1
+     },
+     "plannerSelectedCount": 0,
+     "achievedCount": null
+    },
+    "optionalRecoveryAerobic": {
+     "permitted": false,
+     "preferredRange": {
+      "min": 0,
+      "max": 0
+     },
+     "plannerSelectedCount": 0,
+     "achievedCount": null
+    },
+    "optionalNonCoreAchievedCount": null,
+    "legacyUnknownAchievedCount": null,
+    "requiredCoreStress": [
+     "moderate",
+     "hard"
+    ],
+    "intensityPolicy": {
+     "requiredAppMediumHardMinimum": 0,
+     "requiredAppHardMinimum": 0,
+     "permittedHardCoreMaximum": null
+    },
+    "achievedByStress": {
+     "light": null,
+     "moderate": null,
+     "hard": null,
+     "unknown": null
+    },
+    "anchorCredit": null,
+    "appAuthoredCoreCredit": null,
+    "reductions": []
+   },
+   "sprintHighSpeed": {
+    "exposure": {
+     "requiredMinimum": 1,
+     "defaultTarget": 1,
+     "preferredRange": {
+      "min": 1,
+      "max": 1
+     },
+     "permittedMaximum": 3,
+     "plannerSelectedTarget": 3,
+     "plannerSelectionKind": "core",
+     "achievedCount": null,
+     "unresolvedMinimumShortfall": null,
+     "unresolvedPlannerSelectedShortfall": null,
+     "maximumBreach": null
+    },
+    "achievedSources": [],
+    "reductions": []
+   },
+   "anchors": [
+    {
+     "id": "tt-2",
+     "kind": "team_training",
+     "dayOfWeek": 2,
+     "participation": "normal_unrestricted",
+     "participationProvenance": "derived_healthy_unrestricted",
+     "currentProductionClaim": {
+      "conditioning": true,
+      "sprintHighSpeed": true,
+      "hardDay": true
+     },
+     "creditPolicy": {
+      "conditioningRequiresNormalParticipation": true,
+      "sprintRequiresNormalHighSpeedParticipation": true,
+      "hardDayRequiresNormalHardParticipation": true,
+      "formalPowerPrimerCredit": false
+     }
+    },
+    {
+     "id": "tt-4",
+     "kind": "team_training",
+     "dayOfWeek": 4,
+     "participation": "normal_unrestricted",
+     "participationProvenance": "derived_healthy_unrestricted",
+     "currentProductionClaim": {
+      "conditioning": true,
+      "sprintHighSpeed": true,
+      "hardDay": true
+     },
+     "creditPolicy": {
+      "conditioningRequiresNormalParticipation": true,
+      "sprintRequiresNormalHighSpeedParticipation": true,
+      "hardDayRequiresNormalHardParticipation": true,
+      "formalPowerPrimerCredit": false
+     }
+    },
+    {
+     "id": "game-6",
+     "kind": "game",
+     "dayOfWeek": 6,
+     "participation": "normal_unrestricted",
+     "participationProvenance": "derived_healthy_unrestricted",
+     "currentProductionClaim": {
+      "conditioning": true,
+      "sprintHighSpeed": true,
+      "hardDay": true
+     },
+     "creditPolicy": {
+      "conditioningRequiresNormalParticipation": true,
+      "sprintRequiresNormalHighSpeedParticipation": true,
+      "hardDayRequiresNormalHardParticipation": true,
+      "formalPowerPrimerCredit": false
+     }
+    }
+   ],
+   "power": {
+    "eligible": true,
+    "preferredWeeklyRange": {
+     "min": 0,
+     "max": 2
+    },
+    "plannerSelectedWeeklyBudget": 2,
+    "achievedPrimerCount": null,
+    "removalReason": null,
+    "advisoryOverSelection": null,
+    "fieldActionsCountAsFormalPrimer": false
+   },
+   "restStress": {
+    "requiredFullRestMinimum": 1,
+    "preferredFullRestCount": {
+     "min": 1,
+     "max": 2
+    },
+    "achievedTrueFullRestCount": null,
+    "achievedActiveRecoveryCount": null,
+    "preferredHardDayRange": {
+     "min": 3,
+     "max": 4
+    },
+    "permittedHardDayMaximum": 5,
+    "normalProgrammedHardDayMaximum": 4,
+    "authorisedUnavoidableAnchorExcess": 0,
+    "unavoidableAnchorCausedExcess": null,
+    "achievedModerateDayCount": null,
+    "preferredModerateDayRange": {
+     "min": 1,
+     "max": 7
+    },
+    "achievedHardDayCount": null,
+    "moderateDayDefault": 1,
+    "hardDayMaximumBreach": null
+   },
+   "equipment": {
+    "appConditioningFeasible": null,
+    "substitutionStatus": "legacy_unknown",
+    "consideredSubstitutions": []
+   },
+   "migration": {
+    "legacyContractPresent": false,
+    "missingParticipationRemainsUnknown": false,
+    "missingConditioningRoleRemainsUnknown": false,
+    "missingProhibitedPatternsTraceable": false
+   }
+  },
+  "intensityMultiplier": 1,
+  "workouts": [
+   {
+    "id": "w-coach-0",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 0,
+    "name": "Rest",
+    "description": "Rest day.",
+    "intensity": "Light",
+    "workoutType": "Rest",
+    "authoredDay": {
+     "anchor": null,
+     "components": [
+      "recovery"
+     ]
+    },
+    "isTeamDay": false,
+    "sessionTier": "recovery",
+    "planEntryId": "sched:2026-07-13:0:rest_or_recovery",
+    "durationMinutes": 0,
+    "exercises": [],
+    "createdAt": "2026-09-09T06:27:58.614Z",
+    "updatedAt": "2026-09-09T06:27:58.614Z",
+    "hasCombinedConditioning": false,
+    "section18Evidence": {
+     "protocolVersion": 1,
+     "conditioningRole": "none",
+     "conditioningStress": "unknown",
+     "provenance": "planner_and_canonical_content"
+    }
+   },
+   {
+    "id": "w-composed-mc-ai-1-1",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 1,
+    "name": "lower",
+    "description": "",
+    "intensity": "High",
+    "workoutType": "Strength",
+    "sessionTier": "core",
+    "planEntryId": "sched:2026-07-13:1:lower",
+    "strengthIntent": {
+     "archetype": "lower",
+     "primaryPattern": "squat",
+     "plannedPatterns": [
+      "squat",
+      "hinge"
+     ],
+     "effectivePatterns": [
+      "squat",
+      "hinge"
+     ]
+    },
+    "composedDayShape": "lower",
+    "composedDeclaredSlots": [
+     "squat",
+     "hinge",
+     "single_leg_knee",
+     "single_leg_hip",
+     "football_robustness"
+    ],
+    "durationMinutes": 0,
+    "exercises": [
+     {
+      "automaticSelection": true,
+      "id": "power-w-composed-mc-ai-1-1",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "power-w-composed-mc-ai-1-1-exercise",
+      "exerciseOrder": 1,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 3,
+      "prescribedRepsMax": 3,
+      "restSeconds": 120,
+      "notes": "Do this fresh, early in the session — before the main lifts.",
+      "role": "power",
+      "power": {
+       "family": "lower",
+       "kind": "primer"
+      },
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "power",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "exercise": {
+       "id": "ex-custom-vertical-jump",
+       "name": "Vertical Jump",
+       "description": "Vertical Jump",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-09-09T06:27:58.611Z",
+       "updatedAt": "2026-09-09T06:27:58.611Z"
+      },
+      "createdAt": "2026-09-09T06:27:58.611Z",
+      "updatedAt": "2026-09-09T06:27:58.611Z"
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-1-0",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "ex-squat",
+      "exerciseOrder": 2,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 2,
+      "prescribedRepsMax": 4,
+      "prescribedWeightKg": 107.5,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-squat",
+       "name": "Back Squat",
+       "description": "Heavy compound leg exercise",
+       "exerciseType": "Compound",
+       "muscleGroups": [
+        "Quadriceps",
+        "Glutes",
+        "Hamstrings"
+       ],
+       "equipmentRequired": [
+        "Barbell",
+        "Rack"
+       ],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-13T12:00:00.000Z",
+       "updatedAt": "2026-07-13T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-13T12:00:00.000Z",
+      "updatedAt": "2026-07-13T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "squat",
+       "mainStrengthPattern": "squat",
+       "slot": "squat",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-1-1",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "ex-rdl",
+      "exerciseOrder": 3,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 2,
+      "prescribedRepsMax": 4,
+      "prescribedWeightKg": 87.5,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-rdl",
+       "name": "RDLs",
+       "description": "Romanian Deadlifts - posterior chain",
+       "exerciseType": "Compound",
+       "muscleGroups": [
+        "Hamstrings",
+        "Glutes",
+        "Lower Back"
+       ],
+       "equipmentRequired": [
+        "Barbell"
+       ],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-13T12:00:00.000Z",
+       "updatedAt": "2026-07-13T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-13T12:00:00.000Z",
+      "updatedAt": "2026-07-13T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "hinge",
+       "mainStrengthPattern": "hinge",
+       "slot": "hinge",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-1-2",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "ex-custom-cossack-squat",
+      "exerciseOrder": 4,
+      "prescribedSets": 1,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 12,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "perSide": true,
+      "exercise": {
+       "id": "ex-custom-cossack-squat",
+       "name": "Cossack Squat",
+       "description": "Cossack Squat",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-13T12:00:00.000Z",
+       "updatedAt": "2026-07-13T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-13T12:00:00.000Z",
+      "updatedAt": "2026-07-13T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "single_leg_knee",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-1-3",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "ex-custom-hamstring-curl",
+      "exerciseOrder": 5,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 12,
+      "prescribedWeightKg": 32.5,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-hamstring-curl",
+       "name": "Hamstring Curl",
+       "description": "Hamstring Curl",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-13T12:00:00.000Z",
+       "updatedAt": "2026-07-13T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-13T12:00:00.000Z",
+      "updatedAt": "2026-07-13T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "single_leg_hip",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-1-4",
+      "workoutId": "w-composed-mc-ai-1-1",
+      "exerciseId": "ex-custom-seated-calf-raise",
+      "exerciseOrder": 6,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 12,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-seated-calf-raise",
+       "name": "Seated Calf Raise",
+       "description": "Seated Calf Raise",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-13T12:00:00.000Z",
+       "updatedAt": "2026-07-13T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-13T12:00:00.000Z",
+      "updatedAt": "2026-07-13T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "football_robustness",
+       "provenance": "composer_declaration"
+      }
+     }
+    ],
+    "hasCombinedConditioning": false,
+    "isTeamDay": false,
+    "authoredDay": {
+     "anchor": null,
+     "components": [
+      "strength"
+     ]
+    },
+    "derivedSessionProvenance": [
+     {
+      "protocolVersion": 1,
+      "authorship": "system",
+      "origin": "contract_shortfall_repair",
+      "scope": "session",
+      "triggerSignature": "{\"anchors\":[{\"day\":2,\"id\":\"tt-2\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":4,\"id\":\"tt-4\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":6,\"id\":\"game-6\",\"kind\":\"game\",\"participation\":\"normal_unrestricted\"}],\"identity\":{\"anchorState\":\"game\",\"kind\":\"build\",\"mode\":\"in_season_game_week\",\"phase\":\"In-season\"},\"protocolVersion\":2,\"safety\":{\"prohibitedPatterns\":[],\"prohibitedPower\":false,\"prohibitedSprint\":false},\"selected\":{\"conditioning\":3,\"hardMaximum\":5,\"patterns\":[\"squat\",\"hinge\",\"push\",\"pull\"],\"rest\":1,\"sprint\":3,\"strength\":3},\"weekStart\":\"2026-07-13\"}",
+      "targetMetric": "main_strength",
+      "credit": {
+       "metric": "main_strength",
+       "amount": 1
+      },
+      "originatingFixtureDate": null,
+      "originatingDate": "2026-07-13",
+      "validWhile": [],
+      "invalidWhen": [],
+      "history": [
+       {
+        "action": "created",
+        "date": "2026-07-13"
+       }
+      ],
+      "sourcePlanEntryId": "sched:2026-07-13:1:lower"
+     },
+     {
+      "protocolVersion": 1,
+      "authorship": "system",
+      "origin": "optional_planner_addition",
+      "scope": "power_component",
+      "triggerSignature": "{\"anchors\":[{\"day\":2,\"id\":\"tt-2\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":4,\"id\":\"tt-4\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":6,\"id\":\"game-6\",\"kind\":\"game\",\"participation\":\"normal_unrestricted\"}],\"identity\":{\"anchorState\":\"game\",\"kind\":\"build\",\"mode\":\"in_season_game_week\",\"phase\":\"In-season\"},\"protocolVersion\":2,\"safety\":{\"prohibitedPatterns\":[],\"prohibitedPower\":false,\"prohibitedSprint\":false},\"selected\":{\"conditioning\":3,\"hardMaximum\":5,\"patterns\":[\"squat\",\"hinge\",\"push\",\"pull\"],\"rest\":1,\"sprint\":3,\"strength\":3},\"weekStart\":\"2026-07-13\"}",
+      "targetMetric": "optional_non_core",
+      "credit": {
+       "metric": "optional_non_core",
+       "amount": 1
+      },
+      "originatingFixtureDate": null,
+      "originatingDate": "2026-07-13",
+      "validWhile": [],
+      "invalidWhen": [],
+      "history": [
+       {
+        "action": "created",
+        "date": "2026-07-13"
+       }
+      ],
+      "sourcePlanEntryId": "sched:2026-07-13:1:lower"
+     }
+    ]
+   },
+   {
+    "id": "w-composed-mc-ai-1-2",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 2,
+    "name": "Team Training + Upper Body Pull",
+    "description": "",
+    "intensity": "High",
+    "workoutType": "Team Training",
+    "sessionTier": "core",
+    "planEntryId": "sched:2026-07-13:2:upper_pull",
+    "strengthIntent": {
+     "archetype": "upper",
+     "primaryPattern": "pull",
+     "plannedPatterns": [
+      "pull"
+     ],
+     "effectivePatterns": [
+      "pull"
+     ]
+    },
+    "composedDayShape": "upper_split_pull",
+    "composedDeclaredSlots": [
+     "horizontal_pull",
+     "vertical_pull",
+     "pull_accessory_1",
+     "pull_accessory_2",
+     "core",
+     "football_robustness"
+    ],
+    "durationMinutes": 0,
+    "exercises": [
+     {
+      "automaticSelection": true,
+      "id": "power-w-composed-mc-ai-1-2",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "power-w-composed-mc-ai-1-2-exercise",
+      "exerciseOrder": 1,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 3,
+      "prescribedRepsMax": 3,
+      "restSeconds": 120,
+      "notes": "Do this fresh, early in the session — before the main lifts.",
+      "role": "power",
+      "power": {
+       "family": "upper",
+       "kind": "primer"
+      },
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "power",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "exercise": {
+       "id": "ex-custom-explosive-landmine-press",
+       "name": "Explosive Landmine Press",
+       "description": "Explosive Landmine Press",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-09-09T06:27:58.611Z",
+       "updatedAt": "2026-09-09T06:27:58.611Z"
+      },
+      "createdAt": "2026-09-09T06:27:58.611Z",
+      "updatedAt": "2026-09-09T06:27:58.611Z"
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-0",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-custom-bent-row",
+      "exerciseOrder": 2,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 4,
+      "prescribedRepsMax": 6,
+      "prescribedWeightKg": 92.5,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-bent-row",
+       "name": "Bent Row",
+       "description": "Bent Row",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "pull",
+       "mainStrengthPattern": "pull",
+       "slot": "horizontal_pull",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-1",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-pullups",
+      "exerciseOrder": 3,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 4,
+      "prescribedRepsMax": 6,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-pullups",
+       "name": "Pull-Ups",
+       "description": "Bodyweight pullups",
+       "exerciseType": "Compound",
+       "muscleGroups": [
+        "Back",
+        "Biceps"
+       ],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "pull",
+       "mainStrengthPattern": "pull",
+       "slot": "vertical_pull",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-2",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-custom-face-pull",
+      "exerciseOrder": 4,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 10,
+      "prescribedWeightKg": 25,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-face-pull",
+       "name": "Face Pull",
+       "description": "Face Pull",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "pull_accessory_1",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-3",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-custom-shrugs",
+      "exerciseOrder": 5,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 12,
+      "prescribedWeightKg": 80,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-shrugs",
+       "name": "Shrugs",
+       "description": "Shrugs",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "pull_accessory_2",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-4",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-custom-hanging-leg-raise",
+      "exerciseOrder": 6,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-hanging-leg-raise",
+       "name": "Hanging Leg Raise",
+       "description": "Hanging Leg Raise",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "core",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-2-5",
+      "workoutId": "w-composed-mc-ai-1-2",
+      "exerciseId": "ex-custom-tib-raises",
+      "exerciseOrder": 7,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-tib-raises",
+       "name": "Tib Raises",
+       "description": "Tib Raises",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-14T12:00:00.000Z",
+       "updatedAt": "2026-07-14T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-14T12:00:00.000Z",
+      "updatedAt": "2026-07-14T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "football_robustness",
+       "provenance": "composer_declaration"
+      }
+     }
+    ],
+    "usefulStrengthSessionContract": {
+     "protocolVersion": 1,
+     "applies": true,
+     "minimum": 4,
+     "delivered": 4,
+     "status": "met",
+     "reductionReasons": []
+    },
+    "hasCombinedConditioning": false,
+    "isTeamDay": true,
+    "authoredDay": {
+     "anchor": "club_training",
+     "components": [
+      "strength"
+     ]
+    },
+    "derivedSessionProvenance": [
+     {
+      "protocolVersion": 1,
+      "authorship": "system",
+      "origin": "optional_planner_addition",
+      "scope": "power_component",
+      "triggerSignature": "{\"anchors\":[{\"day\":2,\"id\":\"tt-2\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":4,\"id\":\"tt-4\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":6,\"id\":\"game-6\",\"kind\":\"game\",\"participation\":\"normal_unrestricted\"}],\"identity\":{\"anchorState\":\"game\",\"kind\":\"build\",\"mode\":\"in_season_game_week\",\"phase\":\"In-season\"},\"protocolVersion\":2,\"safety\":{\"prohibitedPatterns\":[],\"prohibitedPower\":false,\"prohibitedSprint\":false},\"selected\":{\"conditioning\":3,\"hardMaximum\":5,\"patterns\":[\"squat\",\"hinge\",\"push\",\"pull\"],\"rest\":1,\"sprint\":3,\"strength\":3},\"weekStart\":\"2026-07-13\"}",
+      "targetMetric": "optional_non_core",
+      "credit": {
+       "metric": "optional_non_core",
+       "amount": 1
+      },
+      "originatingFixtureDate": null,
+      "originatingDate": "2026-07-13",
+      "validWhile": [],
+      "invalidWhen": [],
+      "history": [
+       {
+        "action": "created",
+        "date": "2026-07-13"
+       }
+      ],
+      "sourcePlanEntryId": "sched:2026-07-13:2:upper_pull"
+     }
+    ]
+   },
+   {
+    "id": "w-composed-mc-ai-1-4",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 4,
+    "name": "Team Training + Upper Body Push",
+    "description": "",
+    "intensity": "High",
+    "workoutType": "Team Training",
+    "sessionTier": "core",
+    "planEntryId": "sched:2026-07-13:4:upper_push",
+    "strengthIntent": {
+     "archetype": "upper",
+     "primaryPattern": "push",
+     "plannedPatterns": [
+      "push"
+     ],
+     "effectivePatterns": [
+      "push"
+     ]
+    },
+    "composedDayShape": "upper_split_push",
+    "composedDeclaredSlots": [
+     "horizontal_push",
+     "vertical_push",
+     "push_accessory_1",
+     "push_accessory_2",
+     "core"
+    ],
+    "durationMinutes": 0,
+    "exercises": [
+     {
+      "id": "we-w-composed-mc-ai-1-4-0",
+      "workoutId": "w-composed-mc-ai-1-4",
+      "exerciseId": "ex-custom-single-arm-db-floor-press",
+      "exerciseOrder": 1,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 3,
+      "prescribedRepsMax": 5,
+      "prescribedWeightKg": 27.5,
+      "restSeconds": 0,
+      "perSide": true,
+      "exercise": {
+       "id": "ex-custom-single-arm-db-floor-press",
+       "name": "Single-Arm DB Floor Press",
+       "description": "Single-Arm DB Floor Press",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-16T12:00:00.000Z",
+       "updatedAt": "2026-07-16T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-16T12:00:00.000Z",
+      "updatedAt": "2026-07-16T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "push",
+       "mainStrengthPattern": "push",
+       "slot": "horizontal_push",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-4-1",
+      "workoutId": "w-composed-mc-ai-1-4",
+      "exerciseId": "ex-custom-seated-db-press",
+      "exerciseOrder": 2,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 3,
+      "prescribedRepsMax": 5,
+      "prescribedWeightKg": 50,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-seated-db-press",
+       "name": "Seated DB Press",
+       "description": "Seated DB Press",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-16T12:00:00.000Z",
+       "updatedAt": "2026-07-16T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-16T12:00:00.000Z",
+      "updatedAt": "2026-07-16T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "main_strength",
+       "strengthPattern": "push",
+       "mainStrengthPattern": "push",
+       "slot": "vertical_push",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-4-2",
+      "workoutId": "w-composed-mc-ai-1-4",
+      "exerciseId": "ex-custom-tricep-pushdown",
+      "exerciseOrder": 3,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 10,
+      "prescribedWeightKg": 25,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-tricep-pushdown",
+       "name": "Tricep Pushdown",
+       "description": "Tricep Pushdown",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-16T12:00:00.000Z",
+       "updatedAt": "2026-07-16T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-16T12:00:00.000Z",
+      "updatedAt": "2026-07-16T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "push_accessory_1",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-4-3",
+      "workoutId": "w-composed-mc-ai-1-4",
+      "exerciseId": "ex-custom-tricep-circuit--dirty-30-",
+      "exerciseOrder": 4,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 8,
+      "prescribedRepsMax": 12,
+      "prescribedWeightKg": 12.5,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-tricep-circuit--dirty-30-",
+       "name": "Tricep Circuit (Dirty 30)",
+       "description": "Tricep Circuit (Dirty 30)",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-16T12:00:00.000Z",
+       "updatedAt": "2026-07-16T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-16T12:00:00.000Z",
+      "updatedAt": "2026-07-16T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "push_accessory_2",
+       "provenance": "composer_declaration"
+      }
+     },
+     {
+      "id": "we-w-composed-mc-ai-1-4-4",
+      "workoutId": "w-composed-mc-ai-1-4",
+      "exerciseId": "ex-custom-dragon-flag",
+      "exerciseOrder": 5,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "prescribedWeightKg": 0,
+      "restSeconds": 0,
+      "exercise": {
+       "id": "ex-custom-dragon-flag",
+       "name": "Dragon Flag",
+       "description": "Dragon Flag",
+       "exerciseType": "Compound",
+       "muscleGroups": [],
+       "equipmentRequired": [],
+       "difficultyLevel": "Intermediate",
+       "createdAt": "2026-07-16T12:00:00.000Z",
+       "updatedAt": "2026-07-16T12:00:00.000Z"
+      },
+      "createdAt": "2026-07-16T12:00:00.000Z",
+      "updatedAt": "2026-07-16T12:00:00.000Z",
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "slot": "core",
+       "provenance": "composer_declaration"
+      }
+     }
+    ],
+    "usefulStrengthSessionContract": {
+     "protocolVersion": 1,
+     "applies": true,
+     "minimum": 4,
+     "delivered": 4,
+     "status": "met",
+     "reductionReasons": []
+    },
+    "hasCombinedConditioning": false,
+    "isTeamDay": true,
+    "authoredDay": {
+     "anchor": "club_training",
+     "components": [
+      "strength"
+     ]
+    }
+   },
+   {
+    "id": "w-coach-5",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 5,
+    "name": "Gunshow",
+    "description": "rest_or_recovery - low-soreness upper body pump; stop with 3 reps in reserve",
+    "durationMinutes": 35,
+    "intensity": "Light",
+    "workoutType": "Strength",
+    "sessionTier": "optional",
+    "composedOptionalKind": "gunshow",
+    "exercises": [
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-0",
+      "workoutId": "w-coach-5",
+      "exerciseId": "incline-db-curl",
+      "exerciseOrder": 1,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 10,
+      "prescribedRepsMax": 12,
+      "restSeconds": 45,
+      "notes": "30° incline. Big stretch at the bottom.",
+      "exercise": {
+       "id": "incline-db-curl",
+       "name": "Incline Dumbbell Curl",
+       "description": "30° incline. Big stretch at the bottom."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 25
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-1",
+      "workoutId": "w-coach-5",
+      "exerciseId": "concentration-curl",
+      "exerciseOrder": 2,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "restSeconds": 30,
+      "perSide": true,
+      "notes": "Seated, elbow on inner thigh. Slow negatives.",
+      "exercise": {
+       "id": "concentration-curl",
+       "name": "Concentration Curl",
+       "description": "Seated, elbow on inner thigh. Slow negatives."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 12.5
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-2",
+      "workoutId": "w-coach-5",
+      "exerciseId": "overhead-ext",
+      "exerciseOrder": 3,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 10,
+      "prescribedRepsMax": 12,
+      "restSeconds": 45,
+      "notes": "Cable or dumbbell. Full stretch at bottom.",
+      "exercise": {
+       "id": "overhead-ext",
+       "name": "Overhead Tricep Extension",
+       "description": "Cable or dumbbell. Full stretch at bottom."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 20
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-3",
+      "workoutId": "w-coach-5",
+      "exerciseId": "kickback",
+      "exerciseOrder": 4,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "restSeconds": 30,
+      "perSide": true,
+      "notes": "Hinge forward, lock elbow. Squeeze at top.",
+      "exercise": {
+       "id": "kickback",
+       "name": "Dumbbell Kickback",
+       "description": "Hinge forward, lock elbow. Squeeze at top."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 12.5
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-4",
+      "workoutId": "w-coach-5",
+      "exerciseId": "cable-face-pull",
+      "exerciseOrder": 5,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 15,
+      "prescribedRepsMax": 20,
+      "restSeconds": 30,
+      "notes": "Pull to forehead, open hands out at the top.",
+      "exercise": {
+       "id": "cable-face-pull",
+       "name": "Cable Face Pull",
+       "description": "Pull to forehead, open hands out at the top."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 25
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "strength_accessory",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "we-w-coach-5-5",
+      "workoutId": "w-coach-5",
+      "exerciseId": "rear-delt-fly",
+      "exerciseOrder": 6,
+      "prescribedSets": 3,
+      "prescribedRepsMin": 12,
+      "prescribedRepsMax": 15,
+      "restSeconds": 30,
+      "notes": "Bent over or machine. Pinch shoulder blades.",
+      "exercise": {
+       "id": "rear-delt-fly",
+       "name": "Rear Delt Fly",
+       "description": "Bent over or machine. Pinch shoulder blades."
+      },
+      "createdAt": "2026-09-09T06:27:58.618Z",
+      "updatedAt": "2026-09-09T06:27:58.618Z",
+      "automaticSelection": true,
+      "prescribedWeightKg": 25
+     }
+    ],
+    "createdAt": "2026-09-09T06:27:58.618Z",
+    "updatedAt": "2026-09-09T06:27:58.618Z",
+    "planEntryId": "sched:2026-07-13:5:rest_or_recovery",
+    "derivedSessionProvenance": [
+     {
+      "protocolVersion": 1,
+      "authorship": "system",
+      "origin": "optional_planner_addition",
+      "scope": "session",
+      "triggerSignature": "{\"anchors\":[{\"day\":2,\"id\":\"tt-2\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":4,\"id\":\"tt-4\",\"kind\":\"team_training\",\"participation\":\"normal_unrestricted\"},{\"day\":6,\"id\":\"game-6\",\"kind\":\"game\",\"participation\":\"normal_unrestricted\"}],\"identity\":{\"anchorState\":\"game\",\"kind\":\"build\",\"mode\":\"in_season_game_week\",\"phase\":\"In-season\"},\"protocolVersion\":2,\"safety\":{\"prohibitedPatterns\":[],\"prohibitedPower\":false,\"prohibitedSprint\":false},\"selected\":{\"conditioning\":3,\"hardMaximum\":5,\"patterns\":[\"squat\",\"hinge\",\"push\",\"pull\"],\"rest\":1,\"sprint\":3,\"strength\":3},\"weekStart\":\"2026-07-13\"}",
+      "targetMetric": "optional_non_core",
+      "credit": {
+       "metric": "optional_non_core",
+       "amount": 1
+      },
+      "originatingFixtureDate": null,
+      "originatingDate": "2026-07-13",
+      "validWhile": [],
+      "invalidWhen": [],
+      "history": [
+       {
+        "action": "created",
+        "date": "2026-07-13"
+       }
+      ],
+      "sourcePlanEntryId": "sched:2026-07-13:5:rest_or_recovery"
+     }
+    ]
+   },
+   {
+    "id": "w-coach-6",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 6,
+    "name": "Game",
+    "description": "",
+    "intensity": "High",
+    "workoutType": "Game",
+    "authoredDay": {
+     "anchor": "game",
+     "components": []
+    },
+    "isTeamDay": false,
+    "sessionTier": "core",
+    "planEntryId": "sched:2026-07-13:6:game",
+    "durationMinutes": 0,
+    "exercises": [],
+    "createdAt": "2026-09-09T06:27:58.618Z",
+    "updatedAt": "2026-09-09T06:27:58.618Z",
+    "hasCombinedConditioning": false,
+    "section18Evidence": {
+     "protocolVersion": 1,
+     "conditioningRole": "none",
+     "conditioningStress": "unknown",
+     "provenance": "planner_and_canonical_content"
+    }
+   },
+   {
+    "id": "derived-mobility-2026-07-15",
+    "microcycleId": "mc-ai-1",
+    "dayOfWeek": 3,
+    "name": "Mobility",
+    "description": "Optional top-up - easy ranges only, nothing forced",
+    "durationMinutes": 15,
+    "intensity": "Light",
+    "workoutType": "Mobility",
+    "sessionTier": "optional",
+    "composedOptionalKind": "mobility",
+    "exercises": [
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-1",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "toe-stretch",
+      "exerciseOrder": 1,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 30,
+      "prescribedRepsMax": 45,
+      "restSeconds": 15,
+      "prescriptionType": "duration",
+      "notes": "Toes tucked, sit back onto heels. Builds foot resilience.",
+      "exercise": {
+       "id": "toe-stretch",
+       "name": "Toe Stretch",
+       "description": "Toes tucked, sit back onto heels. Builds foot resilience."
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-2",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "pissing-dog-wall",
+      "exerciseOrder": 2,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 6,
+      "prescribedRepsMax": 6,
+      "restSeconds": 30,
+      "prescriptionType": "reps",
+      "notes": "Each side. Hold each rep 5 seconds",
+      "exercise": {
+       "id": "pissing-dog-wall",
+       "name": "Pissing Dog Against Wall",
+       "description": "Each side. Hold each rep 5 seconds"
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-3",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "jefferson-curl",
+      "exerciseOrder": 3,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 5,
+      "prescribedRepsMax": 5,
+      "restSeconds": 30,
+      "prescriptionType": "reps",
+      "notes": "Slow reps",
+      "exercise": {
+       "id": "jefferson-curl",
+       "name": "Jefferson Curl",
+       "description": "Slow reps"
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-4",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "sleeper-stretch",
+      "exerciseOrder": 4,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 30,
+      "prescribedRepsMax": 30,
+      "restSeconds": 15,
+      "prescriptionType": "duration",
+      "perSide": true,
+      "notes": "Gentle pressure from the opposite hand; no external loading or bouncing. Use short, comfortable holds near games and avoid aggressive holds before throwing, pressing or contact.",
+      "exercise": {
+       "id": "sleeper-stretch",
+       "name": "Sleeper Stretch",
+       "description": "Gentle pressure from the opposite hand; no external loading or bouncing. Use short, comfortable holds near games and avoid aggressive holds before throwing, pressing or contact."
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-5",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "calf-stretch",
+      "exerciseOrder": 5,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 30,
+      "prescribedRepsMax": 45,
+      "restSeconds": 15,
+      "prescriptionType": "duration",
+      "perSide": true,
+      "notes": "Wall or step. Straight-leg then bent-knee variation.",
+      "exercise": {
+       "id": "calf-stretch",
+       "name": "Calf Stretch",
+       "description": "Wall or step. Straight-leg then bent-knee variation."
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     },
+     {
+      "section18Evidence": {
+       "protocolVersion": 1,
+       "role": "recovery_support",
+       "strengthPattern": null,
+       "mainStrengthPattern": null,
+       "provenance": "canonical_row_classifier"
+      },
+      "id": "derived-mobility-2026-07-15-ex-6",
+      "workoutId": "derived-mobility-2026-07-15",
+      "exerciseId": "butterfly-stretch",
+      "exerciseOrder": 6,
+      "prescribedSets": 2,
+      "prescribedRepsMin": 6,
+      "prescribedRepsMax": 10,
+      "restSeconds": 30,
+      "prescriptionType": "reps",
+      "notes": "Hold each rep 6–10 seconds",
+      "exercise": {
+       "id": "butterfly-stretch",
+       "name": "Butterfly Stretch",
+       "description": "Hold each rep 6–10 seconds"
+      },
+      "createdAt": "2026-09-09T06:27:58.621Z",
+      "updatedAt": "2026-09-09T06:27:58.621Z"
+     }
+    ],
+    "createdAt": "2026-09-09T06:27:58.621Z",
+    "updatedAt": "2026-09-09T06:27:58.621Z"
+   }
+  ],
+  "createdAt": "2026-09-09T06:27:58.424Z",
+  "updatedAt": "2026-09-09T06:27:58.424Z"
+ },
+ "microcycleCount": 4,
+ "witnesses": [
+  {
+   "kind": "program",
+   "programId": "prog-ai-1",
+   "weekStart": "2026-07-13"
+  },
+  {
+   "kind": "profile_exact",
+   "profile": {
+    "firstName": "Sam",
+    "gender": "male",
+    "heightCm": 184,
+    "weightKg": 90,
+    "position": "inside_mid",
+    "goals": [
+     "stay_injury_free"
+    ],
+    "seasonPhase": "In-season",
+    "gameDay": "Saturday",
+    "usualGameDay": "Saturday",
+    "teamTrainingDaysPerWeek": 2,
+    "teamTrainingDays": [
+     "Tuesday",
+     "Thursday"
+    ],
+    "teamTrainingDuration": "90 minutes",
+    "teamTrainingIntensity": "Moderate",
+    "trainingDaysPerWeek": 5,
+    "preferredTrainingDays": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ],
+    "trainingLocation": "Commercial gym",
+    "equipmentSelectionCompleteness": "complete",
+    "equipment": [
+     "barbell",
+     "dumbbells",
+     "squat_rack",
+     "pullup_bar",
+     "cable_machine",
+     "hamstring_curl",
+     "knee_extension",
+     "bands"
+    ],
+    "experienceLevel": "5+ years",
+    "squatStrength": "1.5x bodyweight",
+    "benchStrength": "1.5x bodyweight+",
+    "twoKmTimeTrial": {
+     "seconds": 480,
+     "recordedOn": "2026-07-01",
+     "source": "onboarding"
+    },
+    "conditioningLevel": "Elite",
+    "sprintExposure": "2+ times per week",
+    "recentTrainingLoad": "Very consistent",
+    "injuries": [],
+    "biggestLimitation": "Power & explosiveness",
+    "biggestFrustration": "Getting a week that respects team training and game day.",
+    "successVision": "A durable in-season week that keeps strength and conditioning ticking over without cooking the legs."
+   }
+  },
+  {
+   "kind": "calendar_mark",
+   "date": "2026-07-18",
+   "mark": "game"
+  }
+ ],
+ "auxiliaryState": []
+}

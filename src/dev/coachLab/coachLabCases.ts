@@ -153,7 +153,14 @@ function day(
   };
 }
 
-export function coachLabFixtureSnapshot(): CoachSnapshot {
+/**
+ * One Saturday game, low-energy readiness recorded. `readiness: 'not_recorded'`
+ * is the same world with no check-in — the state Sam's device was in when the
+ * Coach invented a tier (F14, 2026-09-09).
+ */
+export function coachLabFixtureSnapshot(
+  options: { readonly readiness?: 'reported' | 'not_recorded' } = {},
+): CoachSnapshot {
   const weekStart = '2026-08-24';
   const visibleWeek: VisibleWeek = {
     weekStart,
@@ -231,7 +238,7 @@ export function coachLabFixtureSnapshot(): CoachSnapshot {
       recordedOn: '2026-08-24',
       source: 'profile_edit',
     },
-    readinessSignal: {
+    readinessSignal: options.readiness === 'not_recorded' ? null : {
       date: '2026-08-24',
       energy: 'low',
       soreness: 'moderate',

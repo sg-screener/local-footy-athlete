@@ -182,6 +182,13 @@ export interface BuildFixtureMinimalReplanInput {
    */
   surfaces: AcceptedEffectiveWeekSurfaces;
   mutationIntent?: FixtureMutationIntent;
+  /**
+   * DAYS BEFORE THIS DATE ARE LOGGED HISTORY (everyday acceptance F6). The
+   * weekly completions may not seat a row on them. Derived by the caller from
+   * the athlete's saved outcomes (`deliveredHistoryBoundaryISO`); omitted only
+   * when nothing in the week is logged.
+   */
+  historyBeforeISO?: string;
 }
 
 const DAY_NAMES = [
@@ -456,12 +463,16 @@ function withCompilerPlannerOffers(
               automaticWeeklyExerciseSelector: selector,
             },
           );
+          // An empty composition is no offer (everyday acceptance F8): a G−1 with
+          // no kit for arm work must not receive a zero-row "Gunshow" card.
+          if (rebuilt.exercises.length === 0) return null;
           return {
             ...compiledOffer,
             exercises: rebuilt.exercises.map((row) => ({ ...row, workoutId: compiledOffer.id })),
           };
         })()
       : compiledOffer;
+    if (!offer) continue;
     const existing = result.find(workout => workout.dayOfWeek === offer.dayOfWeek);
     if (isAutomaticFixtureRelativePlannerOffer(offer)) {
       if (!existing) result.push(offer);
@@ -1308,10 +1319,13 @@ export function buildFixtureMinimalReplan(
     ])),
     profile: args.profile,
     gameDates: args.proposedFixtures.map((fixture) => fixture.date),
+    // A logged day is history (F6): the completion may not seat a row on it.
+    placeableFromISO: args.historyBeforeISO,
   });
   // One core row per week (Sam, 2026-09-03): the repaired week answers for it
   // the way it answers for the frontal plane — on the source, before the search.
   const sourceWithCore = completeWeeklySupport({
+    placeableFromISO: args.historyBeforeISO,
     dosePolicyForDate: date => args.targetMicrocycle.dosePolicyByDay?.[dayOfWeekForISODate(date)] ?? null,
     weekStartISO: args.weekStart,
     workoutsByDate: sourceCompletion.workoutsByDate,

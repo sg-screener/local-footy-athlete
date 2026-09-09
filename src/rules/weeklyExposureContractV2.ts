@@ -311,6 +311,39 @@ export type Section18GovernedFrom = string | null;
  * write the boundary. See
  * docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md §2 Q4.
  */
+/**
+ * THE DELIVERED-DAY BOUNDARY, derived from what the athlete has LOGGED.
+ *
+ * A day with a saved session outcome is history: no later repair may re-seat
+ * a row on it, whether the outcome was full, partial or skipped. The boundary
+ * is the day after the latest logged date inside the week, or null when
+ * nothing in the week is logged. Everyday acceptance F6 (2026-09-09): the
+ * athlete-removal / fixture-move repair (`fixtureMinimalReplan`) was the one
+ * completion caller that received no history boundary at all, so removing
+ * Friday's optional Gunshow re-ran the weekly core completion over the LOGGED
+ * Monday, inserted a Plank there, and the day card forgot the log. The injury
+ * compiler and the generator already honour a boundary; this is the same
+ * fact stated once for the repair.
+ */
+export function deliveredHistoryBoundaryISO(args: {
+  readonly weekStartISO: string;
+  readonly loggedDates: readonly string[];
+}): string | null {
+  const weekStart = args.weekStartISO.slice(0, 10);
+  const weekEnd = new Date(`${weekStart}T12:00:00`);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekEndISO = weekEnd.toISOString().slice(0, 10);
+  const latest = args.loggedDates
+    .map((date) => date.slice(0, 10))
+    .filter((date) => date >= weekStart && date <= weekEndISO)
+    .sort()
+    .pop();
+  if (!latest) return null;
+  const next = new Date(`${latest}T12:00:00`);
+  next.setDate(next.getDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
 export function stampSection18GovernedBoundary(args: {
   contract: WeeklyExposureContractV2;
   weekStartISO: string;

@@ -238,10 +238,16 @@ try {
         .join(',') === '2026-07-20,2026-07-21,2026-07-23',
   );
   const spentState = buildDevE2EWitnessState(spentSeed);
+  // F8 (everyday acceptance, 2026-09-09): this Mon/Tue/Thu athlete has no gym
+  // on Friday, so the G−1 Gunshow is no longer offered there (it used to arrive
+  // as a zero-exercise "Gunshow" card). Wednesday's optional Mobility stays;
+  // Friday is a rest day; Saturday is the game.
   ok(
-    'spent-week seed preserves optional spare-day work and Saturday game',
-    [3, 5].every(day => spentState.program?.microcycles[0]?.workouts.some((workout) =>
-      workout.dayOfWeek === day && workout.sessionTier === 'optional')) &&
+    'spent-week seed preserves optional spare-day work, a real rest Friday and the Saturday game',
+    spentState.program?.microcycles[0]?.workouts.some((workout) =>
+      workout.dayOfWeek === 3 && workout.sessionTier === 'optional') === true &&
+      !spentState.program?.microcycles[0]?.workouts.some((workout) =>
+        workout.dayOfWeek === 5 && (workout.exercises?.length ?? 0) === 0 && workout.workoutType !== 'Rest') &&
       spentState.calendarMarks['2026-07-25'] === 'game',
   );
   ok(

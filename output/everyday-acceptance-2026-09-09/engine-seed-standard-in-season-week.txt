@@ -1,0 +1,48 @@
+SEED standard-in-season-week — anchor 2026-07-13 — week 1 of 4 (engine: buildDevE2ESeed, raw program microcycle 0)
+
+== Mon — Strength — lower (High)
+  1. Vertical Jump | 2 x 3 rest 120s role=power notes="Do this fresh, early in the session — before the main lifts."
+  2. Back Squat | 3 x 2-4
+  3. RDLs | 3 x 2-4
+  4. Cossack Squat | 1 x 8-12 /side
+  5. Hamstring Curl | 2 x 8-12
+  6. Seated Calf Raise | 2 x 8-12
+
+== Tue — Team Training — Team Training + Upper Body Pull (High)
+  1. Explosive Landmine Press | 2 x 3 rest 120s role=power notes="Do this fresh, early in the session — before the main lifts."
+  2. Bent Row | 3 x 4-6
+  3. Pull-Ups | 3 x 4-6
+  4. Face Pull | 2 x 8-10
+  5. Shrugs | 2 x 8-12
+  6. Hanging Leg Raise | 2 x 12-15
+  7. Tib Raises | 2 x 12-15
+
+== Wed — Mobility — Mobility (Light) 15min
+  1. Toe Stretch | 2 x 30-45 rest 15s notes="Toes tucked, sit back onto heels. Builds foot resilience."
+  2. Pissing Dog Against Wall | 2 x 6 rest 30s notes="Each side. Hold each rep 5 seconds"
+  3. Jefferson Curl | 2 x 5 rest 30s notes="Slow reps"
+  4. Sleeper Stretch | 2 x 30 /side rest 15s notes="Gentle pressure from the opposite hand; no external loading or bouncing. Use sh
+  5. Calf Stretch | 2 x 30-45 /side rest 15s notes="Wall or step. Straight-leg then bent-knee variation."
+  6. Butterfly Stretch | 2 x 6-10 rest 30s notes="Hold each rep 6–10 seconds"
+
+== Thu — Team Training — Team Training + Upper Body Push (High)
+  1. Single-Arm DB Floor Press | 3 x 3-5 /side
+  2. Seated DB Press | 3 x 3-5
+  3. Tricep Pushdown | 2 x 8-10
+  4. Tricep Circuit (Dirty 30) | 2 x 8-12
+  5. Dragon Flag | 2 x 12-15
+
+== Fri — Strength — Gunshow (Light) 35min
+  1. Incline Dumbbell Curl | 3 x 10-12 rest 45s notes="30° incline. Big stretch at the bottom."
+  2. Concentration Curl | 2 x 12-15 /side rest 30s notes="Seated, elbow on inner thigh. Slow negatives."
+  3. Overhead Tricep Extension | 2 x 10-12 rest 45s notes="Cable or dumbbell. Full stretch at bottom."
+  4. Dumbbell Kickback | 2 x 12-15 /side rest 30s notes="Hinge forward, lock elbow. Squeeze at top."
+  5. Cable Face Pull | 3 x 15-20 rest 30s notes="Pull to forehead, open hands out at the top."
+  6. Rear Delt Fly | 3 x 12-15 rest 30s notes="Bent over or machine. Pinch shoulder blades."
+
+== Sat — Game — Game (High)
+
+== Sun — Rest — Rest (Light)
+
+EXERCISE KEYS (full): automaticSelection,id,workoutId,exerciseId,exerciseOrder,prescribedSets,prescribedRepsMin,prescribedRepsMax,restSeconds,notes,role,power,section18Evidence,exercise,createdAt,updatedAt
+EXERCISE OBJ KEYS: id,name,description,exerciseType,muscleGroups,equipmentRequired,difficultyLevel,createdAt,updatedAt

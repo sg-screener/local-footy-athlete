@@ -36,10 +36,15 @@ const board = read('screens', 'home', 'WeekBoard.tsx');
 console.log('\n[1] Exactly three answers, and they are the signed words');
 {
   const start = home.indexOf('function MissedSessionNotice(');
-  const end = home.indexOf('function missedQuestion', start);
+  const end = home.indexOf('function missedQuestion', start); // spans MissedSessionNotice and MissedSessionAnswers
   ok('notice region found', start >= 0 && end > start);
   const prompt = start >= 0 && end > start ? home.slice(start, end) : '';
-  ok('exactly three chips', (prompt.match(/<NoticeChip\b/g) ?? []).length === 3);
+  // The three answers live in MissedSessionAnswers (one per half); the notice
+  // itself mounts that component for the head and each follow-up.
+  const answersStart = home.indexOf('function MissedSessionAnswers(');
+  const answersEnd = home.indexOf('function missedQuestion', answersStart);
+  const answers = answersStart >= 0 && answersEnd > answersStart ? home.slice(answersStart, answersEnd) : '';
+  ok('exactly three chips', (answers.match(/<NoticeChip\b/g) ?? []).length === 3);
   ok('yes reads the signed row', prompt.includes("signedCopy('missed.prompt.yes')"));
   ok('no reads the signed row', prompt.includes("signedCopy('missed.prompt.no')"));
   ok('move reads the signed row', prompt.includes("signedCopy('missed.prompt.move')"));
@@ -58,7 +63,12 @@ console.log('\n[2] It is at the TOP of the screen, above both shapes — and ONE
   // start with most recent first"*. The hook derives the whole list — answering
   // one writes an outcome and the next takes its place — and the screen shows
   // its head, which the hook has already ordered newest-first.
-  ok('the screen renders the head of the list', /notice=\{missedSessionNotices\[0\]\}/.test(home));
+  // One DAY at a time (Sam, 2026-09-09: both halves of a club night in the
+  // same card): the head's date selects every notice for that day.
+  ok('the screen renders the head of the list — every half of the most recent day',
+    /notices=\{missedSessionNotices\.filter\(\(missed\) => missed\.date === missedSessionNotices\[0\]\.date\)\}/.test(home));
+  ok('a club night\'s second half rides in the same card as a follow-up question',
+    /followUps=\{rest\.map\(/.test(home) && /function MissedSessionAnswers\(/.test(home));
   ok('and does not stack them', !/notices=\{missedSessionNotices\}/.test(home));
   // TWO FACTS, NOT ONE WINDOWED REGEX: the memo between them carries the
   // three-fact boundary chain and is long enough that any character window is a

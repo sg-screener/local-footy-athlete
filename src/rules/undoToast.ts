@@ -78,6 +78,25 @@ export function undoToastFor(
  * change it just revealed — the athlete asked for one step, and one step is
  * what they get.
  */
+/**
+ * IS THE TOAST'S SIX-SECOND CLOCK ALLOWED TO RUN? Three inputs, one answer,
+ * no clock. `covered` is a bottom sheet standing over the toast (an RN Modal
+ * is a separate window, so no zIndex lifts the toast above it): while a sheet
+ * is open the toast is neither shown nor timed, and the moment the sheet
+ * closes the clock starts from zero. Measured on the simulator (everyday
+ * acceptance F5, 2026-09-09): every Day-card removal lands its entry while
+ * the "… was removed … Done" sheet is up, so the toast used to live and die
+ * behind it. `covered` is a THIRD state, never the unfocused one — the
+ * unfocused branch advances the seen marker, which would bury the entry.
+ */
+export function undoToastCountdownArmed(args: {
+  readonly hasModel: boolean;
+  readonly isFocused: boolean;
+  readonly covered: boolean;
+}): boolean {
+  return args.hasModel && args.isFocused && !args.covered;
+}
+
 export function undoToastSeenMarker(
   entries: readonly DecisionLedgerEntry[],
 ): string | null {

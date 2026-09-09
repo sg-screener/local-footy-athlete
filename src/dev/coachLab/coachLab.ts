@@ -1,8 +1,11 @@
 import type { CoachSnapshot } from '../../rules/liveAthleteSnapshot';
+import { projectCoachSnapshotForModel } from '../../rules/coachModelContext';
 import {
   COACH_RESPONSE_MAX_ANSWER_WORDS,
+  coachResponseGroundingFacts,
   evaluateCoachResponseContract,
   type CoachResponseAutomaticChecks,
+  type CoachResponseGroundingFacts,
   type CoachResponseBasis,
   type CoachResponseKnowledgeSource,
   type CoachResponsePayload,
@@ -112,10 +115,12 @@ export const COACH_LAB_MAX_ANSWER_WORDS = COACH_RESPONSE_MAX_ANSWER_WORDS;
 export function evaluateCoachLabResponse(
   labCase: CoachLabCase,
   response: CoachLabResponseV1,
+  facts: CoachResponseGroundingFacts,
 ): CoachLabEvaluation {
   const shared = evaluateCoachResponseContract(response, {
     requiresLiveProgramFacts: labCase.requiresLiveProgramFacts,
     allowedKnowledgeSourceIds: response.diagnostics.retrievedChunkIds ?? [],
+    facts,
   });
   const labEnvelopeValid = response.schemaVersion === COACH_LAB_RESPONSE_SCHEMA_VERSION
     && typeof response.diagnostics?.provider === 'string'
@@ -152,7 +157,11 @@ export function runCoachLab(args: {
   const results = args.cases.map((labCase): CoachLabResult => {
     const startedAt = Date.now();
     const response = args.candidate.answer({ labCase, snapshot: args.snapshot });
-    const evaluation = evaluateCoachLabResponse(labCase, response);
+    const evaluation = evaluateCoachLabResponse(
+      labCase,
+      response,
+      coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot)),
+    );
     return {
       caseId: labCase.id,
       athleteMessage: labCase.athleteMessage,
@@ -188,7 +197,11 @@ export async function runCoachLabAsync(args: {
       athleteMessage: labCase.athleteMessage,
       response,
       latencyMs: Date.now() - startedAt,
-      ...evaluateCoachLabResponse(labCase, response),
+      ...evaluateCoachLabResponse(
+        labCase,
+        response,
+        coachResponseGroundingFacts(projectCoachSnapshotForModel(args.snapshot)),
+      ),
     });
   }
 

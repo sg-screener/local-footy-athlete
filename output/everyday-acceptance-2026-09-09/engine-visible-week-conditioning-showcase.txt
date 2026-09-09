@@ -1,0 +1,167 @@
+reset ok= true week 2026-07-13 today 2026-07-13
+
+=== VISIBLE WEEK 2026-07-13 (today 2026-07-13)
+2026-07-13 MON | Mixed / lower_squat / core / High indicator="core" source=template
+   TITLE: lower_squat
+   - Jump Squats | 3 × 3 [strength/power]
+   - Walking Lunges | 3 × 5 / side | 25kg [strength/main_lift]
+   - Bulgarian Split Squats | 3 × 8 / side | 25kg [strength/accessory]
+   - Cossack Squat | 1 × 8 / side | 0kg [strength/prehab]
+   - Seated Calf Raise | 2 × 10 | 0kg [strength/prehab]
+   - Crab Walks | 2 × 10 | 0kg [strength/prehab]
+   - 5-Minute Aerobic Intervals |  [conditioning_phase/conditioning]
+   1. Jump Squats | 3 x 3 role=power
+   2. Walking Lunges | 3 x 4-6 /side 25kg
+   3. Cossack Squat | 1 x 8-10 /side 0kg
+   4. Bulgarian Split Squats | 3 x 6-10 /side 25kg
+   5. Seated Calf Raise | 2 x 8-12 0kg
+   6. Crab Walks | 2 x 8-12 0kg
+   7. Steady 5 min Blocks | 5 x 1 role=conditioning
+2026-07-14 TUE | Mixed / upper_pull / core / High indicator="core" source=template
+   TITLE: upper_pull
+   - Explosive Push-Up | 3 × 3 [strength/power]
+   - Bent Row | 3 × 6 | 92.5kg [strength/main_lift]
+   - Pull-Ups | 3 × 6 | 0kg [strength/main_lift]
+   - Incline Y Raise | 2 × 8 | 1kg [strength/accessory]
+   - Cable Face Pull | 2 × 10 | 25kg [strength/accessory]
+   - Band Pallof Press | 3 × 15 | 0kg [strength/midline]
+   - 30-Second Hard Intervals |  [conditioning_phase/conditioning]
+   1. Explosive Push-up | 3 x 3 role=power
+   2. Bent Row | 3 x 4-8 92.5kg
+   3. Pull-Ups | 3 x 4-8 0kg
+   4. Incline Y Raise | 2 x 8-10 1kg
+   5. Cable Face Pull | 2 x 8-12 25kg
+   6. Band Pallof Press | 3 x 12-15 0kg
+   7. 30:30 Hard Intermittent | 2 x 1 role=conditioning
+2026-07-15 WED | Mobility / Mobility / optional / mobility / Light indicator="optional" source=template
+   TITLE: Mobility
+   - Toe Stretch | 2 × 45s [mobility/prehab]
+   - Wall Hip Opener | 2 × 6 [mobility/prehab]
+   - Jefferson Curl | 2 × 5 [mobility/prehab]
+   - Sleeper Stretch | 2 × 30s / side [mobility/prehab]
+   - Calf Stretch | 2 × 45s / side [mobility/prehab]
+   - Butterfly Stretch | 2 × 10 [mobility/prehab]
+   1. Toe Stretch | 2 x 30-45
+   2. Pissing Dog Against Wall | 2 x 6
+   3. Jefferson Curl | 2 x 5
+   4. Sleeper Stretch | 2 x 30 /side
+   5. Calf Stretch | 2 x 30-45 /side
+   6. Butterfly Stretch | 2 x 6-10
+2026-07-16 THU | Strength / lower_hinge / core / High indicator="core" source=template
+   TITLE: lower_hinge
+   - RDLs | 3 × 5 | 87.5kg [strength/main_lift]
+   - Nordic Lower | 2 × 5 | 0kg [strength/accessory]
+   - Calf Raises | 3 × 10 | 0kg [strength/accessory]
+   - Long-Lever Copenhagen | 3 × 25s / side | 0kg [strength/prehab]
+   - Bosch Hold | 2 × 30s / side | 0kg [strength/prehab]
+   1. RDLs | 3 x 4-6 87.5kg
+   2. Nordic Lower | 2 x 4-6 0kg
+   3. Calf Raises | 3 x 8-12 0kg
+   4. Long-Lever Copenhagen | 3 x 15-25 /side 0kg
+   5. Bosch Hold | 2 x 20-30 /side 0kg
+2026-07-17 FRI | Mixed / upper_push / core / High indicator="core" source=template
+   TITLE: upper_push
+   - Bench Press | 3 × 5 | 107.5kg [strength/main_lift]
+   - Z-Press | 3 × 5 | 45kg [strength/main_lift]
+   - Lateral Raise | 2 × 8 | 25kg [strength/accessory]
+   - Overhead Tricep Extension | 2 × 10 | 20kg [strength/accessory]
+   - Weighted Dead Bug | 3 × 15 | 12.5kg [strength/midline]
+   - Spanish Squat Hold | 2 × 30s | 0kg [strength/prehab]
+   - 2 Min On / 1 Min Easy |  [conditioning_phase/conditioning]
+   1. Bench Press | 3 x 4-6 107.5kg
+   2. Z-Press | 3 x 4-6 45kg
+   3. Lateral Raise | 2 x 8-10 25kg
+   4. Overhead Tricep Extension | 2 x 8-12 20kg
+   5. Weighted Dead Bug | 3 x 12-15 12.5kg
+   6. Spanish Squat Hold | 2 x 20-30 0kg
+   7. 2 min On / 1 min Easy | 7 x 1 role=conditioning
+2026-07-18 SAT | Sprint-Intervals / Speed Conditioning / core / Moderate indicator="core" source=template
+   TITLE: Speed Conditioning
+   - Warm-Up |  [speed/conditioning]
+   - Fly 20 |  [speed/conditioning]
+   1. Warm-up | 1 x 1 role=conditioning
+   2. Fly 20 (20+20) | 5 x 1 role=conditioning
+2026-07-19 SUN | (no workout) indicator="rest" source=rest
+
+=== VISIBLE WEEK 2026-07-20 (today 2026-07-13)
+2026-07-20 MON | Mixed / lower_squat / core / High indicator="core" source=template
+   TITLE: lower_squat
+   - Jump Squats | 3 × 3 [strength/power]
+   - Walking Lunges | 3 × 5 / side | 25kg [strength/main_lift]
+   - Bulgarian Split Squats | 3 × 8 / side | 25kg [strength/accessory]
+   - Cossack Squat | 1 × 8 / side | 0kg [strength/prehab]
+   - Seated Calf Raise | 2 × 10 | 0kg [strength/prehab]
+   - Crab Walks | 2 × 10 | 0kg [strength/prehab]
+   - 5-Minute Aerobic Intervals |  [conditioning_phase/conditioning]
+   1. Jump Squats | 3 x 3 role=power
+   2. Walking Lunges | 3 x 4-6 /side 25kg
+   3. Cossack Squat | 1 x 8-10 /side 0kg
+   4. Bulgarian Split Squats | 3 x 6-10 /side 25kg
+   5. Seated Calf Raise | 2 x 8-12 0kg
+   6. Crab Walks | 2 x 8-12 0kg
+   7. Steady 5 min Blocks | 5 x 1 role=conditioning
+2026-07-21 TUE | Mixed / upper_pull / core / High indicator="core" source=template
+   TITLE: upper_pull
+   - Explosive Push-Up | 3 × 3 [strength/power]
+   - Bent Row | 3 × 6 | 92.5kg [strength/main_lift]
+   - Pull-Ups | 3 × 6 | 0kg [strength/main_lift]
+   - Incline Y Raise | 2 × 8 | 1kg [strength/accessory]
+   - Cable Face Pull | 2 × 10 | 25kg [strength/accessory]
+   - Band Pallof Press | 3 × 15 | 0kg [strength/midline]
+   - 30-Second Hard Intervals |  [conditioning_phase/conditioning]
+   1. Explosive Push-up | 3 x 3 role=power
+   2. Bent Row | 3 x 4-8 92.5kg
+   3. Pull-Ups | 3 x 4-8 0kg
+   4. Incline Y Raise | 2 x 8-10 1kg
+   5. Cable Face Pull | 2 x 8-12 25kg
+   6. Band Pallof Press | 3 x 12-15 0kg
+   7. 30:30 Hard Intermittent | 2 x 1 role=conditioning
+2026-07-22 WED | Mobility / Mobility / optional / mobility / Light indicator="optional" source=template
+   TITLE: Mobility
+   - Elephant Walks | 2 × 10 / side [mobility/prehab]
+   - Couch Stretch | 2 × 45s / side [mobility/prehab]
+   - Jefferson Curl | 2 × 5 [mobility/prehab]
+   - Lat Stretch | 2 × 45s / side [mobility/prehab]
+   - Deep Squat Hold | 2 × 45s [mobility/prehab]
+   - World's Greatest Stretch | 2 × 5 / side [mobility/prehab]
+   1. Elephant Walks | 2 x 8-10 /side
+   2. Couch Stretch | 2 x 30-45 /side
+   3. Jefferson Curl | 2 x 5
+   4. Lat Stretch | 2 x 30-45 /side
+   5. Deep Squat Hold | 2 x 30-45
+   6. World's Greatest Stretch | 2 x 5 /side
+2026-07-23 THU | Strength / lower_hinge / core / High indicator="core" source=template
+   TITLE: lower_hinge
+   - RDLs | 3 × 5 | 87.5kg [strength/main_lift]
+   - Nordic Lower | 2 × 5 | 0kg [strength/accessory]
+   - Calf Raises | 3 × 10 | 0kg [strength/accessory]
+   - Long-Lever Copenhagen | 3 × 25s / side | 0kg [strength/prehab]
+   - Bosch Hold | 2 × 30s / side | 0kg [strength/prehab]
+   1. RDLs | 3 x 4-6 87.5kg
+   2. Nordic Lower | 2 x 4-6 0kg
+   3. Calf Raises | 3 x 8-12 0kg
+   4. Long-Lever Copenhagen | 3 x 15-25 /side 0kg
+   5. Bosch Hold | 2 x 20-30 /side 0kg
+2026-07-24 FRI | Mixed / upper_push / core / High indicator="core" source=template
+   TITLE: upper_push
+   - Bench Press | 3 × 5 | 107.5kg [strength/main_lift]
+   - Z-Press | 3 × 5 | 45kg [strength/main_lift]
+   - Lateral Raise | 2 × 8 | 25kg [strength/accessory]
+   - Overhead Tricep Extension | 2 × 10 | 20kg [strength/accessory]
+   - Weighted Dead Bug | 3 × 15 | 12.5kg [strength/midline]
+   - Spanish Squat Hold | 2 × 30s | 0kg [strength/prehab]
+   - 2 Min On / 1 Min Easy |  [conditioning_phase/conditioning]
+   1. Bench Press | 3 x 4-6 107.5kg
+   2. Z-Press | 3 x 4-6 45kg
+   3. Lateral Raise | 2 x 8-10 25kg
+   4. Overhead Tricep Extension | 2 x 8-12 20kg
+   5. Weighted Dead Bug | 3 x 12-15 12.5kg
+   6. Spanish Squat Hold | 2 x 20-30 0kg
+   7. 2 min On / 1 min Easy | 7 x 1 role=conditioning
+2026-07-25 SAT | Sprint-Intervals / Speed Conditioning / core / Moderate indicator="core" source=template
+   TITLE: Speed Conditioning
+   - Warm-Up |  [speed/conditioning]
+   - Hill Accelerations |  [speed/conditioning]
+   1. Warm-up | 1 x 1 role=conditioning
+   2. Hill Acceleration | 8 x 1 role=conditioning
+2026-07-26 SUN | (no workout) indicator="rest" source=rest

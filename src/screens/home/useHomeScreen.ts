@@ -1418,7 +1418,7 @@ export function useHomeScreen() {
       }),
     );
     if (!result.ok) logger.warn('[missed-session] skipped outcome transaction failed', result);
-  }, [weekDays]);
+  }, [weekDays, sessionFeedback]);
 
   /**
    * THE COACH-NOTE WRITERS NOW LIVE IN ONE PLACE, AND THIS SCREEN NAMES ITSELF

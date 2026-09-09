@@ -58,7 +58,8 @@ import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { undoLastDecision } from '../store/undoLastDecision';
-import { undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
+import { undoToastCountdownArmed, undoToastFor, undoToastSeenMarker } from '../rules/undoToast';
+import { useAnySheetOpen } from './ui/Sheet';
 import { UNDO_TOAST_COPY } from '../rules/undoToastCopy';
 
 /** How long the toast stays before it withdraws itself. */
@@ -76,6 +77,8 @@ interface UndoToastProps {
 export function UndoToast({ bottomOffset }: UndoToastProps = {}): React.ReactElement | null {
   const entries = useDecisionLedgerStore((state) => state.entries);
   const isFocused = useIsFocused();
+  // A sheet over the toast pauses everything — see undoToastCountdownArmed.
+  const covered = useAnySheetOpen();
   const [seenEntryId, setSeenEntryId] = useState<string | null>(
     () => undoToastSeenMarker(entries),
   );
@@ -99,14 +102,14 @@ export function UndoToast({ bottomOffset }: UndoToastProps = {}): React.ReactEle
   }, [isFocused, entries]);
 
   useEffect(() => {
-    if (!model || !isFocused) return undefined;
+    if (!undoToastCountdownArmed({ hasModel: !!model, isFocused, covered })) return undefined;
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 180, useNativeDriver: true }).start();
     const timer = setTimeout(() => setSeenEntryId(model.entryId), VISIBLE_MS);
     return () => clearTimeout(timer);
-  }, [model?.entryId, isFocused]);
+  }, [model?.entryId, isFocused, covered]);
 
-  if (!model || !isFocused) return null;
+  if (!model || !isFocused || covered) return null;
 
   const handleUndo = async (): Promise<void> => {
     if (busy) return;

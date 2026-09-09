@@ -1,0 +1,21 @@
+reset ok= true week 2026-08-10 today 2026-08-10
+
+=== VISIBLE WEEK 2026-08-10 (today 2026-08-10)
+2026-08-10 MON | (no workout)  source=none
+2026-08-11 TUE | (no workout)  source=none
+2026-08-12 WED | (no workout)  source=none
+2026-08-13 THU | (no workout)  source=none
+2026-08-14 FRI | (no workout)  source=none
+2026-08-15 SAT | Game / Game Day / core / High indicator="game" source=game
+   TITLE: Game Day
+2026-08-16 SUN | (no workout)  source=none
+
+=== VISIBLE WEEK 2026-08-17 (today 2026-08-10)
+2026-08-17 MON | (no workout)  source=none
+2026-08-18 TUE | (no workout)  source=none
+2026-08-19 WED | (no workout)  source=none
+2026-08-20 THU | (no workout)  source=none
+2026-08-21 FRI | (no workout)  source=none
+2026-08-22 SAT | Game / Game Day / core / High indicator="game" source=game
+   TITLE: Game Day
+2026-08-23 SUN | (no workout)  source=none

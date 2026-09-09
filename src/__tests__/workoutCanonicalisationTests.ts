@@ -467,6 +467,30 @@ section('[11] the off-season subphase is carried, never guessed');
   );
 }
 
+
+// F8 (everyday acceptance, 2026-09-09): an EMPTY composed optional collapses to
+// rest instead of reaching the athlete as a zero-row "Gunshow" card. The early
+// return for composedOptionalKind used to bypass the strength collapse below.
+{
+  const emptyGunshow = {
+    ...workout('Gunshow', []),
+    sessionTier: 'optional',
+    composedOptionalKind: 'gunshow',
+  } as unknown as Workout;
+  const result = finaliseWorkoutAfterMutation(emptyGunshow, { offseasonSubphase: 'not_off_season', phase: 'In-season' });
+  ok('an empty composed optional collapses to rest',
+    result.workout.workoutType === 'Rest' && result.actions.some((action) => action.kind === 'collapsed_to_rest'),
+    { type: result.workout.workoutType, actions: result.actions });
+  const keptGunshow = {
+    ...workout('Gunshow', [row('Incline Dumbbell Curl', 3)]),
+    sessionTier: 'optional',
+    composedOptionalKind: 'gunshow',
+  } as unknown as Workout;
+  const kept = finaliseWorkoutAfterMutation(keptGunshow, { offseasonSubphase: 'not_off_season', phase: 'In-season' });
+  ok('a composed optional with rows is still left exactly as composed',
+    kept.changed === false && kept.workout.exercises.length === 1, kept.actions);
+}
+
 console.log(`\nworkoutCanonicalisationTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (fail > 0) {

@@ -33,7 +33,7 @@ import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visibleProjection';
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
-import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
+import { dayTimeline, dayTimelineSessionCompleted, timelineEntryWorked, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
 import type { ChristmasBreakAsk } from '../../rules/christmasBreakAsk';
 import {
@@ -816,10 +816,9 @@ export default function HomeScreenV2() {
     const timelineEntries = visibleDay
       ? dayTimeline(visibleDay, sessionFeedback[day.date], projectedWorkout, recordedExecution)
       : [];
-    const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
-    const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;
-    const sessionLogged = decidingRows.length > 0
-      && decidingRows.every((entry) => entry.completion !== null);
+    // "Done" has ONE owner (`rules/dayTimeline.ts`): only full or partial work
+    // counts. A day saved with every part skipped is answered, not done.
+    const sessionLogged = dayTimelineSessionCompleted(timelineEntries);
 
     const clubEntry = timelineEntries.find((entry) => entry.kind === 'team_training');
     return (
@@ -1263,7 +1262,7 @@ export default function HomeScreenV2() {
             ordered newest-first by the hook, so the head IS the most recent. */}
         {isNormal && missedSessionNotices.length > 0 && (
           <MissedSessionNotice
-            notice={missedSessionNotices[0]}
+            notices={missedSessionNotices.filter((missed) => missed.date === missedSessionNotices[0].date)}
             visibleWeek={visibleWeek}
             onLog={(missed) => {
               switch (missed.kind) {
@@ -2634,7 +2633,7 @@ function DayRow({
   // and saved feedback — the day is complete. Drives the read-only completed
   // CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
-  const isCompleted = hasWorkout && (sessionLogged ?? feedbackReceipts.length > 0);
+  const isCompleted = hasWorkout && sessionLogged;
   // ── RULING 5, AND WHERE THE "TODAY" FACT LIVES NOW ──
   //
   // Sam, 2026-08-10, on his own screen next to hers: *"the today badge is still
@@ -3024,7 +3023,7 @@ function TeamTrainingCard({
           nothing beside the title. Icon, then title over status, then button. */}
       <View style={styles.teamTrainingRow}>
         <View style={styles.timelineIconMarker}>
-          {logged === 'full' || logged === 'partial' ? (
+          {timelineEntryWorked(logged) ? (
             <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
           ) : (
             <RowIcon kind="team" size={DAY_ROW_ICON_SIZE} color={rowIconColor('team')} />
@@ -3283,7 +3282,7 @@ function DayTimeline({
               style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
             >
               <View style={styles.timelineIconMarker}>
-                {mobilityCompletion === 'full' || mobilityCompletion === 'partial' ? (
+                {timelineEntryWorked(mobilityCompletion) ? (
                   <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
                   <RowIcon kind="flame" size={DAY_ROW_ICON_SIZE} color={rowIconColor('flame')} />
@@ -3442,7 +3441,7 @@ function DayTimeline({
                 * them, and that is the one thing this screen must never do.
                 */}
               <View style={styles.timelineIconMarker}>
-                {entry.completion === 'full' || entry.completion === 'partial' ? (
+                {timelineEntryWorked(entry.completion) ? (
                   <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
                   <RowIcon
@@ -3777,6 +3776,16 @@ interface ProgramQuestionNoticeProps {
   question: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  /**
+   * FURTHER QUESTIONS THAT BELONG TO THE SAME CARD — a club night's second
+   * half under its first (Sam, 2026-09-09). Each carries its own answers.
+   */
+  followUps?: readonly {
+    key: string;
+    questionTestID: string;
+    question: string;
+    children: React.ReactNode;
+  }[];
 }
 
 /**
@@ -3792,6 +3801,7 @@ function ProgramQuestionNotice({
   question,
   icon,
   children,
+  followUps = [],
 }: ProgramQuestionNoticeProps) {
   return (
     <View style={styles.questionNoticeCard} testID={testID}>
@@ -3801,6 +3811,14 @@ function ProgramQuestionNotice({
           {question}
         </Text>
         <View style={styles.questionNoticeActions}>{children}</View>
+        {followUps.map((followUp) => (
+          <React.Fragment key={followUp.key}>
+            <Text style={styles.questionNoticeTitle} testID={followUp.questionTestID}>
+              {followUp.question}
+            </Text>
+            <View style={styles.questionNoticeActions}>{followUp.children}</View>
+          </React.Fragment>
+        ))}
       </View>
     </View>
   );
@@ -3860,8 +3878,16 @@ function ChristmasBreakNoticeIcon() {
 
 // ── Missed-session follow-up question ──
 interface MissedSessionNoticeProps {
-  /** The most recent unlogged commitment. One question on screen at a time. */
-  notice: MissedSession;
+  /**
+   * THE MOST RECENT UNLOGGED DAY, every half of it. One day on screen at a
+   * time (Sam, 2026-08-22: "one at a time, most recent first"), and when that
+   * day holds two unanswered halves — a club night's gym work and its team
+   * training — both questions sit in the ONE card, each with its own answers
+   * (Sam, 2026-09-09: "if they skipped both they need to be asked to log both
+   * in the same pop up"). Every entry shares one date; each is answered
+   * through its own door and the card shrinks as the halves are answered.
+   */
+  notices: readonly MissedSession[];
   /** The projection of the week on screen, for the day's own programmed name. */
   visibleWeek: VisibleWeek;
   onLog: (missed: MissedSession) => void;
@@ -3905,14 +3931,22 @@ interface MissedSessionNoticeProps {
  * this) and the session word is the day's own bucket, which is signed copy
  * already. This component composes no character of what the athlete reads.
  */
-function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: MissedSessionNoticeProps) {
+function MissedSessionNotice({ notices, visibleWeek, onLog, onSkip, onMove }: MissedSessionNoticeProps) {
   // Same quiet proportions as Active modifiers, but a question-mark icon: this
   // notice asks for an answer while the modifier strip only reports a count.
+  const [notice, ...rest] = notices;
+  if (!notice) return null;
   return (
     <ProgramQuestionNotice
       testID="home-missed-session-prompt"
       questionTestID={`missed-session-question-${notice.date}-${notice.kind}`}
       question={missedQuestion(notice, visibleWeek)}
+      followUps={rest.map((other) => ({
+        key: `${other.date}-${other.kind}`,
+        questionTestID: `missed-session-question-${other.date}-${other.kind}`,
+        question: missedQuestion(other, visibleWeek),
+        children: <MissedSessionAnswers notice={other} onLog={onLog} onSkip={onSkip} onMove={onMove} />,
+      }))}
       icon={(
         <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
           stroke="#D8D800" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -3922,6 +3956,20 @@ function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: Mis
         </Svg>
       )}
     >
+      <MissedSessionAnswers notice={notice} onLog={onLog} onSkip={onSkip} onMove={onMove} />
+    </ProgramQuestionNotice>
+  );
+}
+
+/** The three answers for ONE half of a day, exactly as ruled, in the signed words. */
+function MissedSessionAnswers({ notice, onLog, onSkip, onMove }: {
+  notice: MissedSession;
+  onLog: (missed: MissedSession) => void;
+  onSkip: (missed: MissedSession) => void;
+  onMove: (missed: MissedSession) => void;
+}) {
+  return (
+    <>
           <NoticeChip
             testID={`missed-session-did-it-${notice.date}-${notice.kind}`}
             label={signedCopy('missed.prompt.yes')}
@@ -3938,7 +3986,7 @@ function MissedSessionNotice({ notice, visibleWeek, onLog, onSkip, onMove }: Mis
             label={signedCopy('missed.prompt.move')}
             onPress={() => onMove(notice)}
           />
-    </ProgramQuestionNotice>
+    </>
   );
 }
 

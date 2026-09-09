@@ -1119,6 +1119,19 @@ console.log('\n[optional G-1] gender, phase, fixture count and reduced-week law'
     JSON.stringify(composedOptionalKinds(male)) === JSON.stringify(['gunshow']));
   ok('one-game in-season female receives only the optional G-1 Primer', [],
     JSON.stringify(composedOptionalKinds(female)) === JSON.stringify(['primer']));
+  // F8 (everyday acceptance, 2026-09-09): the Gunshow is a gym session. G−1
+  // that is not a gym-access day has no barbell, cable or dumbbell arm work to
+  // compose, and the builder returned an empty session the phone still showed.
+  // The placer asks the day first: no gym on G−1, no Gunshow offer. (Primer is
+  // bodyweight-legal and keeps its seat.)
+  ok('the automatic male Gunshow is not offered when G-1 is not a gym-access day', [],
+    composedOptionalKinds(built({
+      ...gameWeek, athleteGender: 'male', gymAccessDays: [MON, TUE, THU],
+    })).length === 0);
+  ok('the female Primer keeps its G-1 seat on a non-gym day (bodyweight-legal)', [],
+    JSON.stringify(composedOptionalKinds(built({
+      ...gameWeek, athleteGender: 'female', gymAccessDays: [MON, TUE, THU],
+    }))) === JSON.stringify(['primer']));
   ok('a scheduled deload removes the automatic male Gunshow', [],
     composedOptionalKinds(built({
       ...gameWeek, athleteGender: 'male', weekKind: 'deload',
