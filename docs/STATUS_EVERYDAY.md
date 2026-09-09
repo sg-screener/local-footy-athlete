@@ -37,3 +37,15 @@ Sam freed the disk (46 GB candidate worktree removed by me on his word, 21 shut-
 NOT COVERED: the Maestro YAML flows as YAML; "move it back"; the past-day missed prompt (structurally unreachable in seeds); the PDF's week 1 on the phone (different start date); a second reproduction of F13; Sam's real phone; mail; cloud sync.
 
 My simulator and my Metro on `:8093` are left running for Sam to look at; both are mine to stop.
+
+## 2026-09-09 (evening) — the approved fixes, built and proven
+
+Sam approved items 2–7 of `output/everyday-acceptance-2026-09-09/DIAGNOSIS.md` and the combined missed-session card. Built in seven pathspec commits (`11fcf9e0` F3, `b6c6a6b3` F5, `657b9f18` F1, `a1ecc6c2` F6+F8, `94315714` skip door + one card per day, `7dd7f9e6` coach grounding), each tests-first with the born-red count recorded, neighbours classified against a control worktree at `7296df1e`, and each proven on my simulator — the table with commits, cells and screenshot names is the last section of the report README.
+
+**WORKING:** F3, F5, F1, F6, F8, the skip chip (a club night's halves answered one by one, both committed, the card moves on), the coach contract (the two device replies are refused, a truthful one passes). **BUILT, not provable on glass:** the coach's server half — **not deployed**, it ships with the next `supabase functions deploy coach-chat`. **WRITTEN only:** F13, first-tap/lag, F7, F9, F2 (not approved).
+
+**Not hidden:** `test:coach-phrase-ratchet` was already red and now counts 8 more text-literal branches in the contract file (the grounding tripwires); `test:dev-e2e-seeds` spent-week cell's expectation changed (Friday is a real Rest day) and is reported in the commit. Pre-existing dead/red suites are listed in the README section.
+
+**Observed, not fixed:** ~22 s from tap to persisted outcome on the simulator, screen not repainting until then (first-tap/lag family).
+
+My simulator (`3680ABE7-…`) and Metro `:8093` are left running for Sam; the control worktree is removed.
