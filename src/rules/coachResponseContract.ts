@@ -1,4 +1,5 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
+import { COACH_APP_DOOR_LABELS } from './coachAppMap';
 
 /** Pure automatic response boundary shared by Coach Lab and the live endpoint. */
 
@@ -6,7 +7,9 @@ export type CoachResponseBasis =
   | 'athlete_snapshot'
   | 'lfa_rule'
   | 'coaching_judgement'
-  | 'general_s_and_c';
+  | 'general_s_and_c'
+  /** The answer names a door of the app — a control the athlete can tap (slice S3, 2026-09-10). */
+  | 'app_door';
 
 export type CoachResponseSnapshotField = keyof Pick<
   CoachSnapshot,
@@ -17,7 +20,7 @@ export type CoachResponseSnapshotField = keyof Pick<
 
 export interface CoachResponseKnowledgeSource {
   readonly id: string;
-  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example';
+  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example' | 'app_map';
   readonly sourceReference: string;
 }
 
@@ -51,6 +54,8 @@ export interface CoachResponseAutomaticChecks {
   readonly fixtureClaimsGrounded: boolean;
   /** The words do not name a season phase the snapshot does not carry (R-397). */
   readonly phaseClaimsGrounded: boolean;
+  /** Every control the words tell the athlete to tap is a door the app map holds (slice S3). */
+  readonly doorClaimsGrounded: boolean;
 }
 
 /**
@@ -73,18 +78,58 @@ export interface CoachResponseGroundingFacts {
    * to it.
    */
   readonly seasonPhase: string | null;
+  /**
+   * Every on-screen label the app map holds, lower-cased (slice S3). The
+   * words may tell the athlete to tap only these; the list is the map's, not
+   * the model's, so a renamed button changes the gate on the next build.
+   */
+  readonly doorLabels: readonly string[];
 }
 
 export function coachResponseGroundingFacts(snapshot: {
   readonly readiness: { readonly reported: boolean };
   readonly visibleWeek: { readonly fixtures: readonly { readonly weekday: string }[] };
   readonly situation?: { readonly season: { readonly phase: string } | null };
-}): CoachResponseGroundingFacts {
+}, doorLabels: readonly string[] = COACH_APP_DOOR_LABELS): CoachResponseGroundingFacts {
   return {
     readinessReported: snapshot.readiness.reported,
     gameWeekdays: snapshot.visibleWeek.fixtures.map((fixture) => fixture.weekday),
     seasonPhase: snapshot.situation?.season?.phase ?? null,
+    doorLabels: doorLabels.map((label) => label.toLowerCase()),
   };
+}
+
+/**
+ * "tap X", "press the X button", "open X", "use the X option": X is a control
+ * the athlete is being sent to. Held to the map when X is QUOTED — a quoted
+ * label is a claim about the app's glass. An unquoted Title-Case phrase after
+ * the same verbs is checked only when it begins like a known door; ordinary
+ * prose ("Use Monday's session…") is never refused, because a false refusal
+ * costs the athlete a good answer and the instruction already asks for the
+ * exact label.
+ */
+const DOOR_CLAIM = /\b(?:[Tt]ap|[Pp]ress|[Hh]it|[Oo]pen|[Uu]se|[Ss]elect|[Cc]hoose)\s+(?:on\s+)?(?:the\s+)?(?:["“']([^"”'\n]{2,60})["”']|((?:[A-Z][\w'’%?]*)(?:\s+(?:[A-Z][\w'’%?]*|100%\?|a|an|the|of|to|this|my|it|as|is)){1,5}))/g;
+
+function doorMatches(named: string, labels: readonly string[]): boolean {
+  return labels.some((label) => label === named || named.startsWith(label) || label.startsWith(named));
+}
+
+export function doorClaimGrounded(message: string, facts: CoachResponseGroundingFacts): boolean {
+  const pattern = new RegExp(DOOR_CLAIM.source, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(message)) !== null) {
+    const quoted = match[1] !== undefined;
+    const named = (match[1] ?? match[2] ?? '').trim().replace(/[.,;:!?]+$/, '').toLowerCase();
+    if (!named) continue;
+    if (quoted) {
+      if (!doorMatches(named, facts.doorLabels)) return false;
+      continue;
+    }
+    const firstWord = named.split(/\s+/)[0];
+    const looksLikeADoor = facts.doorLabels.some((label) => label.startsWith(firstWord));
+    if (looksLikeADoor && !doorMatches(named, facts.doorLabels)) return false;
+  }
+  return true;
 }
 
 /**
@@ -198,6 +243,7 @@ const BASIS = new Set<string>([
   'lfa_rule',
   'coaching_judgement',
   'general_s_and_c',
+  'app_door',
 ]);
 const SNAPSHOT_FIELDS = new Set<string>([
   'visibleWeek',
@@ -221,6 +267,7 @@ const ANSWER_MODES = new Set<string>([
 ]);
 const JUDGEMENT_LABELS = new Set<string>(['not_needed', 'labelled', 'missing']);
 const SOURCE_AUTHORITIES = new Set<string>([
+  'app_map',
   'lfa_bible',
   'active_rule',
   'canonical_source',
@@ -326,7 +373,8 @@ export function coachResponseContractFailureCode(
     || !checks.changeClaimsTruthful
     || !checks.readinessClaimsGrounded
     || !checks.fixtureClaimsGrounded
-    || !checks.phaseClaimsGrounded) {
+    || !checks.phaseClaimsGrounded
+    || !checks.doorClaimsGrounded) {
     return 'refused';
   }
   return 'invalid_answer';
@@ -378,6 +426,8 @@ export function evaluateCoachResponseContract(
       && fixtureClaimGrounded(payload.message, policy.facts),
     phaseClaimsGrounded: payload !== null
       && phaseClaimGrounded(payload.message, policy.facts),
+    doorClaimsGrounded: payload !== null
+      && doorClaimGrounded(payload.message, policy.facts),
   };
   const violations = (Object.keys(checks) as (keyof CoachResponseAutomaticChecks)[])
     .filter((name) => !checks[name]);

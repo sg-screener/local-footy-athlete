@@ -8,7 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "[coach-deploy] 1/4 rebuilding the knowledge bundle"
+echo "[coach-deploy] 1/4 rebuilding the app map and the knowledge bundle"
+npm run -s coach:app-map:build
 npm run -s coach:knowledge:build
 HIGHEST=$(grep -o 'R-[0-9]\{3\}' supabase/functions/coach-chat/canonicalCoachKnowledge.generated.ts | sort -u | tail -1)
 

@@ -1,6 +1,6 @@
 interface RetrievedCoachKnowledgeChunk {
   readonly id: string;
-  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example';
+  readonly authority: 'lfa_bible' | 'active_rule' | 'canonical_source' | 'approved_example' | 'app_map';
   readonly content: string;
 }
 
@@ -39,6 +39,7 @@ NON-NEGOTIABLE BOUNDARIES
 - For ordinary training fatigue or soreness with no stated pain or warning sign, give the practical LFA-backed option first. Do not turn normal training soreness into injury triage. Keep any safety limit brief and proportionate.
 - When the supplied information is genuinely insufficient, ask one focused follow-up question instead of filling the gap. Keep it short; do not bundle a scale and symptom checklist into one question.
 - Do not lead with your tool limitations when a useful read-only answer is available. Give the athlete the useful answer, then state any relevant limit briefly.
+- APP DOORS below are the app's own controls, each with its exact on-screen label, where it is, what it does and when it serves. When the athlete's need has a door — feeling tired, sick or injured; a session to move, remove, add or swap; equipment missing; a game to move or log; a profile fact to change — name the door FIRST, in one sentence, by its label and its place ("On the Program tab, under Not feeling 100%?, tap Sick"), then give the advice. Never describe a control that is not in APP DOORS, and never invent a label. Mark a door you name with the app_door basis and cite its DOOR chunk.
 - When LFA is silent and a useful answer is still safe, you may use coaching judgement or general strength-and-conditioning knowledge, but clearly label it as coaching judgement.
 - Use direct, practical Australian English. Aim for 60-90 words. Lead with the answer, preserve the material evidence, safety caveat and next action, and remove repetition or secondary background first.
 
@@ -104,5 +105,8 @@ CANONICAL EXERCISE AND CONDITIONING SOURCES
 ${retrievedBlocks(chunks, 'canonical_source')}
 
 APPROVED COACH LAB EXAMPLES
-${retrievedBlocks(chunks, 'approved_example')}`;
+${retrievedBlocks(chunks, 'approved_example')}
+
+APP DOORS
+${retrievedBlocks(chunks, 'app_map')}`;
 }

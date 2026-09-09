@@ -2,7 +2,9 @@ export type CanonicalCoachKnowledgeAuthority =
   | 'lfa_bible'
   | 'active_rule'
   | 'canonical_source'
-  | 'approved_example';
+  | 'approved_example'
+  /** The app's doors, generated from the signed labels (slice S3). */
+  | 'app_map';
 
 interface RetrievalSnapshot {
   readonly readiness: unknown;
@@ -158,9 +160,12 @@ function queryWeights(message: string, snapshot: RetrievalSnapshot): ReadonlyMap
   return weights;
 }
 
-const RULING_HEADING = /^(?:\*\*|## )(R-\d{3})\b/;
+/** A registry ruling row, or an app-map door row — both are one chunk each. */
+const RULING_HEADING = /^(?:\*\*|## )(R-\d{3}|DOOR-[a-z0-9-]+)\b/;
 /** Ruling slots ranked by the athlete's words alone, seated before the context fills the rest. */
 const QUESTION_RULING_SLOTS = 6;
+/** Door slots ranked by the athlete's words alone (slice S3). */
+const QUESTION_DOOR_SLOTS = 2;
 const SECTION_HEADING = /^## /;
 
 /**
@@ -232,7 +237,9 @@ function headingMatches(
   inverseDocumentFrequency: ReadonlyMap<string, number>,
 ): number {
   if (!chunk.ruling) return 0;
-  const heading = new Set(tokens(chunk.content.split('\n')[0].slice(0, 240)));
+  const heading = new Set(tokens(chunk.authority === 'app_map'
+    ? chunk.content
+    : chunk.content.split('\n')[0].slice(0, 240)));
   let matched = 0;
   for (const term of questionWeights.keys()) {
     if (heading.has(term)) matched += inverseDocumentFrequency.get(term) ?? 1;
@@ -272,7 +279,11 @@ function scoreChunk(
   for (const token of tokens(chunk.content)) bodyCounts.set(token, (bodyCounts.get(token) ?? 0) + 1);
   // A ruling chunk's heading is its first line (`**R-nnn** · title …`),
   // however long; a window's headings are its short title-shaped lines.
-  const headingSource = chunk.ruling
+  // A door row is one line whose subject is spread across label, place and
+  // "when"; the whole row is its title. A ruling's title is its first line.
+  const headingSource = chunk.authority === 'app_map'
+    ? chunk.content
+    : chunk.ruling
     ? chunk.content.split('\n')[0].slice(0, 240)
     : chunk.content.split('\n')
       .map((line) => line.trim())
@@ -294,6 +305,9 @@ function scoreChunk(
     if (headingTokens.has(term)) score += weight * rarity * (chunk.ruling ? 10 : 6);
   }
   if (score > 0 && chunk.authority === 'active_rule') score += 3;
+  // A door row is short and written in the athlete's words; a "how do i" or
+  // "where do i" question is about the app, and the door must win it.
+  if (score > 0 && chunk.authority === 'app_map') score += 3;
   // One ruling per chunk means chunks of very different length compete; a
   // long row must not win on bulk alone (slice S2).
   if (chunk.ruling && chunk.content.length > 1_500) {
@@ -321,7 +335,9 @@ export function retrieveCoachLabKnowledge(args: {
 }): CoachLabKnowledgeRetrieval {
   const maximumSelectedCharacters = args.maxSelectedCharacters ?? 60_000;
   const allChunks = args.sources.flatMap((source) => (
-    source.authority === 'active_rule' ? chunkRulings(source) : chunkSource(source)
+    source.authority === 'active_rule' || source.authority === 'app_map'
+      ? chunkRulings(source)
+      : chunkSource(source)
   ));
   const documentFrequency = new Map<string, number>();
   for (const chunk of allChunks) {
@@ -373,7 +389,17 @@ export function retrieveCoachLabKnowledge(args: {
       - headingMatches(left, questionWeights, inverseDocumentFrequency)
       || byScore(left, right))
     .slice(0, QUESTION_RULING_SLOTS);
-  for (const chunk of questionRulings) {
+  // Doors are seated the same way (slice S3): "where do i log the game" is
+  // about the app, and the readiness context must not crowd the door out.
+  const questionDoors = allChunks
+    .filter((chunk) => chunk.authority === 'app_map')
+    .map((chunk) => ({ ...chunk, score: scoreChunk(chunk, questionWeights, inverseDocumentFrequency) }))
+    .filter((chunk) => chunk.score > 0)
+    .sort((left, right) => headingMatches(right, questionWeights, inverseDocumentFrequency)
+      - headingMatches(left, questionWeights, inverseDocumentFrequency)
+      || byScore(left, right))
+    .slice(0, QUESTION_DOOR_SLOTS);
+  for (const chunk of [...questionRulings, ...questionDoors]) {
     const nextCharacters = selected.reduce((total, entry) => total + entry.content.length, 0)
       + chunk.content.length;
     if (nextCharacters > maximumSelectedCharacters) continue;
@@ -384,6 +410,7 @@ export function retrieveCoachLabKnowledge(args: {
     lfa_bible: 0,
     canonical_source: 0,
     approved_example: 0,
+    app_map: selected.filter((chunk) => chunk.authority === 'app_map').length,
   };
   // Slice S2: a ruling chunk is one short row, so eight of them cost less
   // than the two 72-line windows they replace.
@@ -392,6 +419,7 @@ export function retrieveCoachLabKnowledge(args: {
     lfa_bible: 6,
     canonical_source: 2,
     approved_example: 1,
+    app_map: 4,
   };
   let rankedSelections = 0;
   for (const chunk of ranked) {
@@ -412,6 +440,7 @@ export function retrieveCoachLabKnowledge(args: {
       lfa_bible: 1,
       canonical_source: 2,
       approved_example: 3,
+      app_map: 4,
     };
     return authorityOrder[left.authority] - authorityOrder[right.authority]
       || left.path.localeCompare(right.path)

@@ -1,4 +1,4 @@
-export type CoachKnowledgeAuthority = 'lfa_bible' | 'active_rule' | 'canonical_source';
+export type CoachKnowledgeAuthority = 'lfa_bible' | 'active_rule' | 'canonical_source' | 'app_map';
 
 export interface CoachKnowledgeSourceSpec {
   readonly path: string;
@@ -13,4 +13,6 @@ export const COACH_KNOWLEDGE_SOURCE_SPECS: readonly CoachKnowledgeSourceSpec[] =
   { path: 'src/data/exerciseTags.ts', authority: 'canonical_source' },
   { path: 'src/data/exerciseEquipmentRequirement.ts', authority: 'canonical_source' },
   { path: 'src/data/conditioningTemplates.ts', authority: 'canonical_source' },
+  /** Generated from `src/rules/coachAppMap.ts` by `npm run coach:app-map:build` (slice S3). */
+  { path: 'docs/generated/COACH_APP_MAP.md', authority: 'app_map' },
 ] as const;

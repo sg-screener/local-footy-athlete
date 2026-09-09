@@ -14,6 +14,7 @@ import {
   coachResponseContractFailureCode,
   evaluateCoachResponseContract,
 } from '../rules/coachResponseContract';
+import { COACH_APP_DOOR_LABELS } from '../rules/coachAppMap';
 import { coachFailureReply } from '../rules/coachTabCopy';
 import { buildCoachModelInput } from '../rules/coachModelContext';
 import { coachResponseGroundingFacts } from '../rules/coachResponseContract';
@@ -475,7 +476,9 @@ async function finish(): Promise<void> {
     judgementLabel: 'not_needed',
     programActions: [],
   };
-  const FIXTURE_FACTS = { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: 'In-season' } as const;
+  // Slice S3: the facts also carry every door label the map holds.
+  const DOOR_LABELS = COACH_APP_DOOR_LABELS.map((label) => label.toLowerCase());
+  const FIXTURE_FACTS = { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: 'In-season', doorLabels: DOOR_LABELS } as const;
   const sound = evaluateCoachResponseContract(grounded, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
@@ -545,7 +548,7 @@ async function finish(): Promise<void> {
   }, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
-    facts: { readinessReported: false, gameWeekdays: ['Saturday'], seasonPhase: 'In-season' },
+    facts: { readinessReported: false, gameWeekdays: ['Saturday'], seasonPhase: 'In-season', doorLabels: DOOR_LABELS },
   });
   ok('F14: a readiness tier asserted when nothing was recorded fails closed as a refusal',
     !inventedReadiness.ok
@@ -577,7 +580,7 @@ async function finish(): Promise<void> {
   }, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
-    facts: { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: null },
+    facts: { readinessReported: true, gameWeekdays: ['Saturday'], seasonPhase: null, doorLabels: DOOR_LABELS },
   });
   ok('R-397: a phase asserted when the app could not say one is refused',
     !phaseUnknown.ok && phaseUnknown.automaticChecks.phaseClaimsGrounded === false, phaseUnknown);
@@ -613,7 +616,7 @@ async function finish(): Promise<void> {
   const gameInAnEmptyWeek = evaluateCoachResponseContract(grounded, {
     requiresLiveProgramFacts: true,
     allowedKnowledgeSourceIds: ['bible:L1-L2'],
-    facts: { readinessReported: true, gameWeekdays: [], seasonPhase: 'In-season' },
+    facts: { readinessReported: true, gameWeekdays: [], seasonPhase: 'In-season', doorLabels: DOOR_LABELS },
   });
   ok('naming a Saturday game in a week with no fixture fails the same check',
     !gameInAnEmptyWeek.ok && gameInAnEmptyWeek.automaticChecks.fixtureClaimsGrounded === false);

@@ -1626,6 +1626,22 @@
       ],
       "witnessScript": "test:coach-retrieval-regression",
       "evidenceKind": "green_now"
+    },
+    "test:coach-app-map": {
+      "kind": "current_contract",
+      "reason": "The coach may only send the athlete to a door the app has, by its exact on-screen label (L-C4 parity, slice S3, 2026-09-10): every label is the sheet's or the rendering file's word, the generated map is byte-fresh, and the response contract refuses a quoted control the map does not hold.",
+      "productionPaths": [
+        "src/rules/coachAppMap.ts",
+        "src/rules/coachResponseContract.ts",
+        "src/rules/coachKnowledgeManifest.ts"
+      ],
+      "contractRefs": [
+        "R-249",
+        "R-138",
+        "R-397"
+      ],
+      "witnessScript": "test:coach-app-map",
+      "evidenceKind": "green_now"
     }
   }
 }

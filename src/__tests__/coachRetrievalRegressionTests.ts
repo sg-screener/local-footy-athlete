@@ -62,6 +62,26 @@ function rulingsFor(message: string): readonly string[] {
     .map((chunk) => chunk.ruling ?? chunk.id);
 }
 
+function doorsFor(message: string): readonly string[] {
+  const snapshot = buildCoachModelInput({ athleteMessage: message, snapshot: fixtureWithRows() })
+    .currentAthleteSnapshot;
+  return retrieveCoachLabKnowledge({ athleteMessage: message, snapshot, sources }).chunks
+    .filter((chunk) => chunk.authority === 'app_map')
+    .map((chunk) => chunk.ruling ?? chunk.id);
+}
+
+/** "how do i …" → the door that serves it (slice S3). */
+const DOOR_PAIRS: readonly { readonly message: string; readonly doors: readonly string[] }[] = [
+  { message: 'how do i tell the app im sick', doors: ['DOOR-sick', 'DOOR-not-feeling-100'] },
+  { message: 'where do i log the game', doors: ['DOOR-log-game'] },
+  { message: 'how do i change my gym days', doors: ['DOOR-profile-gym-days', 'DOOR-profile-tab'] },
+  { message: 'im going away next week what do i do in the app', doors: ['DOOR-going-away', 'DOOR-adjust-this-week'] },
+  { message: 'how do i move a session to another day', doors: ['DOOR-move-session', 'DOOR-manage-week'] },
+  { message: 'dont have a rack today what do i press', doors: ['DOOR-equipment-changed'] },
+  { message: 'my knee hurts where do i tell the app', doors: ['DOOR-injured', 'DOOR-something-hurts'] },
+  { message: 'how do i clear the tired adjustment', doors: ['DOOR-clear-adjustment', 'DOOR-my-status'] },
+];
+
 /** question → the ruling(s) that own the answer; any one of them suffices. */
 const PAIRS: readonly { readonly message: string; readonly owners: readonly string[]; readonly why: string }[] = [
   { message: 'can i do leg curls instead of nordics', owners: ['R-394'], why: 'in season a curl does not replace the Nordic' },
@@ -98,6 +118,13 @@ console.log('\n[1b] SORENESS IS OWNED BY THE BIBLE, AND THE BIBLE ROW IS SHOWN')
   ok('a soreness question shows a Bible excerpt that speaks of soreness',
     chunks.some((chunk) => chunk.authority === 'lfa_bible' && /sorenes/i.test(chunk.content)),
     chunks.map((chunk) => chunk.id));
+}
+
+console.log('\n[1c] A "HOW DO I" QUESTION REACHES ITS DOOR (S3)');
+for (const pair of DOOR_PAIRS) {
+  const shown = doorsFor(pair.message);
+  ok(`"${pair.message}" reaches ${pair.doors.join(' or ')}`,
+    pair.doors.some((door) => shown.includes(door)), shown);
 }
 
 console.log('\n[2] THE REGISTRY IS ONE CHUNK PER RULING, AND EIGHT RULINGS FIT');
