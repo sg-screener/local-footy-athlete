@@ -60,10 +60,16 @@ check('observation marker contains control, trace and observation identity',
 // Visible-verification (GROUPB finding 1): a saved session outcome (persisted
 // receipt) must surface as a completed day card and a read-only reopen — the
 // receipt was already persisted; these pin that the visible layer reads it back.
-check('completed day card is driven by the persisted feedback receipt',
-  /const isCompleted = hasWorkout && feedbackReceipts\.length > 0;/.test(home) &&
+// One owner for "done" (everyday acceptance F3, 2026-09-09): the card reads
+// `dayTimelineSessionCompleted`, which is the persisted outcome's completions
+// read back through the timeline — full or partial only, never a skipped save.
+check('completed day card is driven by the persisted feedback outcome, through the one owner',
+  /const sessionLogged = dayTimelineSessionCompleted\(timelineEntries\);/.test(home) &&
+  /const isCompleted = hasWorkout && sessionLogged;/.test(home) &&
   /isCompleted \? \(/.test(home) &&
-  /label="View summary"/.test(home));
+  // The button's copy is signed; its marker is the stable thing to pin (the
+  // `label="View summary"` literal left the source at 49c85ed2).
+  /testID="view-completed-session-button"/.test(home));
 // The MARKER is what this cell is for, not the component that draws it. Sam
 // ruled on 2026-08-22 that Done replaces the day's tier chip rather than
 // standing beside it, so the marker moved into `SessionTierBadge` — same slot,

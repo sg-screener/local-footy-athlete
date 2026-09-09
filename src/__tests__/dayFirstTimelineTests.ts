@@ -75,7 +75,7 @@ import {
   project,
   projectParts,
 } from '../rules/projectVisibleWeek';
-import { dayTimeline } from '../rules/dayTimeline';
+import { dayTimeline, dayTimelineSessionCompleted, timelineEntryWorked } from '../rules/dayTimeline';
 import {
   buildSessionExecutionPlan,
   buildSessionExecutionSummary,
@@ -2594,6 +2594,64 @@ run('no clock times, and the timeline entry shape is pinned', () => {
   assert(part && part.rows.length === entry.rows.length && part.rows[0].id === entry.rows[0].id,
     'the timeline\'s rows are not the projection\'s rows for that part — a second '
     + 'reading of a day is exactly what this file exists to prevent.');
+});
+
+
+/**
+ * A SKIPPED DAY IS NOT A DONE DAY (everyday acceptance, F3, 2026-09-09).
+ *
+ * Saving a session with nothing ticked writes `completion: 'skipped'` for every
+ * component. The day card and the Week DONE badge then read the day as
+ * complete because the day-level flag asked "was every component ANSWERED"
+ * (`!== null`) rather than "was any work DONE". The row-level ticks already
+ * asked the right question (`full || partial`). One owner for both now lives in
+ * `rules/dayTimeline.ts`; these cells pin its truth table and the surfaces that
+ * read it.
+ */
+const entryOf = (kind: string, completion: 'full' | 'partial' | 'skipped' | null) =>
+  ({ kind, completion } as unknown as Parameters<typeof dayTimelineSessionCompleted>[0][number]);
+run('timelineEntryWorked: only full or partial is work the athlete did', () => {
+  assert(timelineEntryWorked('full') === true, 'full is work');
+  assert(timelineEntryWorked('partial') === true, 'partial is work');
+  assert(timelineEntryWorked('skipped') === false, 'skipped is NOT work');
+  assert(timelineEntryWorked(null) === false, 'unanswered is NOT work');
+});
+run('a day whose every component was skipped is NOT complete', () => {
+  assert(dayTimelineSessionCompleted([entryOf('power', 'skipped'), entryOf('strength', 'skipped')]) === false,
+    'all-skipped read as complete — the F3 defect');
+});
+run('a day with one partial component and the rest answered is complete', () => {
+  assert(dayTimelineSessionCompleted([entryOf('power', 'skipped'), entryOf('strength', 'partial')]) === true,
+    'partial work should count as done');
+});
+run('a day with an unanswered component is not complete', () => {
+  assert(dayTimelineSessionCompleted([entryOf('power', 'full'), entryOf('strength', null)]) === false,
+    'an unanswered component cannot be complete');
+});
+run('the athlete\'s own work decides; a done club night over skipped own work is not complete', () => {
+  assert(dayTimelineSessionCompleted([entryOf('strength', 'skipped'), entryOf('team_training', 'full')]) === false,
+    'club full + own work skipped must not read as complete');
+});
+run('a club-only day follows the club answer', () => {
+  assert(dayTimelineSessionCompleted([entryOf('team_training', 'skipped')]) === false, 'club skipped is not complete');
+  assert(dayTimelineSessionCompleted([entryOf('team_training', 'full')]) === true, 'club done is complete');
+  assert(dayTimelineSessionCompleted([]) === false, 'no entries is not complete');
+});
+run('the Day card, the Week DONE badge and the session screen read the one owner', () => {
+  const home = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
+  assert(/const sessionLogged = dayTimelineSessionCompleted\(timelineEntries\);/.test(home),
+    'HomeScreenV2 must derive sessionLogged from dayTimelineSessionCompleted');
+  assert(!/decidingRows\.every\(\(entry\) => entry\.completion !== null\)/.test(home),
+    'the "answered means done" predicate must be gone from HomeScreenV2');
+  assert(/const isCompleted = hasWorkout && sessionLogged;/.test(home),
+    'isCompleted must not fall back to "any receipt exists"');
+  assert(!/entry\.completion === 'full' \|\| entry\.completion === 'partial'/.test(home)
+    && !/logged === 'full' \|\| logged === 'partial'/.test(home)
+    && !/mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home),
+    'row ticks must call timelineEntryWorked rather than restate full||partial');
+  const workout = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'useDayWorkout.ts'), 'utf8');
+  assert(/const isAlreadyComplete = !!persistedReceipt\s*&& persistedFeedback\?\.completion !== 'skipped'\s*&& !justSaved;/.test(workout),
+    'useDayWorkout must not lock a skipped day as already complete');
 });
 
 console.log(`\n  day-first timeline totals: ${passed} passed, ${failed} failed`);

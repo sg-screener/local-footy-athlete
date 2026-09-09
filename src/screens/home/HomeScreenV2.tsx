@@ -33,7 +33,7 @@ import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visibleProjection';
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
-import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
+import { dayTimeline, dayTimelineSessionCompleted, timelineEntryWorked, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
 import type { ChristmasBreakAsk } from '../../rules/christmasBreakAsk';
 import {
@@ -816,10 +816,9 @@ export default function HomeScreenV2() {
     const timelineEntries = visibleDay
       ? dayTimeline(visibleDay, sessionFeedback[day.date], projectedWorkout, recordedExecution)
       : [];
-    const ownWork = timelineEntries.filter((entry) => entry.kind !== 'team_training');
-    const decidingRows = ownWork.length > 0 ? ownWork : timelineEntries;
-    const sessionLogged = decidingRows.length > 0
-      && decidingRows.every((entry) => entry.completion !== null);
+    // "Done" has ONE owner (`rules/dayTimeline.ts`): only full or partial work
+    // counts. A day saved with every part skipped is answered, not done.
+    const sessionLogged = dayTimelineSessionCompleted(timelineEntries);
 
     const clubEntry = timelineEntries.find((entry) => entry.kind === 'team_training');
     return (
@@ -2634,7 +2633,7 @@ function DayRow({
   // and saved feedback — the day is complete. Drives the read-only completed
   // CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
-  const isCompleted = hasWorkout && (sessionLogged ?? feedbackReceipts.length > 0);
+  const isCompleted = hasWorkout && sessionLogged;
   // ── RULING 5, AND WHERE THE "TODAY" FACT LIVES NOW ──
   //
   // Sam, 2026-08-10, on his own screen next to hers: *"the today badge is still
@@ -3024,7 +3023,7 @@ function TeamTrainingCard({
           nothing beside the title. Icon, then title over status, then button. */}
       <View style={styles.teamTrainingRow}>
         <View style={styles.timelineIconMarker}>
-          {logged === 'full' || logged === 'partial' ? (
+          {timelineEntryWorked(logged) ? (
             <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
           ) : (
             <RowIcon kind="team" size={DAY_ROW_ICON_SIZE} color={rowIconColor('team')} />
@@ -3283,7 +3282,7 @@ function DayTimeline({
               style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
             >
               <View style={styles.timelineIconMarker}>
-                {mobilityCompletion === 'full' || mobilityCompletion === 'partial' ? (
+                {timelineEntryWorked(mobilityCompletion) ? (
                   <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
                   <RowIcon kind="flame" size={DAY_ROW_ICON_SIZE} color={rowIconColor('flame')} />
@@ -3442,7 +3441,7 @@ function DayTimeline({
                 * them, and that is the one thing this screen must never do.
                 */}
               <View style={styles.timelineIconMarker}>
-                {entry.completion === 'full' || entry.completion === 'partial' ? (
+                {timelineEntryWorked(entry.completion) ? (
                   <MaterialCommunityIcons name="check" size={DAY_ROW_CHECK_SIZE} color="#5BD98A" />
                 ) : (
                   <RowIcon

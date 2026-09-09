@@ -137,6 +137,36 @@ function iconKindForSection(
   return PART_ICON_KIND[kind];
 }
 
+/**
+ * DID THE ATHLETE DO THIS PART? Only `full` or `partial` is work. `skipped` is
+ * an answer ("I did not do it") and `null` is no answer; neither is done.
+ *
+ * ONE OWNER FOR "DONE" (everyday acceptance F3, 2026-09-09). The row ticks on
+ * the Day card asked this question correctly while the day-level flag asked
+ * "was every part ANSWERED" — so a session saved with nothing ticked read as
+ * "Session complete" with a DONE badge over grey, untick'd rows. Every surface
+ * that says "done" now asks here.
+ */
+export function timelineEntryWorked(completion: FeedbackCompletion | null): boolean {
+  return completion === 'full' || completion === 'partial';
+}
+
+/**
+ * IS THE DAY'S SESSION COMPLETE? The athlete's own work decides; a club-only
+ * day follows its club answer. Complete means every deciding part has been
+ * ANSWERED and at least one of them was WORKED: a part still unanswered leaves
+ * the day open, and a day whose every part was skipped is answered but not
+ * done. (A partly-done session — one part skipped, another done — is complete:
+ * the athlete trained and said what they left out.)
+ */
+export function dayTimelineSessionCompleted(entries: readonly DayTimelineEntry[]): boolean {
+  const ownWork = entries.filter((entry) => entry.kind !== 'team_training');
+  const deciding = ownWork.length > 0 ? ownWork : entries;
+  return deciding.length > 0
+    && deciding.every((entry) => entry.completion !== null)
+    && deciding.some((entry) => timelineEntryWorked(entry.completion));
+}
+
 export function dayTimeline(
   day: VisibleDay | null | undefined,
   feedback: SessionFeedback | null | undefined,

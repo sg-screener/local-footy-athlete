@@ -399,7 +399,9 @@ ok('the day card reads Mobility completion from that saved checklist owner',
     && /dayTimeline\(visibleDay, sessionFeedback\[day\.date\], projectedWorkout, recordedExecution\)/.test(home)
     && /mobilityCompletion=\{recordedExecution\?\.sectionCompletions\.mobility \?\? null\}/.test(home)
     && /day-timeline-complete-mobility-warmup-\$\{mobilityCompletion\}/.test(home)
-    && /mobilityCompletion === 'full' \|\| mobilityCompletion === 'partial'/.test(home));
+    // "done" has one owner (`rules/dayTimeline.ts`, everyday acceptance F3):
+    // the mobility tick asks it rather than restating full||partial.
+    && /timelineEntryWorked\(mobilityCompletion\)/.test(home));
 ok('mobility and every other session row use one square checkbox recipe',
   /sessionExecutionCheckbox/.test(screen)
     && /\.\.\.sessionExecutionCheckbox/.test(screen)

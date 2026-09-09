@@ -139,7 +139,11 @@ export function useDayWorkout() {
   ) as SessionFeedback | null;
   const persistedReceipt = (persistedFeedback?.outcomeReceipt ?? null) as
     SessionOutcomeTransactionReceipt | null;
-  const isAlreadyComplete = !!persistedReceipt && !justSaved;
+  // A skipped save is an answer, not a completed session: it must not lock the
+  // day read-only under a "Session complete" moment (everyday acceptance F3).
+  const isAlreadyComplete = !!persistedReceipt
+    && persistedFeedback?.completion !== 'skipped'
+    && !justSaved;
   const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
   const [editingWeightText, setEditingWeightText] = useState('');
 
