@@ -115,6 +115,13 @@ export async function askCoachReadOnly(input: AskCoachReadOnlyInput): Promise<st
     if (serverCode === 'coach_chat_invalid_answer') {
       throw new CoachChatError('no_answer', 'Coach chat returned no usable answer.');
     }
+    if (serverCode === 'coach_chat_contract_mismatch') {
+      // Not a refusal and not the athlete's question: the app and the server
+      // speak different contracts. The unavailable sentence is the honest one
+      // of the three signed sentences (R-140); the versions go to the log.
+      console.warn('[coach-chat] contract mismatch: app speaks', modelInput.contractVersion, 'server answered', raw.slice(0, 120));
+      throw new CoachChatError('unavailable', 'Coach chat contract mismatch.');
+    }
     throw new CoachChatError('unavailable', `Coach chat unavailable (${response.status}).`);
   }
   let payload: { message?: unknown; programActions?: unknown };

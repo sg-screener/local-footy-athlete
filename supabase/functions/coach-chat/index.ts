@@ -8,7 +8,7 @@ import {
   evaluateCoachResponseContract,
 } from '../../../src/rules/coachResponseContract.ts';
 import type { CoachModelSnapshot } from '../../../src/rules/coachModelContext.ts';
-import { COACH_CHAT_MAX_MESSAGE_CHARACTERS } from '../../../src/rules/coachChatLimits.ts';
+import { COACH_CHAT_CONTRACT_VERSION, COACH_CHAT_MAX_MESSAGE_CHARACTERS } from '../../../src/rules/coachChatLimits.ts';
 import {
   checkDurableCoachRateLimit,
   forwardedClientAddress,
@@ -150,6 +150,16 @@ Deno.serve(async (request) => {
   }
 
   const modelInput = body.modelInput;
+  // The app names the contract it speaks (slice S2). A mismatch is told
+  // apart from a refusal so the athlete is never handed a safety sentence
+  // for what is an update problem.
+  const clientVersion = (modelInput as { contractVersion?: unknown }).contractVersion;
+  if (clientVersion !== COACH_CHAT_CONTRACT_VERSION) {
+    return json(409, {
+      error: 'coach_chat_contract_mismatch',
+      serverContractVersion: COACH_CHAT_CONTRACT_VERSION,
+    });
+  }
   const retrieval = retrieveCoachLabKnowledge({
     athleteMessage: modelInput.athleteMessage,
     snapshot: modelInput.currentAthleteSnapshot,

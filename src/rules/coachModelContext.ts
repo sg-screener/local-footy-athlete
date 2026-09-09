@@ -1,5 +1,5 @@
 import type { CoachSnapshot } from './liveAthleteSnapshot';
-import { coachChatMessageWithinLimit } from './coachChatLimits';
+import { COACH_CHAT_CONTRACT_VERSION, coachChatMessageWithinLimit } from './coachChatLimits';
 import { weekdayName } from '../utils/appDate';
 
 export type CoachModelSpeaker = 'coach' | 'athlete';
@@ -378,6 +378,7 @@ export function buildCoachModelInput(args: {
   readonly requiresLiveProgramFacts?: boolean;
 }) {
   return {
+    contractVersion: COACH_CHAT_CONTRACT_VERSION,
     athleteMessage: args.athleteMessage,
     ...(args.reviewFocus ? { reviewFocus: args.reviewFocus } : {}),
     ...(typeof args.requiresLiveProgramFacts === 'boolean'

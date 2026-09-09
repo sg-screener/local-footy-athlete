@@ -1612,6 +1612,20 @@
       ],
       "witnessScript": "test:leg-programming",
       "evidenceKind": "green_now"
+    },
+    "test:coach-retrieval-regression": {
+      "kind": "current_contract",
+      "reason": "The ruling that owns a question must be among the rulings the coach is shown: the registry is one chunk per ruling and the athlete's words seat six rulings before the context fills the rest (slice S2, 2026-09-10). Measured before: two 72-line windows, R-394 reached on one run in two.",
+      "productionPaths": [
+        "src/dev/coachLab/coachLabKnowledgeRetriever.ts",
+        "src/rules/coachKnowledgeManifest.ts"
+      ],
+      "contractRefs": [
+        "R-134",
+        "R-394"
+      ],
+      "witnessScript": "test:coach-retrieval-regression",
+      "evidenceKind": "green_now"
     }
   }
 }
