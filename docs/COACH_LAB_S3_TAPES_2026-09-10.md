@@ -1,0 +1,21 @@
+# Coach Lab — slices 3 and 5 tapes (2026-09-10)
+
+Seat PHONEBUILD. Thirteen questions on the deployed coach-chat v16/v17 (app map, athlete block, session memory, ten turns). Raw logs: `/private/tmp/lfa-yearfix-evidence/s3-tapes.log`, `s3-tapes-v17.log`. All PENDING until Sam's recorded review.
+
+| # | athlete | coach | pre-grade |
+| --- | --- | --- | --- |
+| 1 | how do i tell the app im sick | On the Program tab, under Not feeling 100%?, tap Sick. Choose A bit off, Properly sick, or Can’t get out of bed, then follow the prompt to make today lighter if needed. If you’re properly sick, prioritise rest rather than trying to push through training. | ✓ Names the tile and its three choices. |
+| 2 | where do i log the game | On the Program tab, under Game Day, tap Log Game after it’s been played to record it and how it felt. Your next game is Saturday. | ✓ Right door, right place. |
+| 3 | how do i change my gym days | REFUSED (programFactsGrounded) | ✗ Refused by the truth check: the coach's receipt didn't match its words. Model slip, recorded; the rest of the batch is unaffected. |
+| 4 | im going away next week with no gym what do i do | On the Program tab, go to Week → pen → Adjust this week, then tap I’m going away. Enter your travel dates and choose bodyweight only; the app will reshape the week around it. You’ve got a game on Saturday next week, so keep any bodyweight work easy enough to protect freshness rather than trying to replace gym loading. Today’s quick check shows low energy, so make today lighter if needed. | ✓ The exact path to I'm going away, and the game protected. |
+| 5 | how do i move thursdays session to friday | On the Week view, use Move to shift Thursday’s session to Friday. Friday is G-1 before your Saturday game, so check the move keeps it appropriate—hard conditioning or heavy lower work should not sit there. I can’t make the change from here. | ✓ Right, and flags the day before the game. |
+| 6 | dont have a squat rack today what do i press | On the Program tab, start today’s session, tap ••• then Session options, and tap Equipment changed. Untick the squat rack and press Update session; it will adjust the affected exercises around what you have today. | ✓ The exact taps inside the session. |
+| 7 | my knee hurts where do i tell the app | On the Program tab, under Not feeling 100%?, report it there so the app can adjust today. If the knee starts hurting during your session, go to Start Session → ••• → Session options → Something hurts. Don’t push through painful knee work; if it’s severe, worsening, or affecting walking, see a physio or doctor. | ✓ Both doors: the tile now, Something hurts mid-session. |
+| 8 | im feeling better now how do i clear the tired thing | On the Program tab, go to My status, open the active tired adjustment and tap Clear adjustment, then choose “I’m good now”. Your program will return to normal. | ✓ My status → Clear adjustment → I'm good now. |
+| 9 | how do i put in my new 2km time | On the Progress tab, tap Performance tests, then Save result and enter your new 2 km time. | ✓ Progress → Performance tests → Save result. |
+| 10 | im flat today should i just skip | Don’t automatically skip it. You’ve recorded low energy today, and today is Lower Squat, so make it lighter: keep the main work only if it’s moving well, reduce sets and skip accessories/finishers. On the Program tab, under Not feeling 100%?, tap Tired to apply the app’s lighter-day option. If you feel worse in the warm-up or have pain, stop and use recovery instead. | ✓ Advice first, then the Tired tile. |
+| 11 | what position do i play and what are my goals | You play inside mid. Your goals are to be fresh on game day and get stronger and fitter. Your biggest stated limitation is endurance. | ✓ Read from the profile: inside mid, two goals, endurance. |
+| 12 | do i have a rower at my gym | Yes — your commercial gym equipment list includes a rower. | ✓ Reads the equipment list. |
+| 13 | how heavy is 1.5x bodyweight for my squat | At 84 kg bodyweight, 1.5× bodyweight is 126 kg for your squat. Your latest recorded back squat is 100 kg for 5 reps. | ✓ Bodyweight from the profile, squat from the log. |
+
+**What Sam decides:** approve / correct each row. Row 3 is a recorded model-side miss (the receipt did not match the words), not a review question.

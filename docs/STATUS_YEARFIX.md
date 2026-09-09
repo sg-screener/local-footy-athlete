@@ -341,3 +341,30 @@ process, not in the app.
 **Not yet:** server deploy (retrieval and the APP DOORS block are server-side;
 the phone gets the gate only) — Sam's call; live tapes for S3 wait for it.
 `COACH_CHAT_CONTRACT_VERSION` stays 2: the S3 shapes are additive both ways.
+
+**09:50 — Coach slices S3 (live), S4 and S5 BUILT.** Commits 71797b88 …
+d5dbfd50, 22ca2afb; coach-chat **v17** deployed (receipts v12–v17 in
+`docs/COACH_DEPLOY_RECEIPTS.md`). The road from v12 to v17 was five refusal
+classes, each now a cell: door answers carried no snapshot basis (a cited
+door satisfies the live-facts rule); the model cites `DOOR-sick`/`R-394` by
+name (row names are citable); the door chunk labelled `active_rule` (the
+path is the truth); unquoted Title-Case phrases refused real answers (the
+gate holds quoted controls only); tiers and status choices are doors too
+(`options` per door, curly quotes normalised); a door row is an LFA source
+for `lfa_rule`. Refusal NAMES and details now travel in the 502 body and the
+client's error (`coach:chat:smoke` prints them) — the v12/v13 blindness is
+over. **S4 (R-398):** `src/utils/coachConversationSession.ts`, in-memory,
+survives the tab, dies with the process, cleared by Full reset; ten turns
+(`MAX_RECENT_TURNS`, app and server). **S5 (R-397):** `athlete` block
+(position, goals, limitation, experience, conditioning, age range, height,
+weight, gym, equipment tags/machines, availability, exclusions, pins) through
+the one projection; Privacy sentence rewritten (`profileResetUITests` pins the
+new words). **WORKING:** `coachAppMapTests` 22/0, `coachSnapshotTests` 55/0,
+`coachChatIntegrationTests` 92/0, retrieval regression 26/0,
+`coachTabSlice1Tests` 75/75, `openAICoachLabTests` 61/0, `test:compile` 0.
+**Tapes:** 13 questions on v16/v17 — 12 right, 1 refused
+(`programFactsGrounded`, a receipt/words mismatch by the model) —
+`docs/COACH_LAB_S3_TAPES_2026-09-10.md` + review page. **Baseline reds
+(control = original folder @ 556e2ac8):** `profileResetUITests` "LFA Days row
+present" and "no Sheet hosts a flexing body" — not mine. **Phone:** Release at
+d5dbfd50 building (build-release-6.log); install follows.
