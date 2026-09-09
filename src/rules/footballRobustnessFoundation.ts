@@ -10,7 +10,7 @@ import { POOL_REGISTRY } from '../data/exercisePools';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { getExerciseTags } from '../data/exerciseTags';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
-import { sameExerciseVariationFamily } from './exerciseVariationFamily';
+import { exerciseVariationFamily, sameExerciseVariationFamily } from './exerciseVariationFamily';
 
 export type FootballRobustnessCategory =
   | 'hamstring_eccentric_or_isometric'
@@ -87,9 +87,7 @@ export function isFootballRobustnessAccessory(rawName: string): boolean {
  * Lunges are adductor work too, but they are dynamic and may sit beside a hold.
  */
 export function isAdductorIsometric(rawName: string): boolean {
-  const name = canonicalExerciseName(rawName);
-  return POOL_REGISTRY.groin_adductors.some((entry) =>
-    canonicalExerciseName(entry.name) === name && entry.prescriptionType === 'duration');
+  return exerciseVariationFamily(rawName) === 'adductor_isometric';
 }
 
 /** A hip-dominant alternative is credited only when no Nordic/curl is available. */

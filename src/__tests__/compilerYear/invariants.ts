@@ -167,7 +167,7 @@ export function inspectWeek(args: {
     const workout = d.workout;
     if (!workout || workout.athletePlacement) return [];
     const rowsWithGroin = workout.exercises.filter((row) => row.prescribedSets > 0 && !row.unavailableForInjury
-      && isAdductorIsometric(row.exercise?.name ?? '')).map((row) => row.exercise?.name);
+      && isAdductorIsometric(row.exercise?.name ?? '')).map((row) => `${row.exercise?.name}[${row.section18Evidence?.role ?? '-'}/${row.section18Evidence?.slot ?? '-'}/${row.id.slice(-18)}]`);
     const flow = selectMobilityPrehabFlow({ workout, seasonPhase: profile.seasonPhase, isGameWeek: actualGames.length > 0, date: d.date,
       performedMovementIds: [], athlete: { onboardingData: profile, injuries: profile.injuries ?? [],
         activeConstraints: args.activeConstraints, equipmentTags: equipmentTagsOnDate(profile, d.date, []) } });

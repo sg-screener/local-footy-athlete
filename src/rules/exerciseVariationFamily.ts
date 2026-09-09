@@ -7,6 +7,7 @@
  * from athlete-facing names.
  */
 import { resolveExerciseName } from '../utils/loadEstimation';
+import { POOL_REGISTRY } from '../data/exercisePools';
 
 export type ExerciseVariationFamily =
   | 'bench_press'
@@ -17,7 +18,8 @@ export type ExerciseVariationFamily =
   | 'face_pull'
   | 'tib_raise'
   | 'lat_pulldown'
-  | 'romanian_deadlift';
+  | 'romanian_deadlift'
+  | 'adductor_isometric';
 
 const FAMILY_MEMBERS: Readonly<Record<ExerciseVariationFamily, readonly string[]>> = {
   bench_press: [
@@ -55,6 +57,15 @@ const FAMILY_MEMBERS: Readonly<Record<ExerciseVariationFamily, readonly string[]
   // is exactly what R-233 exists to stop — so B-Stance RDL joins on arrival
   // rather than being found later by an athlete reading both.
   romanian_deadlift: ['RDLs', 'Single-Leg RDL', 'B-Stance RDL'],
+  // Sam, 2026-09-09: "one adductor isometric per session". The groin pool's
+  // duration-authored entries (Copenhagen variants, Groin Squeeze) are one hold
+  // for one session; the composer, the automatic selector, the warm-up flow and
+  // the swap/add doors all read this table, so no second reading exists. The
+  // members are the pool's own authored holds, never a name pattern; dynamic
+  // adductor work (Cossack Squat, Lateral Lunge) is not a hold.
+  adductor_isometric: POOL_REGISTRY.groin_adductors
+    .filter((entry) => entry.prescriptionType === 'duration')
+    .map((entry) => entry.name),
 };
 
 /**

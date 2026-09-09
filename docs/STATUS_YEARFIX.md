@@ -25,11 +25,17 @@ R-303/R-391 found while diagnosing items 4 and 6.
   read from the groin pool's duration-authored entries — Copenhagen variants and
   Groin Squeeze; a Cossack Squat or Lateral Lunge is dynamic adductor work and is
   not counted. A first, broader reading counted them and the early eight-athlete
-  annual run reddened 65 weeks on it; narrowed before the release run.) (a) The warm-up
-  flow is derived from the session but only excluded the same exercise/variation;
-  it drew Groin Squeeze beside a prescribed Half Copenhagen on six dates. Fix: the
-  flow yields any groin/adductor candidate when the session's rows already supply
-  that robustness category. (b) The 3 x 30 s on a deload: the frontal-plane
+  annual run reddened 65 weeks on it; narrowed before the release run. The
+  release run then found seven composer-placed pairs of holds — Copenhagen +
+  Groin Squeeze on female-5-home, Long-Lever + Half Copenhagen on
+  male-6-no-standing-fixture — so the rule moved to the shared
+  `adductor_isometric` variation family, one owner for every door.) (a) Two holds could
+  land on one day: the warm-up flow drew Groin Squeeze beside a prescribed Half
+  Copenhagen on six dates, and the eight-athlete year showed the composer itself
+  placing two robustness holds on one day (Copenhagen + Groin Squeeze, Long-Lever
+  + Half Copenhagen). Fix: the groin pool's duration-authored holds are one
+  `adductor_isometric` variation family, so the existing same-session family
+  rule (composer, automatic selector, flow, add/swap doors) refuses the second. (b) The 3 x 30 s on a deload: the frontal-plane
   completion built its row at authored sets with no dated dose (the leg coverage
   already took one), and `reduceDemandingPrehab` read only the useful-strength
   contract, which a Mixed day does not carry. Fix: the completion takes the same
@@ -66,8 +72,8 @@ R-303/R-391 found while diagnosing items 4 and 6.
 - Primer Pogo Hops typed power and removed by a knee restriction —
   `test:leg-programming` case "The Primer's authored Pogo Hops is typed power…";
   fault `untype-primer-pogo` caught. `test:primer-session` 25/25 unchanged.
-- One adductor isometric per session (flow yields) — case "One adductor
-  isometric per session…"; fault `ignore-session-adductor-in-flow` caught.
+- One adductor isometric per session (variation family) — case "One adductor
+  isometric per session…"; fault `adductor-holds-not-one-family` caught.
 - Frontal completion + prehab reducer read the dated deload policy — case "The
   frontal-plane completion consumes the dated deload dose…"; faults
   `drop-frontal-completion-dose`, `ignore-dated-policy-for-prehab-reduction`.
@@ -109,10 +115,10 @@ same pipeline as the 017818cc book): annual-audit-evidence exit 0; prepare: 52
 weeks, 364 days, 2,045 rows, 443 numeric feedback comparisons, 364/364 reopens
 identical, 0 findings, 0 driver failures; PDF 280 pages, 2,045/2,045 printed rows
 in order, 0 mismatches, 0 week-finder errors, sha256
-c4f3d9db765fe9d738f718875eb399ad9c5e233578d9983d85c72d2785b9cfb2
+e7e5dacad7e63f1ba471c55e3c18e861f7839853840a2213a1e038f54c22e394
 (`output/pdf/three-day-athlete-full-52-week-program-2026-09-09-yearfix.pdf`).
 prepare exit 0, 0 source changes against the manifest taken before the run
-(third run, after the adductor-hold narrowing below).
+(fourth run, after the adductor-hold family below).
 
 **Dated proofs (`tools/proofs.py`, red on the 017818cc book, green here):**
 - item 1: in-season Nordic sets w27–w52 = 2 every week except w42 = 1 (illness
