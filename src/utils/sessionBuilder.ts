@@ -229,6 +229,14 @@ export interface AuthoredSlotRow {
    * it back once a reader exists is the same rule, not a reversal of it.**
    */
   readonly optional?: boolean;
+  /**
+   * R-393 (Sam, 2026-09-09 review): an authored jump is POWER, typed like every
+   * other jump the app places. The knee restriction that strips a strength
+   * day's lower jump reads `role === 'power'` (`applyConstraintsToTypedComponents`);
+   * an untyped Pogo Hops row walked past it in every injured Primer. Naming the
+   * family here hands the row to that ONE filter instead of a second reading.
+   */
+  readonly power?: PowerFamily;
 }
 
 /*
@@ -397,6 +405,8 @@ const SESSION_SLOTS: Record<SlotComposedSessionType, SessionSlot[]> = {
         names: ['Pogo Hops'],
         sets: 2, repsMin: 10, repsMax: 10, restSeconds: 60,
         notes: 'Short, springy contacts. Keep it light.',
+        // A lower jump, so the injury exposure filter sees it (R-393).
+        power: 'lower',
       }],
     },
     // Explosive upper is a ONE-CANDIDATE SHELF today (`Explosive Push-up` is the
@@ -919,7 +929,12 @@ function authoredSlotRowToWorkoutExercise(
     // app, and a classifier reading their NAMES here would hand the week a hard
     // strength exposure the athlete never took — the exact inference
     // ACCESSORY_ROW_EVIDENCE was written to end for the Gunshow's curls.
-    section18Evidence: ACCESSORY_ROW_EVIDENCE,
+    // An authored JUMP is typed power (R-393): the same role, family and
+    // evidence a pool-drawn jump carries, so one injury filter governs both.
+    ...(row.power
+      ? { role: 'power' as const, power: { family: row.power, kind: 'primer' as const },
+          section18Evidence: { ...ACCESSORY_ROW_EVIDENCE, role: 'power' as const } }
+      : { section18Evidence: ACCESSORY_ROW_EVIDENCE }),
     id: `${workoutId}-ex-${order}`,
     workoutId,
     exerciseId: id,

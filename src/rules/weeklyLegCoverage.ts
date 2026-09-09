@@ -17,6 +17,34 @@ import { footballRobustnessCategoriesForExercise, suppliesAlternativeHamstringWo
 import { stableDecisionOrder } from './stableDecisionDiversity';
 import { completeWeeklyCore } from './canonicalWeeklyPlaneCompletion';
 import { applyStrengthDeloadToExercises, type DeloadWeekPolicy } from './deloadWeekRules';
+import { getExerciseTags } from '../data/exerciseTags';
+
+/** R-394 (Sam, 2026-09-09): in-season the Nordic itself is owed; a curl does not stand in. */
+export type WeeklyLegCoverageCategory = 'nordic' | 'hamstring_eccentric_or_isometric' | 'calf_or_soleus';
+
+/** R-312's typed Nordic marker, never the word in a name (Reverse Nordic Curl is a quad exercise). */
+export function isNordicExercise(name: string): boolean {
+  return !!getExerciseTags(name)?.nordicCurlVariant
+    && footballRobustnessCategoriesForExercise(name).includes('hamstring_eccentric_or_isometric');
+}
+
+function suppliesCoverage(name: string, category: WeeklyLegCoverageCategory): boolean {
+  return category === 'nordic' ? isNordicExercise(name)
+    : footballRobustnessCategoriesForExercise(name).includes(category);
+}
+
+function coverageCandidates(category: WeeklyLegCoverageCategory): readonly string[] {
+  return category === 'nordic'
+    ? weeklyLegStrengthCandidates('hamstring_eccentric_or_isometric').filter(isNordicExercise)
+    : weeklyLegStrengthCandidates(category);
+}
+
+/** The Nordic minimum is in-season only (R-394); the year-round pair is R-393. */
+export function weeklyLegCoverageCategories(seasonPhase: OnboardingData['seasonPhase']): readonly WeeklyLegCoverageCategory[] {
+  return seasonPhase === 'In-season'
+    ? ['nordic', 'hamstring_eccentric_or_isometric', 'calf_or_soleus']
+    : ['hamstring_eccentric_or_isometric', 'calf_or_soleus'];
+}
 
 export interface WeeklyLegCoverageInput {
   weekStartISO: string;
@@ -38,10 +66,12 @@ export function completeWeeklyLegCoverage(args: WeeklyLegCoverageInput) {
   let workoutsByDate = args.workoutsByDate;
   const receipts: Array<{category:string; status:'present'|'added'|'unavailable'|'athlete_removed'; dateISO?:string; exercise?:string}> = [];
   const edits = canonicalWeeklyAthleteEditStateFrom({weekStartISO:args.weekStartISO,constraints:args.userRemovalConstraints});
-  for (const category of ['hamstring_eccentric_or_isometric','calf_or_soleus'] as const) {
+  // In-season the Nordic is answered FIRST, so the Nordic it places also
+  // satisfies the ordinary hamstring pair; a curl-first order would add both.
+  for (const category of weeklyLegCoverageCategories(args.profile.seasonPhase)) {
     const rows = Object.values(workoutsByDate).flatMap(w => w.exercises).filter(r =>
       r.prescribedSets > 0 && !r.unavailableForInjury && !r.optionalNoPenalty);
-    if (rows.some(row => footballRobustnessCategoriesForExercise(row.exercise.name).includes(category))) {
+    if (rows.some(row => suppliesCoverage(row.exercise.name, category))) {
       receipts.push({category,status:'present'}); continue;
     }
     // Credit only the category removed by the latest accepted deletion on that
@@ -53,7 +83,7 @@ export function completeWeeklyLegCoverage(args: WeeklyLegCoverageInput) {
         || !['whole_session','strength_component'].includes(decision.scope)) return false;
       const carries = (workout: Workout | null) => workout?.exercises.some(row =>
         row.prescribedSets > 0 && !row.unavailableForInjury && !row.optionalNoPenalty
-        && footballRobustnessCategoriesForExercise(row.exercise.name).includes(category));
+        && suppliesCoverage(row.exercise.name, category));
       return carries(decision.originalWorkout) && !carries(decision.remainingWorkout);
     });
     if (removed) { receipts.push({category,status:'athlete_removed'}); continue; }
@@ -80,7 +110,7 @@ export function completeWeeklyLegCoverage(args: WeeklyLegCoverageInput) {
         activeConstraints:args.activeConstraints ?? [],gameDates:args.gameDates});
       const health = buildGenerationConstraintContext({activeConstraints:args.activeConstraints,todayISO:date});
       const exempt = environment.medicalStop || health?.readiness?.deloaded || health?.readiness?.sessionsOptional || !!health?.illness;
-      const names = weeklyLegStrengthCandidates(category);
+      const names = coverageCandidates(category);
       const candidates = exempt ? [] : legalAutomaticAdditionCandidates({environment,profile:args.profile,
         leaf:'lower_accessories', existingExerciseNames:workout.exercises.map(r=>r.exercise.name)})
         .filter(c => (names.includes(c.name) || (category==='hamstring_eccentric_or_isometric' && equipmentRequiresAlternative

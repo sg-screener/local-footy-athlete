@@ -18,6 +18,7 @@ import { isPowerRow } from './sessionRowCounting';
 import { stableDecisionOrder } from './stableDecisionDiversity';
 import { slotsFilledByRow } from './sessionSlotCoverage';
 import { GLOBAL_RULES } from './weeklyProgrammingContract';
+import { applyStrengthDeloadToExercises, type DeloadWeekPolicy } from './deloadWeekRules';
 
 export type WeeklyMovementPlaneException = {
   readonly protocolVersion: 1;
@@ -126,6 +127,13 @@ export function completeWeeklyLowerBodyFrontal(args: {
    * date and put a Copenhagen plank on a Monday the athlete had already done.
    */
   readonly placeableFromISO?: string;
+  /**
+   * The compiler's dated dose answer (Sam, 2026-09-09: "the deload reduction
+   * must see both"). The completed frontal row used to land at its authored
+   * three sets on a deload Friday while every other row on the day was halved.
+   * Same input shape as the weekly leg coverage; a label never authors a dose.
+   */
+  readonly dosePolicyForDate?: (dateISO: string) => DeloadWeekPolicy | null;
 }): WeeklyLowerFrontalCompletion {
   const cleaned = stripExceptionKind(args.workoutsByDate, 'lower_body_frontal_unavailable');
   const workouts = Object.values(cleaned);
@@ -203,12 +211,14 @@ export function completeWeeklyLowerBodyFrontal(args: {
     const entry = safe.find((candidate) =>
       canonicalExerciseName(candidate.name) === canonicalExerciseName(choice.identity)) as PoolExercise;
     selector.accept(choice);
-    const row = buildAutomaticStrengthSupportRow(
+    let row = buildAutomaticStrengthSupportRow(
       entry,
       workout.id,
       Math.max(-1, ...workout.exercises.map((exercise) => exercise.exerciseOrder)) + 1,
       'football_robustness',
     );
+    const policy = args.dosePolicyForDate?.(dateISO) ?? null;
+    if (policy) row = applyStrengthDeloadToExercises([row], { ...policy, preserveExerciseSelection: true })[0];
     const completed = { ...cleaned, [dateISO]: { ...workout, exercises: [...workout.exercises, row] } };
     return {
       status: 'added',

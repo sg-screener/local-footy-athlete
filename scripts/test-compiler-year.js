@@ -79,6 +79,20 @@ const mutations = {
     week.checks = week.checks.filter(c => c.id !== 'carried_injury_report'); },
   missing_injury_rollover: (r) => { const week = r.athletes[0].weeks.find(w => w.phaseWeek === 13);
     week.checks = week.checks.filter(c => c.id !== 'carried_injury_after_rollover'); },
+  // R-394 / R-395 (Sam, 2026-09-09): the in-season Nordic and harder-conditioning
+  // weekly checks are required of every athlete; dropping or failing either blocks.
+  missing_inseason_nordic_check: (r) => { const week = r.athletes[0].weeks.find(w => w.phase === 'In-season');
+    week.checks = week.checks.filter(c => c.id !== 'weekly_inseason_nordic'); },
+  failed_inseason_nordic_check: (r) => { const week = r.athletes[0].weeks.find(w => w.phase === 'In-season');
+    week.checks.find(c => c.id === 'weekly_inseason_nordic').ok = false; },
+  missing_inseason_conditioning_check: (r) => { const week = r.athletes[0].weeks.find(w => w.phase === 'In-season');
+    week.checks = week.checks.filter(c => c.id !== 'weekly_inseason_conditioning'); },
+  failed_inseason_conditioning_check: (r) => { const week = r.athletes[0].weeks.find(w => w.phase === 'In-season');
+    week.checks.find(c => c.id === 'weekly_inseason_conditioning').ok = false; },
+  missing_injury_exposure_fixed_point: (r) => { r.athletes[0].weeks[0].checks = r.athletes[0].weeks[0].checks.filter(c => c.id !== 'injury_exposure_fixed_point'); },
+  leaked_injury_exposure: (r) => { r.athletes[0].weeks[0].checks.find(c => c.id === 'injury_exposure_fixed_point').ok = false; },
+  missing_adductor_check: (r) => { r.athletes[0].weeks[0].checks = r.athletes[0].weeks[0].checks.filter(c => c.id !== 'one_adductor_isometric_per_session'); },
+  doubled_adductor: (r) => { r.athletes[0].weeks[0].checks.find(c => c.id === 'one_adductor_isometric_per_session').ok = false; },
 };
 for (const [name, mutate] of Object.entries(mutations)) test(`mutation: ${name} blocks acceptance`, () => {
   const result = control(); mutate(result); assert.equal(yearVerdict(result).ok, false);

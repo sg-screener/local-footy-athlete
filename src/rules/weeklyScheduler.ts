@@ -762,8 +762,12 @@ export function longestDemandingLegRun(week:WeeklySchedule, inputs:WeeklySchedul
 /** Rank complete legal weeks; lower is preferred. Actual dose is supplied by composition. */
 export function wholeWeekPlacementCost(week: WeeklySchedule, inputs: WeeklySchedulerInputs): readonly number[] {
   const speed = week.days.filter(d => d.sprintComponent || d.conditioning === 'sprint_high_speed');
+  // R-395's in-season finisher is an extra on whichever strength day is legal,
+  // never a budgeted stimulus: counting it here made the strength assignment
+  // move onto Wednesday to chase it (spare-day case [2]).
   const metabolic = week.days.filter(d => d.conditioning !== null
-    && d.conditioning !== 'sprint_high_speed' && d.conditioningCategory !== 'recovery_flush');
+    && d.conditioning !== 'sprint_high_speed' && d.conditioningCategory !== 'recovery_flush'
+    && d.clauseId !== 'R-395');
   const active = new Set(week.days.filter(d => d.owner === 'strength' || d.clubTraining || d.game
     || (d.conditioning !== null && d.conditioningCategory !== 'recovery_flush')).map(d => d.dayOfWeek));
   let run = 0, longest = 0;
@@ -2042,14 +2046,49 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs, search: WeeklySchedu
       clauseId: 'R-329',
     }));
   })();
+  // ── R-395 (Sam, 2026-09-09): ONE IN-SEASON GYM DAY MAY BE HARDER THAN A FLUSH ─
+  //
+  // *"in-season conditioning does not need a big aerobic dose, but one of the
+  // Monday or Wednesday sessions may be harder than a flush, on the day the
+  // athlete is off club training"*. Measured on the three-day year: every
+  // in-season conditioning slot was a flush (4 x 2 min, 5 x 60 s easy,
+  // 10 x 30 s) because two club nights plus the game spend the whole game-week
+  // budget. This stage sits OUTSIDE that budget, like the G+2 flush: one
+  // strength-owned gym day off club training, outside G-2..G+2, with a machine
+  // on the day (in-season combined conditioning is off-feet), receives a
+  // moderate off-feet finisher. A week that already carries an app metabolic
+  // or Speed component (a one-night club, the no-club fast session) gets
+  // nothing more; a reduced week keeps every reduction rule.
+  const withInSeasonModerate = (() => {
+    if (inputs.phase !== 'In-season' || !hasScheduledGame(inputs)
+      || inputs.clubNights.length === 0 || weekIsReduced) return withFortnightlyCod;
+    if (withFortnightlyCod.some((entry) => !entry.clubTraining && !entry.game
+      && ((entry.conditioning !== null && entry.conditioningCategory !== 'recovery_flush')
+        || entry.sprintComponent))) return withFortnightlyCod;
+    const receiver = withFortnightlyCod.find((entry) => entry.owner === 'strength'
+      && !entry.clubTraining && !entry.game
+      && entry.conditioning === null && !entry.sprintComponent
+      && isGovernableEnergyDay(entry.dayOfWeek)
+      && inputs.gymAccessDays.includes(entry.dayOfWeek)
+      && !inputs.unavailableDays.includes(entry.dayOfWeek)
+      && (inputs.offLegAvailableDays ?? []).includes(entry.dayOfWeek)
+      && !isGameMinusOne(entry.dayOfWeek, inputs) && !isGameMinusTwo(entry.dayOfWeek, inputs)
+      && !isGamePlusOne(entry.dayOfWeek, inputs)
+      && scheduledGameProximity(entry.dayOfWeek, inputs).daysSincePreviousGame !== 2);
+    if (!receiver) return withFortnightlyCod;
+    return withFortnightlyCod.map((entry): SessionIntention => entry !== receiver ? entry : ({
+      ...entry, conditioning: 'off_leg', conditioningCategory: 'tempo',
+      conditioningRole: 'finisher', clauseId: 'R-395',
+    }));
+  })();
   const withComposedOptional = (() => {
     const fixtureDays = scheduledGameDays(inputs);
     const offer = inputs.athleteGender === 'female' ? 'primer' as const : 'gunshow' as const;
     if (inputs.phase !== 'Off-season' && !weekIsReduced && fixtureDays.length === 1) {
       const gameIdx = orderIndex(fixtureDays[0]);
-      if (gameIdx <= 0) return withFortnightlyCod;
+      if (gameIdx <= 0) return withInSeasonModerate;
       const g1Day = WEEK_ORDER[gameIdx - 1];
-      return withFortnightlyCod.map((entry) => (
+      return withInSeasonModerate.map((entry) => (
         entry.dayOfWeek === g1Day
           && entry.owner === 'rest_or_recovery'
           && !entry.clubTraining
@@ -2058,7 +2097,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs, search: WeeklySchedu
           : entry
       ));
     }
-    return withFortnightlyCod;
+    return withInSeasonModerate;
   })();
 
   const intended = new Set<MovementPattern>();

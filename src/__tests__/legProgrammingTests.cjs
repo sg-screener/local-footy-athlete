@@ -387,5 +387,105 @@ test('Annual evidence counts its declared athletes and rejects truncated, duplic
   const broken=JSON.parse(JSON.stringify(year));mutate(broken);assert.equal(annualJourneyCoverage(broken).complete,false);
  }
 });
+// ── Sam's 2026-09-09 review of the three-day year ─────────────────────────
+const {buildDerivedSession,DEFAULT_ATHLETE_CONTEXT}=require('../utils/sessionBuilder');
+const {buildGuidedInjuryConstraint}=require('../utils/guidedInjuryControl');
+const {compileInjuryConditioning}=require('../rules/canonicalInjuryConditioning');
+const {resolveEquipmentCapabilities}=require('../utils/equipmentAvailability');
+const reviewDate='2027-06-25';
+const cats=require('../rules/footballRobustnessFoundation').footballRobustnessCategoriesForExercise;
+const primerFor=()=>buildDerivedSession('primer',reviewDate,'review','review',{...DEFAULT_ATHLETE_CONTEXT,injuries:[],
+ onboardingData:coverageProfile,equipmentTags:[...resolveEquipmentCapabilities(coverageProfile).tags]});
+const guided=(area,region,trigger)=>buildGuidedInjuryConstraint({region,area,severity:4,severityBand:'moderate',
+ adjustmentLevel:'moderate',triggers:[trigger],seriousSymptoms:false},{todayISO:'2027-06-22'});
+test('The Primer\'s authored Pogo Hops is typed power and the knee restriction removes it like any other jump',()=>{
+ const primer=primerFor();
+ const pogo=primer.exercises.find(r=>r.exercise.name==='Pogo Hops');
+ assert.ok(pogo,'the Primer still authors Pogo Hops (R-129)');
+ assert.equal(pogo.role,'power');assert.deepEqual(pogo.power,{family:'lower',kind:'primer'});
+ assert.equal(pogo.section18Evidence.role,'power');
+ assert.equal(pogo.prescribedSets,2);assert.equal(pogo.prescribedRepsMin,10);
+ const knee=compileInjuryConditioning({workout:primer,profile:coverageProfile,dateISO:reviewDate,constraints:[guided('knee','lower_body','running')]});
+ assert.ok(!knee.exercises.some(r=>r.exercise.name==='Pogo Hops'),'knee 4/10 with reduced running removes the Primer jump');
+ assert.ok(knee.exercises.some(r=>r.section18Evidence?.role==='recovery_support'),'the mobility rows of the Primer survive');
+ const none=compileInjuryConditioning({workout:primer,profile:coverageProfile,dateISO:reviewDate,constraints:[]});
+ assert.ok(none.exercises.some(r=>r.exercise.name==='Pogo Hops'),'no restriction keeps the jump');
+});
+const {selectMobilityPrehabFlow}=require('../utils/mobilityPrehabFlow');
+test('One adductor isometric per session: the warm-up flow yields to a prescribed adductor row',()=>{
+ const rows=[simpleRow('Bulgarian Split Squats','a'),simpleRow('Single-Leg RDL','b'),simpleRow('Overhead Press','c'),simpleRow('Neutral-Grip Pulldown','d')];
+ const athlete={onboardingData:coverageProfile,injuries:[],activeConstraints:[],equipmentTags:[...resolveEquipmentCapabilities(coverageProfile).tags]};
+ const flowNames=(exercises,date)=>(selectMobilityPrehabFlow({workout:{...strengthDay(exercises),workoutType:'Mixed',dayOfWeek:5},seasonPhase:'Pre-season',isGameWeek:false,date,performedMovementIds:[],athlete})?.movements??[]).map(m=>m.exercise.name);
+ const dates=Array.from({length:60},(_,i)=>new Date(Date.UTC(2027,0,1+i)).toISOString().slice(0,10));
+ const withGroin=dates.filter(date=>flowNames(rows,date).some(name=>cats(name).includes('adductor_or_groin')));
+ assert.ok(withGroin.length>0,'the plain session draws a warm-up adductor on some dates (control)');
+ for(const date of withGroin) {
+  const paired=flowNames([...rows,simpleRow('Copenhagen Plank (Half)','cop')],date);
+  assert.ok(!paired.some(name=>cats(name).includes('adductor_or_groin')),`${date}: the flow prescribed a second adductor isometric: ${paired.join(', ')}`);
+  assert.ok(paired.length>0,'the flow still prepares the session');
+ }
+});
+test('The frontal-plane completion consumes the dated deload dose and the reducer sees the same policy',()=>{
+ const {completeWeeklyLowerBodyFrontal}=require('../rules/canonicalWeeklyPlaneCompletion');
+ const {compileCanonicalInjuryWeek}=require('../rules/canonicalWeeklyInjuryCompiler');
+ const date='2027-03-05';
+ const mixed={...strengthDay([simpleRow('Bulgarian Split Squats','a'),simpleRow('Single-Leg RDL','b'),simpleRow('Overhead Press','c'),simpleRow('Neutral-Grip Pulldown','d')]),
+  id:'deload-friday',dayOfWeek:5,workoutType:'Mixed',usefulStrengthSessionContract:null};
+ const policy=require('../rules/canonicalWeeklyScheduledDeloadState').canonicalWeeklyScheduledDeloadStateFrom({weekStartISO:'2027-03-01',seasonPhase:'Pre-season',weekKind:'deload'}).policy;
+ assert.ok(policy,'a Pre-season deload week resolves a dated policy');
+ const full=completeWeeklyLowerBodyFrontal({weekStartISO:'2027-03-01',workoutsByDate:{[date]:mixed},profile:coverageProfile});
+ assert.equal(full.status,'added','the week lacks a frontal row and receives one');
+ const authored=full.workoutsByDate[date].exercises.at(-1).prescribedSets;
+ const halved=completeWeeklyLowerBodyFrontal({weekStartISO:'2027-03-01',workoutsByDate:{[date]:mixed},profile:coverageProfile,dosePolicyForDate:d=>d===date?policy:null});
+ assert.equal(halved.workoutsByDate[date].exercises.at(-1).prescribedSets,Math.max(1,Math.round(authored*0.5)),'the completed frontal row takes the dated deload dose');
+ const week=compileCanonicalInjuryWeek({workoutsByDate:{[date]:mixed},profile:coverageProfile,constraints:[],exclusions:[],recordedLoads:{},
+  programmingContextByDate:{[date]:{seasonPhase:'Pre-season',deloadPolicy:policy}}});
+ const frontal=week.workoutsByDate[date].exercises.find(r=>cats(r.exercise.name).includes('adductor_or_groin'));
+ assert.ok(frontal,'the injury week compile still completes the frontal plane');
+ assert.equal(frontal.prescribedSets,1,'a deload Friday without a useful-strength contract still halves demanding prehab to one set');
+ const adductors=week.workoutsByDate[date].exercises.filter(r=>cats(r.exercise.name).includes('adductor_or_groin'));
+ assert.equal(adductors.length,1,'one adductor isometric per session');
+});
+test('In-season a curl does not replace the Nordic: coverage adds one, credits an existing one and stays quiet pre-season',()=>{
+ const {isNordicExercise,weeklyLegCoverageCategories}=require('../rules/weeklyLegCoverage');
+ assert.ok(isNordicExercise('Nordic Lower'));assert.ok(!isNordicExercise('Hamstring Curl'));assert.ok(!isNordicExercise('Reverse Nordic Curl'));
+ assert.deepEqual(weeklyLegCoverageCategories('In-season')[0],'nordic');assert.ok(!weeklyLegCoverageCategories('Pre-season').includes('nordic'));
+ const inSeason={...coverageProfile,seasonPhase:'In-season',usualGameDay:'Saturday',gameDay:'Saturday'};
+ const curlWeek={'2027-03-29':strengthDay([simpleRow('Back Squat','s'),simpleRow('Hamstring Curl','h'),simpleRow('Calf Raises','c')])};
+ const repaired=completeWeeklyLegCoverage({weekStartISO:'2027-03-29',profile:inSeason,workoutsByDate:curlWeek,gameDates:['2027-04-03']});
+ const nordic=repaired.receipts.find(r=>r.category==='nordic');
+ assert.equal(nordic?.status,'added');assert.ok(isNordicExercise(nordic.exercise),nordic.exercise);
+ const added=repaired.workoutsByDate['2027-03-29'].exercises.find(r=>isNordicExercise(r.exercise.name));
+ assert.ok(added.prescribedSets>=2,'a couple of sets: '+added.prescribedSets);
+ assert.ok(repaired.receipts.find(r=>r.category==='hamstring_eccentric_or_isometric').status==='present','the curl still counts for the ordinary pair');
+ const nordicWeek={'2027-03-29':strengthDay([simpleRow('Back Squat','s'),simpleRow('Nordic Lower','n'),simpleRow('Calf Raises','c')])};
+ const credited=completeWeeklyLegCoverage({weekStartISO:'2027-03-29',profile:inSeason,workoutsByDate:nordicWeek,gameDates:['2027-04-03']});
+ assert.strictEqual(credited.workoutsByDate,nordicWeek,'an existing Nordic is credited, nothing added');
+ assert.ok(credited.receipts.every(r=>r.status==='present'));
+ const preSeason=completeWeeklyLegCoverage({weekStartISO:'2027-03-29',profile:coverageProfile,workoutsByDate:curlWeek});
+ assert.ok(!preSeason.receipts.some(r=>r.category==='nordic'),'pre-season keeps R-393\'s Nordic-or-curl pair');
+ // R-312: automatic Nordics stay out of G-2 through game day; the only strength day is G-1.
+ const gMinusOne={'2027-04-02':{...strengthDay([simpleRow('Back Squat','s'),simpleRow('Hamstring Curl','h'),simpleRow('Calf Raises','c')]),dayOfWeek:5}};
+ const proximity=completeWeeklyLegCoverage({weekStartISO:'2027-03-29',profile:inSeason,workoutsByDate:gMinusOne,gameDates:['2027-04-03']});
+ assert.ok(!proximity.workoutsByDate['2027-04-02'].exercises.some(r=>isNordicExercise(r.exercise.name)),'no Nordic the day before a game');
+ assert.equal(proximity.receipts.find(r=>r.category==='nordic')?.status,'unavailable');
+});
+const {scheduleWeek,scheduleRefused}=require('../rules/weeklyScheduler');
+test('In-season game week: the off-club gym day outside the fixture window carries one off-feet session harder than a flush',()=>{
+ const base={weekStartISO:'2027-03-29',phase:'In-season',offseasonBlock:null,gymAccessDays:[1,3,5],offLegAvailableDays:[1,3,5],clubNights:[2,4],gameDay:6,
+  fixtureRecurrence:'recurring',age:24,readiness:{lowReadiness:false,highReadiness:false,lowFatigue:false,consistentlyCompletesThree:false},unavailableDays:[],athleteGender:'female'};
+ const week=over=>{const r=scheduleWeek({...base,...over});assert.ok(!scheduleRefused(r),JSON.stringify(r));return r.days;};
+ const harder=days=>days.filter(d=>d.clauseId==='R-395');
+ const saturday=week({});
+ assert.deepEqual(harder(saturday).map(d=>[d.dayOfWeek,d.conditioning,d.conditioningCategory,d.conditioningRole,d.owner]),[[3,'off_leg','tempo','finisher','strength']]);
+ assert.equal(saturday.find(d=>d.dayOfWeek===1).conditioningCategory,'recovery_flush','G+2 keeps its R-265 flush');
+ assert.deepEqual(harder(week({gameDay:0})).map(d=>d.dayOfWeek),[3],'a Sunday fixture still lands it on Wednesday (G-4)');
+ assert.equal(harder(week({weekKind:'deload'})).length,0,'a reduced week authors nothing harder');
+ assert.equal(harder(week({readiness:{...base.readiness,lowReadiness:true}})).length,0);
+ assert.equal(harder(week({offLegAvailableDays:[]})).length,0,'no machine on the day: in-season combined conditioning is off-feet');
+ assert.equal(harder(week({clubNights:[]})).length,0,'the no-club game week already authors its own fast session (WC-143)');
+ assert.equal(harder(week({gymAccessDays:[1,5],offLegAvailableDays:[1,5]})).length,0,'Monday is G+2 and Friday G-1: no eligible day');
+ assert.equal(harder(week({phase:'Pre-season',clubNights:[1,3],gymAccessDays:[1,3,5],gameDay:null})).length,0,'in-season only');
+});
 console.log(`Leg programming: ${passed}/${passed+failures.length} named cases passed`);
 if(failures.length)process.exitCode=1;

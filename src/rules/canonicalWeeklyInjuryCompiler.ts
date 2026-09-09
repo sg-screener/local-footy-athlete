@@ -277,12 +277,14 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
             .map(([date]) => date),
           placeableFromISO: args.historyBeforeISO,
         };
-        const frontal = completeWeeklyLowerBodyFrontal({ ...weeklyCompletionArgs, workoutsByDate });
+        const dosePolicyForDate = (date: string) =>
+          (args.programmingContextByDate?.[date] ?? args.programmingContext)?.deloadPolicy ?? null;
+        const frontal = completeWeeklyLowerBodyFrontal({ ...weeklyCompletionArgs, dosePolicyForDate, workoutsByDate });
         // One core row per week (Sam, 2026-09-03), re-answered after the injury
         // fold the same way the frontal plane is: an injury that withdrew the
         // week's core row gets a safe one back on a day not yet done.
         return completeWeeklySupport({ ...weeklyCompletionArgs,
-          dosePolicyForDate: date => (args.programmingContextByDate?.[date] ?? args.programmingContext)?.deloadPolicy ?? null,
+          dosePolicyForDate,
           excludedExerciseNames:resolveWeekExclusions(args.exclusions,weeklyCompletionArgs.weekStartISO).wholeWeek,
           excludedExerciseNamesByDate:resolveWeekExclusions(args.exclusions,weeklyCompletionArgs.weekStartISO).byDate,
           workoutsByDate: frontal.workoutsByDate }).workoutsByDate;
@@ -290,7 +292,11 @@ export function compileCanonicalInjuryWeek(args: Omit<InjurySessionInput, 'worko
     : workoutsByDate;
   const contracted = Object.fromEntries(Object.entries(completed).map(([dateISO, original]) => {
     if (args.historyBeforeISO && dateISO < args.historyBeforeISO) return [dateISO, workoutsByDate[dateISO]];
-    let workout = reduceDemandingPrehab(original,original.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false);
+    // The dated deload policy is the same answer the completion rows consumed
+    // above. A Mixed day carries no useful-strength contract, so reading only
+    // the contract left a deload Friday's completed Copenhagen at full dose.
+    let workout = reduceDemandingPrehab(original,(original.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false)
+      || !!((args.programmingContextByDate?.[dateISO] ?? args.programmingContext)?.deloadPolicy));
     // Base edits retain their existing order. The edit compiler carries only
     // injury-era edits and unresolved targets here, after those rows exist.
     // The same ledger translation and edit compiler own both paths.

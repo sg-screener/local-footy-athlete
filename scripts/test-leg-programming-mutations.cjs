@@ -13,7 +13,7 @@ const mutations={
   'drop-fixture-coverage-dose':['src/utils/fixtureMinimalReplan.ts','dosePolicyForDate: date => args.targetMicrocycle.dosePolicyByDay?.[dayOfWeekForISODate(date)] ?? null,','', 'src/__tests__/legProgrammingJourneyTests.cjs'],
   'drop-trial-coverage-dose':['src/rules/canonicalWeeklyRowCompiler.ts','dosePolicyForDate: date => draft.dosePolicyByDay[dayOfWeekForISODate(date)] ?? null,','', 'src/__tests__/legProgrammingJourneyTests.cjs'],
   'drop-final-coverage-dose':['src/rules/canonicalWeeklyRowCompiler.ts','dosePolicyForDate: date => compiledDosePolicyByDay[dayOfWeekForISODate(date)] ?? null,','', 'src/__tests__/legProgrammingJourneyTests.cjs'],
-  'drop-injury-coverage-dose':['src/rules/canonicalWeeklyInjuryCompiler.ts','dosePolicyForDate: date => (args.programmingContextByDate?.[date] ?? args.programmingContext)?.deloadPolicy ?? null,',''],
+  'drop-injury-coverage-dose':['src/rules/canonicalWeeklyInjuryCompiler.ts','        return completeWeeklySupport({ ...weeklyCompletionArgs,\n          dosePolicyForDate,','        return completeWeeklySupport({ ...weeklyCompletionArgs,'],
   'ignore-compiler-dose-for-coverage':['src/rules/weeklyLegCoverage.ts','const policy=args.dosePolicyForDate?.(date) ?? null;','const policy=null;'],
   'ignore-kit-main-seat-reservation':['src/rules/weeklyStrengthBudget.ts','if (slotAvailable) {','if (false) {'],
   'lose-injury-family-evidence':['src/rules/automaticWeeklyExerciseSelection.ts','if (family && !injuryReplacement) {','if (family) {'],
@@ -32,6 +32,13 @@ const mutations={
   'skip-running-return':['src/rules/runningReturn.ts','if(!stage || workout.athletePlacement','if(true || !stage || workout.athletePlacement'],
   'ignore-prehab-dose':['src/rules/trainingWorkload.ts','if (!isDemandingPrehab(name)) return sets;','if (true) return sets;'],
   'ignore-derived-injury':['src/rules/datedAthleteContext.ts','const dated=datedAthleteContext(athlete,dateISO);','return true; const dated=datedAthleteContext(athlete,dateISO);'],
+  // Sam's 2026-09-09 review of the three-day year (R-393 repairs, R-394, R-395).
+  'untype-primer-pogo':['src/utils/sessionBuilder.ts',"// A lower jump, so the injury exposure filter sees it (R-393).\n        power: 'lower',",'// mutation: untyped authored jump'],
+  'ignore-session-adductor-in-flow':['src/utils/mobilityPrehabFlow.ts',"if (sessionSuppliesAdductor\n        && footballRobustnessCategoriesForExercise(candidate.name).includes('adductor_or_groin')) continue;",''],
+  'drop-frontal-completion-dose':['src/rules/canonicalWeeklyPlaneCompletion.ts','const policy = args.dosePolicyForDate?.(dateISO) ?? null;','const policy = null;'],
+  'ignore-dated-policy-for-prehab-reduction':['src/rules/canonicalWeeklyInjuryCompiler.ts','|| !!((args.programmingContextByDate?.[dateISO] ?? args.programmingContext)?.deloadPolicy))','|| false)'],
+  'nordic-satisfied-by-curl':['src/rules/weeklyLegCoverage.ts',"category === 'nordic' ? isNordicExercise(name)","category === 'nordic' ? footballRobustnessCategoriesForExercise(name).includes('hamstring_eccentric_or_isometric')"],
+  'drop-inseason-moderate-conditioning':['src/rules/weeklyScheduler.ts','if (!receiver) return withFortnightlyCod;','if (true) return withFortnightlyCod;'],
 };
 function installMutation(name){
  const rule=mutations[name];if(!rule)throw Error('Unknown mutation '+name);

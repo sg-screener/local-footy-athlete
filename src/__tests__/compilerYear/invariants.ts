@@ -1,4 +1,4 @@
-import { completeWeeklyLegCoverage } from '../../rules/weeklyLegCoverage';
+import { completeWeeklyLegCoverage, isNordicExercise } from '../../rules/weeklyLegCoverage';
 import type { ActiveConstraint } from '../../store/coachUpdatesStore';
 import { createHash } from 'crypto';
 import type { CanonicalWeeklyCompilerResult } from '../../rules/canonicalWeeklyCompiler';
@@ -11,6 +11,12 @@ import { DAY_NAMES, plusDays } from './catalog';
 import type { Check } from './results';
 import { buildSessionTemplate } from '../../utils/sessionTemplate';
 import { project } from '../../rules/projectVisibleWeek';
+import { applyConstraintsToTypedComponents } from '../../utils/exposureEngine';
+import { compileActiveExposureConstraints } from '../../rules/canonicalWeeklyConstraintCompiler';
+import { filterConstraintsForDate } from '../../utils/readinessConstraints';
+import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
+import { equipmentTagsOnDate } from '../../rules/canonicalWeeklyAvailabilityState';
+import { footballRobustnessCategoriesForExercise } from '../../rules/footballRobustnessFoundation';
 
 export function compilerChecks(result: CanonicalWeeklyCompilerResult): Check[] {
   if (result.ok === false) return [{ id: 'accepted_compile', ok: false, detail: JSON.stringify(result.refusal) }];
@@ -40,6 +46,12 @@ export function visibleSignature(days: readonly ResolvedDay[]): string {
 }
 export const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 
+/** Prescribed Nordic sets across a visible week (R-394's "a couple of sets"). */
+export function nordicSetsIn(workouts: readonly { exercises: readonly { exercise?: { name?: string }; prescribedSets: number; unavailableForInjury?: unknown }[] }[]): number {
+  return workouts.flatMap((w) => w.exercises).filter((row) => isNordicExercise(row.exercise?.name ?? '')
+    && row.prescribedSets > 0 && !row.unavailableForInjury).reduce((sum, row) => sum + row.prescribedSets, 0);
+}
+
 export function signatureDifferences(before: string, after: string): string[] {
   const changes: string[] = [];
   const visit = (a: any, b: any, path: string) => {
@@ -58,6 +70,8 @@ export function inspectWeek(args: {
   effectiveContract: WeeklyExposureContractV2;
   activeConstraints?: readonly ActiveConstraint[];
   userRemovalConstraints?: readonly UserRemovalConstraint[];
+  /** R-394: "every week, or at minimum every second week" needs the previous in-season week. */
+  previousInSeasonNordicSets?: number | null;
 }): Check[] {
   const { week, days, weekStart, phase, phaseWeek, profile, marks } = args;
   const dates = Array.from({ length: 7 }, (_, i) => plusDays(weekStart, i));
@@ -100,8 +114,73 @@ export function inspectWeek(args: {
   let projectionError = '';
   try { project({ week: days, weekStart }); } catch (error) { projectionError = String(error); }
   const coverage=completeWeeklyLegCoverage({weekStartISO:weekStart,workoutsByDate:Object.fromEntries(days.filter(d=>d.workout).map(d=>[d.date,d.workout!])),profile,activeConstraints:args.activeConstraints,userRemovalConstraints:args.userRemovalConstraints,gameDates:actualGames.map(d=>d.date)});
+  // R-394 (Sam, 2026-09-09): in-season, a couple of sets of Nordics every week
+  // or at minimum every second week; a curl does not replace them. A reduced
+  // week (deload door, illness, readiness) may carry the halved single set.
+  const inSeason = phase === 'In-season';
+  const nordicSets = nordicSetsIn(workouts);
+  const nordicReceipt = coverage.receipts.find(r => r.category === 'nordic');
+  const reducedWeek = Object.keys(week.dosePolicyByDay ?? {}).length > 0
+    || (args.activeConstraints ?? []).some(c => c.status === 'active' && c.type === 'fatigue');
+  const nordicOk = !inSeason || (nordicReceipt?.status !== 'added'
+    && (nordicSets >= 2 || (args.previousInSeasonNordicSets ?? 0) >= 2
+      || (nordicSets >= 1 && reducedWeek)
+      || nordicReceipt?.status === 'unavailable' || nordicReceipt?.status === 'athlete_removed'));
+  // R-395 (Sam, 2026-09-09): in an in-season game week the club athlete's
+  // strength session that lands on a gym day off club training, outside the
+  // fixture window and with a machine, is harder than a flush. The checker
+  // reads the delivered week (where strength actually landed), the athlete's
+  // club nights, kit and the week's fixtures; the assignment itself is R-391's.
+  const clubDays = new Set((profile.teamTrainingDays ?? []).map((day) => DAY_NAMES.indexOf(day)));
+  const gameDows = actualGames.map((d) => new Date(`${d.date}T12:00:00Z`).getUTCDay());
+  const machine = Object.values(profile.equipmentAnswer?.modalities ?? {}).some((value) => value === 'have');
+  const untilGame = (day: number, game: number) => (game - day + 7) % 7;
+  const sinceGame = (day: number, game: number) => (day - game + 7) % 7;
+  const eligibleHarderDays = days.filter((d) => d.workout?.exercises.some((row) => row.section18Evidence?.role === 'main_strength')
+    && !clubDays.has(d.dayOfWeek) && !gameDows.includes(d.dayOfWeek)
+    && gameDows.every((game) => ![1, 2].includes(untilGame(d.dayOfWeek, game)) && ![1, 2].includes(sinceGame(d.dayOfWeek, game))))
+    .map((d) => d.dayOfWeek);
+  const restricted = reducedWeek || (args.activeConstraints ?? []).some(c => c.status === 'active' && c.type === 'injury');
+  const harderExpected = inSeason && gameDows.length > 0 && clubDays.size > 0 && machine && !restricted && eligibleHarderDays.length > 0;
+  // A flush is typed `optional_flush` at light stress; anything harder is a
+  // core conditioning component at moderate/hard stress, or a Speed block.
+  const harderDelivered = days.some((d) => d.workout && !clubDays.has(d.dayOfWeek) && !gameDows.includes(d.dayOfWeek)
+    && ((!!d.workout.conditioningBlock?.options.length && d.workout.section18ConditioningRole !== 'optional_flush'
+      && ['moderate', 'hard'].includes(String(d.workout.section18Evidence?.conditioningStress))) || !!d.workout.speedBlock));
+  // R-393 repair (Sam's 2026-09-09 review, item 3): the delivered week is a
+  // fixed point of the ONE typed injury exposure filter. A Primer whose jump
+  // walked past that filter under a knee is exactly what this catches; an
+  // athlete's own additions (R-388) and athlete-placed sessions are theirs.
+  const exposureLeaks = days.flatMap((d) => {
+    const workout = d.workout;
+    if (!workout || workout.athletePlacement || workout.workoutType === 'Game') return [];
+    const dated = filterConstraintsForDate([...(args.activeConstraints ?? [])], d.date);
+    const filtered = applyConstraintsToTypedComponents(workout, compileActiveExposureConstraints([...dated])).workout;
+    const kept = new Set(filtered.exercises.map((row) => row.id));
+    const lost = workout.exercises.filter((row) => !kept.has(row.id) && !row.athleteAdditionId).map((row) => row.exercise?.name);
+    if (workout.speedBlock && !filtered.speedBlock) lost.push('speedBlock');
+    return lost.length ? [`${d.date}:${lost.join('+')}`] : [];
+  });
+  // R-393 repair (item 5): one adductor isometric per session, counting the
+  // prescribed rows AND the derived warm-up flow the athlete actually sees.
+  const adductorDoubles = days.flatMap((d) => {
+    const workout = d.workout;
+    if (!workout || workout.athletePlacement) return [];
+    const rowsWithGroin = workout.exercises.filter((row) => row.prescribedSets > 0 && !row.unavailableForInjury
+      && footballRobustnessCategoriesForExercise(row.exercise?.name ?? '').includes('adductor_or_groin')).map((row) => row.exercise?.name);
+    const flow = selectMobilityPrehabFlow({ workout, seasonPhase: profile.seasonPhase, isGameWeek: actualGames.length > 0, date: d.date,
+      performedMovementIds: [], athlete: { onboardingData: profile, injuries: profile.injuries ?? [],
+        activeConstraints: args.activeConstraints, equipmentTags: equipmentTagsOnDate(profile, d.date, []) } });
+    const flowWithGroin = (flow?.movements ?? []).filter((m) => footballRobustnessCategoriesForExercise(m.exercise.name).includes('adductor_or_groin')).map((m) => m.exercise.name);
+    const all = [...rowsWithGroin, ...flowWithGroin];
+    return all.length > 1 ? [`${d.date}:${all.join('+')}`] : [];
+  });
   return [
     { id:'weekly_calf_hamstring',ok:!coverage.receipts.some(r=>r.status==='added'),detail:JSON.stringify(coverage.receipts) },
+    { id:'injury_exposure_fixed_point', ok: exposureLeaks.length === 0, detail: exposureLeaks.join(' | ') },
+    { id:'one_adductor_isometric_per_session', ok: adductorDoubles.length === 0, detail: adductorDoubles.join(' | ') },
+    { id:'weekly_inseason_nordic', ok: nordicOk, detail: `phase=${phase} nordicSets=${nordicSets} previous=${args.previousInSeasonNordicSets ?? 'none'} reduced=${reducedWeek} receipt=${JSON.stringify(nordicReceipt ?? null)}` },
+    { id:'weekly_inseason_conditioning', ok: !harderExpected || harderDelivered, detail: `expected=${harderExpected} delivered=${harderDelivered} eligibleDays=${eligibleHarderDays.join(',')} conditioning=${days.map(d => `${d.dayOfWeek}:${d.workout?.section18ConditioningRole ?? '-'}/${d.workout?.section18Evidence?.conditioningStress ?? '-'}`).join(' ')}` },
     { id: 'phase_clock', ok: args.effectiveContract.identity.seasonPhase === phase && args.effectiveContract.identity.phaseWeek === phaseWeek,
       detail: `expected=${phase}/${phaseWeek} actual=${args.effectiveContract.identity.seasonPhase}/${args.effectiveContract.identity.phaseWeek}` },
     { id: 'placement', ok: placement, detail: `visible dates=${days.map((d) => d.date).join(',')}` },

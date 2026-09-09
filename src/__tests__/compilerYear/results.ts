@@ -19,7 +19,13 @@ export interface YearResult {
   prerequisites: Check[]; mutations: Check[]; athletes: AthleteResult[];
   notCovered: string[];
 }
-export const WEEK_CHECKS = ['compiler_boundary', 'dose_arithmetic', 'compiler_owns_visible_rows', 'phase_clock', 'placement', 'fixtures', 'conservation', 'energy_session_content', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging', 'weekly_calf_hamstring'] as const;
+export const WEEK_CHECKS = ['compiler_boundary', 'dose_arithmetic', 'compiler_owns_visible_rows', 'phase_clock', 'placement', 'fixtures', 'conservation', 'energy_session_content', 'optional', 'deload', 'programming', 'restart', 'ledger', 'selection_history', 'logging', 'weekly_calf_hamstring',
+  // R-394 / R-395 (Sam, 2026-09-09): every future athlete is held to the
+  // in-season Nordic minimum and the one harder-than-a-flush gym day.
+  'weekly_inseason_nordic', 'weekly_inseason_conditioning',
+  // R-393 repairs (same review): the week is a fixed point of the typed injury
+  // exposure filter, and no session carries two adductor isometrics.
+  'injury_exposure_fixed_point', 'one_adductor_isometric_per_session'] as const;
 export function requiredWeekChecks(week: Pick<WeekResult, 'phaseWeek' | 'phase' | 'index'>): readonly string[] {
   if (week.phaseWeek === 10) return [...WEEK_CHECKS, 'carried_injury_report'];
   if (week.phaseWeek === 11 || week.phaseWeek === 12) return [...WEEK_CHECKS, 'carried_injury_retained'];

@@ -20,7 +20,7 @@ import { coldStartThroughOnboarding, quiet, quietAsync, followTheWeek, recordDay
   relaunchApp, rolloverIfDue, setJourneyClock, takeCensus, swapOptionsFor } from '../support/athleteJourney';
 import { ARCHETYPES, YEAR_START, athleteAnswers, plusDays, yearTimeline, type Archetype } from './catalog';
 import { blockSelectionHistory } from '../../store/blockSelectionHistoryStore';
-import { compilerChecks, digest, inspectWeek, signatureDifferences, visibleSignature } from './invariants';
+import { compilerChecks, digest, inspectWeek, nordicSetsIn, signatureDifferences, visibleSignature } from './invariants';
 import type { AthleteResult, Check } from './results';
 import { observeFinalRows, finalRowChecks, finalProgramSignature } from './finalRows';
 import { sourceFactLifecycle, compilerOwnsVisibleInjuryRows } from './sourceFacts';
@@ -128,6 +128,8 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
     return output;
   };
   let stopped: string | null = null;
+  // R-394: the previous in-season week's prescribed Nordic sets, for "every second week".
+  let previousInSeasonNordicSets: number | null = null;
   let carriedInjury: { id: string; reportIndex: number; blockStart: string } | null = null;
   let edited: { weekStart: string; before: string; after: string; target: string } | null = null;
   const action = (kind: string, date: string, ok: boolean, detail?: string) => {
@@ -291,13 +293,15 @@ export async function runAthlete(archetype: Archetype, storage: Map<string, stri
         const current = useProgramStore.getState().currentProgram?.microcycles.find((m) => m.startDate.slice(0, 10) === week.weekStart);
         if (!current) throw new Error('No current compiled microcycle for this date');
         const before = visible(week.weekStart);
-        checks.push(...inspectWeek({ week: current, days: before, ...week,
+        checks.push(...inspectWeek({ week: current, days: before, ...week, previousInSeasonNordicSets,
           activeConstraints:useProgramStore.getState().acceptedMaterialContext.activeConstraints,
           userRemovalConstraints:useProgramStore.getState().userRemovalConstraints,
           effectiveContract: quiet(() => rebaseAcceptedEffectiveWeek({ surfaces: { ...useProgramStore.getState(),
             removalDecisions: useProgramStore.getState().userRemovalConstraints, athleteExclusions: getAthleteExclusions() }, weekStart: week.weekStart,
             profile: useProfileStore.getState().onboardingData, markedDays: useCalendarStore.getState().markedDays })).contract,
           profile: useProfileStore.getState().onboardingData, marks: useCalendarStore.getState().markedDays }));
+        previousInSeasonNordicSets = week.phase === 'In-season'
+          ? nordicSetsIn(before.flatMap((d) => d.workout ? [d.workout] : [])) : null;
         const signature = visibleSignature(before);
         const acceptedLedger = ledger();
         const acceptedSelections = semanticFingerprint(blockSelectionHistory());

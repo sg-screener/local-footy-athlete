@@ -92,9 +92,9 @@
       "reason": "legprogram 2026-09-08 verification: canonical row author. Before selection the shared weekly seat budget reserves kit-legal main work for full-body days; support yields to those reservations. Existing role, choice, prescription and history owners remain in use."
     },
     "src/rules/weeklyScheduler.ts#scheduleWeek": {
-      "fingerprint": "b6879ab7d7edab17a64bccc4dbda4addedd39b27099e0d4b9e3303c08fc36d2f",
+      "fingerprint": "05f3836bfa2a65fc0426bcb16b1a45c9dabda89487ea7c1acd0199fb6076b0d7",
       "classification": "canonical_compiler",
-      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally."
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. yearfix 2026-09-09 re-review: R-395: one in-season off-club strength day outside the fixture window receives a tempo finisher outside the game-week budget; pure scheduling stage, no store access. Classification unchanged."
     },
     "src/data/defaultProgram.ts#buildWorkoutsFromCoach": {
       "fingerprint": "fadde87552d0b5378d5a879bd08812c53f2ff1311ab4f8c771b1f87b974895c4",
@@ -757,9 +757,9 @@
       "reason": "Diagnostic session recorder builds feedback from real visible components and submits the same session outcome transaction as the app."
     },
     "src/rules/canonicalWeeklyInjuryCompiler.ts#compileCanonicalInjuryWeek": {
-      "fingerprint": "c5327b1b9bddb77c0b7db60c5b079912fec9ea959154dfe963b0e570b4665f53",
+      "fingerprint": "fc924665ff9c29b7d0d216238765546728e2f70546a856fbc278807c5e79f9be",
       "classification": "canonical_compiler",
-      "reason": "yearscan, R-388 review, 2026-09-08: Folds explicit dated injury stages and returns workouts/stages. Reserved exercise names prevent replacement collisions; no live store publication. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced. legprogram 2026-09-08 carry/history re-review: The existing history boundary now protects every fold and dose pass, while earlier rows remain available for weekly credit. No new state writer. audit 2026-09-09 re-review after the R-354 history repair (296b3478): the horizon now bars only injury facts reported on/after historyBeforeISO from shaping earlier days, and history days return the post-fold day instead of the raw input, so facts already in force replay on done days. Same fold, same inputs, same outputs; no new persistence, no store publication, no independent weekly author. Witnessed by test:rest-day-reason 144/144, test:leg-programming 37/37 cases, test:annual-audit-repairs, test:annual-audit-second-repairs, fresh test:canonical-weekly-compiler 10753/0 and the 416/416 annual on 865a5a4f."
+      "reason": "yearscan, R-388 review, 2026-09-08: Folds explicit dated injury stages and returns workouts/stages. Reserved exercise names prevent replacement collisions; no live store publication. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced. legprogram 2026-09-08 carry/history re-review: The existing history boundary now protects every fold and dose pass, while earlier rows remain available for weekly credit. No new state writer. audit 2026-09-09 re-review after the R-354 history repair (296b3478): the horizon now bars only injury facts reported on/after historyBeforeISO from shaping earlier days, and history days return the post-fold day instead of the raw input, so facts already in force replay on done days. Same fold, same inputs, same outputs; no new persistence, no store publication, no independent weekly author. Witnessed by test:rest-day-reason 144/144, test:leg-programming 37/37 cases, test:annual-audit-repairs, test:annual-audit-second-repairs, fresh test:canonical-weekly-compiler 10753/0 and the 416/416 annual on 865a5a4f. yearfix 2026-09-09 re-review: the frontal completion receives the same dated dose policy the support completion consumes, and the demanding-prehab reducer reads that dated policy beside the useful-strength contract (a Mixed deload day has no contract). Classification unchanged."
     },
     "src/utils/coachRevisionTemplates.ts#buildEngineTemplateWorkout": {
       "fingerprint": "0ebb7ebf8d49acbdad64c38332298b0afc5015e629f0a1e13d7f1f6ea72c198c",
@@ -1027,9 +1027,9 @@
       "reason": "Private fixture strength relocation binds supplied template identities and typed fixture dependency history to the destination."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan": {
-      "fingerprint": "f3719cf5aca7550b43529ca69469e55ca3a0593ccbf5130976da6257f2f52332",
+      "fingerprint": "5f72545903da853f2d3729964f266b2d0cabba993122ca91da29d125dc757393",
       "classification": "canonical_compiler",
-      "reason": "legprogram 2026-09-08 re-review: integrate 2026-09-03 re-review (the compiler's own week competes with a craft-violating minimal repair): the fixture specialist enumerates, evaluates and ranks candidate weeks; when the best minimal candidate still carries a strong craft violation, the regeneration from the compiler target is ranked by the same cost. Returns the chosen candidate and diagnostics. No store writes. | integrate 2026-09-03 re-review: the planner source also answers for the week's core row (completeWeeklyCore) beside the frontal plane before the search. No store writes. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced."
+      "reason": "legprogram 2026-09-08 re-review: integrate 2026-09-03 re-review (the compiler's own week competes with a craft-violating minimal repair): the fixture specialist enumerates, evaluates and ranks candidate weeks; when the best minimal candidate still carries a strong craft violation, the regeneration from the compiler target is ranked by the same cost. Returns the chosen candidate and diagnostics. No store writes. | integrate 2026-09-03 re-review: the planner source also answers for the week's core row (completeWeeklyCore) beside the frontal plane before the search. No store writes. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced. yearfix 2026-09-09 re-review: the source frontal completion receives the target microcycle dated dose policy like its support completion already did. Classification unchanged."
     },
     "src/utils/fixtureMinimalReplan.ts#buildFixtureMinimalReplan.regenerateFromCompilerTarget": {
       "fingerprint": "ddeaa826fa2f5dacadfcdba57c40c8a5b2e45e1303140b0da790844b3e319eda",
@@ -1352,9 +1352,9 @@
       "reason": "Captures actual card/detail semantic projections for transaction verification; no generated-output mutation."
     },
     "src/utils/sessionBuilder.ts#authoredSlotRowToWorkoutExercise": {
-      "fingerprint": "480c7adceef25c41fdb8250ddc363310ba6b3d30d8692919b61300f20bcb5e52",
+      "fingerprint": "1da29ca477af5d557753bf56601f5fa7c11b8a9b4117df201b003d8b5ee423d8",
       "classification": "canonical_compiler",
-      "reason": "Private optional-session authored-slot row constructor uses explicit seed and dose, with typed accessory evidence."
+      "reason": "Private optional-session authored-slot row constructor uses explicit seed and dose, with typed accessory evidence. yearfix 2026-09-09 re-review: an authored jump row (Primer Pogo Hops) is typed power with family and evidence so the one injury exposure filter governs it; pure row builder. Classification unchanged."
     },
     "src/rules/canonicalWeeklySessionEditState.ts#canonicalWeeklySessionEditStateFrom": {
       "fingerprint": "fab6400c74f230c2f363f8dd9c1537bdf06513eaec9ec2e2753f1af68e44e58d",
@@ -2547,9 +2547,9 @@
       "reason": "R-389 yearbook review: canonical generation now supplies the existing progression and exclusion owners as a pure strength-dose preview before final energy placement. Final full-program progression and publication keep their existing boundary; the preview is not saved."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks": {
-      "fingerprint": "18e72d8f1c0a38b396f2d9be9e3927493b09725c9edcb7f984c2ed8299170f74",
+      "fingerprint": "101dc5c48ff894a1efd6454623ef0539b6472e4bc88fe7bdb12d9f5f789df6d2",
       "classification": "canonical_compiler",
-      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: resolved strength rows are assessed by the existing Section18 evaluator; only main-strength/pattern blockers join candidate cost before placement preferences. Pure trial, same canonical owner, no persistence. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced."
+      "reason": "R-391 yearbook review: Canonical scheduler/compiler trial only. Enumerates legal assignments, composes actual prescribed dose, compares complete arrangements, and keeps only the chosen composition and selection records. No store, clock, display mutation or independent publication. Trials use fixed assignments and duplicate trials are cached locally. Yearbook R391: resolved strength rows are assessed by the existing Section18 evaluator; only main-strength/pattern blockers join candidate cost before placement preferences. Pure trial, same canonical owner, no persistence. R-393 legprogram: reviewed changed body and calls; shared coverage, dated health, prehab and return-dose context remains within this existing ownership. No new persistence or independent weekly author. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced. yearfix 2026-09-09 re-review: the frontal completion is handed the compiled dated dose policy and the prehab reducer also reads that policy; no new writer. Classification unchanged."
     },
     "src/rules/canonicalWeeklyRowCompiler.ts#compileCanonicalProgramWeeks.buildCanonicalCandidate": {
       "fingerprint": "2855e4c733535f82f600115c78b198ac0e20411fe9fd78487f81116a165aef59",
@@ -3212,9 +3212,9 @@
       "reason": "hingecod 2026-09-03: after the fixture change has committed, derives the game-change note from the before/after visible weeks and records it through upsertGameChangeCoachNoteFromDiff (coach-updates constraint transaction). A note that cannot derive is disclosed on the trace, never a veto. The per-run trace id no longer rides on the note."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyLowerBodyFrontal": {
-      "fingerprint": "c4dd5d9260e923762311f97aad1f0940acc664a23cf4ef3be9bd431fff1cbb09",
+      "fingerprint": "bee18ca3fcb15517611cab5c2ef8dc0774f0863ee85ccb2418720f398f64a186",
       "classification": "canonical_compiler",
-      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical weekly frontal-plane completion now requests automatic eligibility. Existing completion placement and weekly selection are unchanged."
+      "reason": "yearlens 2026-09-07 R-383 re-review: Existing canonical weekly frontal-plane completion now requests automatic eligibility. Existing completion placement and weekly selection are unchanged. yearfix 2026-09-09 re-review: takes an optional dosePolicyForDate and applies the dated deload policy to the completed frontal row; still adds one row on an existing strength day and writes nothing. Classification unchanged."
     },
     "src/rules/canonicalWeeklyPlaneCompletion.ts#completeWeeklyCore": {
       "fingerprint": "7b794b285d25d6398d757da1d161bfd0dc1e0bfe0090e37b0c150f5a32b71616",
@@ -3757,9 +3757,9 @@
       "reason": "R-393 legprogram review: canonical automatic prehab dose reduction. Previously counted rows and earlier saved add-ons prevent duplicate full doses; explicit row additions retain their chosen dose."
     },
     "src/rules/weeklyLegCoverage.ts#completeWeeklyLegCoverage": {
-      "fingerprint": "f9c4093a4138f48d6b30ad50373cca07237ae5e69f866f1738913fa20f8c6f03",
+      "fingerprint": "63e7eeec4fddcd9ab962c741a01794a0e7ac1d94ff8445a9b11141405c701507",
       "classification": "canonical_compiler",
-      "reason": "R-393 legprogram review: Final canonical weekly support completion and placement preview: credits existing prescribed categories, uses shared equipment/injury/automatic selection and dose owners, and adds only missing legal support on existing automatic strength days. Accepted-week checks use the canonical dated edit owner to exempt only categories deliberately deleted; moves and restored or unrelated removals do not waive coverage. Equipment availability uses eligible normal hamstring choices; existing experience gates are preserved and available Nordic/curl choices cannot be replaced by hinge credit. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced."
+      "reason": "R-393 legprogram review: Final canonical weekly support completion and placement preview: credits existing prescribed categories, uses shared equipment/injury/automatic selection and dose owners, and adds only missing legal support on existing automatic strength days. Accepted-week checks use the canonical dated edit owner to exempt only categories deliberately deleted; moves and restored or unrelated removals do not waive coverage. Equipment availability uses eligible normal hamstring choices; existing experience gates are preserved and available Nordic/curl choices cannot be replaced by hinge credit. legprogram 2026-09-08 dose re-review: coverage consumes the already resolved dated compiler policy; no policy is independently inferred from workout labels, and no new persistence or publication path is introduced. yearfix 2026-09-09 re-review: R-394: in-season a typed Nordic category is answered first, before the R-393 pair; same candidate, safety, dose and receipt path. Classification unchanged."
     },
     "src/rules/weeklyLegCoverage.ts#completeWeeklySupport": {
       "fingerprint": "df1879896690ff6dd347a49aa914bcf157c3ffef1662f2cac907d300a0ea50e4",

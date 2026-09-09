@@ -1299,6 +1299,8 @@ export function buildFixtureMinimalReplan(
   })[0]?.workouts ?? fixtureNeutral;
   const plannerSource = withCompilerPlannerOffers(expired, args.targetMicrocycle.workouts, args);
   const sourceCompletion = completeWeeklyLowerBodyFrontal({
+    // The same dated answer the support completion consumes below (R-393 repair, 2026-09-09).
+    dosePolicyForDate: (date) => args.targetMicrocycle.dosePolicyByDay?.[dayOfWeekForISODate(date)] ?? null,
     weekStartISO: args.weekStart,
     workoutsByDate: Object.fromEntries(plannerSource.map((workout) => [
       isoDateForWeekday(args.weekStart, workout.dayOfWeek),

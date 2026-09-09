@@ -980,6 +980,8 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
         if (!firstWorkoutByDate.has(dateISO)) firstWorkoutByDate.set(dateISO, workout);
       }
       const completed = completeWeeklyLowerBodyFrontal({
+        // The same dated answer the support completion consumes below (R-393 repair, 2026-09-09).
+        dosePolicyForDate: (date) => compiledDosePolicyByDay[dayOfWeekForISODate(date)] ?? null,
         weekStartISO: blockState.weekStart,
         workoutsByDate: Object.fromEntries(firstWorkoutByDate),
         profile,
@@ -1013,7 +1015,10 @@ export function compileCanonicalProgramWeeks(args: CanonicalProgramWeeksInput): 
     }
     workouts = workouts.map(workout => {
       const dateISO=dateForWeekday(blockState.weekStart,workout.dayOfWeek);
-      const reduced=reduceDemandingPrehab(workout,workout.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false);
+      // The dated dose policy is the compiler's own answer; the useful-strength
+      // contract is absent on a Mixed day, which left a deload's prehab full.
+      const reduced=reduceDemandingPrehab(workout,(workout.usefulStrengthSessionContract?.reductionReasons.some(reason=>['scheduled_deload','low_readiness','illness'].includes(reason))??false)
+        || !!compiledDosePolicyByDay[workout.dayOfWeek]);
       return applyRunningReturn(reduced,dateISO,runningReturnStage({dateISO,seasonPhase:profile.seasonPhase,
         phaseWeekNumber:blockState.phaseWeekNumber,constraints:args.activeConstraints}));
     });
