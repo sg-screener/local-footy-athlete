@@ -5,6 +5,7 @@ every time; this file is the receipt, not the authority.
 
 | date (UTC) | function version | git sha of the tree deployed | bundle highest ruling | what changed | by |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-09 22:31:58 | coach-chat v13 | 8ed00558 | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
 | 2026-09-09 22:29:06 | coach-chat v12 | 4ff64f84 | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
 | 2026-09-09 22:06:07 | coach-chat v11 | 077bd39d (bundle unchanged, R-398) | R-398 | slice S1 server half (phase gate, `situation` required) + slice S2a (one chunk per ruling, question-first seating, contract version 2 handshake); via scripts/coach-deploy.sh — its receipt step aborted on a pipefail (fixed after), row written by hand | PHONEBUILD, on Sam's "deploy the coach" |
 | 2026-09-09 21:05:58 | coach-chat v10 | b71fd747 + rebuilt bundle | R-396 | F14 grounding gate (readiness/fixture claims, 7dd7f9e6); bundle R-393 → R-396 | PHONEBUILD, on Sam's "deploy the coach" |
