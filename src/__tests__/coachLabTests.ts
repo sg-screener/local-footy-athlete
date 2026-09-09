@@ -53,7 +53,7 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
 
 console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
 {
-  ok('the first bench contains ten questions and the S1 bench twelve', COACH_LAB_CASES.length === 22);
+  ok('the benches: ten first, twelve S1, thirteen S3/S5', COACH_LAB_CASES.length === 35);
   ok('every case has a stable unique id',
     new Set(COACH_LAB_CASES.map((entry) => entry.id)).size === COACH_LAB_CASES.length);
   ok('messy spelling and shorthand survive unchanged',
@@ -67,8 +67,13 @@ console.log('\n[1] THE FIRST CORPUS IS REAL LANGUAGE, NOT PERFECT PROMPTS');
   // his words end with the door's name). Twelve S1 rows, none pending.
   const s1Approved = approved.filter((entry) => entry.id.startsWith('s1-'));
   const nordic = COACH_LAB_CASES.find((entry) => entry.id === 's1-nordic-swap-in-season');
+  const s3Approved = approved.filter((entry) => entry.id.startsWith('s3-') || entry.id.startsWith('s5-'));
+  ok('the twelve S3/S5 tapes Sam approved are recorded exactly; the refused one stays pending',
+    s3Approved.length === 12
+      && s3Approved.every((entry) => entry.ownerReview.approvedPromptVersion === 'coach-lab-openai-v5-doors')
+      && COACH_LAB_CASES.find((entry) => entry.id === 's3-change-gym-days')?.ownerReview.status === 'pending');
   ok('the eleven S1 tapes Sam approved are recorded exactly, and the Nordic one is his correction',
-    approved.length === 12
+    approved.length === 24
       && s1Approved.length === 11
       && nordic?.ownerReview.status === 'corrected'
       && typeof nordic.ownerReview.correctionReason === 'string'

@@ -15,7 +15,8 @@ export const OPENAI_COACH_LAB_MODEL = 'gpt-5.6-terra';
  * injuries, estimates and MAS paragraphs (R-397). An approval never transfers
  * across prompt versions (R-136), so the S1 tapes are bound to v4.
  */
-export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v4-situation';
+/** v5 (2026-09-10, slices S3–S5): APP DOORS block, athlete paragraph, output rules. */
+export const OPENAI_COACH_LAB_PROMPT_VERSION = 'coach-lab-openai-v5-doors';
 
 export interface OpenAICoachLabClient {
   create(request: OpenAIResponseRequest): Promise<OpenAIResponseResult>;

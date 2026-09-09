@@ -19,3 +19,5 @@ Seat PHONEBUILD. Thirteen questions on the deployed coach-chat v16/v17 (app map,
 | 13 | how heavy is 1.5x bodyweight for my squat | At 84 kg bodyweight, 1.5× bodyweight is 126 kg for your squat. Your latest recorded back squat is 100 kg for 5 reps. | ✓ Bodyweight from the profile, squat from the log. |
 
 **What Sam decides:** approve / correct each row. Row 3 is a recorded model-side miss (the receipt did not match the words), not a review question.
+
+**Sam, 2026-09-10: "approve all".** Twelve rows recorded as approved in `coachLabCases.ts` (model `gpt-5.6-terra`, prompt `coach-lab-openai-v5-doors`); row 3 has no answer to record and stays pending.

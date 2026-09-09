@@ -299,6 +299,198 @@ export const COACH_LAB_CASES: readonly CoachLabCase[] = [
       approvedPromptVersion: 'coach-lab-openai-v4-situation',
     },
   },
+  // Slices S3 (doors) and S5 (profile) bench, 2026-09-10: where things are
+  // in the app, and who the athlete is. Twelve approved, one pending.
+  {
+    id: 's3-tell-sick',
+    athleteMessage: 'how do i tell the app im sick',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, under Not feeling 100%?, tap Sick. Choose A bit off, Properly sick, or Can’t get out of bed, then follow the prompt to make today lighter if needed. If you’re properly sick, prioritise rest rather than trying to push through training.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-log-game',
+    athleteMessage: 'where do i log the game',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, under Game Day, tap Log Game after it’s been played to record it and how it felt. Your next game is Saturday.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-change-gym-days',
+    athleteMessage: 'how do i change my gym days',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Refused on v16/v17 (programFactsGrounded: the model's receipt did not
+    // match its words) — no answer to approve; re-taped in the next batch.
+    ownerReview: PENDING,
+  },
+  {
+    id: 's3-going-away',
+    athleteMessage: 'im going away next week with no gym what do i do',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'coaching_quality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, go to Week → pen → Adjust this week, then tap I’m going away. Enter your travel dates and choose bodyweight only; the app will reshape the week around it. You’ve got a game on Saturday next week, so keep any bodyweight work easy enough to protect freshness rather than trying to replace gym loading. Today’s quick check shows low energy, so make today lighter if needed.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-move-thursday',
+    athleteMessage: 'how do i move thursdays session to friday',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'lfa_consistency', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Week view, use Move to shift Thursday’s session to Friday. Friday is G-1 before your Saturday game, so check the move keeps it appropriate—hard conditioning or heavy lower work should not sit there. I can’t make the change from here.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-no-rack',
+    athleteMessage: 'dont have a squat rack today what do i press',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, start today’s session, tap ••• then Session options, and tap Equipment changed. Untick the squat rack and press Update session; it will adjust the affected exercises around what you have today.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-knee-where',
+    athleteMessage: 'my knee hurts where do i tell the app',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'medical_safety', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, under Not feeling 100%?, report it there so the app can adjust today. If the knee starts hurting during your session, go to Start Session → ••• → Session options → Something hurts. Don’t push through painful knee work; if it’s severe, worsening, or affecting walking, see a physio or doctor.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-clear-tired',
+    athleteMessage: 'im feeling better now how do i clear the tired thing',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Program tab, go to My status, open the active tired adjustment and tap Clear adjustment, then choose “I’m good now”. Your program will return to normal.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-new-2km',
+    athleteMessage: 'how do i put in my new 2km time',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'On the Progress tab, tap Performance tests, then Save result and enter your new 2 km time.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's3-flat-skip',
+    athleteMessage: 'im flat today should i just skip',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['coaching_quality', 'program_factuality', 'lfa_consistency', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'Don’t automatically skip it. You’ve recorded low energy today, and today is Lower Squat, so make it lighter: keep the main work only if it’s moving well, reduce sets and skip accessories/finishers. On the Program tab, under Not feeling 100%?, tap Tired to apply the app’s lighter-day option. If you feel worse in the warm-up or have pain, stop and use recovery instead.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's5-position-goals',
+    athleteMessage: 'what position do i play and what are my goals',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'You play inside mid. Your goals are to be fresh on game day and get stronger and fitter. Your biggest stated limitation is endurance.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's5-rower',
+    athleteMessage: 'do i have a rower at my gym',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'Yes — your commercial gym equipment list includes a rower.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
+  {
+    id: 's5-bodyweight-squat',
+    athleteMessage: 'how heavy is 1.5x bodyweight for my squat',
+    source: 'coach-90-plan-slices-s3-s5-2026-09-10',
+    requiresLiveProgramFacts: true,
+    reviewFocus: ['program_factuality', 'judgement_transparency', 'voice'],
+    // Sam, 2026-09-10: "approve all" on the S3/S5 tapes (docs/COACH_LAB_S3_TAPES_2026-09-10.md).
+    ownerReview: {
+      status: 'approved',
+      idealAnswer: 'At 84 kg bodyweight, 1.5× bodyweight is 126 kg for your squat. Your latest recorded back squat is 100 kg for 5 reps.',
+      correctionReason: null,
+      approvedModel: 'gpt-5.6-terra',
+      approvedPromptVersion: 'coach-lab-openai-v5-doors',
+    },
+  },
 ];
 
 const signed = (text: string) => text as SignedCopy;
