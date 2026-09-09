@@ -5,6 +5,7 @@ every time; this file is the receipt, not the authority.
 
 | date (UTC) | function version | git sha of the tree deployed | bundle highest ruling | what changed | by |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-09 22:46:17 | coach-chat v16 | d5dbfd50 | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
 | 2026-09-09 22:42:18 | coach-chat v15 | cc5b5b60 + 2 uncommitted tracked change(s) | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
 | 2026-09-09 22:38:24 | coach-chat v14 | c45d549a | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
 | 2026-09-09 22:31:58 | coach-chat v13 | 8ed00558 | R-398 | via scripts/coach-deploy.sh | PHONEBUILD |
