@@ -83,6 +83,47 @@ async function main() {
         boot.ok && signature() === edit.before, boot.error);
     }
   }
+  // ── F6 (everyday acceptance, 2026-09-09): A LOGGED DAY IS NOT REBALANCED ──
+  // Standard in-season seed, today Monday. Monday logged (skipped, and full),
+  // then Friday's optional Gunshow removed whole-day. Measured on the simulator
+  // and reproduced headlessly: the removal repair re-ran the weekly core
+  // completion over the whole week, put a Plank on the LOGGED Monday, and the
+  // day card forgot the log. The repair now receives the delivered-day
+  // boundary the injury and generation paths already honour.
+  {
+    const { createDefaultDevE2ESeedCoordinator } = require('../dev/e2e/defaultDevE2ESeedCoordinator') as typeof import('../dev/e2e/defaultDevE2ESeedCoordinator');
+    const { executeProgramControlActionDurably } = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
+    const { recordDay, setJourneyClock } = require('./support/athleteJourney') as typeof import('./support/athleteJourney');
+    const MON = '2026-07-13'; const FRI = '2026-07-17';
+    const rowsOf = (date: string) => JSON.stringify((quiet(() => deriveVisibleWeekLive(MON, MON)).find(d => d.date === date)?.workout?.exercises ?? [])
+      .map(r => [r.exercise?.name ?? r.exerciseId, r.prescribedSets, r.prescribedRepsMin, r.prescribedRepsMax]));
+    for (const completion of ['skipped', 'full'] as const) {
+      const coordinator = createDefaultDevE2ESeedCoordinator(true);
+      const seeded = await quietAsync(() => coordinator.reset('standard-in-season-week'));
+      check('F6 CONTROL: the standard seed installs (' + completion + ')', seeded === true);
+      setJourneyClock(MON);
+      const logged = await quietAsync(() => recordDay(MON, { record: true, completion, feeling: 'good', soreness: 'none', difficulty: 5 }));
+      check('F6 CONTROL: Monday logged as ' + completion, logged.result === 'recorded', logged);
+      const before = rowsOf(MON);
+      check('F6 CONTROL: Monday has rows to protect (' + completion + ')', before.length > 2);
+      // The simulator sequence: the two club-night strength halves go first
+      // (each leaves Monday alone), then Friday's whole day — that third
+      // removal is the one that re-seated the week's core row on Monday.
+      const bin = (date: string, scope: 'strength' | 'whole_day') => quietAsync(() => executeProgramControlActionDurably(
+        { type: 'bin_session', payload: { date, scope }, source: { screen: 'program', surface: 'day_card', initiatedBy: 'tap' } } as never,
+        { todayISO: MON, visibleWeek: quiet(() => deriveVisibleWeekLive(MON, MON)) } as never));
+      const tue = await bin('2026-07-14', 'strength');
+      const thu = await bin('2026-07-16', 'strength');
+      check('F6 CONTROL: the Tuesday and Thursday strength removals landed (' + completion + ')', tue.ok === true && thu.ok === true, { tue, thu });
+      check('F6 CONTROL: Monday untouched by the two club-night removals (' + completion + ')', rowsOf(MON) === before);
+      const removal = await bin(FRI, 'whole_day');
+      check('F6 CONTROL: the Friday whole-day removal landed (' + completion + ')', removal.ok === true, removal);
+      check('F6: the LOGGED Monday is byte-identical after the Friday removal (' + completion + ')',
+        rowsOf(MON) === before, { before, after: rowsOf(MON) });
+      check('F6: the removal message does not claim to have rebalanced the logged Monday (' + completion + ')',
+        !/rebalanced Monday/i.test(String(removal.message ?? '')), removal.message);
+    }
+  }
   for (const scope of ['strength', 'conditioning', 'whole_day'] as const)
     check('real generated matrix reaches ' + scope, (reached.get(scope) ?? 0) > 0, reached.get(scope) ?? 0);
   console.log('Removal coordinates by scope:', JSON.stringify(Object.fromEntries(reached)));

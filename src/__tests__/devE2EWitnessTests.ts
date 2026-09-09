@@ -168,6 +168,34 @@ ok(
   multiFailures.join(', '),
 );
 
+
+/* ── F8 (everyday acceptance, 2026-09-09): NO SEED DAY CARRIES AN EMPTY SESSION.
+ * The R-130 optional Gunshow was placed on the day before the game whether or
+ * not that day had gym kit; on a bodyweight day the arm pools filter to
+ * nothing and the builder returned a named, optional, zero-exercise workout
+ * that the phone showed as "Gunshow — Start optional session" with no rows.
+ * `spent-week-friday` (Mon/Tue/Thu athlete, Saturday game) had it on every
+ * Friday with no athlete action at all. A day with nothing in it is a rest
+ * day, never an empty card. */
+{
+  const { DEV_E2E_SEED_IDS } = require('../dev/e2e/devE2ESeedIds') as { DEV_E2E_SEED_IDS: readonly string[] };
+  const empties: string[] = [];
+  for (const seedId of DEV_E2E_SEED_IDS) {
+    const seed = buildDevE2ESeed(seedId as never);
+    for (const microcycle of seed.program.microcycles) {
+      for (const workout of microcycle.workouts) {
+        const rows = workout.exercises?.length ?? 0;
+        const composed = (workout as { composedOptionalKind?: string }).composedOptionalKind;
+        const isSession = workout.workoutType !== 'Rest' && (workout.workoutType === 'Strength' || workout.workoutType === 'Mixed'
+          || workout.workoutType === 'Mobility' || Boolean(composed) || workout.sessionTier === 'optional');
+        if (isSession && rows === 0) empties.push(`${seedId}/${microcycle.id}/day${workout.dayOfWeek}:${workout.name}`);
+      }
+    }
+  }
+  ok('no dev seed carries a zero-exercise session (an empty composition is a rest day, not an empty card)',
+    empties.length === 0, empties.join(' | '));
+}
+
 console.log(`\nDev E2E witnesses: ${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {

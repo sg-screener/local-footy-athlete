@@ -649,6 +649,16 @@ function finaliseWorkoutAfterMutationUnchecked(
    * only because their names happened to match a regex below.
    */
   if (inputWorkout.composedOptionalKind) {
+    // AN EMPTY COMPOSITION IS A REST DAY, NOT AN EMPTY CARD (everyday
+    // acceptance F8, 2026-09-09). Equipment and injury filtering can thin an
+    // optional pool to nothing; the builder shrinks rather than pads, and this
+    // early return used to hand that zero-row "Gunshow" straight to the athlete
+    // ("Start optional session", no rows). Same rule as the strength collapse
+    // below and as `optionalTopUpPlacement`'s own placer.
+    if (!hasMeaningfulWorkoutContent(inputWorkout)) {
+      actions.push({ kind: 'collapsed_to_rest', reason: 'no_meaningful_final_content' });
+      return { workout: collapseWorkoutToRest(inputWorkout), changed: true, actions };
+    }
     return { workout: inputWorkout, changed: false, actions };
   }
 
