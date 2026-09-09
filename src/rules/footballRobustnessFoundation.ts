@@ -81,6 +81,17 @@ export function isFootballRobustnessAccessory(rawName: string): boolean {
     || KNEE_CAPACITY_ACCESSORIES.has(name);
 }
 
+/**
+ * An adductor ISOMETRIC (Sam, 2026-09-09: "one adductor isometric per session"):
+ * a groin/adductor pool entry authored as a hold. Cossack Squats and Lateral
+ * Lunges are adductor work too, but they are dynamic and may sit beside a hold.
+ */
+export function isAdductorIsometric(rawName: string): boolean {
+  const name = canonicalExerciseName(rawName);
+  return POOL_REGISTRY.groin_adductors.some((entry) =>
+    canonicalExerciseName(entry.name) === name && entry.prescriptionType === 'duration');
+}
+
 /** A hip-dominant alternative is credited only when no Nordic/curl is available. */
 export function suppliesAlternativeHamstringWork(name: string): boolean {
   return HAMSTRING_ACCESSORIES.has(canonicalExerciseName(name))

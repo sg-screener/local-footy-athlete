@@ -21,7 +21,11 @@ R-303/R-391 found while diagnosing items 4 and 6.
   one filter; the exercise-level matrix separately permits Pogo Hops at knee 4/10.
   Fix at the composition owner: the authored jump slot declares `power: 'lower'`
   and the builder types it exactly like a pool-drawn jump. No second reading.
-- **Item 5, two adductor isometrics on 2027-03-05.** Two causes. (a) The warm-up
+- **Item 5, two adductor isometrics on 2027-03-05.** Two causes. ("Isometric" is
+  read from the groin pool's duration-authored entries — Copenhagen variants and
+  Groin Squeeze; a Cossack Squat or Lateral Lunge is dynamic adductor work and is
+  not counted. A first, broader reading counted them and the early eight-athlete
+  annual run reddened 65 weeks on it; narrowed before the release run.) (a) The warm-up
   flow is derived from the session but only excluded the same exercise/variation;
   it drew Groin Squeeze beside a prescribed Half Copenhagen on six dates. Fix: the
   flow yields any groin/adductor candidate when the session's rows already supply
@@ -105,10 +109,10 @@ same pipeline as the 017818cc book): annual-audit-evidence exit 0; prepare: 52
 weeks, 364 days, 2,045 rows, 443 numeric feedback comparisons, 364/364 reopens
 identical, 0 findings, 0 driver failures; PDF 280 pages, 2,045/2,045 printed rows
 in order, 0 mismatches, 0 week-finder errors, sha256
-aa8e70ae1e8c3aa4cad0b5bb4f92fbe326bc54d27074aaf35f3797b821f7c0f3
+c4f3d9db765fe9d738f718875eb399ad9c5e233578d9983d85c72d2785b9cfb2
 (`output/pdf/three-day-athlete-full-52-week-program-2026-09-09-yearfix.pdf`).
-prepare exited 1 only on its source-hash check, because test files were edited
-during the run; the runtime sources were unchanged (manifest in the folder).
+prepare exit 0, 0 source changes against the manifest taken before the run
+(third run, after the adductor-hold narrowing below).
 
 **Dated proofs (`tools/proofs.py`, red on the 017818cc book, green here):**
 - item 1: in-season Nordic sets w27–w52 = 2 every week except w42 = 1 (illness

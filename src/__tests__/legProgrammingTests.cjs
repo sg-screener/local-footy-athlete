@@ -416,13 +416,18 @@ test('One adductor isometric per session: the warm-up flow yields to a prescribe
  const rows=[simpleRow('Bulgarian Split Squats','a'),simpleRow('Single-Leg RDL','b'),simpleRow('Overhead Press','c'),simpleRow('Neutral-Grip Pulldown','d')];
  const athlete={onboardingData:coverageProfile,injuries:[],activeConstraints:[],equipmentTags:[...resolveEquipmentCapabilities(coverageProfile).tags]};
  const flowNames=(exercises,date)=>(selectMobilityPrehabFlow({workout:{...strengthDay(exercises),workoutType:'Mixed',dayOfWeek:5},seasonPhase:'Pre-season',isGameWeek:false,date,performedMovementIds:[],athlete})?.movements??[]).map(m=>m.exercise.name);
+ const {isAdductorIsometric}=require('../rules/footballRobustnessFoundation');
+ assert.ok(isAdductorIsometric('Copenhagen Plank (Half)')&&isAdductorIsometric('Groin Squeeze')&&isAdductorIsometric('Long-Lever Copenhagen'));
+ assert.ok(!isAdductorIsometric('Cossack Squat')&&!isAdductorIsometric('Lateral Lunge'),'dynamic adductor work is not a hold');
  const dates=Array.from({length:60},(_,i)=>new Date(Date.UTC(2027,0,1+i)).toISOString().slice(0,10));
- const withGroin=dates.filter(date=>flowNames(rows,date).some(name=>cats(name).includes('adductor_or_groin')));
- assert.ok(withGroin.length>0,'the plain session draws a warm-up adductor on some dates (control)');
+ const withGroin=dates.filter(date=>flowNames(rows,date).some(isAdductorIsometric));
+ assert.ok(withGroin.length>0,'the plain session draws a warm-up adductor hold on some dates (control)');
  for(const date of withGroin) {
   const paired=flowNames([...rows,simpleRow('Copenhagen Plank (Half)','cop')],date);
-  assert.ok(!paired.some(name=>cats(name).includes('adductor_or_groin')),`${date}: the flow prescribed a second adductor isometric: ${paired.join(', ')}`);
+  assert.ok(!paired.some(isAdductorIsometric),`${date}: the flow prescribed a second adductor isometric: ${paired.join(', ')}`);
   assert.ok(paired.length>0,'the flow still prepares the session');
+  const dynamic=flowNames([...rows,simpleRow('Cossack Squat','cos')],date);
+  assert.ok(dynamic.some(isAdductorIsometric),`${date}: a dynamic Cossack Squat must not block the warm-up hold`);
  }
 });
 test('The frontal-plane completion consumes the dated deload dose and the reducer sees the same policy',()=>{
@@ -443,8 +448,8 @@ test('The frontal-plane completion consumes the dated deload dose and the reduce
  const frontal=week.workoutsByDate[date].exercises.find(r=>cats(r.exercise.name).includes('adductor_or_groin'));
  assert.ok(frontal,'the injury week compile still completes the frontal plane');
  assert.equal(frontal.prescribedSets,1,'a deload Friday without a useful-strength contract still halves demanding prehab to one set');
- const adductors=week.workoutsByDate[date].exercises.filter(r=>cats(r.exercise.name).includes('adductor_or_groin'));
- assert.equal(adductors.length,1,'one adductor isometric per session');
+ const adductors=week.workoutsByDate[date].exercises.filter(r=>require('../rules/footballRobustnessFoundation').isAdductorIsometric(r.exercise.name));
+ assert.ok(adductors.length<=1,'one adductor isometric per session');
 });
 test('In-season a curl does not replace the Nordic: coverage adds one, credits an existing one and stays quiet pre-season',()=>{
  const {isNordicExercise,weeklyLegCoverageCategories}=require('../rules/weeklyLegCoverage');

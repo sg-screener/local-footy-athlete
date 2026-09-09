@@ -34,7 +34,7 @@ const mutations={
   'ignore-derived-injury':['src/rules/datedAthleteContext.ts','const dated=datedAthleteContext(athlete,dateISO);','return true; const dated=datedAthleteContext(athlete,dateISO);'],
   // Sam's 2026-09-09 review of the three-day year (R-393 repairs, R-394, R-395).
   'untype-primer-pogo':['src/utils/sessionBuilder.ts',"// A lower jump, so the injury exposure filter sees it (R-393).\n        power: 'lower',",'// mutation: untyped authored jump'],
-  'ignore-session-adductor-in-flow':['src/utils/mobilityPrehabFlow.ts',"if (sessionSuppliesAdductor\n        && footballRobustnessCategoriesForExercise(candidate.name).includes('adductor_or_groin')) continue;",''],
+  'ignore-session-adductor-in-flow':['src/utils/mobilityPrehabFlow.ts',"if (sessionSuppliesAdductor && isAdductorIsometric(candidate.name)) continue;",''],
   'drop-frontal-completion-dose':['src/rules/canonicalWeeklyPlaneCompletion.ts','const policy = args.dosePolicyForDate?.(dateISO) ?? null;','const policy = null;'],
   'ignore-dated-policy-for-prehab-reduction':['src/rules/canonicalWeeklyInjuryCompiler.ts','|| !!((args.programmingContextByDate?.[dateISO] ?? args.programmingContext)?.deloadPolicy))','|| false)'],
   'nordic-satisfied-by-curl':['src/rules/weeklyLegCoverage.ts',"category === 'nordic' ? isNordicExercise(name)","category === 'nordic' ? footballRobustnessCategoriesForExercise(name).includes('hamstring_eccentric_or_isometric')"],

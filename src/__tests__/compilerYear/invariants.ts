@@ -16,7 +16,7 @@ import { compileActiveExposureConstraints } from '../../rules/canonicalWeeklyCon
 import { filterConstraintsForDate } from '../../utils/readinessConstraints';
 import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
 import { equipmentTagsOnDate } from '../../rules/canonicalWeeklyAvailabilityState';
-import { footballRobustnessCategoriesForExercise } from '../../rules/footballRobustnessFoundation';
+import { isAdductorIsometric } from '../../rules/footballRobustnessFoundation';
 
 export function compilerChecks(result: CanonicalWeeklyCompilerResult): Check[] {
   if (result.ok === false) return [{ id: 'accepted_compile', ok: false, detail: JSON.stringify(result.refusal) }];
@@ -167,11 +167,11 @@ export function inspectWeek(args: {
     const workout = d.workout;
     if (!workout || workout.athletePlacement) return [];
     const rowsWithGroin = workout.exercises.filter((row) => row.prescribedSets > 0 && !row.unavailableForInjury
-      && footballRobustnessCategoriesForExercise(row.exercise?.name ?? '').includes('adductor_or_groin')).map((row) => row.exercise?.name);
+      && isAdductorIsometric(row.exercise?.name ?? '')).map((row) => row.exercise?.name);
     const flow = selectMobilityPrehabFlow({ workout, seasonPhase: profile.seasonPhase, isGameWeek: actualGames.length > 0, date: d.date,
       performedMovementIds: [], athlete: { onboardingData: profile, injuries: profile.injuries ?? [],
         activeConstraints: args.activeConstraints, equipmentTags: equipmentTagsOnDate(profile, d.date, []) } });
-    const flowWithGroin = (flow?.movements ?? []).filter((m) => footballRobustnessCategoriesForExercise(m.exercise.name).includes('adductor_or_groin')).map((m) => m.exercise.name);
+    const flowWithGroin = (flow?.movements ?? []).filter((m) => isAdductorIsometric(m.exercise.name)).map((m) => m.exercise.name);
     const all = [...rowsWithGroin, ...flowWithGroin];
     return all.length > 1 ? [`${d.date}:${all.join('+')}`] : [];
   });

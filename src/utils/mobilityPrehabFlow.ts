@@ -29,7 +29,7 @@ import { getMondayForDate } from './sessionResolver';
 import { exerciseVariationConflictsWithSession } from '../rules/exerciseVariationFamily';
 import { datedAthleteContext } from '../rules/datedAthleteContext';
 import { prehabSets, prehabWorkRows } from '../rules/trainingWorkload';
-import { footballRobustnessCategoriesForExercise } from '../rules/footballRobustnessFoundation';
+import { isAdductorIsometric } from '../rules/footballRobustnessFoundation';
 import { buildGenerationConstraintContext } from './generationConstraints';
 
 /**
@@ -305,12 +305,12 @@ function fillMenu(
   const taken = new Set<string>();
   const namesThisDay = new Set(sessionExerciseNames);
   // ONE ADDUCTOR ISOMETRIC PER SESSION (Sam, 2026-09-09). The flow is derived
-  // from the session it prepares: when the prescribed rows already carry a
-  // groin/adductor row (a Copenhagen, a Groin Squeeze), the warm-up does not
+  // from the session it prepares: when the prescribed rows already carry an
+  // adductor hold (a Copenhagen, a Groin Squeeze), the warm-up does not
   // prescribe a second one. Measured on the three-day year: six dates paired
-  // a warm-up Groin Squeeze 3 x 30 s with a prescribed Half Copenhagen.
-  const sessionSuppliesAdductor = [...sessionExerciseNames]
-    .some((name) => footballRobustnessCategoriesForExercise(name).includes('adductor_or_groin'));
+  // a warm-up Groin Squeeze 3 x 30 s with a prescribed Half Copenhagen. A
+  // dynamic Cossack Squat or Lateral Lunge is not a hold and blocks nothing.
+  const sessionSuppliesAdductor = [...sessionExerciseNames].some(isAdductorIsometric);
   let slotIndex = 0;
   for (const slot of menu.slots) {
     const candidates = flowSlotCandidates(slot.category, athlete);
@@ -326,8 +326,7 @@ function fillMenu(
       // slot can take its next legal authored candidate instead of deleting a
       // duplicate after composition and needlessly shrinking the menu.
       if (exerciseConflictsWithDay(candidate.name, namesThisDay)) continue;
-      if (sessionSuppliesAdductor
-        && footballRobustnessCategoriesForExercise(candidate.name).includes('adductor_or_groin')) continue;
+      if (sessionSuppliesAdductor && isAdductorIsometric(candidate.name)) continue;
       taken.add(candidate.id);
       namesThisDay.add(canonicalExerciseName(candidate.name));
       movements.push({ exercise: candidate, category: slot.category });
