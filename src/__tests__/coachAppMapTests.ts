@@ -104,6 +104,24 @@ console.log('\n[3] THE DOOR GATE: A QUOTED CONTROL MUST BE A DOOR');
     !refused.ok && refused.automaticChecks.doorClaimsGrounded === false
       && coachResponseContractFailureCode(refused) === 'refused', refused.violations);
   ok('app_door is a basis the contract accepts', refused.automaticChecks.schemaValid === true);
+  const doorOnly = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'On the Program tab, under Not feeling 100%?, tap "Sick" and pick how bad it is; the week is lightened while it is active.',
+    basis: ['app_door'],
+    snapshotFieldsUsed: [],
+    knowledgeSources: [{ id: 'docs/generated/COACH_APP_MAP.md:L20-L20', authority: 'app_map', sourceReference: 'docs/generated/COACH_APP_MAP.md:L20-L20' }],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: ['docs/generated/COACH_APP_MAP.md:L20-L20'], facts });
+  ok('a "how do I" answer grounded only in a cited door passes the live-facts requirement',
+    doorOnly.ok, doorOnly.violations);
+  const doorUnreceipted = evaluateCoachResponseContract({
+    ...grounded,
+    message: 'On the Program tab, under Not feeling 100%?, tap "Sick".',
+    basis: ['app_door'],
+    snapshotFieldsUsed: [],
+    knowledgeSources: [],
+  }, { requiresLiveProgramFacts: true, allowedKnowledgeSourceIds: [], facts });
+  ok('a door basis with no DOOR chunk cited is refused',
+    !doorUnreceipted.ok && doorUnreceipted.automaticChecks.lfaClaimsGrounded === false, doorUnreceipted.violations);
 }
 
 console.log(`\nCoach app map totals: ${passed} passed, ${failed} failed`);

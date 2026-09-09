@@ -411,6 +411,12 @@ export function evaluateCoachResponseContract(
   const usesSnapshot = basis.includes('athlete_snapshot');
   const claimsLfaRule = basis.includes('lfa_rule');
   const usesJudgement = basis.includes('coaching_judgement');
+  // Slice S3: a "how do I" answer is grounded in the app's doors, not the
+  // athlete's week. It counts as live-program grounding only when it cites
+  // the DOOR chunk it read (v12's first tapes refused nine of ten door
+  // answers because they carried no snapshot basis).
+  const usesDoor = basis.includes('app_door')
+    && sources.some((source) => source.authority === 'app_map');
   const focusedQuestionWithoutFacts = payload?.answerMode === 'focused_question'
     && !usesSnapshot
     && snapshotFields.length === 0;
@@ -427,9 +433,12 @@ export function evaluateCoachResponseContract(
       && snapshotReceiptConsistent
       && (!policy.requiresLiveProgramFacts
         || focusedQuestionWithoutFacts
-        || usesSnapshot),
+        || usesSnapshot
+        || usesDoor),
     lfaClaimsGrounded: payload !== null
       && sourcesWereRetrieved
+      // A door named as a basis must be receipted by a DOOR chunk.
+      && (!basis.includes('app_door') || sources.some((source) => source.authority === 'app_map'))
       && (!claimsLfaRule || sources.some(
         (source) => source.authority === 'lfa_bible' || source.authority === 'active_rule',
       )),
