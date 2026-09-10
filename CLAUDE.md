@@ -154,7 +154,9 @@ candidate, once, when Sam asks.
   (`--only <archetype>`) is minutes; eight is an hour.
 - **Never run `test:release`, the 44-group gate, `test:bible`, or a year-long
   audit without Sam's explicit approval.** "Finish it", "build it" and "put it on
-  my phone" are NOT that approval.
+  my phone" are NOT that approval. **R-402 (Sam, 2026-09-10): the gate runs
+  ONCE more, just before the App Store, on his word — not for a merge, not for
+  a fix, not because a lot changed.** It took four hours on 2026-09-10.
 - **Never weaken a test to get green, never claim an unrun check passed.** Fix
   regressions your change causes; report unrelated failures without repairing
   them; flag genuine safety or build blockers.

@@ -10141,3 +10141,9 @@ Owner: phonebuild. Sam: *"i think it should have something like tacked onto the 
 ## R-401 — The no-standing-fixture test profile is removed from every fleet (Sam, 2026-09-10)
 
 Owner: phonebuild. Sam, after the release gate spent an hour on one 52-week replay: *"remove this … profile from all future tests - it's fucking stupid and you're wasting me time"*. `male-6-no-standing-fixture` (six gym days, no club nights, no standing game) is deleted from `src/__tests__/compilerYear/catalog.ts` and from the injury-energy journey worlds; the compiler slice's "accumulated phase restart" witness, which only that profile drove, is retired with it. Seven archetypes remain the fleet. Not re-added without a new ruling. Coverage lost, stated: the pre-season → in-season phase change with no club training over seventeen logged weeks. The slowness itself (a six-gym-day athlete makes the whole-week planner enumerate far more arrangements) stays on the after-the-build list as a planner performance item. · `BUILT` — the catalog has seven entries.
+
+---
+
+## R-402 — The release gate runs once more, before the App Store, and not before (Sam, 2026-09-10)
+
+Owner: phonebuild. Sam, four hours into the second gate run of the day: *"i'm not doing this big test run until the end just before the app store okay? don't fucking run it again after this"*. `npm run test:release` (and anything of its class — the 44-group sequence, `test:bible`, a fleet-wide year audit) is not run again by any seat until Sam says the app is going to the App Store, and then once. Landing work on main in between uses the small checks the change touches (the relevant witnesses, `test:compile`) and the census, with the last gate receipt named in the record. This extends CLAUDE.md's "never run … without Sam's explicit approval" from *approval* to *one named moment*. · `WRITTEN` — a process rule; the receipt is the absence of a run.
