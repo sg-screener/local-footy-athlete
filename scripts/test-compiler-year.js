@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const ts = require('typescript');
 // Install the same offline runtime; importing the CLI does not run the year.
 require('./run-compiler-year');
-const { ARCHETYPES, yearTimeline } = require('../src/__tests__/compilerYear/catalog');
+const { ARCHETYPES, yearTimeline, REPLAY_ARCHETYPES } = require('../src/__tests__/compilerYear/catalog');
 const { requiredWeekChecks, yearVerdict, renderYearHtml } = require('../src/__tests__/compilerYear/results');
 const { runUnits } = require('./release-gate');
 let passed = 0;
@@ -22,7 +22,7 @@ function control() {
       { id: 'real_compiler_mutation', ok: true }, { id: 'source_fact_history_mutation', ok: true },
       { id: 'acceptance_writer_mutation', ok: true }, { id: 'injury_render_writer_mutation', ok: true },
       { id: 'progression_arithmetic_mutation', ok: true }, { id: 'deload_arithmetic_mutation', ok: true }],
-    athletes: ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
+    athletes: REPLAY_ARCHETYPES.map((a) => ({ id: a.id, compilerCalls: 1, loggedSessions: 1, restarts: 52,
       checks: [{ id: 'onboarding', ok: true }],
       actions: ['remove_session', 'undo_session', 'practice_match', 'phase_shift', 'phase_shift', 'move_game', 'remove_game', 'add_game', 'swap_exercise', 'lighter_day']
         .map((kind) => ({ kind, date: 'fixture-only', ok: true })),

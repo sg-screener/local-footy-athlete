@@ -51,7 +51,9 @@ const coordinates: [PlanChangeCategoryId, AddFamilyId, AddLeafId][] = [
 ];
 async function main() {
   for (const gender of ['male', 'female'] as const) {
-    const start = await coldStartThroughOnboarding({ profile: athleteAnswers({ ...ARCHETYPES[6], gender, extraGame: false }), installDayISO: date });
+    // Named, not indexed (R-401 moved this profile out of the year fleets).
+    const base = ARCHETYPES.find((a) => a.id === 'male-6-no-standing-fixture')!;
+    const start = await coldStartThroughOnboarding({ profile: athleteAnswers({ ...base, gender, extraGame: false }), installDayISO: date });
     check(`${gender}: real valid onboarding`, !start.onboardingRefusal);
     const read = () => quiet(() => deriveVisibleWeekLive(date, date));
     for (const [category, section, requestedLeaf] of coordinates) {

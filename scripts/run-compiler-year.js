@@ -15,7 +15,7 @@ global.window = { localStorage: {
 global.fetch = () => { throw new Error('NETWORK DISABLED — year acceptance must compile locally'); };
 require('sucrase/register');
 
-const { ARCHETYPES, yearTimeline } = require('../src/__tests__/compilerYear/catalog');
+const { ARCHETYPES, yearTimeline, REPLAY_ARCHETYPES } = require('../src/__tests__/compilerYear/catalog');
 const { yearVerdict, renderYearHtml } = require('../src/__tests__/compilerYear/results');
 const { runAthlete, realCompilerMutation } = require('../src/__tests__/compilerYear/run');
 const { sourceFactCompilerMutation, acceptanceBoundaryMutation, injuryRenderingMutation } = require('../src/__tests__/compilerYear/sourceFacts');
@@ -33,7 +33,7 @@ async function main() {
     else if (args[i] === '--output') output = args[++i];
     else throw new Error(`Unknown argument ${args[i]}`);
   }
-  if (only !== undefined && !ARCHETYPES.some((a) => a.id === only)) throw new Error(`Unknown archetype ${only}`);
+  if (only !== undefined && !REPLAY_ARCHETYPES.some((a) => a.id === only)) throw new Error(`Unknown archetype ${only}`);
   if (!Number.isInteger(weeks) || weeks < 1 || weeks > 52) throw new Error('Expected 1..52 weeks');
   const root = path.resolve(__dirname, '..');
   const ownership = scanSources({ registry: JSON.parse(fs.readFileSync(path.join(root, 'scripts/weekly-writer-ownership.json'), 'utf8')) });
@@ -58,7 +58,7 @@ async function main() {
   };
   // A killed/incomplete run leaves incomplete RED evidence, never yesterday's PASS.
   present();
-  for (const archetype of ARCHETYPES.filter((a) => !only || a.id === only)) {
+  for (const archetype of REPLAY_ARCHETYPES.filter((a) => !only || a.id === only)) {
     try { result.athletes.push(await runAthlete(archetype, storage, weeks)); }
     catch (error) {
       const reason = `Harness exception: ${error.message}`;

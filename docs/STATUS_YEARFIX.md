@@ -400,3 +400,32 @@ cells re-pinned to the stream shape), `coachTabSlice1Tests` 75/75,
 nothing until 4–7 s from the desk, 10–15 s on the phone.
 **Phone:** Release at d6e21625 building (build-release-7.log); install follows.
 Not run: gates, audits.
+
+**15:20 — The gate, the merge, and what it cost.** Run 1 (85634667's
+parent) red at unit 3: seventeen `changed` census owners (five mine, twelve
+seat fixes merged earlier) — re-reviewed, none reclassified. Run 2
+(85634667): four hours — `canonical-weekly-compiler` ~66 min,
+`compiler-year` ~90 min of which `male-6-no-standing-fixture` was ~60 — then
+red at unit 20 `test:fact-horizon` R3. **Root cause, fixed at the layer:**
+`programSemanticSnapshot.appendStructuredComponent` dumped the power ROW
+(`createdAt`/`updatedAt` re-minted every derivation) as metadata, so every
+readiness change read as a recomposition; a power row is now snapshotted as
+its exercise and `stableValue` drops clock keys; and a duplicate row of the
+same exercise is its own row (`identity#2`), a latent hole the timestamp
+noise had masked. Pre-existing (red on 556e2ac8). Units 20–50 then ran
+individually with receipts (`gate-units-20-50.log`, `unit-*.log`): 29 green;
+`test:annual-audit-repairs` red — pre-existing (556e2ac8), a Copenhagen row
+appears after reopen on 2027-04-22, Sam chose "merge now, fix next";
+`test:session-section-add` red — MINE, from deleting the R-401 profile:
+`ARCHETYPES[6]` is used by position in ~25 quick tests. The profile is back
+as a fixture flagged `replay: false`; year replays read `REPLAY_ARCHETYPES`
+(seven); the verdict counts seven; Add 250/0 again. **R-402:** the gate runs
+once more, before the App Store, not before. **R-400** feedback ask on the
+three failure sentences (phone build ready; the phone is off the network).
+**R-403/R-404** recorded for the next branch (consecutive conditioning by
+modality and focus; one hamstring exercise a week, the Nordic wins). Fresh
+three-day book (`output/pdf/…2026-09-10-final.pdf`, 280 pp, 0 mismatches,
+text identical to last night's) sent to Sam. Next branch: the reopen row,
+R-403, R-404, the warm-up deload Copenhagen (week 15), the six-gym-day
+planner cost. Last gate receipt: run 2 on 85634667, units 1–19 green; the
+rest as above.

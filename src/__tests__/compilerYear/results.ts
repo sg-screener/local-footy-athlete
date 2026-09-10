@@ -1,4 +1,4 @@
-import { ARCHETYPES, YEAR_WEEKS, yearTimeline } from './catalog';
+import { ARCHETYPES, YEAR_WEEKS, yearTimeline, REPLAY_ARCHETYPES } from './catalog';
 import type { DoseReceipt } from './dose';
 
 export interface Check { id: string; ok: boolean; detail?: string }
@@ -61,8 +61,8 @@ export function yearVerdict(result: YearResult) {
   }
   for (const check of result.mutations) if (!check.ok) fail(check.id, check.detail);
   const ids = result.athletes.map((a) => a.id);
-  if (new Set(ids).size !== ids.length || ids.length !== ARCHETYPES.length) fail('archetype_coverage');
-  for (const archetype of ARCHETYPES) {
+  if (new Set(ids).size !== ids.length || ids.length !== REPLAY_ARCHETYPES.length) fail('archetype_coverage');
+  for (const archetype of REPLAY_ARCHETYPES) {
     const athlete = result.athletes.find((a) => a.id === archetype.id);
     if (!athlete) { fail(`${archetype.id}/missing`); continue; }
     if (athlete.weeks.length !== YEAR_WEEKS) fail(`${archetype.id}/year_length`);
@@ -112,7 +112,7 @@ export function yearVerdict(result: YearResult) {
   if (!receipts.some(r => r.kind === 'progressed_load' && r.actual! > r.before)) fail('earned_load_increase_not_reached');
   if (!receipts.some(r => r.kind === 'deload_sets' && r.actual! < r.before)) fail('deload_reduction_not_reached');
   return { ok: failures.size === 0, failures: [...failures.values()],
-    expectedWeeks: ARCHETYPES.length * YEAR_WEEKS, measuredWeeks: measured.length,
+    expectedWeeks: REPLAY_ARCHETYPES.length * YEAR_WEEKS, measuredWeeks: measured.length,
     greenWeeks: measured.filter((w) => requiredWeekChecks(w).every((id) => w.checks.some((c) => c.id === id && c.ok)) && w.checks.every((c) => c.ok)).length };
 }
 

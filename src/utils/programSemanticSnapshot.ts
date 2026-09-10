@@ -128,7 +128,18 @@ export function snapshotSemanticWorkout(
 ): SemanticDaySnapshot {
   if (!workout) return { date, workout: null };
 
-  const exercises = orderedExercises(workout).map((row) => semanticExercise(row, workout));
+  // A second row of the same exercise is its own row (slice S3 gate, 2026-09-10:
+  // an Add of Bench Press to a session that already had one collapsed onto
+  // the existing identity and read as "no material change" — masked until
+  // then by re-minted timestamps on the power row, which are no longer
+  // semantics). Repeats get an occurrence suffix so the array diff sees them.
+  const seen = new Map<string, number>();
+  const exercises = orderedExercises(workout).map((row) => {
+    const snapshot = semanticExercise(row, workout);
+    const count = (seen.get(snapshot.identity) ?? 0) + 1;
+    seen.set(snapshot.identity, count);
+    return count === 1 ? snapshot : { ...snapshot, identity: `${snapshot.identity}#${count}` };
+  });
   const conditioningIds = new Set(
     (workout.conditioningBlock?.options ?? []).flatMap((option) =>
       (option.exerciseIds ?? []).map(String)),

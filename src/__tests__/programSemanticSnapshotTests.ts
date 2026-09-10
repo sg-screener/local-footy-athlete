@@ -206,6 +206,15 @@ console.log('\n[power] A RE-AUTHORED POWER ROW IS THE SAME ROW');
   const changed = diffSemanticPrograms(before, swapped);
   check('a power row re-authored with new clock stamps is not a programming change (fact-horizon R3)',
     same.hasProgrammingChange === false && same.changes.length === 0, same.changes.slice(0, 3));
+  const duplicated = buildSemanticProgramSnapshot([{ date: '2026-07-20', isToday: false, workout: {
+    ...workout('x'), exercises: [powerRow('x'), { ...powerRow('x'), id: undefined, role: undefined }, { ...powerRow('x'), id: undefined, role: undefined }],
+  } as any } as any]);
+  const single = buildSemanticProgramSnapshot([{ date: '2026-07-20', isToday: false, workout: {
+    ...workout('x'), exercises: [powerRow('x'), { ...powerRow('x'), id: undefined, role: undefined }],
+  } as any } as any]);
+  const added = diffSemanticPrograms(single, duplicated);
+  check('adding a second row of an exercise the session already has IS a programming change (the Add hole)',
+    added.hasProgrammingChange === true, added.changes.slice(0, 3));
   check('a power row whose exercise changed IS a programming change',
     changed.hasProgrammingChange === true);
   const snap = snapshotSemanticWorkout('2026-07-20', workout('x') as any);
