@@ -259,11 +259,20 @@ export const COACH_TAB_COPY = {
   noAnswerYet: "I don't have an answer for that yet.",
 } as const;
 
-/** R-140 — exact Sam-approved words for each typed live Coach failure. */
+/**
+ * R-400 (Sam, 2026-09-10): every failure sentence ends with the same ask —
+ * *"please send a screenshot in the 'leave feedback' section of the profile
+ * tab. We will fix the issue ASAP!"* — written with the button's own label
+ * (Profile → Leave Feedback, which opens an email a screenshot can be
+ * attached to). The three R-140 sentences in front of it are unchanged.
+ */
+export const COACH_FAILURE_FEEDBACK_ASK = 'Please send a screenshot through Leave Feedback on the Profile tab and we\'ll fix it ASAP.';
+
+/** R-140 — exact Sam-approved words for each typed live Coach failure, plus the R-400 ask. */
 export const COACH_FAILURE_COPY = {
-  unavailable: "Coach isn't available right now. Try again shortly.",
-  refused: "I can't answer that safely.",
-  no_answer: COACH_TAB_COPY.noAnswerYet,
+  unavailable: `Coach isn't available right now. Try again shortly. ${COACH_FAILURE_FEEDBACK_ASK}`,
+  refused: `I can't answer that safely. ${COACH_FAILURE_FEEDBACK_ASK}`,
+  no_answer: `${COACH_TAB_COPY.noAnswerYet} ${COACH_FAILURE_FEEDBACK_ASK}`,
 } as const satisfies Record<CoachChatFailureCode, string>;
 
 export function coachFailureReply(code: CoachChatFailureCode): string {

@@ -2,10 +2,10 @@
 // Fresh isolated stores; the same onboarding, injury, recovery and boot doors as the app.
 const assert = require('node:assert/strict');
 const {spawnSync} = require('node:child_process');
+// Sam, 2026-09-10: the no-standing-fixture profile is removed from every test
+// fleet (an hour per year replay). One complete journey remains.
 const worlds = [
   ['female-6-sunday-fixture', 'Pre-season'],
-  ['male-6-no-standing-fixture', 'Pre-season'],
-  ['male-6-no-standing-fixture', 'In-season'],
 ];
 if (!process.argv[2]) {
   let failed = 0;

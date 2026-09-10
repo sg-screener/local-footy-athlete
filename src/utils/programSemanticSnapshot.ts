@@ -406,6 +406,16 @@ function sumItemDuration(rows: SemanticExerciseSnapshot[]): number | null {
   return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) : null;
 }
 
+/**
+ * A power component IS a workout row (`powerRows(workout)[0]`), so it is
+ * snapshotted the way every other row is — its exercise, dose and identity —
+ * never the raw row object. The raw row carries `createdAt`/`updatedAt`
+ * (re-authored on every derivation) and the whole exercise library entry;
+ * copying it made every readiness or fixture change look like a programming
+ * change ("safely recomposed" when nothing moved — `test:fact-horizon` R3,
+ * red on the 2026-09-10 gate). Speed blocks are not rows and keep their
+ * structured metadata, minus the clock fields `stableValue` now drops.
+ */
 function appendStructuredComponent(
   components: SemanticComponentSnapshot[],
   workout: Workout,
@@ -413,15 +423,19 @@ function appendStructuredComponent(
   value: unknown,
 ): void {
   if (!value) return;
+  const row = kind === 'power' && isRecord(value) && ('exercise' in value || 'exerciseId' in value)
+    ? semanticExercise(value as WorkoutExercise, workout)
+    : null;
+  const { exercise: _exercise, createdAt: _c, updatedAt: _u, ...rowFields } = isRecord(value) ? value : {};
   components.push({
     identity: componentIdentity(workout, kind),
     kind,
     order: components.length,
     intensity: clean((value as any).intensity) ?? clean(workout.intensity),
-    durationMinutes: finiteOrNull((value as any).durationMinutes),
-    exerciseIds: [],
-    exercises: [],
-    metadata: stableValue(value),
+    durationMinutes: finiteOrNull((value as any).durationMinutes) ?? row?.itemDurationMinutes ?? null,
+    exerciseIds: row ? [row.exerciseId] : [],
+    exercises: row ? [row] : [],
+    metadata: stableValue(row ? rowFields : value),
   });
 }
 
@@ -580,11 +594,17 @@ function stableId(value: unknown): string {
   return semanticFingerprint(value).replace(/[^a-zA-Z0-9]+/g, '-').slice(0, 80);
 }
 
+/** Clock fields are provenance, never semantics: a re-authored row is the same row. */
+const VOLATILE_KEYS = new Set(['createdAt', 'updatedAt']);
+
 function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (!isRecord(value)) return value;
   return Object.fromEntries(
-    Object.keys(value).sort().map((key) => [key, stableValue(value[key])]),
+    Object.keys(value)
+      .filter((key) => !VOLATILE_KEYS.has(key))
+      .sort()
+      .map((key) => [key, stableValue(value[key])]),
   );
 }
 

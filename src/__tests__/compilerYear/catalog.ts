@@ -23,6 +23,10 @@ export interface Archetype {
 
 // Athlete answers, not invented stored programs. Staggered entry phases make
 // an early Off-season refusal visible without hiding every other phase.
+// Sam, 2026-09-10: the 'male-6-no-standing-fixture' profile (six gym days, no
+// club, no standing game) is REMOVED from every test fleet — it took an hour
+// per 52-week replay where the others took three and a half minutes. Do not
+// re-add it; the seven remaining archetypes are the fleet.
 export const ARCHETYPES: readonly Archetype[] = [
   // R-230 (restated by Sam 2026-09-02): bodyweight-only is not an onboarding
   // path — the equipment step refuses it; only the temporary away/holiday
@@ -33,7 +37,6 @@ export const ARCHETYPES: readonly Archetype[] = [
   { id: 'female-4-experienced-gym', gender: 'female', days: ['Monday', 'Tuesday', 'Thursday', 'Friday'], experience: '2-5 years', equipment: 'commercial', initialPhase: 'In-season', clubDays: ['Tuesday', 'Thursday'], gameDay: 'Sunday', extraGame: false },
   { id: 'male-5-two-fixtures', gender: 'male', days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], experience: '5+ years', equipment: 'commercial', initialPhase: 'In-season', clubDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday', extraGame: true },
   { id: 'female-5-home', gender: 'female', days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], experience: '1-2 years', equipment: 'home', initialPhase: 'Off-season', clubDays: ['Tuesday'], gameDay: 'Saturday', extraGame: false },
-  { id: 'male-6-no-standing-fixture', gender: 'male', days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], experience: '5+ years', equipment: 'commercial', initialPhase: 'Pre-season', clubDays: [], gameDay: null, extraGame: true },
   { id: 'female-6-sunday-fixture', gender: 'female', days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], experience: '5+ years', equipment: 'commercial', initialPhase: 'In-season', clubDays: ['Wednesday'], gameDay: 'Sunday', extraGame: false },
 ];
 

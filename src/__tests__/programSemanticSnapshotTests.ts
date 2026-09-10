@@ -186,6 +186,35 @@ for (const [name, mutate] of negativeControls) {
     semanticFingerprint(changed) !== semanticFingerprint(conditioning));
 }
 
+console.log('\n[power] A RE-AUTHORED POWER ROW IS THE SAME ROW');
+{
+  const { snapshotSemanticWorkout, diffSemanticPrograms, buildSemanticProgramSnapshot } = require('../utils/programSemanticSnapshot');
+  const powerRow = (stamp: string, name = 'Pogo Hops') => ({
+    id: `row-${name}`, exerciseId: `ex-${name}`, prescribedSets: 3, prescribedRepsMin: 6, prescribedRepsMax: 6,
+    prescriptionType: 'reps', role: 'power', createdAt: stamp, updatedAt: stamp,
+    exercise: { id: `ex-${name}`, name, category: 'power', primaryPattern: 'jump', createdAt: stamp, updatedAt: stamp },
+  });
+  const workout = (stamp: string, name?: string) => ({
+    id: 'w1', dayOfWeek: 1, workoutType: 'Strength', intensity: 'core', planEntryId: 'sched:2026-07-20:1:lower',
+    exercises: [powerRow(stamp, name)], sessionTier: 'core',
+  });
+  const day = (stamp: string, name?: string) => ({ date: '2026-07-20', workout: workout(stamp, name) as any, isToday: false } as any);
+  const before = buildSemanticProgramSnapshot([day('2026-09-10T03:37:06.453Z')]);
+  const reauthored = buildSemanticProgramSnapshot([day('2026-09-10T03:37:06.954Z')]);
+  const swapped = buildSemanticProgramSnapshot([day('2026-09-10T03:37:06.954Z', 'Box Jump')]);
+  const same = diffSemanticPrograms(before, reauthored);
+  const changed = diffSemanticPrograms(before, swapped);
+  check('a power row re-authored with new clock stamps is not a programming change (fact-horizon R3)',
+    same.hasProgrammingChange === false && same.changes.length === 0, same.changes.slice(0, 3));
+  check('a power row whose exercise changed IS a programming change',
+    changed.hasProgrammingChange === true);
+  const snap = snapshotSemanticWorkout('2026-07-20', workout('x') as any);
+  const power = snap.workout?.components.find((c: SemanticComponentSnapshot) => c.kind === 'power');
+  check('the power component is snapshotted as its exercise, not the raw row',
+    !!power && power.exercises.length === 1 && power.exerciseIds[0] === 'ex-Pogo Hops'
+      && !JSON.stringify(power.metadata).includes('createdAt') && !JSON.stringify(power.metadata).includes('"exercise"'));
+}
+
 console.log(`\nprogramSemanticSnapshotTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.error(failures.join('\n'));

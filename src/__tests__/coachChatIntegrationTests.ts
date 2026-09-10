@@ -190,9 +190,10 @@ console.log('\n[3] THE APP CHAT IS TERRA-READ-ONLY');
       && /console\.warn\('\[coach-chat\] response refused by the read-only truth contract'\)/.test(screen));
   const coachCopy = read('src/rules/coachTabCopy.ts');
   ok('the three typed failure causes render three truthful approved answers',
-    /unavailable: "Coach isn\'t available right now\. Try again shortly\."/.test(coachCopy)
-      && /refused: "I can\'t answer that safely\."/.test(coachCopy)
-      && /no_answer: COACH_TAB_COPY\.noAnswerYet/.test(coachCopy)
+    /unavailable: `Coach isn't available right now\. Try again shortly\. \$\{COACH_FAILURE_FEEDBACK_ASK\}`/.test(coachCopy)
+      && /refused: `I can't answer that safely\. \$\{COACH_FAILURE_FEEDBACK_ASK\}`/.test(coachCopy)
+      && /no_answer: `\$\{COACH_TAB_COPY\.noAnswerYet\} \$\{COACH_FAILURE_FEEDBACK_ASK\}`/.test(coachCopy)
+      && /Leave Feedback on the Profile tab/.test(coachCopy)
       && /say\(coachFailureReply\(failure\)\)/.test(screen));
   ok('Coach is the conversation surface while its athlete facts remain private model input',
     screen.indexOf('testID="coach-tab-conversation"') >= 0
@@ -453,9 +454,9 @@ async function finish(): Promise<void> {
   ok('a benign server answer failure remains no_answer at the screen boundary',
     serverInvalidAnswerCode === 'no_answer');
   ok('the copy owner executes a distinct approved answer for every typed failure',
-    coachFailureReply('unavailable') === "Coach isn't available right now. Try again shortly."
-      && coachFailureReply('refused') === "I can't answer that safely."
-      && coachFailureReply('no_answer') === "I don't have an answer for that yet."
+    coachFailureReply('unavailable') === "Coach isn't available right now. Try again shortly. Please send a screenshot through Leave Feedback on the Profile tab and we'll fix it ASAP."
+      && coachFailureReply('refused') === "I can't answer that safely. Please send a screenshot through Leave Feedback on the Profile tab and we'll fix it ASAP."
+      && coachFailureReply('no_answer') === "I don't have an answer for that yet. Please send a screenshot through Leave Feedback on the Profile tab and we'll fix it ASAP."
       && new Set([
         coachFailureReply('unavailable'),
         coachFailureReply('refused'),
